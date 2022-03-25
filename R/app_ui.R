@@ -6,14 +6,154 @@
 #' @noRd
 app_ui <- function(request) {
   tagList(
+
     # Leave this function for adding external resources
     golem_add_external_resources(),
-    # Your application UI logic
-    fluidPage(
-      h1("movedesign")
-    )
-  )
+
+    # UI ELEMENTS ---------------------------------------------------------
+
+    shinydashboardPlus::dashboardPage(
+
+      options = list(sidebarExpandOnHover = TRUE),
+      title = "Study design of movement ecology studies",
+      skin = "black",
+
+      # HEADER ------------------------------------------------------------
+
+      header = shinydashboardPlus::dashboardHeader(
+        title = tags$img(title = "title",
+                         src = "www/logo.png",
+                         height = "65px"),
+
+        controlbarIcon = icon("cogs"),
+
+        shinydashboard::dropdownMenu(
+
+          shinydashboardPlus::messageItem(
+            from = "GitHub",
+            message = "Documentation, source, & citation",
+            icon = tags$i(class = "fa fa-github",
+                          style = "color: #000000"),
+            href = "https://github.com/movedesign"),
+
+          shinydashboardPlus::messageItem(
+            from = "Issues",
+            message = "Report Issues",
+            icon = icon("exclamation-circle"),
+            href = link_issues),
+          icon = icon("info-circle"),
+
+          type = "messages",
+          badgeStatus = NULL,
+          headerText = "Information:")
+
+      ), # end of dashboardHeader
+
+      # SIDEBAR -----------------------------------------------------------
+
+      sidebar = shinydashboardPlus::dashboardSidebar(
+        shinydashboard::sidebarMenuOutput("side_menu")
+
+      ), # end of dashboardSidebar
+
+      # CONTROL BAR -------------------------------------------------------
+
+      controlbar = shinydashboardPlus::dashboardControlbar(
+        id = "controlbar",
+        skin = "dark",
+        width = 230,
+
+        shinydashboardPlus::controlbarMenu(
+          id = "controlbarMenu",
+
+          shinydashboardPlus::controlbarItem(
+            title = "Settings", icon = icon("sliders-h"),
+
+            mod_comp_settings_ui("comp_settings_1")
+
+          ), # end of controlbar item (settings)
+
+          shinydashboardPlus::controlbarItem(
+            title = "Share", icon = icon("share-alt"),
+
+            fluidRow(
+              tags$div(
+                style = paste("font-size: 30px;",
+                              "letter-spacing: .5rem;",
+                              "text-align: center"),
+                tags$a(href = "https://github.com/",
+                       icon("github")),
+                tags$a(href = "https://twitter.com/",
+                       icon("twitter")),
+                tags$a(href = "https://www.linkedin.com/",
+                       icon("linkedin")))
+            )
+          ) # end of controlbar item (share)
+
+        ) # end of controlbarMenu
+      ), # end of dashboardControlbar
+
+      # BODY --------------------------------------------------------------
+
+      body = shinydashboard::dashboardBody(
+
+        shinydashboard::tabItems(
+
+          # Tab 1 'Home'
+          shinydashboard::tabItem(
+            tabName = "about",
+            mod_tab_about_ui("tab_about_1")),
+
+          # Tab 2 'Upload or select data'
+          shinydashboard::tabItem(
+            tabName = "real",
+            mod_tab_data_ui("tab_data_1")),
+
+          # Tab 3 'Simulate data'
+          shinydashboard::tabItem(
+            tabName = "sims",
+            mod_tab_sims_ui("tab_sims_1")),
+
+          # Tab 4 'Device'
+          shinydashboard::tabItem(
+            tabName = "device",
+            mod_tab_device_ui("tab_device_1")),
+
+          # Tab 5 'Home range estimation'
+          shinydashboard::tabItem(
+            tabName = "hr",
+            mod_tab_hrange_ui("tab_hrange_1")),
+
+          # Tab 6 'CTSD estimation'
+          shinydashboard::tabItem(
+            tabName = "ctsd",
+            mod_tab_ctsd_ui("tab_ctsd_1")),
+
+          # Tab 7 'Report'
+          shinydashboard::tabItem(
+            tabName = "report",
+            mod_tab_report_ui("tab_report_1"))
+
+        ) # end of tabItems
+      ), # end of dashboardBody
+
+      footer = shinydashboardPlus::dashboardFooter(
+
+        left = tags$div(
+          HTML(paste0('<i class="fa fa-code-branch"',
+                      'style = "color:#222d32;"> </i>',
+                      HTML('&nbsp;'), app_version))),
+        right = tags$div(
+          HTML(paste('<i class="fa fa-copyright"',
+                     'style = "color:#222d32;"> </i>',
+                     "2021-2022")))
+
+      ) # end of dashboardFooter
+    ) # end of dashboardPage
+
+  ) # end of tagList
 }
+
 
 #' Add external Resources to the Application
 #'
@@ -24,6 +164,7 @@ app_ui <- function(request) {
 #' @importFrom golem add_resource_path activate_js favicon bundle_resources
 #' @noRd
 golem_add_external_resources <- function() {
+
   add_resource_path(
     "www",
     app_sys("app/www")
@@ -31,11 +172,45 @@ golem_add_external_resources <- function() {
 
   tags$head(
     favicon(),
+
     bundle_resources(
       path = app_sys("app/www"),
       app_title = "movedesign"
-    )
-    # Add here other external resources
-    # for example, you can add shinyalert::useShinyalert()
+    ),
+
+    waiter::use_waiter(),
+    waiter::waiter_preloader(
+      html = tagList(
+        waiter::spin_fading_circles(),
+        HTML(paste0(
+          span("Loading "),
+          span("move", style = "font-weight:600"),
+          span("design", style = "font-weight:600;color:#009da0;"),
+          span("...", style = "font-weight:600")
+        )))
+    ),
+
+    # Activate tooltips and popovers:
+    bsplus::use_bs_tooltip(),
+    bsplus::use_bs_popover(),
+
+    # Font types:
+    extrafont::loadfonts(),
+    tags$link(href = paste0("https://fonts.googleapis.com/css?",
+                            "family=",
+                            "Roboto+Condensed", "|",
+                            "Roboto", "|",
+                            "Fira+Mono", "|",
+                            "Fira+Sans+Condensed", "|",
+                            "Fira+Sans+Extra+Condensed",
+                            "&display=fallback"),
+              rel = "stylesheet"),
+
+    # Misc:
+    rintrojs::introjsUI(), # set up introjs
+    shinyjs::useShinyjs(), # set up shinyjs
+    shinyjs::extendShinyjs(script = "www/fullscreen.js",
+                           functions = c("toggleFullScreen"))
+
   )
 }

@@ -17,10 +17,23 @@
 ## Amend DESCRIPTION with dependencies read from package code parsing
 attachment::att_amend_desc()
 
+usethis::use_import_from("ctmm", "%#%")
+usethis::use_import_from("dplyr", "%>%")
+usethis::use_import_from("ggplot2" ,"%+replace%")
+
 ## Add modules ----
 ## Create a module infrastructure in R/
-golem::add_module(name = "name_of_module1", with_test = TRUE) # Name of the module
-golem::add_module(name = "name_of_module2", with_test = TRUE) # Name of the module
+golem::add_module(name = "tab_about", with_test = TRUE) # Home/about
+golem::add_module(name = "tab_data", with_test = TRUE) # Empirical data
+golem::add_module(name = "tab_sims", with_test = TRUE) # Simulated data
+golem::add_module(name = "tab_device", with_test = TRUE) # Device settings
+golem::add_module(name = "tab_hrange", with_test = TRUE) # HR estimation
+golem::add_module(name = "tab_ctsd", with_test = TRUE) # CTSD estimation
+golem::add_module(name = "tab_report", with_test = TRUE) # report
+
+golem::add_module(name = "comp_tour") # Main tour
+golem::add_module(name = "comp_settings") # Settings
+golem::add_module(name = "comp_glossary") # Glossary
 
 ## Add helper functions ----
 ## Creates fct_* and utils_*
@@ -36,7 +49,11 @@ golem::add_sass_file("custom")
 
 ## Add internal datasets ----
 ## If you have data in your package
-usethis::use_data_raw(name = "my_dataset", open = FALSE)
+usethis::use_data_raw(name = "movmods", open = TRUE)
+usethis::use_data_raw(name = "vhf_models", open = TRUE )
+usethis::use_data_raw(name = "gps_fixrate", open = TRUE )
+usethis::use_data_raw(name = "gps_tradeoffs", open = TRUE )
+usethis::use_data_raw(name = "df_sims", open = TRUE )
 
 ## Tests ----
 ## Add one line by test you want to create
