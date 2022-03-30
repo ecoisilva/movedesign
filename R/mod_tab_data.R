@@ -10,7 +10,7 @@
 mod_tab_data_ui <- function(id){
   ns <- NS(id)
   tagList(
-    fluidRow(
+    shiny::fluidRow(
 
       # Introduction: -----------------------------------------------------
 
@@ -1171,8 +1171,9 @@ mod_tab_data_server <- function(id, vals) {
 
         shiny::withProgress({
           fitList <- readRDS(
-            here::here("inst", "extdata",
-                       paste0(tmpspecies, "_fitList.rds")));
+            system.file("extdata",
+                       paste0(tmpspecies, "_fitList.rds"),
+                       package = "movedesign"));
           Sys.sleep(1.5) },
           message = "Loading model fit.",
           detail = "Please wait...")

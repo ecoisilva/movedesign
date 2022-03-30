@@ -1658,7 +1658,6 @@ mod_tab_device_server <- function(id, vals) {
       }
 
       return(p_end)
-
     }) # end of renderGirafe // regPlot_tradeoffs
 
   }) # end of moduleServer

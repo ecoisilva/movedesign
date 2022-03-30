@@ -20,7 +20,7 @@ address_casus <- paste(
 # Font: -------------------------------------------------------------------
 
 mainfont <- "Roboto Condensed"
-grDevices::windowsFonts(mainfont = grDevices::windowsFont(mainfont))
+# grDevices::windowsFonts(mainfont = grDevices::windowsFont(mainfont))
 
 # Application layout: -----------------------------------------------------
 
@@ -141,3 +141,149 @@ ctmm_species_binom <- c(
   "Chrysocyon brachyurus" = "wolf",
   "Procapra gutturosa" = "gazelle",
   "Glyptemys insculpta" = "turtle")
+
+
+# Modals: -----------------------------------------------------------------
+
+modal_tau_p0 <- bsplus::bs_modal(
+  id = "modal_tau_p0",
+  title = h4(span("Position autocorrelation",
+                  style = col_border),
+             "timescale:"),
+
+  body = fluidRow(
+    style = paste("margin-right: 20px;",
+                  "margin-left: 20px;"),
+
+    p("The", span("position autocorrelation", style = txt_border),
+      "timescale", HTML(paste0("(\u03C4", tags$sub("p"), ")")),
+      "is the", HTML(paste0(span("home range crossing time",
+                                 style = txt_border), "."))),
+    p(span("What does this mean?",
+           style = paste(ft, ft_bold, ft_center, col_main)),
+      "The", span("home range crossing time", style = txt_border),
+      "is the time is takes (on average) for an animal to cross",
+      "the linear extent of its home range. As",
+      HTML(paste0("\u03C4", tags$sub("p"))),
+      "increases, we can expect an animal to take longer to travel",
+      "this linear extent. For example:"
+    ),
+
+    column(
+      width = 12,
+      shiny::img(src = "www/explain_taup.gif",
+                 width = "100%", align = "center")),
+    p(HTML('&nbsp;')),
+
+    p("Typically, the",
+      span("sampling duration",  style = txt_caution),
+      "needs to be at least as long as the home range crossing time",
+      "(if not many times longer) for",
+      span("home range", style = txt_key), "estimation."
+    )
+
+  ), size = "medium")
+
+modal_tau_v0 <- bsplus::bs_modal(
+  id = "modal_tau_v0",
+  title = shiny::h4(span("Velocity autocorrelation",
+                         style = col_border),
+                    "timescale:"),
+
+  body = fluidRow(
+    style = paste("margin-right: 20px;",
+                  "margin-left: 20px;"),
+
+    p("The", span("velocity autocorrelation", style = txt_border),
+      "timescale", HTML(paste0("(\u03C4", tags$sub("v"), ")")),
+      "is the", HTML(paste0(span("directional persistence",
+                                 style = txt_border), "."))),
+    p("Animals with strong", span("directional persistence",
+                                  style = txt_border),
+      "(ballistic or more linear movement bursts), will tend to have",
+      "a", span("long", style = col_main),
+      HTML(paste0("\u03C4", tags$sub("v"))), "parameter.",
+      "On the other hand, animals with more tortuous",
+      "movement (less linear), will tend to have a much",
+      span("shorter", style = col_main),
+      HTML(paste0("\u03C4", tags$sub("v"), " parameter.")),
+      "For example:"
+    ),
+
+    p(HTML('&nbsp;')),
+    column(
+      width = 12,
+      shiny::img(src = "www/explain_tauv.gif",
+                 width = "100%", align = "center")),
+    p(HTML('&nbsp;')),
+
+    p("Typically, the",
+      span("sampling interval", HTML("(\u0394t)"),
+           style = txt_caution),
+      "needs to be at least as long as the",
+      span("velocity autocorrelation", style = txt_border),
+      "timescale for", span("distance/speed traveled",
+                            style = txt_key), "estimation.",
+      "If", span(HTML("\u0394t"), style = txt_caution), ">",
+      HTML(paste0("3\u03C4", tags$sub("v"))), "then no",
+      "statistically significant signature of the animal's",
+      "velocity will remain in the tracking dataset."
+    )
+
+  ), size = "medium")
+
+modal_sigma0 <- bsplus::bs_modal(
+  id = "modal_sigma0",
+  title = shiny::h4(span("Semi-variance", style = col_border),
+                    "parameter:"),
+
+  body = fluidRow(
+    style = paste("margin-right: 20px;",
+                  "margin-left: 20px;"),
+
+    p("The", span("semi-variance", style = txt_border),
+      "parameter", HTML("(\u03C3)"), "is the",
+      "the average square distance observed",
+      "at two different times,",
+      "and ultimately measures the spatial variability",
+      "between any two locations."
+    ),
+
+    p("We are simulating an",
+      span("isotropic", style = txt_key), "movement process,",
+      "so", HTML("\u03C3"),
+      "is the same in both the x and the y directions,",
+      "resulting in a circular", span("home range", style = txt_key),
+      "area."
+    ),
+
+    p("As we are also modeling",
+      span("range resident", style = txt_key),
+      "individuals (with a tendency to remain within their",
+      "home range),", HTML("\u03C3"), "is asymptotic:",
+      "if the", span("sampling duration", style = txt_caution),
+      "is sufficient, the average square distance between any two",
+      "locations will be equal to the chosen",
+      HTML("\u03C3"), "value."
+    )
+
+  ), size = "medium")
+
+modal_dataloss <- bsplus::bs_modal(
+  id = "modal_dataloss",
+  title = shiny::h4(span("Missing data", style = col_border),
+                    "bias:"),
+
+  body = fluidRow(
+    style = paste("margin-right: 20px;",
+                  "margin-left: 20px;"),
+
+    p("Many real-world issues can lead to animal locations",
+      "being sampled", span("irregularly", style = col_caution),
+      "in time: duty-cycling tags to avoid wasting battery",
+      "during periods of inactivity, device malfunctions,",
+      "habitat-related signal loss, and many others.",
+      "Ultimately, missing data equate to",
+      "a loss of", span("information.", style = txt_key)),
+
+  ), size = "medium")
