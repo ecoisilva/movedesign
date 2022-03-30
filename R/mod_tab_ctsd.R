@@ -623,32 +623,30 @@ mod_tab_ctsd_server <- function(id, vals) {
     observe({
       req(vals$ctsd, vals$ctsd_truth)
 
-      # print(vals$ctsd) # vals$ctsd$CI
+      # print(vals$ctsd)
 
-      vals$ctsdErr <-
-        (vals$ctsd[2] - vals$ctsd_truth[2]) /
-        vals$ctsd_truth[2]
-      vals$ctsdErr_min <-
-        (vals$ctsd[1] - vals$ctsd_truth[2]) /
-        vals$ctsd_truth[2]
-      vals$ctsdErr_max <-
-        (vals$ctsd[3] - vals$ctsd_truth[2]) /
-        vals$ctsd_truth[2]
+      tmpctsd_est <- vals$ctsd[2]
+      tmpctsd_lci <- vals$ctsd[1]
+      tmpctsd_uci <- vals$ctsd[3]
+      tmptruth <- vals$ctsd_truth[2]
+
+      vals$ctsdErr <- (tmpctsd_est - tmptruth) / tmptruth
+      vals$ctsdErr_min <- (tmpctsd_lci - tmptruth) / tmptruth
+      vals$ctsdErr_max <- (tmpctsd_uci - tmptruth) / tmptruth
 
     }) # end of observe
 
     observe({
       req(vals$ctsd_new)
 
-      vals$ctsdErr_new <-
-        (vals$ctsd_new[2] - vals$ctsd_truth[2]) /
-        vals$ctsd_truth[2]
-      vals$ctsdErr_min_new <-
-        (vals$ctsd_new[1] - vals$ctsd_truth[2]) /
-        vals$ctsd_truth[2]
-      vals$ctsdErr_max_new <-
-        (vals$ctsd_new[3] - vals$ctsd_truth[2]) /
-        vals$ctsd_truth[2]
+      tmpctsd_est <- vals$ctsd_new[2]
+      tmpctsd_lci <- vals$ctsd_new[1]
+      tmpctsd_uci <- vals$ctsd_new[3]
+      tmptruth <- vals$ctsd_truth[2]
+
+      vals$ctsdErr_new <- (tmpctsd_est - tmptruth) / tmptruth
+      vals$ctsdErr_min_new <- (tmpctsd_lci - tmptruth) / tmptruth
+      vals$ctsdErr_max_new <- (tmpctsd_uci - tmptruth) / tmptruth
 
     }) # end of observe
 
@@ -1591,6 +1589,12 @@ mod_tab_ctsd_server <- function(id, vals) {
                          low = mean(low),
                          high = mean(high))
 
+      yline <- "day" %#% vals$ctsd[2] %#% "kilometers"
+
+      if(!is.null(vals$ctsd_new)) {
+        yline_new <- "day" %#% vals$ctsd_new[2] %#% "kilometers"
+      }
+
       label_x <- paste0("Time lag (in ", tmpunits, ")")
       output$ctsdPlot_main <- ggiraph::renderGirafe({
 
@@ -1604,13 +1608,11 @@ mod_tab_ctsd_server <- function(id, vals) {
           ggplot2::geom_line(color = "black") +
 
           ggplot2::geom_hline(
-            yintercept = "day" %#% vals$ctsd[2] %#%
-              "kilometers", size = 2, col = hex_border) +
+            yintercept = yline, size = 2, col = hex_border) +
 
           { if(!is.null(vals$ctsd_new))
             ggplot2::geom_hline(
-              yintercept = "day" %#% vals$ctsd_new[2] %#%
-                "kilometers", size = 2, col = hex_caution)
+              yintercept = yline_new, size = 2, col = hex_caution)
           } +
 
           ggplot2::labs(

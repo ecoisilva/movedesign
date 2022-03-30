@@ -6,12 +6,12 @@ Authors@R:
 Description: A shiny app to design movement ecology studies.
 License: MIT + file LICENSE
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5.0)
 Imports: 
     bsplus,
     config (>= 0.3.1),
     crayon,
-    ctmm (<= 0.6.1),
+    ctmm (>= 0.6.1),
     dplyr,
     DT,
     extrafont,
