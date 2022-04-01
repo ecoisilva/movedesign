@@ -157,7 +157,6 @@ prepare_pars <- function(tau_p0,
                     isotropic = TRUE,
                     sigma = sig,
                     mu = c(0,0))
-
   return(mod)
 }
 

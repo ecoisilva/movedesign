@@ -983,6 +983,9 @@ mod_tab_device_server <- function(id, vals) {
         vals$needs_fit <- TRUE
 
       } else {
+        req(vals$tau_p0,
+            vals$tau_v0,
+            vals$sigma0)
 
         msg_log(
           style = "danger",

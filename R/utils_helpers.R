@@ -279,8 +279,8 @@ reset_data_values <- function(vals) {
 
   vals$id <- NULL
   vals$data_type <- NULL
-  vals$data <- vals$dataList <- NULL
-  vals$fit <- vals$sum <- NULL
+  vals$data0 <- vals$dataList <- NULL
+  vals$fit0 <- vals$sum <- NULL
 
 }
 

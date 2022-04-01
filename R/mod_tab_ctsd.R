@@ -458,6 +458,39 @@ mod_tab_ctsd_server <- function(id, vals) {
       } # end of if(), checking for data
     }) # end of observe
 
+    ## Checking if tau v available for initial dataset: -----------------
+
+    observe({
+      req(vals$valid_tauv, vals$active_tab == "ctsd")
+      if(vals$valid_tauv == "No") {
+
+        shinyalert::shinyalert(
+          type = "error",
+
+          title = "Speed & distance invalid",
+          text = span(
+            "No statistically significant signature of the animal's",
+            span("velocity", style = txt_caution),
+            "remains in this dataset.",
+            "Please select a different individual or dataset to",
+            "proceed with", span("distance/speed", style = txt_caution),
+            "estimation"),
+
+          confirmButtonText = "Dismiss",
+          html = TRUE)
+
+        msg_log(
+          style = "danger",
+          message = paste0("Initial dataset has no remaining ",
+                           msg_danger("velocity"), " signature."),
+          detail = paste0("Select a different individual",
+                          "or dataset to proceed."))
+
+        shinyjs::disable("run_ctsd")
+      }
+
+    }) # end of observe
+
     ## Adding speed & distance plot box: --------------------------------
 
     output$ctsdBox_outputs <- renderUI({
@@ -560,7 +593,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
         shinyalert::shinyalert(
           type = "error",
-          title = "No data found",
+          title = "No tracking regime set",
           text = span(
             "Please go to the",
             fontawesome::fa(name = "map-marker-alt", fill = hex_main),

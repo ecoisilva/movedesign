@@ -104,10 +104,20 @@ app_ui <- function(request) {
             tabName = "about",
             mod_tab_about_ui("tab_about_1")),
 
-          # Tab 2 'Upload or select data'
+          # # Tab 2 'Upload or select data'
+          # shinydashboard::tabItem(
+          #   tabName = "real",
+          #   mod_tab_data_ui("tab_data_1")),
+
+          # Tab 2.1 'Upload data'
           shinydashboard::tabItem(
-            tabName = "real",
-            mod_tab_data_ui("tab_data_1")),
+            tabName = "data_upload",
+            mod_tab_data_upload_ui("tab_data_upload_1")),
+
+          # Tab 2.2 'Select data'
+          shinydashboard::tabItem(
+            tabName = "data_select",
+            mod_tab_data_select_ui("tab_data_select_1")),
 
           # Tab 3 'Simulate data'
           shinydashboard::tabItem(
@@ -199,7 +209,6 @@ golem_add_external_resources <- function() {
     tags$link(href = paste0("https://fonts.googleapis.com/css?",
                             "family=",
                             "Roboto+Condensed", "|",
-                            "Roboto", "|",
                             "Fira+Mono", "|",
                             "Fira+Sans+Condensed", "|",
                             "Fira+Sans+Extra+Condensed",

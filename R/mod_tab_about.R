@@ -67,16 +67,10 @@ mod_tab_about_ui <- function(id) {
               choices = c("Upload your own" = "Upload",
                           "Select from available species" = "Select",
                           "Simulate from scratch" = "Simulate"),
-
               selected = character(0),
               checkIcon = list(
                 yes = icon("ok",
                            lib = "glyphicon"))),
-              # checkIcon = list(
-              #   yes = tags$i(class = "fa fa-check-square",
-              #                style = "color: #009da0"),
-              #   no = tags$i(class = "fa fa-square-o",
-              #               style = "color: #dd4b39"))),
 
             ### Research question(s) --------------------------------------
 
@@ -86,7 +80,7 @@ mod_tab_about_ui <- function(id) {
                            style = paste("font-size: 16px;",
                                          "font-weight: 500;")),
               choices = c("Home range",
-                          "Distance/speed"),
+                          "Speed & distance"),
               selected = NULL,
               checkIcon = list(
                 yes = tags$i(class = "fa fa-check-square",
@@ -208,10 +202,11 @@ mod_tab_about_server <- function(id, vals) {
 
     # Values: -----------------------------------------------------------
 
-    observe({ vals$which_data <- input$which_data }) %>%
-      bindEvent(input$which_data)
-    observe({ vals$which_question <- input$which_question }) %>%
-      bindEvent(input$which_question)
+    observe({
+      vals$which_data <- input$which_data
+      vals$which_question <- input$which_question
+    })
+
 
     # Restore settings: -------------------------------------------------
 
@@ -231,16 +226,6 @@ mod_tab_about_server <- function(id, vals) {
 
     }) %>% # end of observe, then:
       bindEvent(input$restore_state)
-
-    # ---------------------------------------------------------------------
-
-    # output$warning_about <- renderText({
-    #   paste(
-    #     "All results or suggestions within this app are based on",
-    #     "simulations only, and may not reflect real species or outputs.",
-    #     "Please use any recommended tracking regimes with caution.")
-    # })
-
 
   })
 }

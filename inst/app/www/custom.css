@@ -482,12 +482,6 @@ shiny .irs-handle:hover {
   margin: -40px 1px 5px 0px;
 }
 
-/*
-.glyphicon {
-  top: 10px;
-  right: 1px;
-  font-size: 19px;
-} */
 
 /* BOXES --------------------------------------------------------------- */
 
@@ -933,41 +927,29 @@ footer {
 
 /* ALERT --------------------------------------------------------------- */
 
-.sweet-alert {
-  font-family: Roboto Condensed, sans-serif;
-  border-radius: none !important;
-}
 .sweet-alert button {
   font-family: Roboto Condensed, sans-serif!important;
   font-size: 14px !important;
+  line-height: 20px !important;
   letter-spacing: 0.5px !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-  background: #222d32 !important;
-  color: #ffffff !important;
-  letter-spacing: 0.5px !important;
-  text-transform: uppercase!important;
-  text-shadow: none;
-  padding-top: 2px!important;
-  padding-bottom: 2px!important;
-}
+  color: #444!important ;
 
-.sweet-alert .sa-icon.sa-error {
-  border-color: #dd4b39!important;
-}
-.sweet-alert .sa-icon.sa-error .sa-line {
-  background-color: #dd4b39!important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: #f4f4f4 !important;
+
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  float: right !important;
 }
 
 .sweet-alert h2 {
-  font-family: Roboto Condensed, sans-serif!important;
-  font-weight: 300!important;
-  color: #dd4b39!important;
-  margin: 0!important;
+  font-size: 28px !important;
+  line-height: 20px !important;
 }
+
 .sweet-alert p {
-  color: #8c8c8c!important;
+  text-align: justify !important;
 }
 
 /* EQUATIONS ----------------------------------------------------------- */
