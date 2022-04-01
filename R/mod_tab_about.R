@@ -46,6 +46,7 @@ mod_tab_about_ui <- function(id) {
             HTML(paste0(span("speed and distance traveled",
                              style = txt_key), "."))),
 
+          # verbatimTextOutput(outputId = ns("warning_about")),
           tags$hr(),
 
           ## Workflow section: --------------------------------------------
@@ -69,10 +70,13 @@ mod_tab_about_ui <- function(id) {
 
               selected = character(0),
               checkIcon = list(
-                yes = tags$i(class = "fa fa-check-square",
-                             style = "color: #009da0"),
-                no = tags$i(class = "fa fa-square-o",
-                            style = "color: #dd4b39"))),
+                yes = icon("ok",
+                           lib = "glyphicon"))),
+              # checkIcon = list(
+              #   yes = tags$i(class = "fa fa-check-square",
+              #                style = "color: #009da0"),
+              #   no = tags$i(class = "fa fa-square-o",
+              #               style = "color: #dd4b39"))),
 
             ### Research question(s) --------------------------------------
 
@@ -227,6 +231,16 @@ mod_tab_about_server <- function(id, vals) {
 
     }) %>% # end of observe, then:
       bindEvent(input$restore_state)
+
+    # ---------------------------------------------------------------------
+
+    # output$warning_about <- renderText({
+    #   paste(
+    #     "All results or suggestions within this app are based on",
+    #     "simulations only, and may not reflect real species or outputs.",
+    #     "Please use any recommended tracking regimes with caution.")
+    # })
+
 
   })
 }

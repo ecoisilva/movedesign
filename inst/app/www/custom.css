@@ -3,7 +3,7 @@
 
 body {
   font-family: Roboto Condensed, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .main-header .navbar {
@@ -104,7 +104,7 @@ p {
   text-align: justify;
   font-family: Fira Sans Condensed, Open Sans, sans-serif;
   color: #8c8c8c;
-    font-size: 14px;
+    font-size: 15px;
   font-weight: 100;
   line-height: 1.5;
   letter-spacing: 0.3px;
@@ -155,7 +155,8 @@ pre {
 }
 
 pre.shiny-text-output {
-  word-wrap: normal;
+  white-space: pre-wrap;
+  word-break: keep-all;
   font-family: Fira Mono, Consolas, sans-serif;
 }
 
@@ -480,11 +481,13 @@ shiny .irs-handle:hover {
 .timelineinput .irs-line {
   margin: -40px 1px 5px 0px;
 }
+
+/*
 .glyphicon {
   top: 10px;
   right: 1px;
   font-size: 19px;
-}
+} */
 
 /* BOXES --------------------------------------------------------------- */
 

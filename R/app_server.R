@@ -9,6 +9,11 @@ app_server <- function(input, output, session) {
   ns <- session$ns
   vals <- reactiveValues()
 
+  data(gps_fixrate)
+  data(gps_tradeoffs)
+  data(movmods)
+  data(df_sims)
+
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
   # Render sidebar menu: --------------------------------------------------
 
