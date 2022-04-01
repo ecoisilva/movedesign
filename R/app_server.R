@@ -15,6 +15,12 @@ app_server <- function(input, output, session) {
   data(df_sims)
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
+
+  modify_stop_propagation <- function(x) {
+    x$children[[1]]$attribs$onclick = "event.stopPropagation()"
+    x
+  }
+
   # Render sidebar menu: --------------------------------------------------
 
   output$side_menu <- shinydashboard::renderMenu({
@@ -93,71 +99,75 @@ app_server <- function(input, output, session) {
       id = "tabs",
 
       # Tab 1: Home
-      shinydashboard::menuItem(
-        text = "Home",
-        tabName = "about",
-        icon = shiny::icon("home")
-      ),
+      modify_stop_propagation(
+        shinydashboard::menuItem(
+          text = "Home",
+          tabName = "about",
+          icon = shiny::icon("home")
+        )),
 
       # Tab 2 and 3: Upload or simulate data
-      shinydashboard::menuItem(
-        id = "group_data",
-        tabname = "data",
-        text = "Data",
-        icon = shiny::icon("paw"),
-        startExpanded = TRUE,
+      modify_stop_propagation(
+        shinydashboard::menuItem(
+          id = "group_data",
+          tabname = "data",
+          text = "Data",
+          icon = shiny::icon("paw"),
+          startExpanded = TRUE,
 
-        # shinydashboard::menuSubItem(
-        #   tabName = "real",
-        #   text = data_title,
-        #   icon = data_icon),
+          # shinydashboard::menuSubItem(
+          #   tabName = "real",
+          #   text = data_title,
+          #   icon = data_icon),
 
-        shinydashboard::menuSubItem(
-          tabName = "data_upload",
-          text = upload_title,
-          icon = upload_icon),
+          shinydashboard::menuSubItem(
+            tabName = "data_upload",
+            text = upload_title,
+            icon = upload_icon),
 
-        shinydashboard::menuSubItem(
-          tabName = "data_select",
-          text = select_title,
-          icon = select_icon),
+          shinydashboard::menuSubItem(
+            tabName = "data_select",
+            text = select_title,
+            icon = select_icon),
 
-        shinydashboard::menuSubItem(
-          tabName = "sims",
-          text = sims_title,
-          icon = sims_icon)
-      ),
+          shinydashboard::menuSubItem(
+            tabName = "sims",
+            text = sims_title,
+            icon = sims_icon)
+        )),
 
       # Tab 4: Device tradeoffs
-      shinydashboard::menuItem(
-        tabname = "group_device",
-        text = "Device",
-        icon = shiny::icon("map-marker-alt"),
-        startExpanded = TRUE,
+      modify_stop_propagation(
+        shinydashboard::menuItem(
+          tabname = "group_device",
+          text = "Device",
+          icon = shiny::icon("map-marker-alt"),
+          startExpanded = TRUE,
 
-        shinydashboard::menuSubItem(
-          tabName = "device",
-          text = regs_title,
-          icon = regs_icon)
-      ),
+          shinydashboard::menuSubItem(
+            tabName = "device",
+            text = regs_title,
+            icon = regs_icon)
+        )),
 
       # Tab 5 and 6: Home range or CTSD estimation
-      shinydashboard::menuItem(
-        id = "group_design",
-        tabname = "design",
-        text = "Analyses", # "Study design",
-        icon = shiny::icon("drafting-compass"),
-        startExpanded = TRUE,
+      modify_stop_propagation(
+        shinydashboard::menuItem(
+          id = "group_design",
+          tabname = "design",
+          text = "Analyses", # "Study design",
+          icon = shiny::icon("drafting-compass"),
+          startExpanded = TRUE,
 
-        shinydashboard::menuSubItem(
-          tabName = "hr",
-          text = hr_title,
-          icon = hr_icon),
-        shinydashboard::menuSubItem(
-          tabName = "ctsd",
-          text = ctsd_title,
-          icon = ctsd_icon)
-      ),
+          shinydashboard::menuSubItem(
+            tabName = "hr",
+            text = hr_title,
+            icon = hr_icon),
+          shinydashboard::menuSubItem(
+            tabName = "ctsd",
+            text = ctsd_title,
+            icon = ctsd_icon)
+        )),
 
       # Tab 7: Report
       shinydashboard::menuItem(
