@@ -1,4 +1,9 @@
 
+utils::globalVariables(c("gps_fixrate"))
+utils::globalVariables(c("gps_tradeoffs"))
+utils::globalVariables(c("output_sims"))
+utils::globalVariables(c("movmods"))
+
 # Main links and variables: -----------------------------------------------
 
 tm_now <- Sys.time()
@@ -17,11 +22,6 @@ address_casus <- paste(
   "Helmholtz-Zentrum Dresden-Rossendorf e.V. (HZDR),",
   "Untermarkt 20, 02826, Görlitz — Germany")
 
-# Font: -------------------------------------------------------------------
-
-mainfont <- "Roboto Condensed"
-# grDevices::windowsFonts(mainfont = grDevices::windowsFont(mainfont))
-
 # Application layout: -----------------------------------------------------
 
 div_column_main <- "col-xs-12 col-sm-12 col-md-12 col-lg-12"
@@ -36,7 +36,7 @@ div2_column_left <- "col-xs-12 col-sm-7 col-md-8 col-lg-9"
 # Colors: -----------------------------------------------------------------
 
 hex_main <- "#222d32"
-hex_subitem <- "#2c3b41"
+hex_item <- "#008d90"
 hex_border <- "#009da0"
 hex_key <- "#006466"
 hex_caution <- "#dd4b39"
@@ -49,6 +49,7 @@ msg_warning <- crayon::make_style(hex_gold)
 
 col_main <- paste0("color: ", hex_main, ";")
 col_border <- paste0("color: ", hex_border, ";")
+col_item <- paste0("color: ", hex_item, ";")
 col_key <- paste0("color: ", hex_key, ";")
 col_caution <- paste0("color: ", hex_caution, "!important;")
 col_gold <- paste0("color: ", hex_gold, ";")
@@ -98,29 +99,27 @@ btn_danger <- paste(ft, col_caution)
 
 # Tour: -------------------------------------------------------------------
 
-ttl_tour <- paste(ft, ft_bold, ft_center, "font-size: 28px;")
-txt_tour <- paste0(ft,
-                   "font-size: 15px;",
+ttl_tour <- paste(ft, ft_bold, ft_center, "font-size: 32px;")
+
+txt_tour <- paste0("font-family: Fira Sans Condensed;",
+                   "font-size: 17px;",
                    "line-height: 1.5;",
                    "letter-spacing: 0.2px;")
-txt_action <- paste0(ft, col_caution,
-                     "padding: .2rem .2rem;",
-                     "background: #2c3b41;",
-                     "font-size: 13px;",
-                     "text-align: justify;",
-                     "line-height: 1.5;",
-                     "letter-spacing: 0.5px;",
-                     "text-transform: uppercase;")
 
-txt_step <- paste0(ft, "color: black;",
-                   "padding: .2rem .2rem .2rem .4rem;",
-                   "background: #ffbf00;",
-                   "font-size: 13px;",
-                   "font-weight: 500;",
-                   "text-align: justify;",
-                   "line-height: 1.5;",
-                   "letter-spacing: 0.5px;",
-                   "text-transform: uppercase;")
+txt_tour_italic <- paste0(txt_tour, "font-style: italic;")
+txt_tour_border <- paste0(txt_tour, col_border)
+txt_tour_caution <- paste0(txt_tour, col_caution)
+txt_tour_white <- paste0(txt_tour, "color: white;")
+txt_tour_grey <- paste0(txt_tour, col_grey)
+txt_tour_item <- paste0(txt_tour, col_item)
+
+txt_action <- paste0(txt_tour,
+                     "text-align: justify;",
+                     "color: black;",
+                     "background: #ffffff;")
+
+txt_output <- paste0("font-family: Fira Mono;",
+                     "font-size: 15px;")
 
 # 'ctmm' R package, available species: ------------------------------------
 

@@ -58,7 +58,7 @@ usethis::use_data_raw(name = "movmods", open = TRUE)
 usethis::use_data_raw(name = "vhf_models", open = TRUE )
 usethis::use_data_raw(name = "gps_fixrate", open = TRUE )
 usethis::use_data_raw(name = "gps_tradeoffs", open = TRUE )
-usethis::use_data_raw(name = "df_sims", open = TRUE )
+usethis::use_data_raw(name = "output_sims", open = TRUE )
 
 ## Tests ----
 ## Add one line by test you want to create

@@ -3,9 +3,10 @@
 library(dplyr)
 library(ctmm)
 
-gps_tradeoffs <- read.csv(here::here("inst",
-                                     "extdata",
-                                     "gps_tradeoffs.csv"))
+gps_tradeoffs <- read.csv(system.file("extdata",
+                                      "gps_tradeoffs.csv",
+                                      package = "movedesign"))
+
 gps_tradeoffs <- gps_tradeoffs %>%
   dplyr::mutate(
     dur_mnths = duration/4,

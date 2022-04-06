@@ -9,14 +9,14 @@ app_server <- function(input, output, session) {
   ns <- session$ns
   vals <- reactiveValues()
 
-  data(gps_fixrate)
-  data(gps_tradeoffs)
-  data(movmods)
-  data(df_sims)
+  data(gps_fixrate, package = "movedesign")
+  data(gps_tradeoffs, package = "movedesign")
+  data(output_sims, package = "movedesign")
+  data(movmods, package = "movedesign")
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 
-  modify_stop_propagation <- function(x) {
+  keep_expanded <- function(x) {
     x$children[[1]]$attribs$onclick = "event.stopPropagation()"
     x
   }
@@ -221,5 +221,24 @@ app_server <- function(input, output, session) {
 
   # Interactive tour:
   mod_comp_tour_server("tour_1", vals = vals)
+
+  # -----------------------------------------------------------------------
+
+  onStop(function() {
+
+    message("Session stopped")
+
+    if(!is.null(output_sims)) {
+      rm("output_sims", envir = .GlobalEnv) }
+    if(!is.null(gps_fixrate)) {
+      rm("gps_fixrate", envir = .GlobalEnv) }
+    if(!is.null(gps_tradeoffs)) {
+      rm("gps_tradeoffs", envir = .GlobalEnv) }
+    if(!is.null(movmods)) {
+      rm("movmods", envir = .GlobalEnv) }
+
+    # print(ls(envir = .GlobalEnv))
+
+  }) # end of onStop
 
 }

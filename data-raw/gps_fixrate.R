@@ -119,3 +119,4 @@ gps_fixrate$freq_hrs <- 1/gps_fixrate$nu_hrs
 # View(format(gps_fixrate, scientific = FALSE))
 
 usethis::use_data(gps_fixrate, overwrite = TRUE)
+
