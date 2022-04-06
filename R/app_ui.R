@@ -23,7 +23,7 @@ app_ui <- function(request) {
       header = shinydashboardPlus::dashboardHeader(
         title = tags$img(title = "title",
                          src = "www/logo.png",
-                         height = "65px"),
+                         height = "50px"),
 
         controlbarIcon = icon("cogs"),
 
@@ -126,7 +126,7 @@ app_ui <- function(request) {
 
           # Tab 4 'Device'
           shinydashboard::tabItem(
-            tabName = "device",
+            tabName = "regime",
             mod_tab_device_ui("tab_device_1")),
 
           # Tab 5 'Home range estimation'

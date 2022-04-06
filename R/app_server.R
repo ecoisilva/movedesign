@@ -99,15 +99,14 @@ app_server <- function(input, output, session) {
       id = "tabs",
 
       # Tab 1: Home
-      modify_stop_propagation(
-        shinydashboard::menuItem(
-          text = "Home",
-          tabName = "about",
-          icon = shiny::icon("home")
-        )),
+      shinydashboard::menuItem(
+        text = "Home",
+        tabName = "about",
+        icon = shiny::icon("home")
+      ),
 
       # Tab 2 and 3: Upload or simulate data
-      modify_stop_propagation(
+      keep_expanded(
         shinydashboard::menuItem(
           id = "group_data",
           tabname = "data",
@@ -137,25 +136,26 @@ app_server <- function(input, output, session) {
         )),
 
       # Tab 4: Device tradeoffs
-      modify_stop_propagation(
+      keep_expanded(
         shinydashboard::menuItem(
-          tabname = "group_device",
+          id = "group_device",
+          tabname = "device",
           text = "Device",
           icon = shiny::icon("map-marker-alt"),
           startExpanded = TRUE,
 
           shinydashboard::menuSubItem(
-            tabName = "device",
+            tabName = "regime",
             text = regs_title,
             icon = regs_icon)
         )),
 
       # Tab 5 and 6: Home range or CTSD estimation
-      modify_stop_propagation(
+      keep_expanded(
         shinydashboard::menuItem(
           id = "group_design",
           tabname = "design",
-          text = "Analyses", # "Study design",
+          text = "Analyses",
           icon = shiny::icon("drafting-compass"),
           startExpanded = TRUE,
 

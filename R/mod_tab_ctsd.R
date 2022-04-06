@@ -767,7 +767,8 @@ mod_tab_ctsd_server <- function(id, vals) {
 
         # Sampling interval:
 
-        df_fixrate <- dplyr::arrange(gps_fixrate, desc(freq))
+        fixrate <- movedesign::gps_fixrate
+        df_fixrate <- dplyr::arrange(fixrate, desc(freq))
         dti_choices <- df_fixrate$nu_notes
 
         tau_v0 <- vals$tau_v0 %#% vals$tau_v0_units
@@ -879,8 +880,9 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     output$ctsdText_sampling <- renderUI({
 
-      tmp <- gps_fixrate$nu[match(input$ctsd_dti0,
-                                  gps_fixrate$nu_notes)]
+      fixrate <- movedesign::gps_fixrate
+      tmp <- fixrate$nu[match(input$ctsd_dti0,
+                              fixrate$nu_notes)]
 
       vals$n_new <- length(
         seq(from = 1,
@@ -1069,8 +1071,9 @@ mod_tab_ctsd_server <- function(id, vals) {
       vals$dti2_units <- sub('^.* ([[:alnum:]]+)$',
                              '\\1', input$ctsd_dti0)
 
-      tmp <- gps_fixrate$nu[match(input$ctsd_dti0,
-                                  gps_fixrate$nu_notes)]
+      fixrate <- movedesign::gps_fixrate
+      tmp <- fixrate$nu[match(input$ctsd_dti0,
+                              fixrate$nu_notes)]
 
       vals$dti2 <- round((vals$dti2_units %#% tmp), 0)
       vals$dur2 <- input$ctsd_dur0

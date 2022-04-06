@@ -277,10 +277,15 @@ msg_step <- function(current, total, style) {
 #' @noRd
 reset_data_values <- function(vals) {
 
-  vals$id <- NULL
-  vals$data_type <- NULL
-  vals$data0 <- vals$dataList <- NULL
-  vals$fit0 <- vals$sum <- NULL
+  vals$is_valid <- FALSE
+
+  if(!is.null(vals$id)) vals$id <- NULL
+  if(!is.null(vals$data_type)) vals$data_type <- NULL
+  if(!is.null(vals$data0)) vals$data0 <- NULL
+  if(!is.null(vals$dataList)) vals$dataList <- NULL
+
+  if(!is.null(vals$tmpid)) vals$tmpid <- NULL
+  if(!is.null(vals$fit0)) vals$fit0 <- NULL
 
 }
 

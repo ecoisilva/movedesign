@@ -523,7 +523,8 @@ mod_tab_hrange_server <- function(id, vals) {
 
         # Sampling interval:
 
-        df_fixrate <- dplyr::arrange(gps_fixrate, desc(freq))
+        fixrate <- movedesign::gps_fixrate
+        df_fixrate <- dplyr::arrange(fixrate, desc(freq))
         value <- vals$dti0_dev
         index <- which.min(abs(df_fixrate$nu - value))
         dti_choices <- df_fixrate$nu_notes
@@ -647,8 +648,9 @@ mod_tab_hrange_server <- function(id, vals) {
     output$hrText_sampling <- renderUI({
       req(vals$data1, input$hr_dur0, input$hr_dti0)
 
-      tmp <- gps_fixrate$nu[match(input$hr_dti0,
-                                  gps_fixrate$nu_notes)]
+      fixrate <- movedesign::gps_fixrate
+      tmp <- fixrate$nu[match(input$hr_dti0,
+                              fixrate$nu_notes)]
 
       n_new <- length(
         seq(from = 1,
@@ -787,8 +789,9 @@ mod_tab_hrange_server <- function(id, vals) {
       vals$dti1_units <- sub('^.* ([[:alnum:]]+)$',
                              '\\1', input$hr_dti0)
 
-      tmp <- gps_fixrate$nu[match(input$hr_dti0,
-                                  gps_fixrate$nu_notes)]
+      fixrate <- movedesign::gps_fixrate
+      tmp <- fixrate$nu[match(input$hr_dti0,
+                              fixrate$nu_notes)]
 
       vals$dti1 <- vals$dti1_units %#% round(tmp, 0)
       vals$dur1 <- input$hr_dur0
@@ -1491,7 +1494,7 @@ mod_tab_hrange_server <- function(id, vals) {
 
     output$helpPlot_error <- ggiraph::renderGirafe({
 
-      df0 <- df_sims %>%
+      df0 <- movedesign::output_sims %>%
         dplyr::filter(method == "pHREML_AKDEc") %>%
         dplyr::mutate(error = (bias - 1) / 1) %>%
         dplyr::group_by(duration)

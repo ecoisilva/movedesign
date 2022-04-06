@@ -58,6 +58,12 @@ mod_tab_device_ui <- function(id) {
               placeholder = 'Select an option here',
               onInitialize = I('function() { this.setValue(""); }'))),
 
+          # shinyWidgets::switchInput(
+          #   inputId = ns("evaluate_tradeoffs"),
+          #   label = span(icon("wrench"),
+          #                "Simulate tradeoffs?"),
+          #   labelWidth = "212px")
+
           # p(style = txt_label_bold,
           #   "Do you want to consider weight limitations?"),
           #
@@ -365,7 +371,8 @@ mod_tab_device_server <- function(id, vals) {
 
     output$gpsInput_maxrate <- renderUI({
 
-      rate_choices <- gps_fixrate %>%
+      fixrate <- movedesign::gps_fixrate
+      rate_choices <- fixrate %>%
         dplyr::filter(choices == "Y") %>%
         dplyr::pull(nu_notes)
 
@@ -441,7 +448,8 @@ mod_tab_device_server <- function(id, vals) {
 
         "This tracking regime is equal to a new location every",
         span(round(input$vhf_dti, 1), tmpunits, style = txt_border),
-        "for a duration of",
+        "(or approximately", 1/round(input$vhf_dti, 1) %#% "day",
+        "locations/day) for a duration of",
         span(paste0(round(dur0_mth, 1),
                     " months"), style = txt_border), "(or",
         "approximately", HTML(paste0(span(
@@ -911,7 +919,7 @@ mod_tab_device_server <- function(id, vals) {
           input$gps_maxrate)
 
       df_decay <- simulate_gpsdecay(
-        data = gps_fixrate,
+        data = movedesign::gps_fixrate,
         k0 = input$gps_k0,
         yrange0 = input$gps_dur,
         subset = 0.164383,
@@ -947,7 +955,7 @@ mod_tab_device_server <- function(id, vals) {
 
       df0 <- ctmm::simulate(
         vals$data0,
-        vals$fit,
+        vals$fit0,
         t = seq(0, vals$dur0_dev, by = vals$dti0_dev)) %>%
         ctmm:::pseudonymize()
 
@@ -1113,7 +1121,7 @@ mod_tab_device_server <- function(id, vals) {
       } else {
         dat <- ctmm::simulate(
           vals$data1,
-          vals$fit,
+          vals$fit0,
           dt = 20 %#% "seconds")
       }
       newdat <- vals$data1
@@ -1536,8 +1544,7 @@ mod_tab_device_server <- function(id, vals) {
     output$regPlot_tradeoffs <- ggiraph::renderGirafe({
       req(input$which_var)
 
-      utils::globalVariables(c("gps_tradeoffs"))
-      df <- gps_tradeoffs[1:27, ]
+      df <- movedesign::gps_tradeoffs[1:27, ]
 
       ylim.prim <- c(0, 233)
       ylim.sec <- c(0, 13733.87)

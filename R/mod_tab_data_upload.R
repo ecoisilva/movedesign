@@ -206,7 +206,7 @@ mod_tab_data_upload_ui <- function(id) {
           # Visualization: ------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Displaying dataset:", style = ttl_box),
+            title = span("Data vizualization:", style = ttl_box),
             id = ns("uploadBox_viz"),
             width = NULL,
             solidHeader = FALSE,
@@ -311,18 +311,20 @@ mod_tab_data_upload_server <- function(id, vals) {
     ## Match id for input, plot and table: --------------------------------
 
     observe({
+      req(input$id_uploaded)
       vals$id <- input$id_uploaded
     })
 
     observe({
+      req(vals$table_selection)
       vals$id <- names(vals$dataList)[
         vals$table_selection$selected]
     })
 
     observe({
+      req(vals$plot_selection)
       vals$id <- names(vals$dataList)[
         match(vals$plot_selection, names(vals$dataList))]
-
     })
 
     observe({
@@ -349,12 +351,13 @@ mod_tab_data_upload_server <- function(id, vals) {
 
       vals$data_type <- "uploaded"
       inFile <- input$file_csv
+      # data.table::fread()
       df0 <- read.csv(inFile$datapath,
                       header = input$file_header,
                       sep = input$file_sep,
                       quote = input$file_quote)
 
-      df0 <- ctmm::as.telemetry(df0[1:201,])
+      df0 <- ctmm::as.telemetry(df0)
 
       if (!("timestamp" %in% names(df0[[1]]))) {
 

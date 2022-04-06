@@ -103,33 +103,12 @@ mod_tab_data_select_ui <- function(id) {
               inputId = ns("validate_select"),
               icon =  icon("check-circle"),
               label = "Validate",
-              width = "100%")
-
-          ), # end of box // selectBox_species
-
-          # Select variables: ---------------------------------------------
-
-          shinydashboardPlus::box(
-            title = span("Variables", style = ttl_box.solid),
-            id = ns("selectBox_variables"),
-            status = "primary",
-            width = NULL,
-            solidHeader = TRUE,
-            collapsible = FALSE, closable = FALSE,
-
-            selectInput(inputId = ns("selectVar_x"),
-                        label = "X coordinate:",
-                        selected = "x",
-                        choices = ""),
-            selectInput(inputId = ns("selectVar_y"),
-                        label = "Y coordinate:",
-                        selected = "y",
-                        choices = ""),
-            selectInput(inputId = ns("selectVar_t"),
-                        label = "Datetime:",
-                        selected = "timestamp",
-                        choices = ""),
-
+              width = "100%"),
+            fluidRow(
+              column(
+                width = 12,
+                verbatimTextOutput(outputId = ns("selectVal_output"))
+              )), p(style = "padding: 0px;"),
             actionButton(
               inputId = ns("selectButton_extract"),
               icon =  icon("paper-plane"),
@@ -137,7 +116,39 @@ mod_tab_data_select_ui <- function(id) {
               width = "100%",
               class = "btn-primary")
 
-          ), # end of box // selectBox_variables
+          ), # end of box // selectBox_species
+
+          # Select variables: ---------------------------------------------
+
+          # shinydashboardPlus::box(
+          #   title = span("Variables", style = ttl_box.solid),
+          #   id = ns("selectBox_variables"),
+          #   status = "primary",
+          #   width = NULL,
+          #   solidHeader = TRUE,
+          #   collapsible = FALSE, closable = FALSE,
+          #
+          #   selectInput(inputId = ns("selectVar_x"),
+          #               label = "X coordinate:",
+          #               selected = "x",
+          #               choices = ""),
+          #   selectInput(inputId = ns("selectVar_y"),
+          #               label = "Y coordinate:",
+          #               selected = "y",
+          #               choices = ""),
+          #   selectInput(inputId = ns("selectVar_t"),
+          #               label = "Datetime:",
+          #               selected = "timestamp",
+          #               choices = ""),
+          #
+          #   actionButton(
+          #     inputId = ns("selectButton_extract"),
+          #     icon =  icon("paper-plane"),
+          #     label = "Extract",
+          #     width = "100%",
+          #     class = "btn-primary")
+          #
+          # ), # end of box // selectBox_variables
 
           # Tracking regime: ----------------------------------------------
 
@@ -164,7 +175,7 @@ mod_tab_data_select_ui <- function(id) {
           # Visualization: ------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Displaying dataset:", style = ttl_box),
+            title = span("Data vizualization:", style = ttl_box),
             id = ns("selectBox_viz"),
             width = NULL,
             solidHeader = FALSE,
@@ -227,7 +238,6 @@ mod_tab_data_select_server <- function(id, vals) {
     ## Hide all boxes at start: -----------------------------------------
 
     tmpnames <- c("regime",
-                  "variables",
                   "sizes",
                   "misc")
 
@@ -235,55 +245,27 @@ mod_tab_data_select_server <- function(id, vals) {
       shinyjs::hide(id = paste0("selectBox_", tmpnames[i]))
     }
 
-    ## If subset data available, update inputs: -------------------------
-
-    observe({
-      req(vals$data0)
-
-      updateSelectInput(session, inputId = "selectVar_x",
-                        label = "X coordinate:",
-                        choices = names(vals$data0),
-                        selected =
-                          ifelse(!is.null(vals$data0$"x"),
-                                 "x", "longitude"))
-      updateSelectInput(session, inputId = "selectVar_y",
-                        label = "Y coordinate:",
-                        choices = names(vals$data0),
-                        selected =
-                          ifelse(!is.null(vals$data0$"y"),
-                                 "y", "latitude"))
-      updateSelectInput(session, inputId = "selectVar_t",
-                        label = "Datetime:",
-                        choices = names(vals$data0),
-                        selected =
-                          ifelse(!is.null(vals$data0$"timestamp"),
-                                 "timestamp", "t"))
-
-      vals$input_x <- input$selectVar_x
-      vals$input_y <- input$selectVar_y
-      vals$input_t <- input$selectVar_t
-
-    }) # end of observe
-
     ## Match id for input, plot and table: --------------------------------
 
     observe({
+      req(input$id_selected)
       vals$id <- input$id_selected
     })
 
     observe({
+      req(vals$table_selection)
       vals$id <- names(vals$dataList)[
         vals$table_selection$selected]
     })
 
     observe({
+      req(vals$plot_selection)
       vals$id <- names(vals$dataList)[
         match(vals$plot_selection, names(vals$dataList))]
-
     })
 
     observe({
-      req(vals$id)
+      req(vals$dataList, vals$id)
 
       shiny::updateSelectizeInput(
         session,
@@ -296,22 +278,21 @@ mod_tab_data_select_server <- function(id, vals) {
 
     ## Reset values between data tabs: ----------------------------------
 
-    # observe({ # may not be needed
-    #   req(vals$active_tab == 'data_select')
-    #   reset_data_values(vals)
-    #
-    # }) # end of observe
+    observe({ # may not be needed
+      req(vals$active_tab == 'data_select')
+
+      reset_data_values(vals)
+      shinyjs::enable("selectButton_extract")
+
+    }) %>% # end of observe,
+      bindEvent(vals$species, ignoreInit = TRUE)
 
     # SELECT DATA -------------------------------------------------------
     ## Select species from the 'ctmm' package: --------------------------
 
     ### 1.1. Load species data:
-
     observe({
       req(vals$active_tab == 'data_select', input$sp_selected)
-
-      # Reset values between tabs:
-      reset_data_values(vals)
 
       vals$data0 <- NULL
       vals$data_type <- "selected"
@@ -360,10 +341,12 @@ mod_tab_data_select_server <- function(id, vals) {
         label = "Select an individual:",
         choices = names(vals$dataList))
 
+      shinyjs::disable("selectVal_output")
+      vals$is_valid <- NULL
+
     }) # end of observe
 
     # 1.2. Subset data based on individual selection:
-
     observe({
       req(vals$dataList,
           vals$id,
@@ -376,9 +359,9 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$species_binom <- names(ctmm_species_binom[index])
       vals$data0 <- df_subset
 
-      # vals$n_ids <- length(vals$id)
-
-      shinyjs::show(id = "selectBox_variables")
+      shinyjs::enable("selectButton_extract")
+      shinyjs::disable("selectVal_output")
+      vals$is_valid <- NULL
 
     }) %>% # end of observe,
       bindEvent(input$id_selected)
@@ -387,6 +370,7 @@ mod_tab_data_select_server <- function(id, vals) {
 
     observe({
       req(vals$data0, vals$species_binom)
+      shinyjs::enable("selectVal_output")
 
       if(is.null(vals$needs_fit)) {
         vals$needs_fit <- TRUE
@@ -405,6 +389,7 @@ mod_tab_data_select_server <- function(id, vals) {
       if(eval_dur < (10 %#% "days") || eval_n < 200) {
 
         shinyalert::shinyalert(
+          type = "warning",
           title = "Warning",
           text = span(
             "Selected individual has a sampling duration",
@@ -428,6 +413,13 @@ mod_tab_data_select_server <- function(id, vals) {
         shinyjs::hide(id = "selectBox_parameters")
 
       } else {
+
+        vals$input_x <- ifelse(!is.null(vals$data0$"x"),
+                               "x", "longitude")
+        vals$input_y <- ifelse(!is.null(vals$data0$"y"),
+                               "y", "latitude")
+        vals$input_t <- ifelse(!is.null(vals$data0$"timestamp"),
+                               "timestamp", "t")
 
         msg_log(
           style = "success",
@@ -577,9 +569,11 @@ mod_tab_data_select_server <- function(id, vals) {
             align = "center", width = 12,
 
             renderUI({
+              req(vals$tmpid)
               if(vals$tmpid == "Simulated individual") {
                 NULL
               } else {
+                req(vals$tmpid, vals$tmpsp1, vals$tmpsp2)
 
                 p("These parameters have been extracted from",
                   "individual", span(vals$tmpid,
@@ -615,6 +609,21 @@ mod_tab_data_select_server <- function(id, vals) {
         ) # end of box
       }) # end of renderUI
 
+      # if(!vals$tour_active) {
+      #   shinyalert::shinyalert(
+      #     type = "success",
+      #     title = "Success",
+      #     html = TRUE,
+      #     size = "xs")
+      # }
+
+      shinyjs::disable("selectButton_extract")
+
+      updateTabsetPanel(
+        session,
+        inputId = "dataTabs_viz",
+        selected = "comp_viz_selected-dataPlot_svf")
+
     }) %>% # end of observe, then:
       bindEvent(input$selectButton_extract)
 
@@ -622,6 +631,8 @@ mod_tab_data_select_server <- function(id, vals) {
     ## Movement process: ------------------------------------------------
 
     output$selectBlock_movprocess <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0)
+
       if(vals$tmpid == "Simulated individual") {
         NULL } else {
           sum.fit <- summary(vals$fit0)
@@ -646,6 +657,8 @@ mod_tab_data_select_server <- function(id, vals) {
     ## Timescale parameters: --------------------------------------------
 
     output$selectBlock_taup <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0)
+
       if(vals$tmpid == "Simulated individual") {
         NULL } else {
 
@@ -704,6 +717,8 @@ mod_tab_data_select_server <- function(id, vals) {
     }) # end of renderUI
 
     output$selectBlock_tauv <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0)
+
       if(vals$tmpid == "Simulated individual") {
         NULL } else {
 
@@ -763,6 +778,8 @@ mod_tab_data_select_server <- function(id, vals) {
     ## Spatial parameters: ----------------------------------------------
 
     output$selectBlock_sigma <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0)
+
       if(vals$tmpid == "Simulated individual") {
         NULL } else {
 
@@ -799,6 +816,7 @@ mod_tab_data_select_server <- function(id, vals) {
     ##  Tracking regime: --------------------------------------------------
 
     output$selectInfo_dur <- shiny::renderUI({
+      req(vals$data0)
 
       sum.dat <- summary(vals$data0)
       tempnames <- names(sum.dat)
@@ -821,6 +839,7 @@ mod_tab_data_select_server <- function(id, vals) {
     }) # ender of renderUI // selectInfo_dur
 
     output$selectInfo_dti <- shiny::renderUI({
+      req(vals$data0)
 
       sum.dat <- summary(vals$data0)
       tempnames <- names(sum.dat)
@@ -922,16 +941,17 @@ mod_tab_data_select_server <- function(id, vals) {
 
     output$dataTable_processes <- reactable::renderReactable({
 
+      mods <- movedesign::movmods
+
       tmpname <-
         sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
 
-      if(is.null(match(tmpname, movmods$name_short))) {
+      if(is.null(match(tmpname, mods$name_short))) {
         preselected_mod <- NULL
       } else {
-        preselected_mod <- match(tmpname, movmods$name_short)
+        preselected_mod <- match(tmpname, mods$name_short)
       }
-      df0 <- movmods %>%
-        dplyr::select(!name_short)
+      df0 <- mods %>% dplyr::select(!name_short)
 
       reactable::reactable(
         df0,
@@ -987,10 +1007,17 @@ mod_tab_data_select_server <- function(id, vals) {
 
     # Additional information: -------------------------------------------
 
+    output$selectVal_output <- renderText({
+      req(vals$is_valid)
+      "Success!"
+    }) # end of renderText // selectVal_output
+
     output$selectUI_time <- renderText({
       req(vals$selectOut_time)
+
       paste0("Model fitting took approximately ",
              round(vals$selectOut_time, 1), " minutes.")
+
     }) # end of renderText // selectOut_time
 
   }) # end of moduleServer

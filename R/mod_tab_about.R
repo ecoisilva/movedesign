@@ -47,48 +47,6 @@ mod_tab_about_ui <- function(id) {
                              style = txt_key), "."))),
 
           # verbatimTextOutput(outputId = ns("warning_about")),
-          tags$hr(),
-
-          ## Workflow section: --------------------------------------------
-
-          h3("What is your workflow?"),
-          p(style = "padding: none;"),
-
-          fluidRow(
-            align = "center",
-
-            ### Data source -----------------------------------------------
-
-            shinyWidgets::radioGroupButtons(
-              inputId = ns("which_data"),
-              label = span("Data source",
-                           style = paste("font-size: 16px;",
-                                         "font-weight: 500;")),
-              choices = c("Upload your own" = "Upload",
-                          "Select from available species" = "Select",
-                          "Simulate from scratch" = "Simulate"),
-              selected = character(0),
-              checkIcon = list(
-                yes = icon("ok",
-                           lib = "glyphicon"))),
-
-            ### Research question(s) --------------------------------------
-
-            shinyWidgets::checkboxGroupButtons(
-              inputId = ns("which_question"),
-              label = span("Research question",
-                           style = paste("font-size: 16px;",
-                                         "font-weight: 500;")),
-              choices = c("Home range",
-                          "Speed & distance"),
-              selected = NULL,
-              checkIcon = list(
-                yes = tags$i(class = "fa fa-check-square",
-                             style = "color: #009da0"),
-                no = tags$i(class = "fa fa-square-o",
-                            style = "color: #dd4b39")))
-
-          ), # end of fluidRow
 
           ## Tour/tutorial section: ---------------------------------------
 
@@ -113,7 +71,52 @@ mod_tab_about_ui <- function(id) {
                  style = txt_key), "and to deal",
             "with other known biases (such as small sample sizes,",
             "or irregular sampling schedules)."
-          )
+          ),
+
+          ## Workflow section: --------------------------------------------
+
+          tags$hr(),
+
+          fluidRow(
+            align = "center",
+            div(id = "workflow-content",
+
+                br(),
+                h3("What is your workflow?"),
+                p(style = "padding: none;"),
+
+                ### Data source -------------------------------------------
+
+                shinyWidgets::radioGroupButtons(
+                  inputId = ns("which_data"),
+                  label = span("Data source",
+                               style = paste("font-size: 16px;",
+                                             "font-weight: 500;")),
+                  choices = c("Upload your own" = "Upload",
+                              "Select from available species" = "Select",
+                              "Simulate from scratch" = "Simulate"),
+                  selected = character(0),
+                  checkIcon = list(
+                    yes = icon("ok",
+                               lib = "glyphicon"))),
+
+                ### Research question(s) ----------------------------------
+
+                shinyWidgets::checkboxGroupButtons(
+                  inputId = ns("which_question"),
+                  label = span("Research question",
+                               style = paste("font-size: 16px;",
+                                             "font-weight: 500;")),
+                  choices = c("Home range",
+                              "Speed & distance"),
+                  selected = NULL,
+                  checkIcon = list(
+                    yes = tags$i(class = "fa fa-check-square",
+                                 style = "color: #009da0"),
+                    no = tags$i(class = "fa fa-square-o",
+                                style = "color: #dd4b39"))),
+                br()
+            )) # end of fluidRow
 
         ) # end of column (text)
       ), # end of box // intro

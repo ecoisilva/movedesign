@@ -39,7 +39,7 @@ mod_comp_viz_ui <- function(id){
 
         ggiraph::girafeOutput(
           outputId = ns("dataPlot_id"),
-          width = "95%", height = "100%") %>%
+          width = "100%", height = "100%") %>%
           shinycssloaders::withSpinner(
             type = getOption("spinner.type", default = 7),
             color = getOption("spinner.color",
@@ -92,10 +92,11 @@ mod_comp_viz_ui <- function(id){
 #'
 #' @noRd
 mod_comp_viz_server <- function(id, vals) {
-  moduleServer( id, function(input, output, session){
+  moduleServer( id, function(input, output, session) {
     ns <- session$ns
 
     observe({
+      req(vals$is_valid)
 
       tabselected <- NULL
       if(vals$is_valid && vals$active_tab == 'data_upload') {
@@ -151,6 +152,7 @@ mod_comp_viz_server <- function(id, vals) {
       sumdfList[,sum_col2] <- round(sumdfList[sum_col2], 1)
       sumdfList <- sumdfList %>% dplyr::select(-longitude,
                                                -latitude)
+
       vals$sum <- sumdfList
 
     }) # end of observe
@@ -213,6 +215,28 @@ mod_comp_viz_server <- function(id, vals) {
           newdat.all <- do.call(rbind.data.frame, data_df) }
       } else { newdat.all <- as_tele_df(vals$dataList) }
 
+      yrange <- diff(range(newdat.all$y))
+      xrange <- diff(range(newdat.all$x))
+
+      if(yrange < 1.5 * xrange) {
+        ymin <- min(newdat.all$y) - yrange * .3
+        ymax <- max(newdat.all$y) + yrange * .3
+      } else if(yrange < 2 * xrange) {
+        ymin <- min(newdat.all$y) - yrange * .5
+        ymax <- max(newdat.all$y) + yrange * .5
+      } else {
+        ymin <- min(newdat.all$y)
+        ymax <- max(newdat.all$y)
+      }
+
+      if(xrange < 2 * yrange) {
+        xmin <- min(newdat.all$x) - xrange * .5
+        xmax <- max(newdat.all$x) + xrange * .5
+      } else {
+        xmin <- min(newdat.all$x)
+        xmax <- max(newdat.all$x)
+      }
+
       p.all <- ggplot2::ggplot() +
         ggiraph::geom_point_interactive(
           data = newdat.all,
@@ -220,19 +244,27 @@ mod_comp_viz_server <- function(id, vals) {
                        color = id,
                        tooltip = id,
                        data_id = id),
-          size = 1.5) + # , alpha = 0.6) +
+          size = 1.2) +
         ggplot2::labs(x = "x coordinate",
                       y = "y coordinate") +
+        # ggplot2::coord_fixed() +
 
+        ggplot2::scale_x_continuous(
+          labels = scales::comma,
+          limits = c(xmin, xmax)) +
+        ggplot2::scale_y_continuous(
+          labels = scales::comma,
+          limits = c(ymin, ymax)) +
         ggplot2::scale_color_grey() +
+
         theme_movedesign() +
         ggplot2::theme(legend.position = "none")
 
       ggiraph::girafe(
         ggobj = p.all,
-        width_svg = 6, height_svg = 5,
+        # width_svg = 6, height_svg = 5,
         options = list(
-          ggiraph::opts_sizing(rescale = TRUE, width = .1),
+          ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_zoom(max = 5),
           ggiraph::opts_hover(
             css = paste("fill:#ffbf00;",
@@ -270,7 +302,27 @@ mod_comp_viz_server <- function(id, vals) {
       newdat$time <- as.POSIXct(
         newdat$time, format = "%Y-%m-%d %H:%M:%S")
 
-      tmp <- min(newdat$y) - diff(range(newdat$y)) * .15
+      yrange <- diff(range(newdat$y))
+      xrange <- diff(range(newdat$x))
+
+      if(yrange < 1.5 * xrange) {
+        ymin <- min(newdat$y) - yrange * .3
+        ymax <- max(newdat$y) + yrange * .3
+      } else if(yrange < 2 * xrange) {
+        ymin <- min(newdat$y) - yrange * .5
+        ymax <- max(newdat$y) + yrange * .5
+      } else {
+        ymin <- min(newdat$y)
+        ymax <- max(newdat$y)
+      }
+
+      if(xrange < 2 * yrange) {
+        xmin <- min(newdat$x) - xrange * .5
+        xmax <- max(newdat$x) + xrange * .5
+      } else {
+        xmin <- min(newdat$x)
+        xmax <- max(newdat$x)
+      }
 
       p <- ggplot2::ggplot() +
 
@@ -287,16 +339,18 @@ mod_comp_viz_server <- function(id, vals) {
             color = time,
             tooltip = time,
             data_id = time),
-          size = 2) +
+          size = 1.2) +
+        # ggplot2::coord_fixed() +
 
         ggplot2::labs(x = "x coordinate",
                       y = "y coordinate") +
 
         ggplot2::scale_x_continuous(
-          labels = scales::comma) +
+          labels = scales::comma,
+          limits = c(xmin, xmax)) +
         ggplot2::scale_y_continuous(
           labels = scales::comma,
-          limits = c(tmp, max(newdat$y))) +
+          limits = c(ymin, ymax)) +
         viridis::scale_color_viridis(
           name = "Tracking time:",
           option = "D", trans = "time",
@@ -319,9 +373,9 @@ mod_comp_viz_server <- function(id, vals) {
 
       ggiraph::girafe(
         ggobj = p,
-        width_svg = 7.5, height_svg = 5,
+        # width_svg = 7.5, height_svg = 5,
         options = list(
-          ggiraph::opts_sizing(rescale = TRUE, width = .1),
+          ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_zoom(max = 5),
           # ggiraph::opts_hover_inv(css = "opacity:0.4;"),
           # ggiraph::opts_selection(
@@ -347,7 +401,7 @@ mod_comp_viz_server <- function(id, vals) {
     output$dataPlot_svf <- ggiraph::renderGirafe({
       req(vals$data_type != "simulated")
 
-      frac <- vals$input_timeframe / 100
+      frac <- input$dataVar_timeframe / 100
       svf <- prepare_svf(vals$data0, fraction = frac)
       p <- plotting_svf(svf)
 
