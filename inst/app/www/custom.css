@@ -3,7 +3,7 @@
 
 body {
   font-family: Roboto Condensed, sans-serif;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .main-header .navbar {
@@ -103,8 +103,8 @@ p {
   display: block;
   text-align: justify;
   font-family: Fira Sans Condensed, Open Sans, sans-serif;
-  color: #8c8c8c;
-    font-size: 15px;
+  color: #757575;
+    font-size: 16px;
   font-weight: 100;
   line-height: 1.5;
   letter-spacing: 0.3px;
@@ -281,6 +281,10 @@ sub { font-size: 90%; }
   margin-top: -5px;
 }
 
+.btn-group .btn-group+.btn-group {
+    margin-left: 5px;
+}
+
 .caution-button,
 .caution-button:focus {
   background-color: #e3362d;
@@ -334,6 +338,7 @@ sub { font-size: 90%; }
 
 .selectize-control {
   margin-bottom: 0px;
+  margin-right: 5px;
 }
 
 .selectize-control.multi .selectize-input > div {
@@ -853,6 +858,14 @@ padding: 0 10px;
 
 /* PLOTS & TABLES ------------------------------------------------------ */
 
+
+.girafe,
+.girafe_container_std {
+ margin-left:auto;
+ margin-right:auto;
+ max-width: 900px;
+}
+
 .plotly-notifier {
   font-family: Roboto Condensed, arial, sans-serif;
   color: #fff !important;
@@ -951,6 +964,7 @@ footer {
 .sweet-alert p {
   text-align: justify !important;
 }
+
 
 /* EQUATIONS ----------------------------------------------------------- */
 

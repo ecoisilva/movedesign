@@ -1,0 +1,17 @@
+﻿url: https://ecoisilva.github.io/movedesign/
+template:
+  params:
+    bootswatch: cosmo
+
+authors:
+  Inês Silva:
+    href: https://github.com/ecoisilva
+
+reference:
+- title: "Helper functions"
+  desc: "Functions for correctly formatting units"
+  contents:
+  - abbreviate_time
+  - fix_spUnits
+  - fix_timeunits
+

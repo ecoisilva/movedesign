@@ -9,3 +9,7 @@ $run_dev.*
 ^CODE_OF_CONDUCT\.md$
 ^doc$
 ^Meta$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$

@@ -6,7 +6,16 @@
 \alias{movedesign-package}
 \title{movedesign: movedesign}
 \description{
+\if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
+
 A shiny app to design movement ecology studies.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://ecoisilva.github.io/movedesign/}
+}
+
 }
 \author{
 \strong{Maintainer}: Inês Silva \email{i.simoes-silva@hzdr.de}
