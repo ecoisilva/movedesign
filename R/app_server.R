@@ -14,11 +14,6 @@ app_server <- function(input, output, session) {
   # data(output_sims, package = "movedesign")
   # data(movmods, package = "movedesign")
 
-  utils::globalVariables(c(gps_fixrate))
-  utils::globalVariables(c(gps_tradeoffs))
-  utils::globalVariables(c(output_sims))
-  utils::globalVariables(c(movmods))
-
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 
   keep_expanded <- function(x) {
