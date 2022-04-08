@@ -1,9 +1,7 @@
 url: https://ecoisilva.github.io/movedesign/
 template:
-  package: thinkrtemplate
-
-development:
-  mode: auto
+  bootstrap: 5
+  bootswatch: lux
 
 authors:
   Inês Silva:
@@ -14,5 +12,4 @@ reference:
   desc: "Functions for correctly formatting units"
   contents:
   - abbreviate_time
-
 
