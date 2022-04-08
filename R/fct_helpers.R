@@ -50,7 +50,9 @@ abbreviate_time <- function(unit) {
 #' \dontrun{
 #' movedesign::fix_timeunits(1, "hours")
 #' }
+#' @keywords internal
 #'
+#' @noRd
 fix_timeunits <- function(value, unit)  {
 
   # Check if value is equal to 1 (e.g. 1 hour):
@@ -80,7 +82,9 @@ fix_timeunits <- function(value, unit)  {
 #' Fix values and spatial values and units
 #'
 #' @description Correctly convert spatial units from ctmm outputs for blocks.
+#' @keywords internal
 #'
+#' @noRd
 fix_spUnits <- function(value, units) {
 
   # type = "speed"
@@ -115,7 +119,9 @@ fix_spUnits <- function(value, units) {
 #' Prepare movement model
 #'
 #' @description Prepare parameters for movement data simulation
+#' @keywords internal
 #'
+#' @noRd
 prepare_pars <- function(tau_p0,
                          tau_p0_units,
                          tau_v0,
@@ -141,7 +147,9 @@ prepare_pars <- function(tau_p0,
 #' Simulate movement data
 #'
 #' @description Simulate movement data through ctmm
+#' @keywords internal
 #'
+#' @noRd
 simulate_data <- function(mod0,
                           dur0,
                           dur0_units,
@@ -169,7 +177,9 @@ CI.lower <- Vectorize(function(k, level) {
 #' Prepare semi-variance data
 #'
 #' @description Prepare semi-variance data
+#' @keywords internal
 #'
+#' @noRd
 prepare_svf <- function(data, fraction = .65) {
 
   level <- 0.95
@@ -203,7 +213,9 @@ prepare_svf <- function(data, fraction = .65) {
 #' @param yrange Numeric. Value for the range of y, in y units.
 #' @param subset Character. Cut-off for frequencies
 #' @param minrate Minimum frequency.
+#' @keywords internal
 #'
+#' @noRd
 simulate_gpsdecay <- function(data,
                               k0,
                               yrange0,
@@ -246,7 +258,9 @@ simulate_gpsdecay <- function(data,
 #' Convert as.telemetry to data.frame
 #'
 #' @description Convert as.telemetry to data.frame
+#' @keywords internal
 #'
+#' @noRd
 as_tele_df <- function(data) {
 
   data_df <- list()
@@ -264,7 +278,9 @@ as_tele_df <- function(data) {
 #' Subset time frame
 #'
 #' @description Subset time frame
+#' @keywords internal
 #'
+#' @noRd
 subset_timeframe <- function(var, value) {
   as.data.frame(var) %>% dplyr::top_frac(value)
 }

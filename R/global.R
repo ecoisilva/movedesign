@@ -20,7 +20,7 @@ mainlink_casus <- "https://www.casus.science/"
 address_casus <- paste(
   "Center for Advanced Systems Understanding (CASUS),",
   "Helmholtz-Zentrum Dresden-Rossendorf e.V. (HZDR),",
-  "Untermarkt 20, 02826, Görlitz — Germany")
+  "Untermarkt 20, 02826, G\u00F6rlitz — Germany")
 
 # Application layout: -----------------------------------------------------
 

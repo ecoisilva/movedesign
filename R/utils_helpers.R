@@ -3,6 +3,7 @@
 #'
 #' @description Highlight tab titles for workflows.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 highlight_title <- function(title) {
@@ -17,6 +18,7 @@ highlight_title <- function(title) {
 #'
 #' @description Highlight tab icons for workflows.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 highlight_icon <- function(name) {
@@ -29,6 +31,7 @@ highlight_icon <- function(name) {
 #'
 #' @description Display parameters.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 parBlock <- function(number = NULL,
@@ -56,6 +59,7 @@ parBlock <- function(number = NULL,
 #'
 #' @description Display sample sizes.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 sampleBlock <- function(number = NULL,
@@ -109,6 +113,7 @@ sampleBlock <- function(number = NULL,
 #'
 #' @description Display relative errors.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 errorBlock <- function(icon = NULL,
@@ -170,6 +175,7 @@ errorBlock <- function(icon = NULL,
 #'
 #' @description Extracting units from ctmm summaries.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 extract_units <- function(input) {
@@ -181,6 +187,7 @@ extract_units <- function(input) {
 #'
 #' @description Add helper text to inputs.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 help_text <- function(title, subtitle, content) {
@@ -201,6 +208,7 @@ help_text <- function(title, subtitle, content) {
 #'
 #' @description Add helper tip to inputs.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 help_tip <- function(input, text, placement = "bottom") {
@@ -217,6 +225,7 @@ help_tip <- function(input, text, placement = "bottom") {
 #'
 #' @description Create message logs to show throughout app run.
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 msg_log <- function(message, detail, style) {
@@ -250,6 +259,7 @@ msg_log <- function(message, detail, style) {
 #'
 #' @description Create message steps
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 msg_step <- function(current, total, style) {
@@ -273,6 +283,7 @@ msg_step <- function(current, total, style) {
 #'
 #' @description Reset reactive values
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 reset_data_values <- function(vals) {
@@ -292,6 +303,7 @@ reset_data_values <- function(vals) {
 #' Coerce telemetry object to list
 #'
 #' @description Coerce telemetry object to list from ctmmweb
+#' @keywords internal
 #'
 #' @noRd
 as_tele_list <- function(tele) {
@@ -309,6 +321,7 @@ as_tele_list <- function(tele) {
 #'
 #' @description Add help modal to inputs
 #' @return The return value, if any, from executing the utility.
+#' @keywords internal
 #'
 #' @noRd
 help_modal <- function(input, file) {
@@ -323,10 +336,11 @@ help_modal <- function(input, file) {
 
 
 #' @title movedesign ggplot2 custom theme
+#' @encoding UTF-8
 #'
 #' @description Custom ggplot2 theme for movedesign plot outputs.
-#'
 #' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
+#' @keywords internal
 #'
 #' @param ft_size Base font size.
 #' @noRd
@@ -360,7 +374,9 @@ theme_movedesign <- function(ft_size = 14) {
 #' Plot home range
 #'
 #' @description Plotting home range output from ctmm
+#' @keywords internal
 #'
+#' @noRd
 plotting_hr <- function(dat, ud, levels) {
 
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
@@ -462,7 +478,9 @@ plotting_hr <- function(dat, ud, levels) {
 #' Plot home range with simulated data
 #'
 #' @description Plotting home range output from ctmm with simulation.
+#' @keywords internal
 #'
+#' @noRd
 plotting_hrsim <- function(dat, datsim, ud, levels, show) {
 
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
@@ -542,7 +560,9 @@ plotting_hrsim <- function(dat, datsim, ud, levels, show) {
 #' Plot variogram
 #'
 #' @description Plot variogram from ctmm
+#' @keywords internal
 #'
+#' @noRd
 plotting_svf <- function(data) {
 
   p <- data %>%

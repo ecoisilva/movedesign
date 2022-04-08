@@ -1,5 +1,5 @@
 Package: movedesign
-Title: Study design of movement ecology studies.
+Title: Study design of movement ecology studies
 Version: 0.0.0.9000
 Authors@R: 
     person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"))

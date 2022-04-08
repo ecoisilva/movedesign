@@ -9,10 +9,15 @@ app_server <- function(input, output, session) {
   ns <- session$ns
   vals <- reactiveValues()
 
-  data(gps_fixrate, package = "movedesign")
-  data(gps_tradeoffs, package = "movedesign")
-  data(output_sims, package = "movedesign")
-  data(movmods, package = "movedesign")
+  # data(gps_fixrate, package = "movedesign")
+  # data(gps_tradeoffs, package = "movedesign")
+  # data(output_sims, package = "movedesign")
+  # data(movmods, package = "movedesign")
+
+  utils::globalVariables(c(gps_fixrate))
+  utils::globalVariables(c(gps_tradeoffs))
+  utils::globalVariables(c(output_sims))
+  utils::globalVariables(c(movmods))
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 
