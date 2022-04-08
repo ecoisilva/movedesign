@@ -7,6 +7,8 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
+#' @importFrom stats qt sd
+#'
 mod_tab_hrange_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -526,7 +528,7 @@ mod_tab_hrange_server <- function(id, vals) {
         # Sampling interval:
 
         fixrate <- movedesign::gps_fixrate
-        df_fixrate <- dplyr::arrange(fixrate, desc(freq))
+        df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(freq))
         value <- vals$dti0_dev
         index <- which.min(abs(df_fixrate$nu - value))
         dti_choices <- df_fixrate$nu_notes
@@ -960,7 +962,7 @@ mod_tab_hrange_server <- function(id, vals) {
         dur <- as.numeric(
           sumdat[grep('sampling period', tempnames)])
 
-        out <- fix_timeunits(dur, tempunits)
+        out <- fix_time(dur, tempunits)
         parBlock(text = "Sampling duration",
                  header = paste(out[1], out[2]))
 
@@ -971,7 +973,7 @@ mod_tab_hrange_server <- function(id, vals) {
         dti <- as.numeric(
           sumdat[grep('sampling interval', tempnames)])
 
-        out <- fix_timeunits(dti, vals$dti0_units)
+        out <- fix_time(dti, vals$dti0_units)
         parBlock(text = "Sampling interval",
                  header = paste(out[1], out[2]),
                  number = "between fixes")

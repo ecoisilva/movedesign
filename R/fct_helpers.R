@@ -23,18 +23,17 @@ abbreviate_time <- function(unit) {
   val <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
   if (any(is.na(val))) {
     stop("Invalid time unit: ", paste(x[is.na(val)], collapse = ", "),
-         call. = FALSE
-    )
+         call. = FALSE)
   }
 
-  if (x == "year" ) abb <- "yr"
-  if (x == "month" ) abb <- "mth"
-  if (x == "day" ) abb <- "d"
-  if (x == "hour" ) abb <- "hr"
-  if (x == "minute" ) abb <- "min"
-  if (x == "seconds" ) abb <- "sec"
+  if (x == "year" ) y <- "yr"
+  if (x == "month" ) y <- "mth"
+  if (x == "day" ) y <- "d"
+  if (x == "hour" ) y <- "hr"
+  if (x == "minute" ) y <- "min"
+  if (x == "seconds" ) y <- "sec"
 
-  return(abb)
+  return(y)
 
 }
 
@@ -48,26 +47,36 @@ abbreviate_time <- function(unit) {
 #'
 #' @examples
 #' \dontrun{
-#' movedesign::fix_timeunits(1, "hours")
+#' movedesign::fix_time(1, "hours")
 #' }
 #' @keywords internal
 #'
 #' @noRd
-fix_timeunits <- function(value, unit)  {
+fix_time <- function(value, unit)  {
+
+  if (!is.numeric(value) || !is.integer(value)) {
+    stop("`value` argument must be numeric.")
+  }
+  if (!is.character(unit)) {
+    stop("`unit` argument must be a character string.")
+  }
+
+  all_units <- c("year", "month", "day", "hour", "minute", "second")
+  x <- gsub("(.)s$", "\\1", unit)
+
+  val <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
+  if (any(is.na(val))) {
+    stop("Invalid time unit: ", paste(x[is.na(val)], collapse = ", "),
+         call. = FALSE)
+  }
 
   # Check if value is equal to 1 (e.g. 1 hour):
-  if(value == 1 && (unit == "years" || unit == "year" ))
-    unit <- "year"
-  if(value == 1 && (unit == "months" || unit == "month" ))
-    unit <- "month"
-  if(value == 1 && (unit == "days" || unit == "day" ))
-    unit <- "day"
-  if(value == 1 && (unit == "hours" || unit == "hour" ))
-    unit <- "hour"
-  if(value == 1 && (unit == "minutes" || unit == "minute" ))
-    unit <- "minute"
-  if(value == 1 && (unit == "seconds" || unit == "second" ))
-    unit <- "second"
+  if(value == 1 && x == "year") y <- "year"
+  if(value == 1 && x == "month") y <- "month"
+  if(value == 1 && x == "day") y <- "day"
+  if(value == 1 && x == "hour") y <- "hour"
+  if(value == 1 && x == "minute") y <- "minute"
+  if(value == 1 && x == "second") y <- "second"
 
   out_value <- ifelse(
     value %% 1 == 0,
@@ -79,15 +88,25 @@ fix_timeunits <- function(value, unit)  {
 
 }
 
-#' Fix values and spatial values and units
+#' Fix spatial values and units
 #'
 #' @description Correctly convert spatial units from ctmm outputs for blocks.
 #' @keywords internal
 #'
+#' @param value numeric, integer. For example, 1.
+#' @param unit character vector of spatial units. For example, "square/kilometers".
+#' @return A list with the corrected value and the corrected unit.
+#'
 #' @noRd
-fix_spUnits <- function(value, units) {
+fix_spatial <- function(value, units) {
 
-  # type = "speed"
+  if (!is.numeric(value) || !is.integer(value)) {
+    stop("`value` argument must be numeric.")
+  }
+  if (!is.character(unit)) {
+    stop("`unit` argument must be a character string.")
+  }
+
   value <- value %#% units
 
   if(value >= 1e6) {

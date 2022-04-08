@@ -7,6 +7,8 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
+#' @importFrom stats runif
+#'
 mod_tab_sims_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -451,7 +453,7 @@ mod_tab_sims_server <- function(id, vals) {
       list(input$generateSeed, input$repeat_sim)
     })
     seed0 <- reactive({
-      round(runif(1, min = 1, max = 10000), 0)
+      round(stats::runif(1, min = 1, max = 10000), 0)
     }) %>% bindEvent(to_rerun(), ignoreInit = TRUE)
 
     ## Prepare model and run simulation: --------------------------------
@@ -626,8 +628,8 @@ mod_tab_sims_server <- function(id, vals) {
       newdat <- vals$data0
       newdat <- newdat[which(newdat$t <= (1 %#% "day")), ]
 
-      out_tp <- fix_timeunits(vals$tau_p0, vals$tau_p0_units)
-      out_dur <- fix_timeunits(vals$dur0, vals$dur0_units)
+      out_tp <- fix_time(vals$tau_p0, vals$tau_p0_units)
+      out_dur <- fix_time(vals$dur0, vals$dur0_units)
       subtitle <- paste(
         "Highlighting one \u03C4\u209A cycle",
         paste0("(\u2248 ", out_tp[1], " ", out_tp[2], ")"),

@@ -7,7 +7,7 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_comp_viz_ui <- function(id){
+mod_comp_viz_ui <- function(id) {
   ns <- NS(id)
   tagList(
 

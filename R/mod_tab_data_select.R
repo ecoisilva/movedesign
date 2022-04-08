@@ -322,7 +322,7 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$data_type <- "selected"
 
       vals$species <- input$sp_selected
-      data(list = vals$species, package = "ctmm")
+      utils::data(list = vals$species, package = "ctmm")
 
       df0 <- NULL
       if(vals$species == "buffalo") df0 <- buffalo
@@ -862,7 +862,7 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$dur0 <- dur
       vals$dur0_units <- tempunits
 
-      out <- fix_timeunits(dur, vals$dur0_units)
+      out <- fix_time(dur, vals$dur0_units)
       parBlock(text = "Sampling duration",
                header = paste(out[1], out[2]))
 
@@ -884,7 +884,7 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$dti0 <- dti
       vals$dti0_units <- tempunits
 
-      out <- fix_timeunits(dti, vals$dti0_units)
+      out <- fix_time(dti, vals$dti0_units)
       parBlock(text = "Sampling interval",
                header = paste(out[1], out[2]),
                number = "between fixes")

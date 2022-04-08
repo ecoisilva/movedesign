@@ -10,14 +10,12 @@
 mod_comp_tour_ui <- function(id) {
   ns <- NS(id)
   tagList(
-
     actionButton(
       inputId = ns("default_tour"),
       label = "Click here for a guided tutorial",
       icon = icon("compass"),
       width = "240px",
       class = "btn-primary")
-
   )
 }
 
@@ -98,7 +96,7 @@ mod_comp_tour_server <- function(id, vals) {
           "do not interact with anything outside of higlighted zones",
           "create alongside the tutorial boxes.",
           p(),
-          "In addition, this tutorial will",
+          "This tutorial will",
           span("not", style = paste(txt_tour, col_caution)),
           "cover definitions in detail.",
           "If you want to check the more comprehensive",

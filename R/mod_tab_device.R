@@ -477,8 +477,8 @@ mod_tab_device_server <- function(id, vals) {
       req(input$vhf_dur,
           input$vhf_dti)
 
-      tmpunits <- fix_timeunits(input$vhf_dti,
-                                input$vhf_dti_units)[2]
+      tmpunits <- fix_time(input$vhf_dti,
+                           input$vhf_dti_units)[2]
 
       dur0 <- input$vhf_dur %#% input$vhf_dur_units
       dur0_day <- "days" %#% dur0
@@ -529,7 +529,7 @@ mod_tab_device_server <- function(id, vals) {
                        '\\1', input$gps_selected_dti)
       dti <- dti_units %#% round(tmp, 0)
 
-      tmpunits <- fix_timeunits(dti, dti_units)[2]
+      tmpunits <- fix_time(dti, dti_units)[2]
 
       dur0 <- input$gps_dur %#% input$gps_dur_units
       dur0_day <- "days" %#% dur0
@@ -1417,15 +1417,15 @@ mod_tab_device_server <- function(id, vals) {
 
       simrow$device <- vals$device_type
 
-      out_tp <- fix_timeunits(vals$tau_p0, vals$tau_p0_units)
-      out_tv <- fix_timeunits(vals$tau_v0, vals$tau_v0_units)
+      out_tp <- fix_time(vals$tau_p0, vals$tau_p0_units)
+      out_tv <- fix_time(vals$tau_v0, vals$tau_v0_units)
       simrow$taup <- paste(out_tp[1], out_tp[2])
       simrow$tauv <- paste(out_tv[1], out_tv[2])
 
-      out_dur <- fix_timeunits(vals$dur0_units_dev %#%
+      out_dur <- fix_time(vals$dur0_units_dev %#%
                                  vals$dur0_dev,
                                vals$dur0_units_dev)
-      out_dti <- fix_timeunits(vals$dti0_units_dev %#%
+      out_dti <- fix_time(vals$dti0_units_dev %#%
                                  vals$dti0_dev,
                                vals$dti0_units_dev)
 
@@ -1494,13 +1494,13 @@ mod_tab_device_server <- function(id, vals) {
     output$regBlock_tau_p <- renderUI({
       req(vals$tau_p0, vals$tau_v0)
 
-      taup <- fix_timeunits(vals$tau_p0, vals$tau_p0_units)
+      taup <- fix_time(vals$tau_p0, vals$tau_p0_units)
 
       if(vals$data_type == "simulated") {
         tmprange <- NULL
       } else {
-        taup_min <- fix_timeunits(vals$tau_p0_min, vals$tau_p0_units)
-        taup_max <- fix_timeunits(vals$tau_p0_max, vals$tau_p0_units)
+        taup_min <- fix_time(vals$tau_p0_min, vals$tau_p0_units)
+        taup_max <- fix_time(vals$tau_p0_max, vals$tau_p0_units)
         tmprange <- span(paste(taup_min[1], "—", taup_max[1]),
                          style = col_main)
       }
@@ -1515,13 +1515,13 @@ mod_tab_device_server <- function(id, vals) {
     }) # end of renderUI // regBlock_tau_p
 
     output$regBlock_tau_v <- renderUI({
-      tauv <- fix_timeunits(vals$tau_v0, vals$tau_v0_units)
+      tauv <- fix_time(vals$tau_v0, vals$tau_v0_units)
 
       if(vals$data_type == "simulated") {
         tmprange <- NULL
       } else {
-        tauv_min <- fix_timeunits(vals$tau_v0_min, vals$tau_v0_units)
-        tauv_max <- fix_timeunits(vals$tau_v0_max, vals$tau_v0_units)
+        tauv_min <- fix_time(vals$tau_v0_min, vals$tau_v0_units)
+        tauv_max <- fix_time(vals$tau_v0_max, vals$tau_v0_units)
         tmprange <- span(paste(tauv_min[1], "—", tauv_max[1]),
                          style = col_main)
       }
@@ -1546,7 +1546,7 @@ mod_tab_device_server <- function(id, vals) {
         tmpunits <- "days"
       }
       tmpheader <- round(tmpunits %#% vals$dur0_dev, 1)
-      out <- fix_timeunits(tmpheader, tmpunits)
+      out <- fix_time(tmpheader, tmpunits)
 
       parBlock(
         text = "Sampling duration",
@@ -1558,7 +1558,7 @@ mod_tab_device_server <- function(id, vals) {
       req(vals$dti0_dev, vals$dti0_units_dev)
 
       tmp <- vals$dti0_units_dev %#% vals$dti0_dev
-      out <- fix_timeunits(tmp, vals$dti0_units_dev)
+      out <- fix_time(tmp, vals$dti0_units_dev)
 
       parBlock(
         text = "Sampling interval",

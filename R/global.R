@@ -1,8 +1,81 @@
 
-utils::globalVariables(c("gps_fixrate"))
-utils::globalVariables(c("gps_tradeoffs"))
-utils::globalVariables(c("output_sims"))
-utils::globalVariables(c("movmods"))
+utils::globalVariables(unique(c(
+    # mod_comp_viz_server :
+    "latitude",
+    "longitude",
+    "time",
+    "x",
+    "y",
+    # mod_tab_ctsd_server :
+    "freq",
+    "high",
+    "x",
+    "y",
+    "timestamp",
+    "t_new",
+    "low",
+    # mod_tab_data_select_server :
+    "name_short",
+    "buffalo",
+    "coati",
+    "gazelle",
+    "jaguar",
+    "pelican",
+    "turtle",
+    "wolf",
+    # mod_tab_device_server :
+    "choices",
+    "color",
+    "DOF_area",
+    "DOF_speed",
+    "duration",
+    "freq_hrs",
+    "frequency",
+    "nu_notes",
+    "timestamp",
+    "x",
+    "y",
+    # mod_tab_hrange_server :
+    "bias",
+    "duration",
+    "error",
+    "freq",
+    "mean.error",
+    "method",
+    "n.error",
+    "sd.error",
+    "se.error",
+    # mod_tab_sims_server :
+    "timestamp",
+    "x",
+    "y",
+    # plotting_hr:
+    "group",
+    "lat",
+    "long",
+    "x",
+    "y",
+    # plotting_hrsim:
+    "group",
+    "lat",
+    "long",
+    "x",
+    "y",
+    # plotting_svf:
+    "lag_days",
+    "SVF",
+    "var_low50",
+    "var_low95",
+    "var_upp50",
+    "var_upp95",
+    # prepare_svf:
+    "lag",
+    # simulate_gpsdecay:
+    "freq_hrs",
+    "highlight",
+    "nu",
+    "nu_notes"
+  )))
 
 # Main links and variables: -----------------------------------------------
 
@@ -115,8 +188,8 @@ txt_tour_item <- paste0(txt_tour, col_item)
 
 txt_action <- paste0(txt_tour,
                      "text-align: justify;",
-                     "color: black;",
-                     "background: #ffffff;")
+                     "color: #ffffff;",
+                     "background: #008085;")
 
 txt_output <- paste0("font-family: Fira Mono;",
                      "font-size: 15px;")
@@ -146,7 +219,7 @@ ctmm_species_binom <- c(
 
 modal_tau_p0 <- bsplus::bs_modal(
   id = "modal_tau_p0",
-  title = h4(span("Position autocorrelation",
+  title = shiny::h4(span("Position autocorrelation",
                   style = col_border),
              "timescale:"),
 

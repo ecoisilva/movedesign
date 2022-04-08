@@ -214,7 +214,7 @@ golem_add_external_resources <- function() {
     bsplus::use_bs_popover(),
 
     # Font types:
-    extrafont::loadfonts(),
+    # extrafont::loadfonts(),
     tags$link(href = paste0("https://fonts.googleapis.com/css?",
                             "family=",
                             "Roboto+Condensed", "|",

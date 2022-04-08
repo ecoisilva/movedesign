@@ -4,6 +4,8 @@
 #'
 #' @format A data frame with 40 observations and seven variables: \code{nu_notes}, \code{nu},
 #'   \code{higlight}, \code{choices}, \code{nu_hrs}, \code{freq}, and \code{freq_hrs}.
+#' @noRd
+
 "gps_fixrate"
 
 
@@ -12,6 +14,7 @@
 #' Dataset showing how sample sizes changes with sampling duration and sampling interval.
 #'
 #' @format Data frame
+#' @noRd
 "gps_tradeoffs"
 
 
@@ -21,6 +24,7 @@
 #' within the ctmm R package.
 #'
 #' @format Data frame
+#' @noRd
 "movmods"
 
 
@@ -30,6 +34,7 @@
 #' For further details, see \url{https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.13786}
 #'
 #' @format Data frame
+#' @noRd
 "output_sims"
 
 

@@ -7,6 +7,8 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
+#' @importFrom utils read.csv
+#'
 mod_tab_data_upload_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -927,7 +929,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$dur0 <- dur
       vals$dur0_units <- tempunits
 
-      out <- fix_timeunits(dur, vals$dur0_units)
+      out <- fix_time(dur, vals$dur0_units)
       parBlock(text = "Sampling duration",
                header = paste(out[1], out[2]))
 
@@ -948,7 +950,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$dti0 <- dti
       vals$dti0_units <- tempunits
 
-      out <- fix_timeunits(dti, vals$dti0_units)
+      out <- fix_time(dti, vals$dti0_units)
       parBlock(text = "Sampling interval",
                header = paste(out[1], out[2]),
                number = "between fixes")

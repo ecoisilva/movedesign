@@ -175,9 +175,9 @@ mod_tab_report_server <- function(id, vals) {
     output$report_device <- renderUI({
       req(vals$dur0_dev, vals$dti0_dev)
 
-      dur <- fix_timeunits(vals$dur0_units_dev %#%
+      dur <- fix_time(vals$dur0_units_dev %#%
                              vals$dur0_dev, vals$dur0_units_dev)
-      dti <- fix_timeunits(vals$dti0_units_dev %#%
+      dti <- fix_time(vals$dti0_units_dev %#%
                              vals$dti0_dev, vals$dti0_units_dev)
 
       shinydashboard::tabBox(

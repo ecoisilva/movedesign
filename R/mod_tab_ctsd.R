@@ -768,7 +768,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         # Sampling interval:
 
         fixrate <- movedesign::gps_fixrate
-        df_fixrate <- dplyr::arrange(fixrate, desc(freq))
+        df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(freq))
         dti_choices <- df_fixrate$nu_notes
 
         tau_v0 <- vals$tau_v0 %#% vals$tau_v0_units
@@ -1266,7 +1266,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     output$ctsdInfo_dur <- shiny::renderUI({
       req(vals$dti0_dev)
 
-      out_dur <- fix_timeunits(vals$dur0_units_dev %#% vals$dur0_dev,
+      out_dur <- fix_time(vals$dur0_units_dev %#% vals$dur0_dev,
                                vals$dur0_units_dev)
 
       parBlock(text = "Sampling duration",
@@ -1277,7 +1277,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     output$ctsdInfo_dti <- shiny::renderUI({
       req(vals$dti0_dev)
 
-      out_dti <- fix_timeunits(vals$dti0_units_dev %#%
+      out_dti <- fix_time(vals$dti0_units_dev %#%
                                  vals$dti0_dev,
                                vals$dti0_units_dev)
 
@@ -1328,7 +1328,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
         dur <- vals$dur2
         tempunits <- vals$dur2_units
-        out_dur <- fix_timeunits(dur, tempunits)
+        out_dur <- fix_time(dur, tempunits)
 
         parBlock(text = "Sampling duration",
                  header = span(paste(out_dur[1], out_dur[2]),
@@ -1342,7 +1342,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         dti <- vals$dti2
         tempunits <- vals$dti2_units
 
-        out_dti <- fix_timeunits(dti, tempunits)
+        out_dti <- fix_time(dti, tempunits)
 
         parBlock(text = "Sampling interval",
                  header = span(paste(out_dti[1], out_dti[2]),

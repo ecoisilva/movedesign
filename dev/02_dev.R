@@ -20,6 +20,7 @@ attachment::att_amend_desc()
 usethis::use_import_from("ctmm", "%#%")
 usethis::use_import_from("dplyr", "%>%")
 usethis::use_import_from("ggplot2" ,"%+replace%")
+usethis::use_import_from("rlang", ".data")
 
 ## Add modules ----
 ## Create a module infrastructure in R/
