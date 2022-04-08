@@ -23,19 +23,19 @@ usethis::use_import_from("ggplot2" ,"%+replace%")
 
 ## Add modules ----
 ## Create a module infrastructure in R/
-golem::add_module(name = "tab_about", with_test = TRUE) # Home/about
-golem::add_module(name = "tab_data", with_test = TRUE) # Empirical data
+golem::add_module(name = "tab_about") # Home/about
+golem::add_module(name = "tab_data") # Empirical data
 
-golem::add_module(name = "tab_data_upload", with_test = TRUE) # Empirical data, upload
-golem::add_module(name = "tab_data_select", with_test = TRUE) # Empirical data, select
+golem::add_module(name = "tab_data_upload") # Empirical data, upload
+golem::add_module(name = "tab_data_select") # Empirical data, select
 
-golem::add_module(name = "tab_sims", with_test = TRUE) # Simulated data
-golem::add_module(name = "tab_device", with_test = TRUE) # Device settings
-golem::add_module(name = "tab_hrange", with_test = TRUE) # HR estimation
-golem::add_module(name = "tab_ctsd", with_test = TRUE) # CTSD estimation
-golem::add_module(name = "tab_report", with_test = TRUE) # report
+golem::add_module(name = "tab_sims") # Simulated data
+golem::add_module(name = "tab_device") # Device settings
+golem::add_module(name = "tab_hrange") # HR estimation
+golem::add_module(name = "tab_ctsd") # CTSD estimation
+golem::add_module(name = "tab_report") # Report
 
-golem::add_module(name = "comp_tour") # Main tour
+golem::add_module(name = "comp_tour", with_test = TRUE) # Main tour
 golem::add_module(name = "comp_settings") # Settings
 golem::add_module(name = "comp_glossary") # Glossary
 golem::add_module(name = "comp_viz") # Data viz

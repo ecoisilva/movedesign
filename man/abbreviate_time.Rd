@@ -16,6 +16,8 @@ Returns a character vector with one element.
 Create abbreviations of time units for info blocks.
 }
 \examples{
+\dontrun{
 movedesign::abbreviate_time("years")
+}
 
 }
