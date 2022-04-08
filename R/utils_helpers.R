@@ -8,7 +8,7 @@
 highlight_title <- function(title) {
 
   span(HTML("&nbsp;"), title,
-       style = paste("font-size: 15px;",
+       style = paste("font-size: 17px;",
                      "font-family: Fira Sans Extra Condensed;",
                      "font-weight: 700;"))
 }
@@ -22,7 +22,7 @@ highlight_title <- function(title) {
 highlight_icon <- function(name) {
 
   fontawesome::fa(name = name,
-                  width = "15px")
+                  height = "17px")
 }
 
 #' Parameter blocks
@@ -321,4 +321,252 @@ help_modal <- function(input, file) {
         id_modal = file))
 }
 
+
+#' @title movedesign ggplot2 custom theme
+#'
+#' @description Custom ggplot2 theme for movedesign plot outputs.
+#'
+#' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
+#'
+#' @param ft_size Base font size.
+#' @noRd
+theme_movedesign <- function(ft_size = 14) {
+  font <- "Roboto Condensed" # assign font family
+
+  ggplot2::theme_minimal() %+replace% # replace elements
+    ggplot2::theme(
+
+      text = ggplot2::element_text(family = font, size = ft_size),
+
+      plot.title = ggplot2::element_text(
+        face = "bold", size = ft_size + 2, vjust = 1.2, hjust = .5),
+      plot.subtitle = ggplot2::element_text(
+        color = "black", hjust = .5),
+      plot.margin = ggplot2::unit(c(0.3, 0.3, 1, 0.3), "cm"),
+
+      panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
+      panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
+
+      axis.text.x = ggplot2::element_text(colour = "#878787"),
+      axis.text.y = ggplot2::element_text(colour = "#878787"),
+      axis.title.x = ggplot2::element_text(
+        family = font, face = "bold", hjust = 1, vjust = -1),
+      axis.title.y = ggplot2::element_text(
+        family = font, face = "bold", angle = 90, vjust = 2))
+}
+
+
+
+#' Plot home range
+#'
+#' @description Plotting home range output from ctmm
+#'
+plotting_hr <- function(dat, ud, levels) {
+
+  pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
+    ud, level.UD = .95)@polygons[[3]] # upper
+
+  if("95% high CI" %in% levels) {
+
+    p1 <- ggiraph::geom_polygon_interactive(
+      data = pol_ud_high,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = hex_caution,
+      alpha = .3)
+  }
+
+  if("Estimate" %in% levels) {
+    pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
+      ud, level.UD = .95)@polygons[[2]] # estimate
+
+    p2 <- ggiraph::geom_polygon_interactive(
+      data = pol_ud,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = "#2c3b41",
+      alpha = .3)
+  }
+
+  if("95% low CI" %in% levels) {
+    pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
+      ud, level.UD = .95)@polygons[[1]] # low
+
+    p3 <- ggiraph::geom_polygon_interactive(
+      data = pol_ud_low,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = hex_caution,
+      alpha = .3)
+  }
+
+  ymin <- min(pol_ud_high@Polygons[[1]]@coords[,2])
+  yrange <- range(pol_ud_high@Polygons[[1]]@coords[,2])
+
+  tmp <- ymin - diff(yrange) * .2
+  p <- ggplot2::ggplot() +
+    ggiraph::geom_polygon_interactive(
+      data = pol_ud_high,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = NA, alpha = 1) +
+
+    ggplot2::geom_path(dat,
+                       mapping = ggplot2::aes(
+                         x = x, y = y),
+                       color = hex_border, size = 0.2,
+                       alpha = .4) +
+    ggplot2::geom_point(dat,
+                        mapping = ggplot2::aes(
+                          x = x, y = y),
+                        color = hex_border, size = 1.5) +
+
+    { if("95% high CI" %in% levels) p1 } +
+    { if("Estimate" %in% levels) p2 } +
+    { if("95% low CI" %in% levels) p3 } +
+
+    ggplot2::labs(x = "X coordinate",
+                  y = "Y coordinate") +
+
+    ggplot2::scale_x_continuous(
+      labels = scales::comma) +
+    ggplot2::scale_y_continuous(
+      labels = scales::comma,
+      limits = c(tmp, NA)) +
+
+    # viridis::scale_color_viridis(
+    #   name = "Tracking time:",
+    #   option = "D", trans = "time",
+    #   breaks = c(min(dat$timestamp),
+    #              max(dat$timestamp)),
+    #   labels = c("Start", "End")) +
+
+    theme_movedesign() +
+
+    ggplot2::guides(
+      color = ggplot2::guide_colorbar(
+        title.vjust = 1.02)) +
+    ggplot2::theme(
+      text = ggplot2::element_text(
+        family = "Roboto Condensed"),
+
+      legend.position = c(0.76, 0.08),
+      legend.direction = "horizontal",
+      legend.title = ggplot2::element_text(
+        size = 11, face = "bold.italic"),
+      legend.key.height = ggplot2::unit(0.3, "cm"),
+      legend.key.width = ggplot2::unit(0.6, "cm")
+    )
+}
+
+#' Plot home range with simulated data
+#'
+#' @description Plotting home range output from ctmm with simulation.
+#'
+plotting_hrsim <- function(dat, datsim, ud, levels, show) {
+
+  pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
+    ud, level.UD = .95)@polygons[[3]] # upper
+
+  if("95% high CI" %in% levels) {
+
+    p1 <- ggiraph::geom_polygon_interactive(
+      data = pol_ud_high,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = hex_caution,
+      alpha = .3)
+  }
+
+  if("Estimate" %in% levels) {
+    pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
+      ud, level.UD = .95)@polygons[[2]] # estimate
+
+    p2 <- ggiraph::geom_polygon_interactive(
+      data = pol_ud,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = "#617680", # "#2c3b41",
+      alpha = .6)
+  }
+
+  if("95% low CI" %in% levels) {
+    pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
+      ud, level.UD = .95)@polygons[[1]] # low
+
+    p3 <- ggiraph::geom_polygon_interactive(
+      data = pol_ud_low,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = hex_caution,
+      alpha = .3)
+  }
+
+  show_col <- ifelse(show, hex_border, "white")
+  show_alpha <- ifelse(show, 1, 0)
+
+  p <- ggplot2::ggplot() +
+    ggiraph::geom_polygon_interactive(
+      data = pol_ud_high,
+      mapping = ggplot2::aes(x = long, y = lat,
+                             group = group),
+      fill = NA, alpha = 0) +
+
+    ggplot2::geom_point(
+      datsim, mapping = ggplot2::aes(x = x, y = y),
+      color = hex_main, size = 1.5) +
+
+    { if("95% high CI" %in% levels) p1 } +
+    { if("Estimate" %in% levels) p2 } +
+    { if("95% low CI" %in% levels) p3 } +
+
+    ggplot2::geom_point(
+      dat, mapping = ggplot2::aes(x = x, y = y),
+      color = show_col, alpha = show_alpha, size = 2) +
+
+    ggplot2::labs(x = "X coordinate",
+                  y = "Y coordinate") +
+
+    ggplot2::scale_x_continuous(
+      labels = scales::comma) +
+    ggplot2::scale_y_continuous(
+      labels = scales::comma) +
+
+    theme_movedesign() +
+    ggplot2::theme(legend.position = "none")
+
+}
+
+
+
+#' Plot variogram
+#'
+#' @description Plot variogram from ctmm
+#'
+plotting_svf <- function(data) {
+
+  p <- data %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_ribbon(
+      ggplot2::aes(x = lag_days,
+                   ymin = var_low95,
+                   ymax = var_upp95),
+      fill = "grey50",
+      alpha = 0.25) +
+    ggplot2::geom_ribbon(
+      ggplot2::aes(x = lag_days,
+                   ymin = var_low50,
+                   ymax = var_upp50),
+      fill = hex_caution,
+      alpha = 0.25) +
+    ggplot2::geom_line(
+      ggplot2::aes(x = lag_days, y = SVF), size = 0.5) +
+    ggplot2::labs(
+      x = "Time lag (in days)",
+      y = expression(bold("Semi-variance"~"("*km^{"2"}*")"))) +
+    theme_movedesign()
+
+  return(p)
+
+}
 

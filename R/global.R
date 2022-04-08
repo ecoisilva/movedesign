@@ -90,7 +90,7 @@ txt_label <- paste0(ft, col_main,
 txt_label_bold <- paste0(ft,
                          ft_center,
                          ft_extrabold,
-                         col_main, "font-size: 14px;")
+                         col_main, "font-size: 16px;")
 
 # Button colors for text formatting: --------------------------------------
 

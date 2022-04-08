@@ -3,21 +3,24 @@
 
 body {
   font-family: Roboto Condensed, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
 }
 
-.main-header .navbar {
-  margin-left: 205px;
-}
-.main-header .logo {
-  width: 205px;
-}
-
-.content-wrapper, .main-footer {
-  margin-left: 205px;
-}
 .content-wrapper, .right-side {
-  background-color: #f7f7f7;
+  background-color: #f5f5f5;
+}
+
+.shiny-split-layout > div {
+  display: inline-block;
+  vertical-align: top;
+  box-sizing: border-box;
+  overflow: visible;
+}
+.shiny-output-error {
+  visibility: hidden;
+}
+.shiny-output-error:before {
+  visibility: hidden;
 }
 
 .skin-black .main-header .logo {
@@ -27,34 +30,12 @@ body {
   background-color: #ffffff;
 }
 
-.shiny-split-layout > div {
-  display: inline-block;
-  vertical-align: top;
-  box-sizing: border-box;
-  overflow: visible;
+.row {
+  max-width: 1200px;
 }
 
-.shiny-output-error {
-  visibility: hidden;
-}
-.shiny-output-error:before {
-  visibility: hidden;
-}
-
-.treeview-menu {
-  padding-left: 10px;
-}
-
-.navbar-custom-menu > .navbar-nav > li > .dropdown-menu {
-  border: 1px solid #e4e4e4;
-}
 
 /* SIDEBAR ------------------------------------------------------------- */
-
-.main-sidebar {
-  width: 205px;
-  border-right: 1px solid #eee;
-}
 
 .skin-black .sidebar a {
   color: #222d32;
@@ -76,12 +57,6 @@ body {
   color: #ffffff;
   background: #007d80; /* #009da0; */
 }
-.skin-black .sidebar-menu > li > .treeview-menu {
-  margin: 0;
-}
-.treeview-menu {
-  padding-left: 0px;
-}
 
 .skin-black .main-sidebar,
 .skin-black .wrapper {
@@ -93,8 +68,20 @@ body {
 .skin-black .sidebar-menu > li:hover > a {
   color: #fff;
   background: #009da0;
-  border-left-width: 0px;
-  padding-left: 17px;
+}
+.skin-black .sidebar-menu > li > a {
+  border-left: 0;
+}
+
+.treeview-menu {
+  padding-left: 10px;
+}
+.treeview-menu > li > a {
+  font-size: 15px;
+  margin: 0 -1px 0px -11px;
+}
+.navbar-custom-menu > .navbar-nav > li > .dropdown-menu {
+  border: 1px solid #e4e4e4;
 }
 
 /* TEXT ---------------------------------------------------------------- */
@@ -182,7 +169,7 @@ sub { font-size: 90%; }
 .btn {
   border: none;
   font-family: Roboto Condensed, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.5px;
   border-radius: 0;
   outline: none;
@@ -413,15 +400,22 @@ sub { font-size: 90%; }
   box-shadow: none!important;
 }
 
-.pretty.p-switch.p-fill input:checked ~ .state.p-primary::before {
+.pretty {
+  margin-right: 0em;
+}
+.pretty .p-switch. p-fill input:checked ~ .state.p-primary::before {
   background-color: #116367 !important;
 }
-.pretty.p-switch input:checked ~ .state.p-primary::before {
+.pretty .p-switch input:checked ~ .state.p-primary::before {
   border-color: #116367 !important;
 }
-.pretty.p-switch.p-fill input:checked ~ .state label:after {
+.pretty .p-switch .p-fill input:checked ~ .state label:after {
   background-color: #009da0 !important;
 
+}
+.pretty .state label::after,
+.pretty .state label::before {
+  margin-top: 2px;
 }
 
 .irs--shiny .irs {
@@ -863,7 +857,7 @@ padding: 0 10px;
 .girafe_container_std {
  margin-left:auto;
  margin-right:auto;
- max-width: 900px;
+ max-width: 730px;
 }
 
 .plotly-notifier {
