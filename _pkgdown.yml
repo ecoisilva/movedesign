@@ -1,7 +1,9 @@
-﻿url: https://ecoisilva.github.io/movedesign/
+url: https://ecoisilva.github.io/movedesign/
 template:
-  params:
-    bootswatch: cosmo
+  package: thinkrtemplate
+
+development:
+  mode: auto
 
 authors:
   Inês Silva:
@@ -12,6 +14,5 @@ reference:
   desc: "Functions for correctly formatting units"
   contents:
   - abbreviate_time
-  - fix_spUnits
-  - fix_timeunits
+
 
