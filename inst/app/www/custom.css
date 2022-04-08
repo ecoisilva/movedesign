@@ -37,10 +37,15 @@ body {
 
 /* SIDEBAR ------------------------------------------------------------- */
 
+.main-sidebar {
+  border-right: 1px solid #ececec;
+}
+
 .skin-black .sidebar a {
   color: #222d32;
 }
 .skin-black .sidebar-menu > li > .treeview-menu {
+  margin: 0 0 0 0;
   background: #f4f4f4;
 }
 .skin-black .sidebar-menu .treeview-menu > li > a {
@@ -78,7 +83,7 @@ body {
 }
 .treeview-menu > li > a {
   font-size: 15px;
-  margin: 0 -1px 0px -11px;
+  margin: 0 0px 0px -11px;
 }
 .navbar-custom-menu > .navbar-nav > li > .dropdown-menu {
   border: 1px solid #e4e4e4;

@@ -233,14 +233,14 @@ app_server <- function(input, output, session) {
 
     message("Session stopped")
 
-    if(!is.null(output_sims)) {
-      rm("output_sims", envir = .GlobalEnv) }
-    if(!is.null(gps_fixrate)) {
-      rm("gps_fixrate", envir = .GlobalEnv) }
-    if(!is.null(gps_tradeoffs)) {
-      rm("gps_tradeoffs", envir = .GlobalEnv) }
-    if(!is.null(movmods)) {
-      rm("movmods", envir = .GlobalEnv) }
+    # if(!is.null(output_sims)) {
+    #   rm("output_sims", envir = .GlobalEnv) }
+    # if(!is.null(gps_fixrate)) {
+    #   rm("gps_fixrate", envir = .GlobalEnv) }
+    # if(!is.null(gps_tradeoffs)) {
+    #   rm("gps_tradeoffs", envir = .GlobalEnv) }
+    # if(!is.null(movmods)) {
+    #   rm("movmods", envir = .GlobalEnv) }
 
     # print(ls(envir = .GlobalEnv))
 

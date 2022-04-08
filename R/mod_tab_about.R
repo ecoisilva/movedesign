@@ -171,7 +171,7 @@ mod_tab_about_ui <- function(id) {
               paste(ttl_sub, "text-align: left!important;")),
 
           p(
-            "Inês Silva,",
+            "In\u00EAs Silva,",
             span(contact_email, style = col_border),
             tags$hr()
           ),

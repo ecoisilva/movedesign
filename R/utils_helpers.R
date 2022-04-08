@@ -339,7 +339,7 @@ help_modal <- function(input, file) {
 #' @encoding UTF-8
 #'
 #' @description Custom ggplot2 theme for movedesign plot outputs.
-#' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
+#' @author Inu00EAs Silva \email{i.simoes-silva@@hzdr.de}
 #' @keywords internal
 #'
 #' @param ft_size Base font size.

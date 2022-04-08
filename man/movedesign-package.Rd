@@ -4,7 +4,7 @@
 \name{movedesign-package}
 \alias{movedesign}
 \alias{movedesign-package}
-\title{movedesign: Study design of movement ecology studies.}
+\title{movedesign: Study design of movement ecology studies}
 \description{
 \if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
 
