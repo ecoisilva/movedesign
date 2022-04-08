@@ -21,12 +21,21 @@ app_ui <- function(request) {
       # HEADER ------------------------------------------------------------
 
       header = shinydashboardPlus::dashboardHeader(
-        title = tags$img(title = "title",
-                         src = "www/logo.png",
-                         height = "50px"),
+        title = tagList(
+          tags$span(
+            class = "logo-mini",
+            tags$img(title = "title",
+                     src = "www/favicon.ico",
+                     height = "30px")),
+
+          tags$span(
+            class = "logo-lg",
+            tags$img(title = "title",
+                     src = "www/logo.png",
+                     height = "50px"))
+        ),
 
         controlbarIcon = icon("cogs"),
-
         shinydashboard::dropdownMenu(
 
           shinydashboardPlus::messageItem(

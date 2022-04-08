@@ -49,7 +49,7 @@ mod_tab_data_select_ui <- function(id) {
               p(style = ft_center,
                 "First, choose a species and individual",
                 "from the list.", br(), "Then click",
-                fontawesome::fa(name = "check-circle", fill = hex_main),
+                fontawesome::fa(name = "magic", fill = hex_main),
                 span("Validate", style = btn_primary), "and",
                 fontawesome::fa(name = "paper-plane", fill = hex_main),
                 HTML(paste0(span("Extract", style = btn_primary), ".")))
@@ -99,11 +99,7 @@ mod_tab_data_select_ui <- function(id) {
                 onInitialize = I('function() { this.setValue(""); }'))
             ),
 
-            shiny::actionButton(
-              inputId = ns("validate_select"),
-              icon =  icon("check-circle"),
-              label = "Validate",
-              width = "100%"),
+            uiOutput(ns("selectUI_validate")),
             fluidRow(
               column(
                 width = 12,
@@ -153,12 +149,11 @@ mod_tab_data_select_ui <- function(id) {
           # Tracking regime: ----------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Tracking regime", style = ttl_box.solid),
+            title = span("Tracking regime:", style = ttl_box),
             id = ns("selectBox_regime"),
-            status = "info",
             width = NULL,
-            solidHeader = TRUE,
-            collapsible = FALSE,
+            solidHeader = FALSE,
+            collapsible = TRUE,
 
             fluidRow(
               column(width = 12, uiOutput(ns("selectInfo_dur"))),
@@ -175,7 +170,7 @@ mod_tab_data_select_ui <- function(id) {
           # Visualization: ------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Data vizualization:", style = ttl_box),
+            title = span("Data visualization:", style = ttl_box),
             id = ns("selectBox_viz"),
             width = NULL,
             solidHeader = FALSE,
@@ -276,16 +271,45 @@ mod_tab_data_select_server <- function(id, vals) {
 
     }) # end of observe
 
-    ## Reset values between data tabs: ----------------------------------
+    ## Reset values between data tabs: -------------------------------------
 
-    observe({ # may not be needed
-      req(vals$active_tab == 'data_select')
+    # observe({ # may not be needed
+    #   req(vals$active_tab == 'data_select')
+    #
+    #   reset_data_values(vals)
+    #   shinyjs::enable("selectButton_extract")
+    #
+    # }) %>% # end of observe,
+    #   bindEvent(vals$species, ignoreInit = TRUE)
 
-      reset_data_values(vals)
-      shinyjs::enable("selectButton_extract")
+    ## Render validate buttons: -------------------------------------------
 
-    }) %>% # end of observe,
-      bindEvent(vals$species, ignoreInit = TRUE)
+    output$selectUI_validate <- renderUI({
+
+      tmpbutton <- shiny::actionButton(
+        inputId = ns("validate_select"),
+        icon =  icon("magic"),
+        label = "Validate",
+        width = "100%",
+        class = "btn-danger")
+
+      if (is.null(vals$is_valid)) {
+        tmpbutton
+
+      } else {
+        if (vals$is_valid) {
+          shiny::actionButton(
+            inputId = ns("validate_select"),
+            icon =  icon("check-circle"),
+            label = "Validated!",
+            width = "100%",
+            class = "btn-info")
+        } else {
+          tmpbutton
+        }
+      }
+
+    }) # end of renderUI // selectUI_validate
 
     # SELECT DATA -------------------------------------------------------
     ## Select species from the 'ctmm' package: --------------------------
@@ -440,6 +464,8 @@ mod_tab_data_select_server <- function(id, vals) {
         #    }
 
       } # end of evaluation
+      Sys.sleep(1)
+
     }) %>% # end of observe,
       bindEvent(input$validate_select, ignoreInit = TRUE)
 
@@ -458,7 +484,7 @@ mod_tab_data_select_server <- function(id, vals) {
           text = span(
             'Please select a species/dataset and an individual',
             'first, then click the',
-            fontawesome::fa(name = "check-circle", fill = hex_main),
+            fontawesome::fa(name = "magic", fill = hex_main),
             span('Validate', style = col_main), "and",
             fontawesome::fa(name = "paper-plane", fill = hex_main),
             span('Extract', style = col_main),
@@ -586,7 +612,7 @@ mod_tab_data_select_server <- function(id, vals) {
                   "They will only update if you change the",
                   "individual and/or species selected, and then",
                   "click the buttons",
-                  fontawesome::fa(name = "check-circle",
+                  fontawesome::fa(name = "magic",
                                   fill = hex_main),
                   span("Validate", style = btn_primary), "and",
                   fontawesome::fa(name = "paper-plane",
@@ -609,13 +635,17 @@ mod_tab_data_select_server <- function(id, vals) {
         ) # end of box
       }) # end of renderUI
 
-      # if(!vals$tour_active) {
-      #   shinyalert::shinyalert(
-      #     type = "success",
-      #     title = "Success",
-      #     html = TRUE,
-      #     size = "xs")
-      # }
+      if(!vals$tour_active) {
+        shinyalert::shinyalert(
+          type = "success",
+          title = "Success",
+          text = span(
+            "Proceed to the",
+            fontawesome::fa(name = "stopwatch", fill = hex_main),
+            span('Tracking regime', style = col_main), "tab."),
+          html = TRUE,
+          size = "xs")
+      }
 
       shinyjs::disable("selectButton_extract")
 

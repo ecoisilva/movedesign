@@ -638,7 +638,7 @@ mod_tab_ctsd_server <- function(id, vals) {
               "minutes."))
 
           vals$guess <- NULL
-          vals$newfit <- fit0
+          vals$fit1 <- fit0
           vals$needs_fit <- FALSE
 
         } # end of if(vals$needs_fit)
@@ -649,7 +649,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     observe({
       shinyjs::show(id = 'ctsdBox_regime')
       shinyjs::show(id = 'ctsdBox_sizes')
-    }) %>% bindEvent(vals$newfit)
+    }) %>% bindEvent(vals$fit1)
 
     ## Calculating relative errors for CTSD estimates: ------------------
 
@@ -954,7 +954,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         start_ctsd <- Sys.time()
         shiny::withProgress({
           vals$ctsd <- ctmm::speed(vals$data1,
-                                   vals$newfit)
+                                   vals$fit1)
         },
         message = "Estimating speed/distance.",
         detail = "This may take a while...")
@@ -979,7 +979,7 @@ mod_tab_ctsd_server <- function(id, vals) {
             "minutes."))
 
         vals$data_speed <- ctmm::speeds(vals$data1,
-                                        vals$newfit,
+                                        vals$fit1,
                                         units = FALSE)
 
         vals$time_ctsd <- difftime(Sys.time(),
@@ -1006,14 +1006,14 @@ mod_tab_ctsd_server <- function(id, vals) {
         shiny::withProgress({
           sim_full <- ctmm::simulate(
             dat,
-            vals$fit,
+            vals$fit0,
             t = seq(0, vals$dur0_dev, by = 1 %#% "minute"))
           vals$data_full <- sim_full
           incProgress(0.25)
 
           vals$ctsd_truth <- ctmm::speed(
             sim_full[which(sim_full$t <= (1 %#% "days")), ],
-            vals$fit,
+            vals$fit0,
             cores = -1)
 
         },
@@ -1049,7 +1049,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Estimating for new tracking regime: ------------------------------
 
     observe({
-      req(vals$data1, vals$newfit)
+      req(vals$data1, vals$fit1)
 
       # Show "conditional simulation" panels:
       for(i in 1:length(vec)) {
@@ -1105,7 +1105,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         start_sim <- Sys.time()
         df2 <- ctmm::simulate(
           dat,
-          vals$fit,
+          vals$fit0,
           t = seq(0,
                   vals$dur2 %#% vals$dur2_units,
                   by = vals$dti2 %#% vals$dti2_units))
@@ -1191,7 +1191,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         shiny::withProgress({
           vals$ctsd_new <- ctmm::speed(
             vals$data2_ctsd,
-            CTMM = vals$fit,
+            CTMM = vals$fit0,
             fast = TRUE)
         },
         message = "Estimating speed of simulated trajectory.",
@@ -1369,10 +1369,10 @@ mod_tab_ctsd_server <- function(id, vals) {
     }) # end of renderUI // ctsdBlock_n (absolute sample size)
 
     output$ctsdBlock_Nspeed <- shiny::renderUI({
-      req(vals$newfit)
+      req(vals$fit1)
 
-      tmpnames <- names(summary(vals$newfit)$DOF)
-      N <- summary(vals$newfit)$DOF[grep('speed', tmpnames)][[1]]
+      tmpnames <- names(summary(vals$fit1)$DOF)
+      N <- summary(vals$fit1)$DOF[grep('speed', tmpnames)][[1]]
       n <- nrow(vals$data1)
 
       diff_perc <- paste0(

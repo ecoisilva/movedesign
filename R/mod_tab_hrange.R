@@ -318,9 +318,11 @@ mod_tab_hrange_ui <- function(id){
                 column(
                   width = 12, align = "center",
                   span("Add the",
-                       span("original locations",
+                       fontawesome::fa(name = "map-marker-alt",
+                                       fill = hex_border),
+                       span("Data",
                             style = paste0(txt_label_bold, col_border)),
-                       "to the plot above:",
+                       "locations to the plot above:",
                        style = paste0(ft_center,
                                       txt_label_bold,
                                       col_main)),
@@ -488,7 +490,7 @@ mod_tab_hrange_server <- function(id, vals) {
               "minutes."))
 
           vals$guess <- NULL
-          vals$newfit <- fit0
+          vals$fit1 <- fit0
           vals$needs_fit <- FALSE
 
         } # end of if(vals$needs_fit)
@@ -499,7 +501,7 @@ mod_tab_hrange_server <- function(id, vals) {
     observe({
       shinyjs::show(id = 'hrBox_regime')
       shinyjs::show(id = 'hrBox_sizes')
-    }) %>% bindEvent(vals$newfit)
+    }) %>% bindEvent(vals$fit1)
 
     # ADJUSTING TRACKING REGIME -----------------------------------------
     # Adjust sampling parameters necessary for simulation:
@@ -690,7 +692,7 @@ mod_tab_hrange_server <- function(id, vals) {
           shinyjs::show(id = tmplist[i])
         }
 
-        req(vals$data1, vals$newfit, vals$tmpid, vals$id)
+        req(vals$data1, vals$fit1, vals$tmpid, vals$id)
         if(vals$tmpid != vals$id) {
 
           shinyalert::shinyalert(
@@ -715,7 +717,7 @@ mod_tab_hrange_server <- function(id, vals) {
           start <- Sys.time()
           shiny::withProgress({
             vals$akde <- ctmm::akde(data = vals$data1,
-                                    CTMM = vals$newfit)
+                                    CTMM = vals$fit1)
           },
           message = "Estimating home range.",
           detail = "This may take a while...")
@@ -810,7 +812,7 @@ mod_tab_hrange_server <- function(id, vals) {
       start <- begin <- Sys.time()
       df2 <- ctmm::simulate(
         vals$data0,
-        vals$fit,
+        vals$fit0,
         t = seq(0,
                 vals$dur1 %#% vals$dur1_units,
                 by = vals$dti1 %#% vals$dti1_units))
@@ -1070,10 +1072,10 @@ mod_tab_hrange_server <- function(id, vals) {
     }) # end of renderUI // hrBlock_n (absolute sample size)
 
     output$hrBlock_Narea <- shiny::renderUI({
-      req(vals$newfit)
+      req(vals$fit1)
 
-      tempnames <- names(summary(vals$newfit)$DOF)
-      N <- summary(vals$newfit)$DOF[grep('area', tempnames)][[1]]
+      tempnames <- names(summary(vals$fit1)$DOF)
+      N <- summary(vals$fit1)$DOF[grep('area', tempnames)][[1]]
       n <- nrow(vals$data1)
 
       diff_perc <- paste0(

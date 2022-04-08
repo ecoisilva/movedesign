@@ -15,7 +15,7 @@ mod_comp_tour_ui <- function(id) {
       inputId = ns("default_tour"),
       label = "Click here for a guided tutorial",
       icon = icon("compass"),
-      width = "230px",
+      width = "240px",
       class = "btn-primary")
 
   )
@@ -100,7 +100,7 @@ mod_comp_tour_server <- function(id, vals) {
           p(),
           "In addition, this tutorial will",
           span("not", style = paste(txt_tour, col_caution)),
-          "cover parameter definitions in detail.",
+          "cover definitions in detail.",
           "If you want to check the more comprehensive",
           fontawesome::fa(name = "question-circle"),
           "help tips, please do so outside of the tutorial."
@@ -230,7 +230,7 @@ mod_comp_tour_server <- function(id, vals) {
         HTML(paste(
           span(
             "Now, select an individual from the dropdown menu",
-            "and click the", fontawesome::fa(name = "check-circle"),
+            "and click the", fontawesome::fa(name = "magic"),
             "'Validate' button before proceeding.",
             style = txt_action),
           p(),
@@ -250,12 +250,14 @@ mod_comp_tour_server <- function(id, vals) {
           "used, as the uncertainty associated with any",
           "parameters will be too high.",
           p(),
-          "If a", span("'Success!'", style = txt_output),
-          "message appears below the",
+          "If the button changes to",
           fontawesome::fa(name = "check-circle"),
-          "'Validate' button,",
+          "'Validated!', and",
+          "If a", span("'Success!'", style = txt_output),
+          "message appears below,",
+
           span(
-            "you can proceed by clicking the",
+            "then you can proceed by clicking the",
             fontawesome::fa(name = "paper-plane"),
             "'Extract' button.",
             style = txt_action)
