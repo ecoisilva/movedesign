@@ -56,9 +56,9 @@ mod_tab_data_upload_ui <- function(id) {
                 span(".csv", style = col_border), "file.",
                 br(), "Then click",
                 fontawesome::fa(name = "check-circle", fill = hex_main),
-                span("Validate", style = btn_primary), "and",
+                span("Validate", style = col_main), "and",
                 fontawesome::fa(name = "paper-plane", fill = hex_main),
-                HTML(paste0(span("Extract", style = btn_primary), ".")))
+                HTML(paste0(span("Extract", style = col_main), ".")))
 
             ) # end of column (text)
 
@@ -143,11 +143,7 @@ mod_tab_data_upload_ui <- function(id) {
                 onInitialize = I('function() { this.setValue(""); }'))
             ),
 
-            shiny::actionButton(
-              inputId = ns("validate_upload"),
-              icon =  icon("check-circle"),
-              label = "Validate",
-              width = "100%")
+            uiOutput(ns("uploadUI_validate"))
 
           ), # end of box // uploadBox_species
 
@@ -279,6 +275,35 @@ mod_tab_data_upload_server <- function(id, vals) {
     for(i in 1:length(tmpnames)) {
       shinyjs::hide(id = paste0("uploadBox_", tmpnames[i]))
     }
+
+    ## Render validate button: -------------------------------------------
+
+    output$uploadUI_validate <- renderUI({
+
+      tmpbutton <- shiny::actionButton(
+        inputId = ns("validate_upload"),
+        icon =  icon("magic"),
+        label = "Validate",
+        width = "100%",
+        class = "btn-danger")
+
+      if (is.null(vals$is_valid)) {
+        tmpbutton
+
+      } else {
+        if (vals$is_valid) {
+          shiny::actionButton(
+            inputId = ns("validate_upload"),
+            icon =  icon("check-circle"),
+            label = "Validated!",
+            width = "100%",
+            class = "btn-info")
+        } else {
+          tmpbutton
+        }
+      }
+
+    }) # end of renderUI // uploadUI_validate
 
     ## If subset data available, update inputs: -------------------------
 
@@ -429,6 +454,7 @@ mod_tab_data_upload_server <- function(id, vals) {
 
       vals$data0 <- df_subset
       shinyjs::show(id = "uploadBox_variables")
+      vals$is_valid <- FALSE
 
     }) # end of observe
 
@@ -511,7 +537,7 @@ mod_tab_data_upload_server <- function(id, vals) {
           style = "success",
           message = paste0("Species and individual ",
                            msg_success("validated"), "."),
-          detail = paste0("Species selected is the ",
+          detail = paste0("Species selected is ",
                           msg_success(vals$species_binom),
                           ", and the individual is ",
                           msg_success(vals$id), "."))
@@ -883,7 +909,7 @@ mod_tab_data_upload_server <- function(id, vals) {
 
           vals$sigma0 <- ctmm:::var.covm(vals$fit0$sigma, ave = TRUE)
           vals$sigma0_units <- "m^2"
-          sig <- fix_spUnits(vals$sigma0, units = "m^2")
+          sig <- fix_spatial(vals$sigma0, unit = "m^2")
 
           parBlock(
             text = shiny::fluidRow(

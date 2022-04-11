@@ -40,10 +40,6 @@ mod_tab_data_select_ui <- function(id) {
                 "to your intended study species,",
                 "as all subsequent steps will built upon these",
                 "parameters.",
-
-                "Here, you can select one of the seven species",
-                "available within the", a(href = mainlink_ctmm, 'ctmm'),
-                "package and extract their parameters.",
                 br()),
 
               p(style = ft_center,
@@ -100,11 +96,7 @@ mod_tab_data_select_ui <- function(id) {
             ),
 
             uiOutput(ns("selectUI_validate")),
-            fluidRow(
-              column(
-                width = 12,
-                verbatimTextOutput(outputId = ns("selectVal_output"))
-              )), p(style = "padding: 0px;"),
+            p(style = "padding: 0px;"),
             actionButton(
               inputId = ns("selectButton_extract"),
               icon =  icon("paper-plane"),
@@ -282,7 +274,7 @@ mod_tab_data_select_server <- function(id, vals) {
     # }) %>% # end of observe,
     #   bindEvent(vals$species, ignoreInit = TRUE)
 
-    ## Render validate buttons: -------------------------------------------
+    ## Render validate button: --------------------------------------------
 
     output$selectUI_validate <- renderUI({
 
@@ -365,8 +357,8 @@ mod_tab_data_select_server <- function(id, vals) {
         label = "Select an individual:",
         choices = names(vals$dataList))
 
-      shinyjs::disable("selectVal_output")
-      vals$is_valid <- NULL
+      # shinyjs::disable("selectVal_output")
+      vals$is_valid <- FALSE
 
     }) # end of observe
 
@@ -384,7 +376,7 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$data0 <- df_subset
 
       shinyjs::enable("selectButton_extract")
-      shinyjs::disable("selectVal_output")
+      # shinyjs::disable("selectVal_output")
       vals$is_valid <- NULL
 
     }) %>% # end of observe,
@@ -815,7 +807,8 @@ mod_tab_data_select_server <- function(id, vals) {
 
           vals$sigma0 <- ctmm:::var.covm(vals$fit0$sigma, ave = TRUE)
           vals$sigma0_units <- "m^2"
-          sig <- fix_spUnits(vals$sigma0, units = "m^2")
+
+          sig <- fix_spatial(vals$sigma0, unit = "m^2")
 
           parBlock(
             text = shiny::fluidRow(
@@ -866,7 +859,7 @@ mod_tab_data_select_server <- function(id, vals) {
       parBlock(text = "Sampling duration",
                header = paste(out[1], out[2]))
 
-    }) # ender of renderUI // selectInfo_dur
+    }) # end of renderUI // selectInfo_dur
 
     output$selectInfo_dti <- shiny::renderUI({
       req(vals$data0)
@@ -1037,10 +1030,10 @@ mod_tab_data_select_server <- function(id, vals) {
 
     # Additional information: -------------------------------------------
 
-    output$selectVal_output <- renderText({
-      req(vals$is_valid)
-      "Success!"
-    }) # end of renderText // selectVal_output
+    # output$selectVal_output <- renderText({
+    #   req(vals$is_valid)
+    #   "Success!"
+    # }) # end of renderText // selectVal_output
 
     output$selectUI_time <- renderText({
       req(vals$selectOut_time)

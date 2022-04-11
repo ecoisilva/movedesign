@@ -1,25 +1,19 @@
 ---
-title: "Study design with {movedesign}"
-output:
-  html_document:
-    number_sections: true
-    toc: true
-    toc_float:
-      smooth_scroll: false
-    css: styles.css
+title: "movedesign"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{movedesign}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-editor_options:
-  chunk_output_type: console
 ---
 
-# Introduction
-
-This vignette explains how to test a specific tracking regime for home range estimation with the `movedesign` package, after uploading your own dataset.
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
 
 ```{r setup}
 library(movedesign)
 ```
-

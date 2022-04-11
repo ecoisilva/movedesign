@@ -131,7 +131,7 @@ mod_tab_about_ui <- function(id) {
         collapsible = FALSE, closable = FALSE,
 
         column(
-          align = "center", width = 5,
+          align = "center", width = 6,
 
           ## Restore application settings: --------------------------------
 
@@ -165,29 +165,21 @@ mod_tab_about_ui <- function(id) {
         ## Contact details: ---------------------------------------------
 
         column(
-          align = "center", width = 7,
+          align = "center", width = 6,
 
           p("Project contact:", style =
-              paste(ttl_sub, "text-align: left!important;")),
+              paste(ttl_sub, "text-align: left;")),
 
-          p(
-            "In\u00EAs Silva,",
-            span(contact_email, style = col_border),
-            tags$hr()
-          ),
+          p("In\u00EAs Silva,",
+            span(contact_email, style = col_border)),
+          tags$hr(),
 
           p("Institutional contact:", style =
-              paste(ttl_sub, "text-align: left!important;")),
-
-          p(
-            style = "font-size: 14px",
-            address_casus
-          ),
-
-          img(src = "www/logo_casus.png", height = "70px"),
+              paste(ttl_sub, "text-align: left;")),
+          p(style = ft_center, address_casus),
           p(),
-          a(href = mainlink_casus, mainlink_casus),
-          p()
+          img(src = "www/logo_casus.png", height = "70px"), p(),
+          a(href = mainlink_casus, mainlink_casus), p()
 
         ) # end of column (right)
       ) # end of box

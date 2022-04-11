@@ -54,9 +54,6 @@ abbreviate_time <- function(unit) {
 #' @noRd
 fix_time <- function(value, unit)  {
 
-  if (!is.numeric(value) || !is.integer(value)) {
-    stop("`value` argument must be numeric.")
-  }
   if (!is.character(unit)) {
     stop("`unit` argument must be a character string.")
   }
@@ -98,40 +95,51 @@ fix_time <- function(value, unit)  {
 #' @return A list with the corrected value and the corrected unit.
 #'
 #' @noRd
-fix_spatial <- function(value, units) {
+fix_spatial <- function(value, unit) {
 
-  if (!is.numeric(value) || !is.integer(value)) {
-    stop("`value` argument must be numeric.")
-  }
   if (!is.character(unit)) {
     stop("`unit` argument must be a character string.")
   }
 
-  value <- value %#% units
+  all_units <- c("square kilometers",
+                 "square meters",
+                 "km^2",
+                 "m^2",
+                 "ha")
+  x <- gsub("(.)s$", "\\1", unit)
+
+  val <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
+  if (any(is.na(val))) {
+    stop("Invalid time unit: ", paste(x[is.na(val)], collapse = ", "),
+         call. = FALSE)
+  }
+
+  value <- value %#% x
 
   if(value >= 1e6) {
     out_value <- "km^2" %#% value
-    units <- "km^2"
-    units_html <- HTML(paste0("km", tags$sup(2)))
+    unit <- "km^2"
+    unit_html <- HTML(paste0("km", tags$sup(2)))
   }
 
   if(1e4 > value || value < 1e6) {
     out_value <- "ha" %#% value
-    units <- "ha"
-    units_html <- "ha"
+    unit <- "ha"
+    unit_html <- "ha"
   }
 
   if(value <= 1e4) {
     out_value <- value
-    units <- "m^2"
-    units_html <- HTML(paste0("km", tags$sup(2)))
+    unit <- "m^2"
+    unit_html <- HTML(paste0("km", tags$sup(2)))
   }
 
-  out_value <- ifelse(out_value %% 1 == 0,
-                      scales::label_comma(accuracy = 1)(out_value),
-                      scales::label_comma(accuracy = .1)(out_value))
+  out_value <- ifelse(
+    out_value %% 1 == 0,
+    scales::label_comma(accuracy = 1)(out_value),
+    scales::label_comma(accuracy = .1)(out_value))
 
-  return(c(out_value, units, units_html))
+  return(c(out_value, unit, unit_html))
 
 }
 
@@ -139,6 +147,13 @@ fix_spatial <- function(value, units) {
 #'
 #' @description Prepare parameters for movement data simulation
 #' @keywords internal
+#'
+#' @param tau_p0 numeric, integer. position autocorrelation timescale.
+#' @param tau_p0_units character vector of tau p units.
+#' @param tau_v0 numeric, integer. velocity autocorrelation timescale.
+#' @param tau_v0_units character vector of tau v units.
+#' @param sigma0 numeric, integer. semi-variance or sigma.
+#' @param tau_p0_units character vector of sigma units.
 #'
 #' @noRd
 prepare_pars <- function(tau_p0,
@@ -167,6 +182,13 @@ prepare_pars <- function(tau_p0,
 #'
 #' @description Simulate movement data through ctmm
 #' @keywords internal
+#'
+#' @param mod0 movement model
+#' @param dur0 numeric, integer. sampling duration.
+#' @param dur0_units character vector of sampling duration units.
+#' @param tau_v0 numeric, integer. sampling interval.
+#' @param tau_v0_units character vector of sampling interval units.
+#' @param seed0 random seed value for simulation.
 #'
 #' @noRd
 simulate_data <- function(mod0,

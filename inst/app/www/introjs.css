@@ -14,13 +14,14 @@
   border: none;
   background-color: #222d32;
   max-width: 100%;
-  min-width: 470px; /* 620px; */
+  min-width: 476px; /* 620px; */
 }
 
 .introjs-tooltiptext{
   padding: 0 52px 0 52px;
   box-sizing: border-box;
-  font: 17px/normal "Fira Sans Condensed";
+  font-family: "Anek Tamil", sans-serif;
+  font-size: 17px;
   text-align: justify;
   color: #ffffff!important;
   line-height: 1.4;

@@ -113,11 +113,6 @@ app_ui <- function(request) {
             tabName = "about",
             mod_tab_about_ui("tab_about_1")),
 
-          # # Tab 2 'Upload or select data'
-          # shinydashboard::tabItem(
-          #   tabName = "real",
-          #   mod_tab_data_ui("tab_data_1")),
-
           # Tab 2.1 'Upload data'
           shinydashboard::tabItem(
             tabName = "data_upload",
@@ -217,10 +212,10 @@ golem_add_external_resources <- function() {
     # extrafont::loadfonts(),
     tags$link(href = paste0("https://fonts.googleapis.com/css?",
                             "family=",
+                            "Anek+Tamil", "|",
                             "Roboto+Condensed", "|",
                             "Fira+Mono", "|",
-                            "Fira+Sans+Condensed", "|",
-                            "Fira+Sans+Extra+Condensed",
+                            "Fira+Sans+Condensed",
                             "&display=fallback"),
               rel = "stylesheet"),
 

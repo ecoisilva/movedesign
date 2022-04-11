@@ -83,7 +83,7 @@ tm_now <- Sys.time()
 tm_today <- Sys.Date()
 tm_today_full <- format(Sys.time(), "%d-%B-%Y")
 
-app_version <- "Version 1.0.0"
+app_version <- "Version 0.0.1"
 contact_email <- "i.simoes-silva@hzdr.de"
 
 link_github_package <- "https://github.com/ecoisilva/movedesign"
@@ -174,7 +174,7 @@ btn_danger <- paste(ft, col_caution)
 
 ttl_tour <- paste(ft, ft_bold, ft_center, "font-size: 32px;")
 
-txt_tour <- paste0("font-family: Fira Sans Condensed;",
+txt_tour <- paste0("font-family: Anek Tamil;",
                    "font-size: 17px;",
                    "line-height: 1.5;",
                    "letter-spacing: 0.2px;")
@@ -188,8 +188,10 @@ txt_tour_item <- paste0(txt_tour, col_item)
 
 txt_action <- paste0(txt_tour,
                      "text-align: justify;",
-                     "color: #ffffff;",
-                     "background: #008085;")
+                     "color: black;",
+                     "background: #fff;") # "#0f5254"
+
+txt_step <- paste0("font-family: Roboto Condensed, sans-serif;")
 
 txt_output <- paste0("font-family: Fira Mono;",
                      "font-size: 15px;")

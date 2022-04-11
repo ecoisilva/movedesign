@@ -8,10 +8,11 @@
 #' @noRd
 highlight_title <- function(title) {
 
-  span(HTML("&nbsp;"), title,
-       style = paste("font-size: 17px;",
-                     "font-family: Fira Sans Extra Condensed;",
-                     "font-weight: 700;"))
+  span(title,
+       style = paste("font-size: 16px;",
+                     "font-family: Anek Tamil;",
+                     "font-weight: 700;",
+                     "padding-left: 5px;"))
 }
 
 #' Highlight tab icons
@@ -23,8 +24,7 @@ highlight_title <- function(title) {
 #' @noRd
 highlight_icon <- function(name) {
 
-  fontawesome::fa(name = name,
-                  height = "17px")
+  fontawesome::fa(name = name, height = "17px")
 }
 
 #' Parameter blocks
@@ -80,11 +80,11 @@ sampleBlock <- function(number = NULL,
 
   if (!is.null(header)) {
 
-    if(header <= 5) {
+    if(as.numeric(header) <= 5) {
       numberColor <- paste0("color: ", hex_caution, "!important;")
       if(numberIcon) { numberIcon <- icon("angle-double-down")
       } else { numberIcon <- HTML("&nbsp;") }
-    } else { if(header >= 30) {
+    } else { if(as.numeric(header) >= 30) {
       numberColor <- paste0("color: ", hex_border, "!important;")
       header <- scales::label_comma(accuracy = 1)(header)
       if(numberIcon) { numberIcon <- icon("angle-down")

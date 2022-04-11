@@ -35,7 +35,7 @@ mod_tab_device_ui <- function(id) {
         column(
           align = "center", width = 12,
 
-          p("Approppriate study design is dependent on",
+          p("Appropriate study design is dependent on",
             "the", span("tracking device type", style = txt_key),
             "(and, ultimately, its",
             HTML(paste0(span("battery life", style = txt_border),
@@ -433,19 +433,41 @@ mod_tab_device_server <- function(id, vals) {
     ## Select fix rate inputs: ------------------------------------------
 
     output$gpsSelect_fix <- renderUI({
+
       # req(df_decay())
       # dti_choices <- df_decay() %>%
       #   dplyr::filter(dur > 0) %>%
       #   dplyr::pull(nu_notes)
 
-      dti_choices <- movedesign::gps_fixrate %>%
-        dplyr::pull(nu_notes)
+      # dti_choices <- movedesign::gps_fixrate %>%
+      #   dplyr::pull(nu_notes)
+      #
+      # shinyWidgets::pickerInput(
+      #   inputId = ns("gps_selected_dti"),
+      #   label = NULL,
+      #   choices = dti_choices,
+      #   options = list(title = "Select regime"))
 
-      shinyWidgets::pickerInput(
-        inputId = ns("gps_selected_dti"),
-        label = NULL,
-        choices = dti_choices,
-        options = list(title = "Select regime"))
+      splitLayout(
+        cellWidths = c("75px", "180px"),
+        cellArgs = list(style = 'align: center;'),
+
+        shiny::numericInput(
+          ns("gps_dti"),
+          label = NULL,
+          min = 1, value = 1),
+
+        shiny::selectInput(
+          ns("gps_dti_units"),
+          label = NULL,
+          choices = c("Day(s)" = "days",
+                      "Hour(s)" = "hours",
+                      "Minute(s)" = "minutes",
+                      "Second(s)" = "seconds"),
+          selected = "hours")
+
+      ) # end of splitLayout
+
 
     }) # end of renderUI // gpsSelect_fix
 
@@ -484,7 +506,7 @@ mod_tab_device_server <- function(id, vals) {
       dur0_day <- "days" %#% dur0
       dur0_mth <- "months" %#% dur0
 
-      if(dur0_day == 1) {
+      if (dur0_day == 1) {
         tmp <- "1 day"
       } else {
         tmp <- paste(round(dur0_day, 0), "days")
@@ -494,7 +516,7 @@ mod_tab_device_server <- function(id, vals) {
         1/("day" %#% input$vhf_dti %#% input$vhf_dti_units), 0)
       freq_units <- "locations/day"
 
-      if(freq < 1) {
+      if (freq < 1) {
         freq <- round(
           1/("hours" %#% input$vhf_dti %#%
                input$vhf_dti_units), 0)
@@ -518,24 +540,18 @@ mod_tab_device_server <- function(id, vals) {
 
     output$gpsText_regime <- renderUI({
       req(input$gps_dur,
-          input$gps_selected_dti,
+          input$gps_dti,
           !input$evaluate_tradeoffs)
 
-      fixrate <- movedesign::gps_fixrate
-      tmp <- fixrate$nu[match(input$gps_selected_dti,
-                              fixrate$nu_notes)]
-
-      dti_units <- sub('^.* ([[:alnum:]]+)$',
-                       '\\1', input$gps_selected_dti)
-      dti <- dti_units %#% round(tmp, 0)
-
+      dti <- input$gps_dti
+      dti_units <- input$gps_dti_units
       tmpunits <- fix_time(dti, dti_units)[2]
 
       dur0 <- input$gps_dur %#% input$gps_dur_units
       dur0_day <- "days" %#% dur0
       dur0_mth <- "months" %#% dur0
 
-      if(dur0_day == 1) {
+      if (dur0_day == 1) {
         tmp <- "1 day"
       } else {
         tmp <- paste(round(dur0_day, 0), "days")
@@ -545,16 +561,16 @@ mod_tab_device_server <- function(id, vals) {
         1/("day" %#% dti %#% dti_units), 1)
       freq_units <- "locations/day"
 
-      if(freq < 1) {
+      if (freq < 1) {
         freq <- round(
           1/("month" %#% dti %#% dti_units), 1)
         freq_units <- "locations/month"
       }
 
-      p(style = paste(ft_center), # "padding: 0 50px 0 50px"),
+      p(style = paste(ft_center),
 
         "This tracking regime is equal to a new location every",
-        span(round(dti, 1), dti_units, style = txt_border),
+        span(round(dti, 1), tmpunits, style = txt_border),
         "(or approximately",
         HTML(paste0(span(paste(freq, freq_units),
                          style = txt_border), ")")),
@@ -574,9 +590,9 @@ mod_tab_device_server <- function(id, vals) {
       shinyjs::show(id = "regBox_device")
       shinyjs::show(id = "regBox_sampling")
 
-      if(input$device_type == 1) {
+      if (input$device_type == 1) {
         vals$device_type <- "GPS"
-      } else if(input$device_type == 2) {
+      } else if (input$device_type == 2) {
         vals$device_type <- "VHF"
       }
 
@@ -619,13 +635,21 @@ mod_tab_device_server <- function(id, vals) {
 
           ), # end of splitLayout
 
-          uiOutput(ns("gpsInput_maxrate")),
+          if (input$evaluate_tradeoffs) {
+          uiOutput(ns("gpsInput_maxrate")) },
 
-          shiny::sliderInput(
+          if (input$evaluate_tradeoffs) {
+            shiny::sliderInput(
             inputId = ns("gps_k0"),
             label = "Decay rate:",
             min = 0.01, max = 5, value = 0.8,
-            ticks = FALSE)
+            ticks = FALSE) },
+
+          # if (!input$evaluate_tradeoffs) {
+          #   shiny::numericInput(
+          #     inputId = ns("gps_maxlocs"),
+          #     label = "Maximum number of locations:",
+          #     min = 1, max = 64000, value = 32000) }
 
         ) # end of fluidRow
 
@@ -667,7 +691,7 @@ mod_tab_device_server <- function(id, vals) {
 
         ) # end of fluidRow
 
-      } # end of if(), VHF device
+      } # end of if (), VHF device
     }) # end of renderUI // regUI_device
 
     ## Changing sampling parameters: ------------------------------------
@@ -677,7 +701,7 @@ mod_tab_device_server <- function(id, vals) {
       vals$is_reg_valid <- FALSE
 
       output$regUI_sampling <- renderUI({
-        if(input$device_type == 1) {
+        if (input$device_type == 1) {
 
           ### GPS & Satellite logger:
 
@@ -700,10 +724,6 @@ mod_tab_device_server <- function(id, vals) {
 
             if (!input$evaluate_tradeoffs) {
             uiOutput(ns("gpsSelect_fix")) },
-
-            # column(width = 12,
-            #        verbatimTextOutput(outputId = ns("output_gpsfix"))
-            # ),
 
             if (input$evaluate_tradeoffs) {
             p("Please select a", span("fix rate", style = txt_border),
@@ -755,7 +775,7 @@ mod_tab_device_server <- function(id, vals) {
             uiOutput(ns("vhfText_regime"))
 
           ) # end of column (UI)
-        } # end of if(), VHF device
+        } # end of if (), VHF device
 
       }) # end of renderUI // regUI_device
 
@@ -765,7 +785,7 @@ mod_tab_device_server <- function(id, vals) {
     observe({ # Add footer to sampling box:
 
       output$regUI_sampling_footer <- renderUI({
-        if(input$device_type == 1) {
+        if (input$device_type == 1) {
 
           ### GPS & Satellite logger:
 
@@ -825,21 +845,84 @@ mod_tab_device_server <- function(id, vals) {
             ) # end of splitLayout
           ) # end of column (footer)
 
-        } # end of if(), VHF device
+        } # end of if (), VHF device
       }) # end of renderUI // regUI_device
 
     }) %>% # end of observe
       bindEvent(input$device_type, ignoreInit = TRUE)
 
-    ## Validate regime... -------------------------------------------------
+    ## Change sample size text: -----------------------------------------
+
+    observe({
+      if (input$est_type == 1) {
+
+        temp_text <- p(
+          style = ft_center,
+
+          "As", span("effective sample sizes", style = txt_border),
+          "are", HTML(paste0(
+            span("roughly estimated", style = txt_caution), ",")),
+          "these values will update before validation.",
+          "However, they should only be used for a quick evaluation,",
+          "and will not always correspond to the real sample sizes.")
+
+      } else {
+
+        vals$device_n <- NULL
+        vals$device_N1 <- NULL
+        vals$device_N2 <- NULL
+
+        temp_text <- p(
+          style = ft_center,
+
+          "As", span("effective sample sizes", style = txt_border),
+          "are extracted from the",
+          HTML(paste0(
+            span("model fit",
+                 style = col_caution), ",")),
+          "these values will", span("not", style = "color: #000;"),
+          "update automatically.", br(), "Click the",
+          fontawesome::fa(name = "bolt", fill = "#dd4b39"),
+          HTML(paste0(span("Run", style = btn_danger))),
+          "button to refresh.")
+      }
+
+      output$regText_sizes <- renderUI({temp_text})
+
+    }) %>% # end of observe
+      bindEvent(input$est_type)
+
+    ## Add species box (if data available): -----------------------------
+
+    observe({
+      if (!is.null(vals$tau_p0)) {
+        shinyjs::show(id = "regBox_species")
+      } else {
+        shinyjs::hide(id = "regBox_species")
+      }
+    }) # end of observe
+
+    ## Add summary box (if data available): -----------------------------
+
+    observe({
+      if (!is.null(vals$df_regs)) {
+        shinyjs::show(id = "regBox_summary")
+      } else {
+        shinyjs::hide(id = "regBox_summary")
+      }
+    }) # end of observe
+
+    # VALIDATION ----------------------------------------------------------
     ### ...GPS & Satellite loggers: ---------------------------------------
 
     observe({
+
       if ((input$evaluate_tradeoffs &&
-          is.null(input$regPlot_decay_selected))
-          || # or
+           is.null(input$regPlot_decay_selected))
+          ||
           (!input$evaluate_tradeoffs &&
-           is.null(input$gps_selected_dti))) {
+           is.null(input$gps_dti))
+      ) {
 
         vals$is_reg_valid <- FALSE
         shinyalert::shinyalert(
@@ -916,67 +999,6 @@ mod_tab_device_server <- function(id, vals) {
     }) %>% # end of observer,
       bindEvent(input$validate_vhf)
 
-    ## Change sample size text: -----------------------------------------
-
-    observe({
-      if(input$est_type == 1) {
-
-        temp_text <- p(
-          style = ft_center,
-
-          "As", span("effective sample sizes", style = txt_border),
-          "are", HTML(paste0(
-            span("roughly estimated", style = txt_caution), ",")),
-          "these values will update before validation.",
-          "However, they also correspond to a best-case scenario",
-          "(real sample sizes may be lower).")
-
-      } else {
-
-        vals$device_n <- NULL
-        vals$device_N1 <- NULL
-        vals$device_N2 <- NULL
-
-        temp_text <- p(
-          style = ft_center,
-
-          "As", span("effective sample sizes", style = txt_border),
-          "are extracted from the",
-          HTML(paste0(
-            span("model fit",
-                 style = col_caution), ",")),
-          "these values will", span("not", style = "color: #000;"),
-          "update automatically.", br(), "Click the",
-          fontawesome::fa(name = "bolt", fill = "#dd4b39"),
-          HTML(paste0(span("Run", style = btn_danger))),
-          "button to refresh.")
-      }
-
-      output$regText_sizes <- renderUI({temp_text})
-
-    }) %>% # end of observe
-      bindEvent(input$est_type)
-
-    ## Add species box (if data available): -----------------------------
-
-    observe({
-      if(!is.null(vals$tau_p0)) {
-        shinyjs::show(id = "regBox_species")
-      } else {
-        shinyjs::hide(id = "regBox_species")
-      }
-    }) # end of observe
-
-    ## Add summary box (if data available): -----------------------------
-
-    observe({
-      if(!is.null(vals$df_regs)) {
-        shinyjs::show(id = "regBox_summary")
-      } else {
-        shinyjs::hide(id = "regBox_summary")
-      }
-    }) # end of observe
-
     # PARAMETER CALCULATIONS --------------------------------------------
     ## Device — sampling duration & interval: ---------------------------
 
@@ -984,23 +1006,35 @@ mod_tab_device_server <- function(id, vals) {
       vals$dur0_dev <- NULL
       vals$dti0_dev <- NULL
 
-      if(input$device_type == 1) {
-        req(input$regPlot_decay_selected)
+      if (input$device_type == 1) {
+        if (input$evaluate_tradeoffs) {
+          req(input$regPlot_decay_selected)
 
-        df0 <- df_decay()
-        dur_dev <- df0[reg_selected(), ]$dur
-        dti_dev <- df0[reg_selected(), ]$nu
+          df0 <- df_decay()
+          dur_dev <- df0[reg_selected(), ]$dur
+          dti_dev <- df0[reg_selected(), ]$nu
 
-        vals$dur0_dev <- round(dur_dev %#% "months", 0)
-        vals$dur0_units_dev <- "months"
-        vals$dti0_dev <- round(dti_dev, 0)
+          vals$dur0_dev <- round(dur_dev %#% "months", 0)
+          vals$dur0_units_dev <- "months"
+          vals$dti0_dev <- round(dti_dev, 0)
 
-        tmpdti_notes <- df0[reg_selected(), ]$nu_notes
-        tmpdti_units <- sub('^.* ([[:alnum:]]+)$',
-                            '\\1', tmpdti_notes)
-        vals$dti0_units_dev <- tmpdti_units
+          tmpdti_notes <- df0[reg_selected(), ]$nu_notes
+          tmpdti_units <- sub('^.* ([[:alnum:]]+)$',
+                              '\\1', tmpdti_notes)
+          vals$dti0_units_dev <- tmpdti_units
+        } else {
+          req(input$gps_dur, input$gps_dti)
 
-      } else if(input$device_type == 2) {
+          dur_dev <- input$gps_dur %#% input$gps_dur_units
+          dti_dev <- input$gps_dti %#% input$gps_dti_units
+
+          vals$dur0_dev <- round(dur_dev, 0)
+          vals$dur0_units_dev <- input$gps_dur_units
+          vals$dti0_dev <- round(dti_dev, 0)
+          vals$dti0_units_dev <- input$gps_dti_units
+        }
+
+      } else if (input$device_type == 2) {
         req(input$vhf_dur, input$vhf_dti)
 
         dur_dev <- input$vhf_dur %#% input$vhf_dur_units
@@ -1011,7 +1045,7 @@ mod_tab_device_server <- function(id, vals) {
         vals$dti0_dev <- round(dti_dev, 0)
         vals$dti0_units_dev <- input$vhf_dti_units
 
-      } # end of if()
+      } # end of if ()
     }) # end of observe
 
     ## Device — sample sizes: -------------------------------------------
@@ -1038,18 +1072,19 @@ mod_tab_device_server <- function(id, vals) {
       nlost <- n_loss
       r <- dti / tauv
 
-      if(input$est_type == 1) {
+      if (input$est_type == 1) {
         vals$is_fitted <- "No"
 
         N1 <- dur / taup
-        N2 <- ifelse(dti > tauv,
-                     ifelse(dti > 10 * tauv, 0,
-                            (n - n_loss)/(r * (r/3))),
-                     (n - n_loss) / tauv * dti)
+        N2 <- ifelse(
+          dti > tauv,
+          ifelse(dti > 3 * tauv, 0,
+                 (n - n_loss) / (dti/tauv)^r * (dti/tauv)),
+          (n - n_loss) / tauv * dti)
 
-        if(N1 > (n - n_loss)) { N1 <- n }
+        if (N1 > (n - n_loss)) { N1 <- n }
 
-      } else if(input$est_type == 2) {
+      } else if (input$est_type == 2) {
 
         vals$device_n_fit <- nrow(vals$data1)
 
@@ -1095,7 +1130,7 @@ mod_tab_device_server <- function(id, vals) {
         dplyr::filter(freq_hrs >= 0) %>%
         dplyr::filter(freq_hrs < max_freq)
 
-      if(nrow(tmpdf) + 3 <= nrow(df_decay) - 3) {
+      if (nrow(tmpdf) + 3 <= nrow(df_decay) - 3) {
         df_decay <- df_decay[1:(nrow(tmpdf) + 3),]
       } else {
         df_decay <- df_decay[1:nrow(tmpdf),]
@@ -1112,7 +1147,7 @@ mod_tab_device_server <- function(id, vals) {
       ctmm::simulate(
         vals$data0,
         vals$fit0,
-        t = seq(0, vals$dur0_dev, by = vals$dti0_dev)) %>%
+        t = seq(0, vals$dur0_dev, by = vals$dti0_dev)[-1]) %>%
         ctmm:::pseudonymize()
 
     }) %>% # end of reactive
@@ -1125,8 +1160,8 @@ mod_tab_device_server <- function(id, vals) {
           vals$dti0_dev,
           vals$is_reg_valid)
 
-      # if(input$device_type == 1) need(input$regPlot_decay_selected)
-      # if(input$device_type == 2) need(input$vhf_dur, input$vhf_dti)
+      # if (input$device_type == 1) need(input$regPlot_decay_selected)
+      # if (input$device_type == 2) need(input$vhf_dur, input$vhf_dti)
 
       shinyjs::show(id = "regBox_sims")
 
@@ -1150,7 +1185,56 @@ mod_tab_device_server <- function(id, vals) {
                          units = 'min'), 1),
           "minutes."))
 
-      if(!vals$tour_active) {
+      ### Run model fit (if set): -----------------------------------------
+
+      if (input$est_type == 1) {
+        vals$needs_fit <- TRUE
+
+      } else {
+        req(vals$tau_p0,
+            vals$tau_v0,
+            vals$sigma0)
+
+        msg_log(
+          style = "danger",
+          message = paste0("Model fit ",
+                           msg_danger("not found"), "."),
+          detail = "Please wait for 'ctmm.select()' to finish.")
+
+        vals$time_sims <- difftime(Sys.time(), start,
+                                   units = "mins")
+
+        start <- Sys.time()
+        shiny::withProgress({
+          newmod <- prepare_pars(
+            tau_p0 = vals$tau_p0, tau_p0_units = vals$tau_p0_units,
+            tau_v0 = vals$tau_v0, tau_v0_units = vals$tau_v0_units,
+            sigma0 = vals$sigma0, sigma0_units = vals$sigma0_units)
+
+          fit1 <- ctmm::ctmm.fit(vals$data1, newmod)
+        },
+        message = "Fitting movement model.",
+        detail = "This may take a while...")
+
+        if (!is.null(fit1)) {
+          msg_log(
+            style = 'success',
+            message = paste0("Model fit ",
+                             msg_success("completed"), "."),
+            detail = paste(
+              "This step took approximately",
+              round(vals$time_sims, 1), "minutes."))
+
+          vals$guess <- NULL
+          vals$needs_fit <- FALSE
+          vals$fit1 <- fit1
+
+          shinyjs::enable("regButton_save")
+        }
+
+      } # end of if(), est_type
+
+      if (!vals$tour_active) {
         shinyalert::shinyalert(
           type = "success",
           title = "Success",
@@ -1161,60 +1245,10 @@ mod_tab_device_server <- function(id, vals) {
           html = TRUE,
           size = "xs") }
 
-      ### Run model fit (if set): -----------------------------------------
-
-      # if(input$est_type == 1) {
-      #   vals$needs_fit <- TRUE
-      #
-      # } else {
-      #   req(vals$tau_p0,
-      #       vals$tau_v0,
-      #       vals$sigma0)
-      #
-      #   msg_log(
-      #     style = "danger",
-      #     message = paste0("Model fit ",
-      #                      msg_danger("not found"), "."),
-      #     detail = "Please wait for 'ctmm.select()' to finish.")
-      #
-      #   start <- Sys.time()
-      #   newmod <- prepare_pars(
-      #     tau_p0 = vals$tau_p0, tau_p0_units = vals$tau_p0_units,
-      #     tau_v0 = vals$tau_v0, tau_v0_units = vals$tau_v0_units,
-      #     sigma0 = vals$sigma0, sigma0_units = vals$sigma0_units)
-      #
-      #   shiny::withProgress({
-      #     fit1 <- ctmm::ctmm.fit(vals$data1, newmod)
-      #   },
-      #   message = "Fitting movement model.",
-      #   detail = "This may take a while...")
-      #
-      #   msg_log(
-      #     style = "warning",
-      #     message = paste0("...", msg_warning("Fitting"),
-      #                      " movement model."),
-      #     detail = "Please wait for model fit to finish.")
-      #
-      #   vals$time_sims <- difftime(Sys.time(), start,
-      #                              units = "mins")
-      #   msg_log(
-      #     style = 'success',
-      #     message = paste0("Model fit ",
-      #                      msg_success("completed"), "."),
-      #     detail = paste(
-      #       "This step took approximately",
-      #       round(vals$time_sims, 1), "minutes."))
-      #
-      #   vals$guess <- NULL
-      #   vals$fit1 <- fit1
-      #   vals$needs_fit <- FALSE
-      #
-      # } # end of if(), est_type
-      #
-      # # if(!input$regBox_sampling$collapsed &&
-      # #    vals$tour_active) { NULL } else {
-      # #      shinydashboardPlus::updateBox(
-      # #        "regBox_sampling", action = "toggle") }
+      # if (!input$regBox_sampling$collapsed &&
+      #    vals$tour_active) { NULL } else {
+      #      shinydashboardPlus::updateBox(
+      #        "regBox_sampling", action = "toggle") }
 
     }) %>% # end of observe,
       bindEvent(input$run_sim_new)
@@ -1232,7 +1266,7 @@ mod_tab_device_server <- function(id, vals) {
 
       df0 <- df_decay()
 
-      if(input$deviceInput_log == TRUE) {
+      if (input$deviceInput_log == TRUE) {
         df0$x <- log(vals$gpsdecay$freq_hrs)
       } else {
         df0$x <- vals$gpsdecay$freq_hrs
@@ -1262,12 +1296,12 @@ mod_tab_device_server <- function(id, vals) {
         theme_movedesign() +
         ggplot2::theme(legend.position = "none")
 
-      if(!is.null(input$gps_selected_dti)) {
-        tempid <- match(input$gps_selected_dti, df0$nu_notes)
-        preselection <- as.character(tempid)
-      } else {
-        preselection <- character(0)
-      }
+      # if (!is.null(input$gps_selected_dti)) {
+      #   tempid <- match(input$gps_selected_dti, df0$nu_notes)
+      #   preselection <- as.character(tempid)
+      # } else {
+      #   preselection <- character(0)
+      # }
 
       ggiraph::girafe(
         ggobj = p,
@@ -1278,7 +1312,7 @@ mod_tab_device_server <- function(id, vals) {
                         "fill:#ffbf00;",
                         "stroke:#ffbf00;")),
           ggiraph::opts_selection(
-            selected = preselection,
+            # selected = preselection,
             type = "single",
             css = paste("r:5pt;",
                         "fill:#dd4b39;",
@@ -1293,7 +1327,7 @@ mod_tab_device_server <- function(id, vals) {
       req(vals$data0, vals$data1)
 
       newdat <- vals$data1
-      if(vals$data_type == "simulated") {
+      if (vals$data_type == "simulated") {
         dat <- vals$data0[which(vals$data0$t <= max(vals$data1$t)), ]
       } else {
         dat <- vals$data0
@@ -1496,7 +1530,7 @@ mod_tab_device_server <- function(id, vals) {
 
       taup <- fix_time(vals$tau_p0, vals$tau_p0_units)
 
-      if(vals$data_type == "simulated") {
+      if (vals$data_type == "simulated") {
         tmprange <- NULL
       } else {
         taup_min <- fix_time(vals$tau_p0_min, vals$tau_p0_units)
@@ -1517,7 +1551,7 @@ mod_tab_device_server <- function(id, vals) {
     output$regBlock_tau_v <- renderUI({
       tauv <- fix_time(vals$tau_v0, vals$tau_v0_units)
 
-      if(vals$data_type == "simulated") {
+      if (vals$data_type == "simulated") {
         tmprange <- NULL
       } else {
         tauv_min <- fix_time(vals$tau_v0_min, vals$tau_v0_units)
@@ -1540,7 +1574,7 @@ mod_tab_device_server <- function(id, vals) {
     output$regBlock_dur0_dev <- renderUI({
       req(vals$dur0_dev)
 
-      if(vals$dur0_dev > (1 %#% "month")) {
+      if (vals$dur0_dev > (1 %#% "month")) {
         tmpunits <- "months"
       } else {
         tmpunits <- "days"
@@ -1589,7 +1623,7 @@ mod_tab_device_server <- function(id, vals) {
     output$regBlock_Narea <- renderUI({
       req(vals$device_N1)
 
-      if(input$est_type == 1) {
+      if (input$est_type == 1) {
         diff1 <- paste0("-", round((100 - ((
           vals$device_N1 * 100)/vals$device_n)), 1), "%")
       } else {
@@ -1611,7 +1645,7 @@ mod_tab_device_server <- function(id, vals) {
     output$regBlock_Nspeed <- renderUI({
       req(vals$device_N2)
 
-      if(input$est_type == 1) {
+      if (input$est_type == 1) {
         diff2 <- paste0("-", round((100 - ((
           vals$device_N2 * 100)/vals$device_n)), 1), "%")
       } else {
@@ -1740,7 +1774,7 @@ mod_tab_device_server <- function(id, vals) {
 
       # Sampling duration:
 
-      if(input$which_var == 1) {
+      if (input$which_var == 1) {
 
         p <- ggplot2::ggplot(df) +
           ggplot2::geom_point(
@@ -1796,7 +1830,7 @@ mod_tab_device_server <- function(id, vals) {
 
       # Sampling interval:
 
-      if(input$which_var == 2) {
+      if (input$which_var == 2) {
 
         p <- ggplot2::ggplot(df) +
           ggplot2::geom_point(
@@ -1852,24 +1886,6 @@ mod_tab_device_server <- function(id, vals) {
     }) # end of renderGirafe // regPlot_tradeoffs
 
     # MISC: ---------------------------------------------------------------
-
-    # output$output_gpsfix <- renderText({
-    #   req(vals$dti0_dev, vals$dti0_units_dev)
-    #
-    #   freq <- round(
-    #     1/("day" %#% vals$dti0_dev %#% vals$dti0_units_dev), 0)
-    #   freq_units <- "locations/hour"
-    #
-    #   if(freq < 1) {
-    #     freq <- round(
-    #       1/("hours" %#% vals$dti0_dev %#%
-    #            vals$dti0_units_dev), 0)
-    #     freq_units <- "locations/hour"
-    #   }
-    #
-    #   return(paste(freq, freq_units))
-    #
-    # }) # end of renderText // output_gpsfix
 
   }) # end of moduleServer
 }

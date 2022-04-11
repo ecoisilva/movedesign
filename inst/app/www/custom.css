@@ -43,6 +43,7 @@ body {
 
 .skin-black .sidebar a {
   color: #222d32;
+  font-size: 15px;
 }
 .skin-black .sidebar-menu > li > .treeview-menu {
   margin: 0 0 0 0;
@@ -66,6 +67,7 @@ body {
 .skin-black .main-sidebar,
 .skin-black .wrapper {
   background-color: #ffffff;
+  font-family: Anek Tamil, sans-serif;
 }
 
 .skin-black .sidebar-menu > li.active > a,
@@ -94,7 +96,7 @@ body {
 p {
   display: block;
   text-align: justify;
-  font-family: Fira Sans Condensed, Open Sans, sans-serif;
+  font-family: Anek Tamil, Open Sans, sans-serif;
   color: #757575;
     font-size: 16px;
   font-weight: 100;
@@ -344,7 +346,7 @@ sub { font-size: 90%; }
 
 .selectize-dropdown {
   font-family: Roboto Condensed, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.5px;
   border-radius: 0;
   outline: none;
@@ -359,6 +361,10 @@ sub { font-size: 90%; }
 }
 
 .form-control {
+  font-family: Roboto Condensed, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: #444;
   border-color: #f4f4f4;
 }
 
@@ -814,8 +820,8 @@ padding: 0 10px;
 }
 
 .nav-pills > li.active > a:focus {
-  color: #ffffff;
-  background-color: #009da0;
+  color: #444;
+  background-color: #f7f7f7;
 }
 .nav-pills > li > a.active {
   background-color: #f4f4f4 !important;
@@ -823,10 +829,9 @@ padding: 0 10px;
 
 .nav-stacked > li.active > a,
 .nav-stacked > li.active > a:hover {
-  background: 0 0;
   color: #444;
-  border-top: 0;
-  border-left-color: #009da0;
+  background-color: #f7f7f7;
+  border-left: 3px solid #009da0;
 }
 
 .nav-tabs {
@@ -874,6 +879,14 @@ padding: 0 10px;
   background-color: #222d32 !important;
   color: #fff !important;
   border: 1px #222d32 solid !important;
+}
+
+.ReactTable {
+  font-family: Roboto Condensed, Consola, sans-serif;
+}
+
+table.dataTable {
+  font-family: Roboto Condensed;
 }
 
 .rt-table {
@@ -961,7 +974,7 @@ footer {
 }
 
 .sweet-alert p {
-  text-align: justify !important;
+  text-align: center !important;
 }
 
 

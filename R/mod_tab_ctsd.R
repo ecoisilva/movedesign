@@ -7,7 +7,7 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_tab_ctsd_ui <- function(id){
+mod_tab_ctsd_ui <- function(id) {
   ns <- NS(id)
   tagList(
     fluidRow(
@@ -372,9 +372,10 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Changing group options for plot: ---------------------------------
 
     output$ctsdVar_group <- renderUI({
-      req(vals$dur0)
+      req(vals$dur0_dev, vals$dti0_dev)
 
       eval_dur <- vals$dur0_dev
+      eval_dti <- vals$dti0_dev
 
       group_choices <- c(
         "Minutes" = "minutes",
@@ -398,6 +399,12 @@ mod_tab_ctsd_server <- function(id, vals) {
         group_selected <- "days"
         group_min <- "minutes"
         group_max <- "months"
+      }
+
+      if (eval_dti >= 1 %#% "day") {
+        group_min <- "days"
+      } else if (eval_dti >= 1 %#% "hour") {
+        group_min <- "hours"
       }
 
       shinyWidgets::sliderTextInput(
@@ -623,7 +630,7 @@ mod_tab_ctsd_server <- function(id, vals) {
             sigma0 = vals$sigma0, sigma0_units = vals$sigma0_units)
 
           shiny::withProgress({
-            fit0 <- ctmm::ctmm.fit(vals$data1, newmod)
+            fit1 <- ctmm::ctmm.fit(vals$data1, newmod)
           },
           message = "Fitting movement model.",
           detail = "This may take a while...")
@@ -638,7 +645,7 @@ mod_tab_ctsd_server <- function(id, vals) {
               "minutes."))
 
           vals$guess <- NULL
-          vals$fit1 <- fit0
+          vals$fit1 <- fit1
           vals$needs_fit <- FALSE
 
         } # end of if(vals$needs_fit)
@@ -951,16 +958,17 @@ mod_tab_ctsd_server <- function(id, vals) {
             msg_step(1, 2, style = "warning")),
           detail = "This may take a while...")
 
-        start_ctsd <- Sys.time()
         shiny::withProgress({
+          start_ctsd <- Sys.time()
           vals$ctsd <- ctmm::speed(vals$data1,
                                    vals$fit1)
         },
         message = "Estimating speed/distance.",
         detail = "This may take a while...")
 
-        # vals$ctsd_units <- rownames(vals$ctsd$CI) %>%
-        #   extract_units()
+        if("CI" %in% names(vals$ctsd)) {
+          vals$ctsd <- vals$ctsd$CI
+        }
 
         tempnames <- rownames(vals$ctsd)
         vals$ctsd_units <-
@@ -982,10 +990,6 @@ mod_tab_ctsd_server <- function(id, vals) {
                                         vals$fit1,
                                         units = FALSE)
 
-        vals$time_ctsd <- difftime(Sys.time(),
-                                   start_ctsd,
-                                   units = 'mins')
-
         ### Simulating fine-scale trajectory: ---------------------------
 
         msg_log(
@@ -1002,8 +1006,8 @@ mod_tab_ctsd_server <- function(id, vals) {
           dat <- vals$data1
         }
 
-        start_truth <- Sys.time()
         shiny::withProgress({
+          start_truth <- Sys.time()
           sim_full <- ctmm::simulate(
             dat,
             vals$fit0,
@@ -1012,7 +1016,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           incProgress(0.25)
 
           vals$ctsd_truth <- ctmm::speed(
-            sim_full[which(sim_full$t <= (1 %#% "days")), ],
+            sim_full[which(sim_full$t <= (1 %#% "day")), ],
             vals$fit0,
             cores = -1)
 
@@ -1021,8 +1025,9 @@ mod_tab_ctsd_server <- function(id, vals) {
         message = "Estimating speed of fine-scale trajectory.",
         detail = "This may take a while...")
 
-        # vals$ctsd_truth_units <- rownames(vals$ctsd_truth$CI) %>%
-        #   extract_units()
+        if("CI" %in% names(vals$ctsd_truth)) {
+          vals$ctsd_truth <- vals$ctsd_truth$CI
+        }
 
         tempnames <- rownames(vals$ctsd_truth)
         vals$ctsd_truth_units <-
@@ -1033,7 +1038,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           Sys.time(), start_truth, units = 'mins')
 
         msg_log(
-          style = 'success',
+          style = "success",
           message = paste0(
             "Estimation ", msg_success("completed"),
             msg_step(2, 2, style = "success")),
@@ -1041,6 +1046,10 @@ mod_tab_ctsd_server <- function(id, vals) {
             "This step took approximately",
             round(vals$time_ctsd_truth, 1),
             "minutes."))
+
+        vals$time_ctsd <- difftime(Sys.time(),
+                                   start_ctsd,
+                                   units = 'mins')
 
       } # end of if() dti & tau evaluation
     }) %>% # end of observe, then:
@@ -1184,11 +1193,13 @@ mod_tab_ctsd_server <- function(id, vals) {
 
         msg_log(
           style = "warning",
-          message = "Estimating speed of simulated trajectory.",
+          message = paste0(
+            "Estmating speed for ",
+            msg_warning("newly simulated trajectory.")),
           detail = "This may take a while...")
 
-        start_ctsd_new <- Sys.time()
         shiny::withProgress({
+          start_ctsd_new <- Sys.time()
           vals$ctsd_new <- ctmm::speed(
             vals$data2_ctsd,
             CTMM = vals$fit0,
@@ -1197,18 +1208,14 @@ mod_tab_ctsd_server <- function(id, vals) {
         message = "Estimating speed of simulated trajectory.",
         detail = "This may take a while...")
 
-        # vals$ctsd_units_new <- rownames(vals$ctsd_new$CI) %>%
-        #   extract_units()
+        if("CI" %in% names(vals$ctsd_new)) {
+          vals$ctsd_new <- vals$ctsd_new$CI
+        }
 
         tempnames <- rownames(vals$ctsd_new)
         vals$ctsd_units_new <-
           tempnames[grep('speed', tempnames)] %>%
           extract_units()
-
-        vals$time_ctsd_new <- difftime(
-          Sys.time(),
-          start_ctsd_new,
-          units = 'mins')
 
         msg_log(
           style = "success",
@@ -1217,6 +1224,12 @@ mod_tab_ctsd_server <- function(id, vals) {
             "This step took approximately",
             round(vals$time_ctsd_new, 1),
             "minutes."))
+
+        vals$time_ctsd_new <- difftime(
+          Sys.time(),
+          start_ctsd_new,
+          units = 'mins')
+
 
       } else {
 
@@ -1264,7 +1277,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Tracking regime: -------------------------------------------------
 
     output$ctsdInfo_dur <- shiny::renderUI({
-      req(vals$dti0_dev)
+      req(vals$dur0_dev)
 
       out_dur <- fix_time(vals$dur0_units_dev %#% vals$dur0_dev,
                                vals$dur0_units_dev)
@@ -1277,8 +1290,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     output$ctsdInfo_dti <- shiny::renderUI({
       req(vals$dti0_dev)
 
-      out_dti <- fix_time(vals$dti0_units_dev %#%
-                                 vals$dti0_dev,
+      out_dti <- fix_time(vals$dti0_units_dev %#% vals$dti0_dev,
                                vals$dti0_units_dev)
 
       parBlock(text = "Sampling interval",
@@ -1450,6 +1462,19 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     }) # end of renderUI // ctsdInfo_speed
 
+    output$ctsdInfo_err <- shiny::renderUI({
+      req(vals$ctsd, vals$ctsdErr)
+
+      errorBlock(
+        icon = "radiation",
+        text = "Expected error",
+        value = vals$ctsdErr,
+        min = vals$ctsdErr_min,
+        max = vals$ctsdErr_max,
+        rightBorder = FALSE)
+
+    }) # end of renderUI // ctsdInfo_err
+
     output$ctsdInfo_speed_new <- shiny::renderUI({
       req(vals$ctsd_new)
 
@@ -1471,19 +1496,6 @@ mod_tab_ctsd_server <- function(id, vals) {
           "—", round(est_max, 3)))
 
     }) # end of renderUI // ctsdInfo_speed
-
-    output$ctsdInfo_err <- shiny::renderUI({
-      req(vals$ctsd)
-
-      errorBlock(
-        icon = "radiation",
-        text = "Expected error",
-        value = vals$ctsdErr,
-        min = vals$ctsdErr_min,
-        max = vals$ctsdErr_max,
-        rightBorder = FALSE)
-
-    }) # end of renderUI // ctsdInfo_err
 
     output$ctsdInfo_err_new <- shiny::renderUI({
       req(vals$ctsd_new)
@@ -1591,19 +1603,19 @@ mod_tab_ctsd_server <- function(id, vals) {
       df0$timestamp <- as.POSIXct(df0$t, origin = t_origin)
 
       if(tmpunits == "minutes") {
-        df0$t_new <- round(as.POSIXct(df0$timestamp),
+        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
                            units = "mins")
         df0 <- df0 %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
       } else if(tmpunits == "hours") {
-        df0$t_new <- round(as.POSIXct(df0$timestamp),
+        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
                            units = "hours")
         df0 <- df0 %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
       } else if(tmpunits == "days") {
-        df0$t_new <- round(as.POSIXct(df0$timestamp),
+        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
                            units = "days")
         df0 <- df0 %>%
           dplyr::mutate(t_new = as.POSIXct(
@@ -1612,7 +1624,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         df0 <- df0 %>% dplyr::mutate(
           t_new = format(timestamp, "%U"))
       } else if(tmpunits == "months") {
-        df0$t_new <- round(as.POSIXct(df0$timestamp),
+        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
                            units = "months")
         df0 <- df0 %>%
           dplyr::mutate(t_new = as.POSIXct(
@@ -1938,15 +1950,15 @@ mod_tab_ctsd_server <- function(id, vals) {
     output$time_ctsd <- renderText({
       req(vals$time_ctsd)
 
-      paste0("Time difference of ",
-             round(vals$time_ctsd, 1), " minutes.")
+      paste("Initial tracking regime took approximately",
+            round(vals$time_ctsd, 1), "minutes.")
     })
 
     output$time_ctsd_new <- renderText({
       req(vals$time_ctsd_new)
 
-      paste0("Time difference of ",
-             round(vals$time_ctsd_new, 1), " minutes.")
+      paste("Newly set tracking regime took approximately",
+            round(vals$time_ctsd_new, 1), "minutes.")
     })
 
   }) # end of moduleServer

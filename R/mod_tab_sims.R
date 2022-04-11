@@ -426,6 +426,15 @@ mod_tab_sims_server <- function(id, vals) {
     shinyjs::hide(id = "simBox_summary")
     shinyjs::hide(id = "simBox_repeat")
 
+    ## Reset values from import or select data tabs: --------------------
+
+    observe({
+      req(vals$active_tab == 'sims')
+      reset_data_values(vals)
+
+    }) %>% # end of observe,
+      bindEvent(input$generateSeed)
+
     # SIMULATIONS -------------------------------------------------------
     ## Initial sampling parameters: -------------------------------------
 

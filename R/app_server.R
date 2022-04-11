@@ -114,11 +114,6 @@ app_server <- function(input, output, session) {
           icon = shiny::icon("paw"),
           startExpanded = TRUE,
 
-          # shinydashboard::menuSubItem(
-          #   tabName = "real",
-          #   text = data_title,
-          #   icon = data_icon),
-
           shinydashboard::menuSubItem(
             tabName = "data_upload",
             text = upload_title,
@@ -195,7 +190,6 @@ app_server <- function(input, output, session) {
   mod_tab_about_server("tab_about_1", vals = vals)
 
   # Data tabs:
-  # mod_tab_data_server("tab_data_1", vals = vals)
   mod_tab_data_upload_server("tab_data_upload_1", vals = vals)
   mod_tab_data_select_server("tab_data_select_1", vals = vals)
   mod_tab_sims_server("tab_sims_1", vals = vals)
@@ -208,7 +202,7 @@ app_server <- function(input, output, session) {
   mod_tab_ctsd_server("tab_ctsd_1", vals = vals)
 
   # Report tab:
-  mod_tab_report_server("tab_report_ui_1", vals = vals)
+  mod_tab_report_server("tab_report_1", vals = vals)
 
   # Misc: -----------------------------------------------------------------
 

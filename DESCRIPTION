@@ -1,6 +1,6 @@
 Package: movedesign
 Title: Study design of movement ecology studies
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R: 
     person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"))
 Description: A shiny app to design movement ecology studies.
@@ -39,6 +39,7 @@ Imports:
     viridis,
     waiter
 Suggests: 
+    covr,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

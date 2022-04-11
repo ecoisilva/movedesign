@@ -93,7 +93,7 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           span("Warning:", style = paste(txt_tour, col_caution)),
-          "do not interact with anything outside of higlighted zones",
+          "do not interact with anything outside of highlighted zones",
           "create alongside the tutorial boxes.",
           p(),
           "This tutorial will",
@@ -135,40 +135,56 @@ mod_comp_tour_server <- function(id, vals) {
           p(),
           span(
             "Please choose",
-            fontawesome::fa(name = "check",
-                            fill = hex_item),
-            span("Select from available species",
-                 style = txt_tour_item),
+            fontawesome::fa(name = "check", fill = hex_item),
+            span("Select from available species", style = txt_tour_item),
             "and the two research questions:",
-            fontawesome::fa(name = "check-square",
-                            fill = hex_border),
-            "Home range, and",
-            fontawesome::fa(name = "check-square",
-                            fill = hex_border),
-            "Speed & distance.", style = txt_action)
+            fontawesome::fa(name = "check-square", fill = hex_item),
+            HTML(paste0(span("Home range", style = txt_tour_item), ",")),
+            "and",
+            fontawesome::fa(name = "check-square", fill = hex_item),
+            HTML(paste0(span("Speed & distance", style = txt_tour_item),
+                        ".")), style = txt_action)
         )))
 
       element <- c(element, ".sidebar")
       intro <- c(
         intro,
         HTML(paste(
-          "The corresponding steps are now highlighted.",
-          "First, we go to the",
+          "The corresponding steps are now marked in bold.",
+          "First, we will go to the",
           fontawesome::fa(name = "file", fill = hex_border),
-          span("Select data", style = txt_tour_border), "tab.",
-          p(),
-          span("Click on the 'Next' button or use the right arrow",
-               "of your keyboard to proceed.", style = txt_action)
+          span("Select data", style = txt_tour_border), "tab",
+          HTML("&mdash;"), "to load a dataset from the",
+          span("ctmm", style = txt_tour_grey), "R package",
+          HTML("&mdash;"), "then the",
+          fontawesome::fa(name = "stopwatch", fill = hex_border),
+          span("Tracking regime", style = txt_tour_border), "tab",
+          HTML("&mdash;"),
+          "to set the sampling duration and interval for evaluation",
+          HTML("&mdash;"), "and finally the",
+          fontawesome::fa(name = "drafting-compass", fill = hex_border),
+          span("Analyses", style = txt_tour_border), "tabs."
         )))
 
       ## Data tabs: -------------------------------------------------------
 
       tab3 <- paste0("#tab_data_select_1", "-")
+      element <- c(element, paste0(tab3, "select_intro"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "Here, you can select one of the seven species",
+          "available within the", a(href = mainlink_ctmm, 'ctmm'),
+          "package and extract their parameters."
+        )))
+
+
+
       element <- c(element, paste0(tab3, "selectBox_species"))
       intro <- c(
         intro,
         HTML(paste(
-          "Parameters extracted from the species provided",
+          "Parameters extracted from one of the species provided",
           "may help inform animal tracking studies of other",
           "species with similar",
           paste0(span("movement behaviors",
@@ -250,10 +266,7 @@ mod_comp_tour_server <- function(id, vals) {
           p(),
           "If the button changes to",
           fontawesome::fa(name = "check-circle"),
-          "'Validated!', and",
-          "If a", span("'Success!'", style = txt_output),
-          "message appears below,",
-
+          "'Validated!',",
           span(
             "then you can proceed by clicking the",
             fontawesome::fa(name = "paper-plane"),

@@ -7,7 +7,7 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_tab_report_ui <- function(id){
+mod_tab_report_ui <- function(id) {
   ns <- NS(id)
   tagList(
     fluidRow(
@@ -48,8 +48,8 @@ mod_tab_report_ui <- function(id){
             width = NULL,
             solidHeader = FALSE,
 
-            DT::dataTableOutput(ns("endTable_sims")),
-            br(),
+            # DT::dataTableOutput(ns("endTable_sims")),
+            # br(),
             DT::dataTableOutput(ns("endTable_regs")),
             br(),
             DT::dataTableOutput(ns("endTable_outs"))
@@ -73,43 +73,80 @@ mod_tab_report_server <- function(id, vals) {
     }) %>%
       bindEvent(input$map_locs)
 
-    observe({
-      req(vals$data_type)
-
-      if(vals$data_type == "simulated") {
-        shinyjs::hide("map_locs")
-      }
-    })
-
     # INFORMATION -------------------------------------------------------
     ## Species & individual: --------------------------------------------
 
-    output$report_plot <- mapboxer::renderMapboxer({
-      req(vals$data_type != "simulated")
+    output$report_plot <- ggiraph::renderGirafe({
+      req(vals$data1)
 
-      locs <- as.data.frame(vals$data0$longitude)
-      names(locs) <- "lng"
-      locs$lat <- vals$data0$latitude
-      locs$time <- vals$data0$timestamp
+      newdat <- vals$data1
+      yrange <- diff(range(newdat$y))
+      xrange <- diff(range(newdat$x))
 
-      p <- mapboxer::as_mapbox_source(locs) %>%
-        mapboxer::mapboxer(
-          center = c(mean(locs$lng), mean(locs$lat)),
-          zoom = 4
-        ) %>%
-        mapboxer::add_circle_layer(
-          circle_color = "#ffbf00",
-          circle_radius = 7,
-          id = "locs"
-        ) %>%
-        mapboxer::add_navigation_control(pos = "top-left")
+      if(yrange < 1.5 * xrange) {
+        ymin <- min(newdat$y) - yrange * .3
+        ymax <- max(newdat$y) + yrange * .3
+      } else if(yrange < 2 * xrange) {
+        ymin <- min(newdat$y) - yrange * .5
+        ymax <- max(newdat$y) + yrange * .5
+      } else {
+        ymin <- min(newdat$y)
+        ymax <- max(newdat$y)
+      }
 
-      return(p)
-    }) # end of renderMapboxer
+      if(xrange < 2 * yrange) {
+        xmin <- min(newdat$x) - xrange * .5
+        xmax <- max(newdat$x) + xrange * .5
+      } else {
+        xmin <- min(newdat$x)
+        xmax <- max(newdat$x)
+      }
+
+      p <- ggplot2::ggplot() +
+
+        ggiraph::geom_path_interactive(
+          newdat, mapping = ggplot2::aes(
+            x = x, y = y,
+            color = timestamp),
+          alpha = .9) +
+        ggiraph::geom_point_interactive(
+          newdat, mapping = ggplot2::aes(
+            x = x, y = y,
+            color = timestamp),
+          size = 1.2) +
+
+        ggplot2::labs(x = "x coordinate",
+                      y = "y coordinate") +
+
+        ggplot2::scale_x_continuous(
+          labels = scales::comma,
+          limits = c(xmin, xmax)) +
+        ggplot2::scale_y_continuous(
+          labels = scales::comma,
+          limits = c(ymin, ymax)) +
+        viridis::scale_color_viridis(
+          name = "Tracking time:",
+          option = "D", trans = "time",
+          breaks = c(min(newdat$timestamp),
+                     max(newdat$timestamp)),
+          labels = c("Start", "End")) +
+
+        theme_movedesign() +
+        ggplot2::theme(legend.position = "none")
+
+      ggiraph::girafe(
+        ggobj = p,
+        width_svg = 5, height_svg = 5,
+        options = list(
+          ggiraph::opts_sizing(rescale = TRUE, width = .5),
+          ggiraph::opts_toolbar(saveaspng = FALSE)))
+
+    }) # end of renderGirafe // report_plot
 
     output$report_species <- renderUI({
       req(vals$tau_p0, vals$tau_v0, vals$sigma0)
 
+      subtitle <- NULL
       if(!is.null(vals$species_common)) {
 
         subtitle <- tagList(
@@ -119,7 +156,7 @@ mod_tab_report_server <- function(id, vals) {
 
       } else { subtitle <- em(vals$species_binom) }
 
-      out_sig <- fix_spUnits(vals$sigma0, units = vals$sigma0_units)
+      out_sig <- fix_spatial(vals$sigma0, unit = vals$sigma0_units)
 
       shinydashboard::tabBox(
         width = NULL,
@@ -150,7 +187,9 @@ mod_tab_report_server <- function(id, vals) {
               color = hex_main,
               right = span(HTML(out_sig[1], out_sig[3]))),
 
-            mapboxer::mapboxerOutput(outputId = ns("report_plot"))
+            ggiraph::girafeOutput(
+              outputId = ns("report_plot"),
+              width = "95%", height = "95%")
 
           ), # end of navPills
         ), # end of tabPanel
@@ -161,10 +200,11 @@ mod_tab_report_server <- function(id, vals) {
 
             shiny::p(),
             column(width = 12, align = "center",
-                   shinyWidgets::switchInput(ns("map_locs"),
-                                             label = "Minimap",
-                                             value = FALSE,
-                                             inline = TRUE))),
+                   shinyWidgets::switchInput(
+                     inputId = ns("map_locs"),
+                     label = "Minimap",
+                     value = TRUE,
+                     inline = TRUE))),
           br())
 
       ) # end of tabBox
@@ -207,7 +247,7 @@ mod_tab_report_server <- function(id, vals) {
     ## Sample sizes: ---------------------------------------------------
 
     output$report_sizes <- renderUI({
-      req(vals$newfit, vals$device_n)
+      req(vals$fit1)
       shinyjs::show(id = "reportBox_sizes")
 
       n <- vals$device_n
@@ -269,8 +309,7 @@ mod_tab_report_server <- function(id, vals) {
     }) # end of renderUI // report_sizes
 
     # TABLES ------------------------------------------------------------
-
-    # Simulations table: ------------------------------------------------
+    ## Simulations table: -----------------------------------------------
 
     output$endTable_sims <- DT::renderDataTable({
       req(vals$data_type == "simulated", vals$df_sims)

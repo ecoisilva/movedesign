@@ -1135,9 +1135,9 @@ mod_tab_hrange_server <- function(id, vals) {
 
     output$hrInfo_est <- shiny::renderUI({
 
-      est <- fix_spUnits(vals$hrEst, vals$hr_units)
-      est_min <- fix_spUnits(vals$hrEst_min, vals$hr_units)
-      est_max <- fix_spUnits(vals$hrEst_max, vals$hr_units)
+      est <- fix_spatial(vals$hrEst, vals$hr_units)
+      est_min <- fix_spatial(vals$hrEst_min, vals$hr_units)
+      est_max <- fix_spatial(vals$hrEst_max, vals$hr_units)
 
       parBlock(
         icon = "map-marked-alt",
@@ -1153,9 +1153,9 @@ mod_tab_hrange_server <- function(id, vals) {
     output$hrInfo_est_new <- shiny::renderUI({
       req(vals$akde_new)
 
-      est <- fix_spUnits(vals$hrEst_new, vals$hr_units_new)
-      est_min <- fix_spUnits(vals$hrEst_min_new, vals$hr_units_new)
-      est_max <- fix_spUnits(vals$hrEst_max_new, vals$hr_units_new)
+      est <- fix_spatial(vals$hrEst_new, vals$hr_units_new)
+      est_min <- fix_spatial(vals$hrEst_min_new, vals$hr_units_new)
+      est_max <- fix_spatial(vals$hrEst_max_new, vals$hr_units_new)
 
       parBlock(
         icon = "map-marked-alt",
