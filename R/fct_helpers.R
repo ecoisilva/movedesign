@@ -51,36 +51,54 @@ abbreviate_time <- function(unit) {
 #' }
 #' @keywords internal
 #'
+#' @importFrom dplyr case_when
+#' @importFrom ctmm `%#%`
 #' @noRd
-fix_time <- function(value, unit)  {
+fix_time <- function(value, unit, adjust = FALSE)  {
 
   if (!is.character(unit)) {
     stop("`unit` argument must be a character string.")
   }
 
   all_units <- c("year", "month", "day", "hour", "minute", "second")
-  x <- gsub("(.)s$", "\\1", unit)
+  y <- gsub("(.)s$", "\\1", unit)
 
-  val <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
-  if (any(is.na(val))) {
-    stop("Invalid time unit: ", paste(x[is.na(val)], collapse = ", "),
+  var <- all_units[pmatch(y, all_units, duplicates.ok = TRUE)]
+  if (any(is.na(var))) {
+    stop("Invalid time unit: ", paste(y[is.na(var)], collapse = ", "),
          call. = FALSE)
   }
 
+  x <- value
+  secs <- round(x %#% y, 0)
+
+  if (adjust) {
+    if (any(secs < 60)) {
+      new.unit <- "second"
+    } else if (any(secs < 3600)) {
+      new.unit <- "minute"
+    } else if (any(secs < 86400)) {
+      new.unit <- "hour"
+    } else if (any(secs < 1 %#% "month")) {
+      new.unit <- "day"
+    } else if (any(secs < 1 %#% "year")) {
+      new.unit <- "month"
+    } else {
+      new.unit <- "year"
+    }
+    x <- new.unit %#% value %#% y
+    y <- new.unit
+  }
+
+  x <- dplyr::case_when(
+    x %% 1 == 0 ~ scales::label_comma(accuracy = 1)(x),
+    x %% 1 != 0 ~ scales::label_comma(accuracy = .1)(x))
+
   # Check if value is equal to 1 (e.g. 1 hour):
-  if(value == 1 && x == "year") y <- "year"
-  if(value == 1 && x == "month") y <- "month"
-  if(value == 1 && x == "day") y <- "day"
-  if(value == 1 && x == "hour") y <- "hour"
-  if(value == 1 && x == "minute") y <- "minute"
-  if(value == 1 && x == "second") y <- "second"
+  y <- dplyr::case_when(x < 1 || x > 1 ~ paste0(y, "s"),
+                 x == 1 ~ y)
 
-  out_value <- ifelse(
-    value %% 1 == 0,
-    scales::label_comma(accuracy = 1)(value),
-    scales::label_comma(accuracy = .1)(value))
-
-  out <- c(out_value, unit)
+  out <- c(x, y)
   return(out)
 
 }
@@ -263,8 +281,7 @@ simulate_gpsdecay <- function(data,
                               subset,
                               minrate) {
 
-  tmp <- data$freq_hrs[
-    match(minrate, data$nu_notes)]
+  tmp <- data$freq_hrs[match(minrate, data$nu_notes)]
 
   newdata <- data %>%
     dplyr::filter(highlight == "Y") %>%
@@ -272,22 +289,23 @@ simulate_gpsdecay <- function(data,
     dplyr::select(nu_notes, nu, freq_hrs)
 
   ylow <- 0
+  yrange <- "months" %#% yrange0
 
   x <- newdata$freq_hrs - newdata$freq_hrs[1]
-  newdata$dur <- yrange0 * exp(-k0 * x) + ylow
+  newdata$dur_mth <- yrange * exp(-k0 * x) + ylow
   newdata$color <- as.factor(dplyr::case_when(
-    newdata$dur < subset ~ "red",
-    newdata$dur >= subset ~ "blue"))
+    newdata$dur_mth < subset ~ "red",
+    newdata$dur_mth >= subset ~ "blue"))
   newdata$id <- 1:nrow(newdata)
 
   newdata$n <- NA
   for(i in 1:nrow(newdata)) {
-    if(newdata$dur[i] <= 0.0328766) {
+    if(newdata$dur_mth[i] <= 0.033) {
       newdata$n[i] <- 0
-      newdata$dur[i] <- 0
+      newdata$dur_mth[i] <- 0
     } else {
       newdata$n[i] <- length(
-        seq(1, round((newdata$dur[i] %#% "months"), 0),
+        seq(1, round((newdata$dur_mth[i] %#% "months"), 0),
             by = newdata$nu[i]))
     }
   }

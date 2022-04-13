@@ -263,17 +263,6 @@ mod_tab_data_select_server <- function(id, vals) {
 
     }) # end of observe
 
-    ## Reset values between data tabs: -------------------------------------
-
-    # observe({ # may not be needed
-    #   req(vals$active_tab == 'data_select')
-    #
-    #   reset_data_values(vals)
-    #   shinyjs::enable("selectButton_extract")
-    #
-    # }) %>% # end of observe,
-    #   bindEvent(vals$species, ignoreInit = TRUE)
-
     ## Render validate button: --------------------------------------------
 
     output$selectUI_validate <- renderUI({

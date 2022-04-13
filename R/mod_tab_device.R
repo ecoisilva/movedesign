@@ -11,9 +11,6 @@ mod_tab_device_ui <- function(id) {
   ns <- NS(id)
   tagList(
     fluidRow(
-      tags$head(tags$style(
-        type = "text/css",
-        ".container-fluid {  max-width: 1260px; }")),
 
       # Introduction: -----------------------------------------------------
 
@@ -122,7 +119,10 @@ mod_tab_device_ui <- function(id) {
               grid = FALSE,
               post = "%",
               width = "100%") %>%
-              help_modal(file = "modal_dataloss")
+              help_modal(file = "modal_dataloss"),
+
+            br(),
+            uiOutput(ns("regBlock_loss"))
 
           ), # end of box // regBox_loss
 
@@ -493,6 +493,30 @@ mod_tab_device_server <- function(id, vals) {
       ) # end of splitLayout
     }) # end of renderUI // vhfSelect_fix
 
+    ## Adjust units: ------------------------------------------------------
+
+    # observe({
+    #   if(!is.null(input$gps_dur_units)) {
+    #
+    #     dur.value <- input$gps_dur
+    #     dur.units <- input$gps_dur_units
+    #
+    #     if(dur.value >= 31 && dur.units == "days") {
+    #       dur.value <- 1; dur.units <-  "months" }
+    #     if(dur.value >= 12 && dur.units == "months") {
+    #       dur.value <- 1; dur.units <-  "years" }
+    #
+    #     shiny::updateNumericInput(
+    #       session, inputId = "gps_dur",
+    #       min = 1, value = dur.value)
+    #
+    #     shiny::updateSelectInput(
+    #       session, inputId = "gps_dur_units",
+    #       selected = dur.units)
+    #
+    #   } # end of if(), GPS device
+    # }) # end of observe
+
     ## Create regime text: ------------------------------------------------
 
     output$vhfText_regime <- renderUI({
@@ -628,9 +652,9 @@ mod_tab_device_server <- function(id, vals) {
             shiny::selectInput(
               inputId = ns("gps_dur_units"),
               label = NULL,
-              choices = c("Days" = "days",
-                          "Months" = "months",
-                          "Years" = "years"),
+              choices = c("Day(s)" = "days",
+                          "Month(s)" = "months",
+                          "Year(s)" = "years"),
               selected = "months")
 
           ), # end of splitLayout
@@ -1005,17 +1029,18 @@ mod_tab_device_server <- function(id, vals) {
     observe({
       vals$dur0_dev <- NULL
       vals$dti0_dev <- NULL
+      vals$is_reg_valid <- FALSE
 
       if (input$device_type == 1) {
         if (input$evaluate_tradeoffs) {
           req(input$regPlot_decay_selected)
 
           df0 <- df_decay()
-          dur_dev <- df0[reg_selected(), ]$dur
+          dur_dev <- df0[reg_selected(), ]$dur_mth
           dti_dev <- df0[reg_selected(), ]$nu
 
           vals$dur0_dev <- round(dur_dev %#% "months", 0)
-          vals$dur0_units_dev <- "months"
+          vals$dur0_units_dev <- input$gps_dur_units
           vals$dti0_dev <- round(dti_dev, 0)
 
           tmpdti_notes <- df0[reg_selected(), ]$nu_notes
@@ -1069,7 +1094,7 @@ mod_tab_device_server <- function(id, vals) {
       t0 <- seq(1, dur, by = dti)
       n <- length(t0)
       n_loss <- round(n * (input$deviceInput_loss/100), 0)
-      nlost <- n_loss
+      vals$n_lost <- n_loss
       r <- dti / tauv
 
       if (input$est_type == 1) {
@@ -1097,7 +1122,6 @@ mod_tab_device_server <- function(id, vals) {
       }
 
       vals$device_n <- n - n_loss
-      vals$device_nlost <- nlost
       vals$device_N1 <- N1
       vals$device_N2 <- N2
 
@@ -1109,14 +1133,17 @@ mod_tab_device_server <- function(id, vals) {
     df_decay <- shiny::reactive({
       req(input$gps_k0,
           input$gps_dur,
+          input$gps_dur_units,
           input$gps_maxrate)
 
       df_decay <- simulate_gpsdecay(
         data = movedesign::gps_fixrate,
         k0 = input$gps_k0,
-        yrange0 = input$gps_dur,
+        yrange0 = input$gps_dur %#% input$gps_dur_units,
         subset = 0.164383,
         minrate = input$gps_maxrate)
+
+      df_decay$dur <- df_decay$dur_mth %#% "months"
 
       max_freq <- df_decay %>%
         dplyr::filter(color == "red") %>%
@@ -1143,11 +1170,17 @@ mod_tab_device_server <- function(id, vals) {
 
     ## Simulating new conditional data: ---------------------------------
 
+    observe({
+      vals$seed1 <- round(stats::runif(1, min = 1, max = 10000), 0)
+    }) %>%
+      bindEvent(input$run_sim_new, ignoreInit = TRUE, once = TRUE)
+
     data_sim <- shiny::reactive({
       ctmm::simulate(
         vals$data0,
         vals$fit0,
-        t = seq(0, vals$dur0_dev, by = vals$dti0_dev)[-1]) %>%
+        t = seq(0, vals$dur0_dev, by = vals$dti0_dev)[-1],
+        seed = vals$seed1) %>%
         ctmm:::pseudonymize()
 
     }) %>% # end of reactive
@@ -1158,10 +1191,8 @@ mod_tab_device_server <- function(id, vals) {
           vals$fit0,
           vals$dur0_dev,
           vals$dti0_dev,
-          vals$is_reg_valid)
-
-      # if (input$device_type == 1) need(input$regPlot_decay_selected)
-      # if (input$device_type == 2) need(input$vhf_dur, input$vhf_dti)
+          vals$is_reg_valid,
+          input$deviceInput_loss)
 
       shinyjs::show(id = "regBox_sims")
 
@@ -1173,7 +1204,19 @@ mod_tab_device_server <- function(id, vals) {
       detail = "This may take a while...")
       vals$needs_fit <- TRUE
 
-      vals$data1 <- data1
+      if(input$deviceInput_loss > 0) {
+        perc_loss <- 1 - input$deviceInput_loss/100
+        n_row <- nrow(data1)
+        n_cut <- round(n_row * perc_loss)
+
+        rows_thin <- sort(sample(1:nrow(data1), n_cut))
+        data1_thin <- data1[rows_thin,]
+        vals$data1 <- data1_thin
+        vals$data1_full <- data1
+      } else {
+        vals$data1 <- data1
+        vals$data1_full <- data1
+      }
 
       msg_log(
         style = "success",
@@ -1185,7 +1228,7 @@ mod_tab_device_server <- function(id, vals) {
                          units = 'min'), 1),
           "minutes."))
 
-      ### Run model fit (if set): -----------------------------------------
+      ### Run model fit (if set):
 
       if (input$est_type == 1) {
         vals$needs_fit <- TRUE
@@ -1261,8 +1304,8 @@ mod_tab_device_server <- function(id, vals) {
     })
 
     output$regPlot_decay <- ggiraph::renderGirafe({
-      req(input$evaluate_tradeoffs)
-      req(df_decay())
+      req(input$evaluate_tradeoffs,
+          df_decay())
 
       df0 <- df_decay()
 
@@ -1271,6 +1314,9 @@ mod_tab_device_server <- function(id, vals) {
       } else {
         df0$x <- vals$gpsdecay$freq_hrs
       }
+
+      df0$dur <- input$gps_dur_units %#% df0$dur
+      dur_units <- input$gps_dur_units
 
       p <- ggplot2::ggplot(
         df0, ggplot2::aes(x = x,
@@ -1291,8 +1337,9 @@ mod_tab_device_server <- function(id, vals) {
         ggplot2::scale_color_manual(
           values = c(hex_main, hex_caution)) +
 
-        ggplot2::labs(x = "Frequency (fixes per hour)",
-                      y = "Durations (in months)") +
+        ggplot2::labs(
+          x = "Frequency (fixes per hour)",
+          y = paste0("Durations (in ", dur_units, ")")) +
         theme_movedesign() +
         ggplot2::theme(legend.position = "none")
 
@@ -1331,22 +1378,14 @@ mod_tab_device_server <- function(id, vals) {
         dat <- vals$data0[which(vals$data0$t <= max(vals$data1$t)), ]
       } else {
         dat <- vals$data0
-        # shiny::withProgress({
-        #   dat <- ctmm::simulate(
-        #     vals$data1,
-        #     vals$fit0,
-        #     dt = 1 %#% "minute")
-        # },
-        # message = "Filling missing gaps.",
-        # detail = "This may take a while...")
       }
 
       ymin <- min(
-        min(newdat$y) - diff(range(newdat$y)) * .2,
+        min(vals$data1_full$y) - diff(range(vals$data1_full$y)) * .2,
         min(dat$y) - diff(range(dat$y)) * .2)
 
       ymax <- max(
-        max(newdat$y) + diff(range(newdat$y)) * .2,
+        max(vals$data1_full$y) + diff(range(vals$data1_full$y)) * .2,
         max(dat$y) + diff(range(dat$y)) * .2)
 
       p <- ggplot2::ggplot() +
@@ -1380,8 +1419,8 @@ mod_tab_device_server <- function(id, vals) {
         viridis::scale_color_viridis(
           name = "Tracking time:",
           option = "D", trans = "time",
-          breaks = c(min(newdat$time),
-                     max(newdat$time)),
+          breaks = c(min(newdat$timestamp),
+                     max(newdat$timestamp)),
           labels = c("Start", "End")) +
 
         theme_movedesign() +
@@ -1574,14 +1613,9 @@ mod_tab_device_server <- function(id, vals) {
     output$regBlock_dur0_dev <- renderUI({
       req(vals$dur0_dev)
 
-      if (vals$dur0_dev > (1 %#% "month")) {
-        tmpunits <- "months"
-      } else {
-        tmpunits <- "days"
-      }
-      tmpheader <- round(tmpunits %#% vals$dur0_dev, 1)
-      out <- fix_time(tmpheader, tmpunits)
-
+      out <- fix_time(vals$dur0_units_dev %#% vals$dur0_dev,
+                      vals$dur0_units_dev,
+                      adjust = TRUE)
       parBlock(
         text = "Sampling duration",
         header = paste(out[1], out[2]))
@@ -1592,7 +1626,8 @@ mod_tab_device_server <- function(id, vals) {
       req(vals$dti0_dev, vals$dti0_units_dev)
 
       tmp <- vals$dti0_units_dev %#% vals$dti0_dev
-      out <- fix_time(tmp, vals$dti0_units_dev)
+      out <- fix_time(tmp, vals$dti0_units_dev,
+                      adjust = TRUE)
 
       parBlock(
         text = "Sampling interval",
@@ -1662,7 +1697,18 @@ mod_tab_device_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = FALSE)
 
-    }) # end of renderUI // regBlock_Nspeed\
+    }) # end of renderUI // regBlock_Nspeed
+
+    ## Data loss: -------------------------------------------------------
+
+    output$regBlock_loss <- renderUI({
+      req(vals$n_lost, input$deviceInput_loss > 0)
+
+      parBlock(
+        text = "Fixes lost:",
+        header = vals$n_lost)
+
+    }) # end of renderUI // regBlock_loss
 
     # MODALS & HELP -----------------------------------------------------
 
