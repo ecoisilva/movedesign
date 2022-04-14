@@ -1,15 +1,9 @@
 url: https://ecoisilva.github.io/movedesign/
 template:
   bootstrap: 5
-  bootswatch: lux
+
+lang: en
 
 authors:
-  Inês Silva:
+  In\u00EAs Silva:
     href: https://github.com/ecoisilva
-
-reference:
-- title: "Helper functions"
-  desc: "Functions for correctly formatting units"
-  contents:
-  - abbreviate_time
-

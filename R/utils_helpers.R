@@ -34,10 +34,10 @@ highlight_icon <- function(name) {
 #' @keywords internal
 #'
 #' @noRd
-parBlock <- function(number = NULL,
+parBlock <- function(icon = NULL,
                      header = NULL,
-                     text = NULL,
-                     icon = NULL) {
+                     value = NULL,
+                     subtitle = NULL) {
 
   cl <- "parblock"
 
@@ -47,11 +47,11 @@ parBlock <- function(number = NULL,
     if (!is.null(icon)) {
       shiny::tags$span(
         class = "parblock-icon", icon(icon), br()) },
-    shiny::tags$span(class = "parblock-text", text, br()),
-    shiny::tags$span(class = "parblock-header", header),
-    if(is.null(number)) { NULL } else {
-      shiny::tags$span(class = "parblock-percentage",
-                       br(), number) }
+    shiny::tags$span(class = "parblock-text", header, br()),
+    shiny::tags$span(class = "parblock-value", value),
+    if(is.null(subtitle)) { NULL } else {
+      shiny::tags$span(class = "parblock-subtitle",
+                       br(), subtitle) }
   )
 }
 

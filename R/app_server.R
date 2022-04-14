@@ -9,11 +9,6 @@ app_server <- function(input, output, session) {
   ns <- session$ns
   vals <- reactiveValues()
 
-  # data(gps_fixrate, package = "movedesign")
-  # data(gps_tradeoffs, package = "movedesign")
-  # data(output_sims, package = "movedesign")
-  # data(movmods, package = "movedesign")
-
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 
   keep_expanded <- function(x) {
@@ -130,7 +125,7 @@ app_server <- function(input, output, session) {
             icon = sims_icon)
         )),
 
-      # Tab 4: Device tradeoffs
+      # Tab 4: Device
       keep_expanded(
         shinydashboard::menuItem(
           id = "group_device",
@@ -143,6 +138,11 @@ app_server <- function(input, output, session) {
             tabName = "regime",
             text = regs_title,
             icon = regs_icon)
+
+          # shinydashboard::menuSubItem(
+          #   tabName = "caveats",
+          #   text = "Limitations",
+          #   icon =  shiny::icon("bomb"))
         )),
 
       # Tab 5 and 6: Home range or CTSD estimation
@@ -166,7 +166,7 @@ app_server <- function(input, output, session) {
 
       # Tab 7: Report
       shinydashboard::menuItem(
-        text = "Summary",
+        text = "Report",
         tabName = "report",
         icon = shiny::icon("archive")
       ), tags$hr(),
@@ -196,6 +196,7 @@ app_server <- function(input, output, session) {
 
   # Device tab:
   mod_tab_device_server("tab_device_1", vals = vals)
+  mod_tab_caveats_server("tab_caveats_1", vals = vals)
 
   # Analyses tabs:
   mod_tab_hrange_server("tab_hrange_1", vals = vals)

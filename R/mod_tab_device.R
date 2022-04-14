@@ -40,9 +40,7 @@ mod_tab_device_ui <- function(id) {
             span("study duration", style = txt_caution),
             "(how long to track each individual for), and",
             span("sampling interval", style = txt_caution),
-            "(time between which new locations are collected).",
-            "Weight limits imposed on tracking devices",
-            "(e.g., 5% rule) also impact battery life."
+            "(time between which new locations are collected)."
           ),
 
           p("Which type are you evaluating?",
@@ -65,15 +63,6 @@ mod_tab_device_ui <- function(id) {
             value = TRUE,
           ),
 
-          # p(style = txt_label_bold,
-          #   "Do you want to consider weight limitations?"),
-          #
-          # shinyWidgets::switchInput(
-          #   inputId = ns("weight"),
-          #   onLabel = "Yes",
-          #   offLabel = "No",
-          #   labelWidth = "25px"),
-          # br()
 
         ), # end of column (text)
 
@@ -552,7 +541,8 @@ mod_tab_device_server <- function(id, vals) {
         "This tracking regime is equal to a new location every",
         span(round(input$vhf_dti, 1), tmpunits, style = txt_border),
         "(or approximately",
-        HTML(paste0(span(freq, freq_units, style = txt_border), ")")),
+        HTML(paste0(span(paste(freq, freq_units),
+                         style = txt_border), ")")),
         "for a duration of",
         span(paste0(round(dur0_mth, 1),
                     " months"), style = txt_border), "(or",
@@ -667,13 +657,7 @@ mod_tab_device_server <- function(id, vals) {
             inputId = ns("gps_k0"),
             label = "Decay rate:",
             min = 0.01, max = 5, value = 0.8,
-            ticks = FALSE) },
-
-          # if (!input$evaluate_tradeoffs) {
-          #   shiny::numericInput(
-          #     inputId = ns("gps_maxlocs"),
-          #     label = "Maximum number of locations:",
-          #     min = 1, max = 64000, value = 32000) }
+            ticks = FALSE) }
 
         ) # end of fluidRow
 
@@ -1230,31 +1214,32 @@ mod_tab_device_server <- function(id, vals) {
 
       ### Run model fit (if set):
 
+      vals$time_sims <- difftime(Sys.time(), start,
+                                 units = "mins")
+
       if (input$est_type == 1) {
         vals$needs_fit <- TRUE
 
       } else {
-        req(vals$tau_p0,
-            vals$tau_v0,
-            vals$sigma0)
+        req(vals$data1)
 
         msg_log(
           style = "danger",
           message = paste0("Model fit ",
                            msg_danger("not found"), "."),
-          detail = "Please wait for 'ctmm.select()' to finish.")
+          detail = "Please wait for 'ctmm.select()' to finish:")
 
-        vals$time_sims <- difftime(Sys.time(), start,
-                                   units = "mins")
-
-        start <- Sys.time()
         shiny::withProgress({
-          newmod <- prepare_pars(
-            tau_p0 = vals$tau_p0, tau_p0_units = vals$tau_p0_units,
-            tau_v0 = vals$tau_v0, tau_v0_units = vals$tau_v0_units,
-            sigma0 = vals$sigma0, sigma0_units = vals$sigma0_units)
+          start <- Sys.time()
+          guess1 <- ctmm::ctmm.guess(vals$data1, interactive = FALSE)
+          fit1 <- ctmm::ctmm.select(vals$data1, guess1, trace = TRUE)
 
-          fit1 <- ctmm::ctmm.fit(vals$data1, newmod)
+          # newmod <- prepare_pars(
+          #   tau_p0 = vals$tau_p0, tau_p0_units = vals$tau_p0_units,
+          #   tau_v0 = vals$tau_v0, tau_v0_units = vals$tau_v0_units,
+          #   sigma0 = vals$sigma0, sigma0_units = vals$sigma0_units)
+          # fit1 <- ctmm::ctmm.fit(vals$data1, newmod)
+
         },
         message = "Fitting movement model.",
         detail = "This may take a while...")
@@ -1273,8 +1258,8 @@ mod_tab_device_server <- function(id, vals) {
           vals$fit1 <- fit1
 
           shinyjs::enable("regButton_save")
-        }
 
+        } # end of if(), !is.null(fit1)
       } # end of if(), est_type
 
       if (!vals$tour_active) {
@@ -1579,11 +1564,11 @@ mod_tab_device_server <- function(id, vals) {
       }
 
       parBlock(
-        text = span(
+        header = span(
           HTML(paste0("Position autocorrelation ",
                       "(\u03C4", tags$sub("p"), ")"))),
-        header = span(paste(taup[1], taup[2]), style = col_main),
-        number = tmprange)
+        value = span(paste(taup[1], taup[2]), style = col_main),
+        subtitle = tmprange)
 
     }) # end of renderUI // regBlock_tau_p
 
@@ -1600,11 +1585,11 @@ mod_tab_device_server <- function(id, vals) {
       }
 
       parBlock(
-        text = span(
+        header = span(
           HTML(paste0("Velocity autocorrelation ",
                       "(\u03C4", tags$sub("v"), ")"))),
-        header = span(paste(tauv[1], tauv[2]), style = col_main),
-        number = tmprange)
+        value = span(paste(tauv[1], tauv[2]), style = col_main),
+        subtitle = tmprange)
 
     }) # end of renderUI // regBlock_tau_v
 
@@ -1617,8 +1602,8 @@ mod_tab_device_server <- function(id, vals) {
                       vals$dur0_units_dev,
                       adjust = TRUE)
       parBlock(
-        text = "Sampling duration",
-        header = paste(out[1], out[2]))
+        header = "Sampling duration",
+        value = paste(out[1], out[2]))
 
     }) # end of renderUI // regBlock_dur0_dev
 
@@ -1630,9 +1615,9 @@ mod_tab_device_server <- function(id, vals) {
                       adjust = TRUE)
 
       parBlock(
-        text = "Sampling interval",
-        header = paste(out[1], out[2]),
-        number = "between fixes")
+        header = "Sampling interval",
+        value = paste(out[1], out[2]),
+        subtitle = "between fixes")
 
     }) # end of renderUI // regBlock_dti0_dev
 
@@ -1705,8 +1690,8 @@ mod_tab_device_server <- function(id, vals) {
       req(vals$n_lost, input$deviceInput_loss > 0)
 
       parBlock(
-        text = "Fixes lost:",
-        header = vals$n_lost)
+        header = "Fixes lost:",
+        value = vals$n_lost)
 
     }) # end of renderUI // regBlock_loss
 

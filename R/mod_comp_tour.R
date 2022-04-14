@@ -339,6 +339,12 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
+          # "In this section, we can select",
+          # span("sampling parameters", style = txt_key),
+          # "to simulate a new dataset from the",
+          # "same", span("movement model", style = txt_key),
+          # "of the species provided.",
+
           "In this section, we will simulate a new dataset",
           "conditioned upon the previous parameters,",
           "while selecting a custom tracking regime.",

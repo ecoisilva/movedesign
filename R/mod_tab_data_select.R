@@ -649,7 +649,7 @@ mod_tab_data_select_server <- function(id, vals) {
           sum.fit <- summary(vals$fit0)
 
           parBlock(
-            text = shiny::fluidRow(
+            header = shiny::fluidRow(
               style = paste("margin-bottom: -14px;"),
               actionButton(
                 inputId = ns("selectHelp_mods"),
@@ -660,7 +660,7 @@ mod_tab_data_select_server <- function(id, vals) {
                               "padding: 0;")),
               br(), "Movement process"
             ),
-            header = sum.fit$name[1])
+            value = sum.fit$name[1])
 
         } # end of if() statement
     }) # end of renderUI
@@ -696,7 +696,7 @@ mod_tab_data_select_server <- function(id, vals) {
             vals$tau_p0_units <- tempunits
 
             parBlock(
-              text = shiny::fluidRow(
+              header = shiny::fluidRow(
                 style = paste("margin-bottom: -14px;"),
                 actionButton(
                   inputId = ns("selectHelp_taup"),
@@ -709,11 +709,11 @@ mod_tab_data_select_server <- function(id, vals) {
                   HTML(paste0("Position autocorrelation ",
                               "(\u03C4", tags$sub("p"), ")")))
               ),
-              header =
+              value =
                 paste(scales::label_comma(
                   accuracy = .1)(vals$tau_p0),
                   vals$tau_p0_units),
-              number =
+              subtitle =
                 paste(
                   ifelse(vals$tau_p0_min == 0,
                          "0",
@@ -756,7 +756,7 @@ mod_tab_data_select_server <- function(id, vals) {
             vals$tau_v0_units <- tempunits
 
             parBlock(
-              text = shiny::fluidRow(
+              header = shiny::fluidRow(
                 style = paste("margin-bottom: -14px;"),
                 actionButton(
                   inputId = ns("selectHelp_tauv"),
@@ -769,10 +769,10 @@ mod_tab_data_select_server <- function(id, vals) {
                   HTML(paste0("Velocity autocorrelation ",
                               "(\u03C4", tags$sub("v"), ")")))
               ),
-              header =
+              value =
                 paste(scales::label_comma(
                   accuracy = .1)(fit.tau_v), tempunits),
-              number =
+              subtitle =
                 paste(
                   ifelse(fit.tau_v_low == 0,
                          "0",
@@ -800,7 +800,7 @@ mod_tab_data_select_server <- function(id, vals) {
           sig <- fix_spatial(vals$sigma0, unit = "m^2")
 
           parBlock(
-            text = shiny::fluidRow(
+            header = shiny::fluidRow(
               style = paste("margin-bottom: -14px;"),
               actionButton(
                 inputId = ns("selectHelp_sigma"),
@@ -811,8 +811,8 @@ mod_tab_data_select_server <- function(id, vals) {
                               "padding: 0;")), br(),
               span(HTML("Semi-variance (\u03C3)"))
             ),
-            header = span(HTML("&nbsp;", sig[1], sig[3])),
-            number =
+            value = span(HTML("&nbsp;", sig[1], sig[3])),
+            subtitle =
               paste(
                 ifelse(vals$sigma0_min == 0,
                        "0",
@@ -845,8 +845,8 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$dur0_units <- tempunits
 
       out <- fix_time(dur, vals$dur0_units)
-      parBlock(text = "Sampling duration",
-               header = paste(out[1], out[2]))
+      parBlock(header = "Sampling duration",
+               value = paste(out[1], out[2]))
 
     }) # end of renderUI // selectInfo_dur
 
@@ -867,9 +867,9 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$dti0_units <- tempunits
 
       out <- fix_time(dti, vals$dti0_units)
-      parBlock(text = "Sampling interval",
-               header = paste(out[1], out[2]),
-               number = "between fixes")
+      parBlock(header = "Sampling interval",
+               value = paste(out[1], out[2]),
+               subtitle = "between fixes")
 
     }) # end of renderUI // selectInfo_dti
 

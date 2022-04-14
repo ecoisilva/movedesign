@@ -555,10 +555,9 @@ mod_tab_sims_server <- function(id, vals) {
           detail = "Please wait for model fit to finish.")
 
         withProgress({
-          vals$fit <- ctmm::ctmm.fit(
+          vals$fit0 <- ctmm::ctmm.fit(
             vals$data0, vals$ctmm_mod,
-            method = 'pHREML',
-            control = list(method = 'pNewton', cores = -1))
+            method = 'pHREML')
         },
         message = "Fitting movement model.",
         detail = "This may take a while...")
@@ -884,8 +883,8 @@ mod_tab_sims_server <- function(id, vals) {
         paste(scales::label_comma(
           accuracy = .1)(mean(tmpdist)), "meters")
 
-      tmpnames <- rownames(summary(vals$fit)$CI)
-      speed <- summary(vals$fit)$CI[
+      tmpnames <- rownames(summary(vals$fit0)$CI)
+      speed <- summary(vals$fit0)$CI[
         grep('speed', tmpnames), 2]
       speedunits <- tmpnames[grep('speed', tmpnames)] %>%
         extract_units()

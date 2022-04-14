@@ -548,42 +548,44 @@ mod_tab_hrange_server <- function(id, vals) {
             title = h4("Adjusting tracking regime:"),
 
             fluidRow(
-              style = paste("margin-right: 40px;",
-                            "margin-left: 40px;"),
+              style = paste("margin-right: 25px;",
+                            "margin-left: 25px;"),
 
-              p("Here you can adjust",
-                span("sampling parameters", style = txt_key),
-                "to predict or simulate additional data from the",
-                "same", span("movement model", style = txt_key),
-                "of the species provided."),
+              parBlock(
+                header = span(
+                  HTML(paste0("Position autocorrelation ",
+                              "(\u03C4", tags$sub("p"), ")"))),
+                value =
+                  paste(scales::label_comma(
+                    accuracy = .1)(vals$tau_p0),
+                    vals$tau_p0_units),
+                subtitle = tmprange),
 
-              p("Based on your research question,",
-                "we recommend that",
+              p("If home range estimation is your goal,",
+                "we recommend that the",
                 span("sampling duration", style = txt_border),
                 "is that least 10 times the",
                 span(HTML(paste0("position autocorrelation ",
                                  "(\u03C4", tags$sub("p"), ")")),
-                     style = txt_border), "value, to reduce bias",
-                "of the conditional simulation.",
+                     style = txt_border), "value (shown above).",
+                "The", span("sampling interval", HTML("(\u0394t)"),
+                            style = txt_border),
+                "is not reliably related to the accuracy",
+                "of home range estimation, so you can",
+                "increase it if the total number of locations",
+                "is a concern.",
+                p(),
                 span(style = col_black,
-                     "These recommended values are already,",
-                     "set below, so you can just click",
+                     "The recommended",
+                     span("sampling duration", style = txt_border),
+                     "is already set below, so you can just click",
                      fontawesome::fa(name = "bolt",
                                      fill = hex_caution),
                      span("Run simulation",
                           style = paste(txt_tour, col_caution)),
-                     "to proceed.")
+                     "to proceed."),
+                p()
               ),
-
-              parBlock(
-                text = span(
-                  HTML(paste0("Position autocorrelation ",
-                              "(\u03C4", tags$sub("p"), ")"))),
-                header =
-                  paste(scales::label_comma(
-                    accuracy = .1)(vals$tau_p0),
-                    vals$tau_p0_units),
-                number = tmprange),
 
               shinyWidgets::sliderTextInput(
                 inputId = ns('hr_dur0'),
@@ -614,8 +616,8 @@ mod_tab_hrange_server <- function(id, vals) {
 
               p(span("Proceed with caution!", style = txt_caution),
                 "Longer sampling durations and lower sampling",
-                "intervals will add run time to simulation, model",
-                "fitting, and estimation functions."),
+                "intervals may add significant run time to model",
+                "fitting and estimation functions."),
 
             ), # end of fluidRow
 
@@ -624,7 +626,7 @@ mod_tab_hrange_server <- function(id, vals) {
               actionButton(
                 inputId = ns("run_hr_new"),
                 label = "Run simulation",
-                icon =  icon("bolt"),
+                icon = icon("bolt"),
                 class = "btn-danger")
             ),
 
@@ -663,14 +665,16 @@ mod_tab_hrange_server <- function(id, vals) {
 
       splitLayout(
 
-        parBlock(text = "Number of original locations:",
-                 header = scales::label_comma(
-                   accuracy = 1)(nrow(vals$data1))),
+        parBlock(header = "Initial tracking regime:",
+                 value = scales::label_comma(
+                   accuracy = 1)(nrow(vals$data1)),
+                 subtitle = span("locations", style = col_main)),
 
-        parBlock(text = "Number of new locations:",
-                 header = span(scales::label_comma(
+        parBlock(header =  "New tracking regime:",
+                 value = span(scales::label_comma(
                    accuracy = 1)(n_new),
-                   style = col_caution))
+                   style = col_caution),
+                 subtitle = span("locations", style = col_caution))
 
       ) # end of splitLayout
     }) # end of renderUI // hrText_sampling
@@ -963,8 +967,8 @@ mod_tab_hrange_server <- function(id, vals) {
           sumdat[grep('sampling period', tempnames)])
 
         out <- fix_time(dur, tempunits)
-        parBlock(text = "Sampling duration",
-                 header = paste(out[1], out[2]))
+        parBlock(header = "Sampling duration",
+                 value = paste(out[1], out[2]))
 
       }) # end of renderUI // hrInfo_dur
 
@@ -974,9 +978,9 @@ mod_tab_hrange_server <- function(id, vals) {
           sumdat[grep('sampling interval', tempnames)])
 
         out <- fix_time(dti, vals$dti0_units)
-        parBlock(text = "Sampling interval",
-                 header = paste(out[1], out[2]),
-                 number = "between fixes")
+        parBlock(header = "Sampling interval",
+                 value = paste(out[1], out[2]),
+                 subtitle = "between fixes")
 
       }) # end of renderUI // hrInfo_dti
     }) # end of observe
@@ -1028,8 +1032,8 @@ mod_tab_hrange_server <- function(id, vals) {
           scales::label_comma(accuracy = .1)(dur))
 
         parBlock(
-          text = "Sampling duration",
-          header = span(paste(dur, tempunits),
+          header = "Sampling duration",
+          value = span(paste(dur, tempunits),
                         style = col_caution))
 
       }) # ender of renderUI // hrInfo_dur_new
@@ -1049,10 +1053,10 @@ mod_tab_hrange_server <- function(id, vals) {
           scales::label_comma(accuracy = .1)(dti))
 
         parBlock(
-          text = "Sampling interval",
-          header = span(paste(dti, tempunits),
+          header = "Sampling interval",
+          value = span(paste(dti, tempunits),
                         style = col_caution),
-          number = span("between fixes",
+          subtitle = span("between fixes",
                         style = col_caution))
 
       }) # ender of renderUI // hrInfo_dti_new
@@ -1141,10 +1145,10 @@ mod_tab_hrange_server <- function(id, vals) {
 
       parBlock(
         icon = "map-marked-alt",
-        text = "Estimate",
-        header = span(HTML("&nbsp;", est[1], est[3]),
+        header = "Estimate",
+        value = span(HTML("&nbsp;", est[1], est[3]),
                       style = col_main),
-        number = span(paste(est_min[1], "—", est_max[1]),
+        subtitle = span(paste(est_min[1], "—", est_max[1]),
                       style = col_main))
 
 
@@ -1159,10 +1163,10 @@ mod_tab_hrange_server <- function(id, vals) {
 
       parBlock(
         icon = "map-marked-alt",
-        text = "Estimate",
-        header = span(HTML("&nbsp;", est[1], est[3]),
+        header = "Estimate",
+        value = span(HTML("&nbsp;", est[1], est[3]),
                       style = col_main),
-        number = span(paste(est_min[1], "—", est_max[1]),
+        subtitle = span(paste(est_min[1], "—", est_max[1]),
                       style = col_main))
 
     }) # end of renderUI // hrInfo_est_new

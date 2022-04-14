@@ -128,10 +128,15 @@ app_ui <- function(request) {
             tabName = "sims",
             mod_tab_sims_ui("tab_sims_1")),
 
-          # Tab 4 'Device'
+          # Tab 4.1 'Device'
           shinydashboard::tabItem(
             tabName = "regime",
             mod_tab_device_ui("tab_device_1")),
+
+          # # Tab 4.2 'Caveats'
+          # shinydashboard::tabItem(
+          #   tabName = "caveats",
+          #   mod_tab_caveats_ui("tab_caveats_1")),
 
           # Tab 5 'Home range estimation'
           shinydashboard::tabItem(

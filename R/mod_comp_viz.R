@@ -21,6 +21,7 @@ mod_comp_viz_ui <- function(id) {
           span("Data", style = ttl_panel)
         ),
 
+        br(),
         reactable::reactableOutput(ns("dataTable_all")),
         br(),
 
@@ -37,6 +38,7 @@ mod_comp_viz_ui <- function(id) {
           span("Selected individual", style = ttl_panel)
         ),
 
+        br(),
         ggiraph::girafeOutput(
           outputId = ns("dataPlot_id"),
           width = "100%", height = "100%") %>%
@@ -79,8 +81,7 @@ mod_comp_viz_ui <- function(id) {
           label = span(paste("Proportion of the",
                              "variogram plotted (in %):"),
                        style = txt_label_bold),
-          min = 0, max = 100, value = 65, step = 5),
-        br()
+          min = 0, max = 100, value = 65, step = 5)
 
       ) # end of panels (1 out of 3)
     ) # end of tabs

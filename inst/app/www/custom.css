@@ -195,7 +195,7 @@ sub { font-size: 90%; }
 
 .btn-primary {
   color: #fff;
-  background-color: #202f2f;
+  background-color: #222d32;
 }
 .btn-primary:hover {
   color: #fff;
@@ -645,21 +645,21 @@ font-size: 12px;
   color: #f4f4f4;
   font-size: 25px;
 }
-.parblock > .parblock-text {
+.parblock > .parblock-header {
   color: #222d32;
   font-size: 14px;
   font-weight: 100;
   letter-spacing: 0.5px;
   text-transform: none;
 }
-.parblock > .parblock-header {
+.parblock > .parblock-value {
   color: #006466;
   font-size: 26px;
   line-height: 26px;
   font-weight: 100;
   letter-spacing: 1px;
 }
-.parblock > .parblock-percentage {
+.parblock > .parblock-subtitle {
   color: #006466;
   font-size: 14px;
   line-height: 16px;

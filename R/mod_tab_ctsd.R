@@ -589,7 +589,6 @@ mod_tab_ctsd_server <- function(id, vals) {
     }) %>% # end of observe.
       bindEvent(input$ctsdInput_show)
 
-
     # PROCESSING --------------------------------------------------------
     ## Fitting movement model (if needed): ------------------------------
 
@@ -623,14 +622,10 @@ mod_tab_ctsd_server <- function(id, vals) {
                              msg_danger("not found"), "."),
             detail = "Please wait for 'ctmm.select()' to finish.")
 
-          start <- Sys.time()
-          newmod <- prepare_pars(
-            tau_p0 = vals$tau_p0, tau_p0_units = vals$tau_p0_units,
-            tau_v0 = vals$tau_v0, tau_v0_units = vals$tau_v0_units,
-            sigma0 = vals$sigma0, sigma0_units = vals$sigma0_units)
-
           shiny::withProgress({
-            fit1 <- ctmm::ctmm.fit(vals$data1, newmod)
+            start <- Sys.time()
+            guess1 <- ctmm::ctmm.guess(vals$data1, interactive = FALSE)
+            fit1 <- ctmm::ctmm.select(vals$data1, guess1, trace = TRUE)
           },
           message = "Fitting movement model.",
           detail = "This may take a while...")
@@ -820,14 +815,14 @@ mod_tab_ctsd_server <- function(id, vals) {
               ),
 
               parBlock(
-                text = span(
+                header = span(
                   HTML(paste0("Velocity autocorrelation ",
                               "(\u03C4", tags$sub("v"), ")"))),
-                header =
+                value =
                   paste(scales::label_comma(
                     accuracy = .1)(vals$tau_v0),
                     vals$tau_v0_units),
-                number = tmprange),
+                subtitle = tmprange),
 
               shiny::sliderInput(
                 inputId = ns('ctsd_dur0'),
@@ -898,12 +893,12 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       splitLayout(
 
-        parBlock(text = "Number of original locations:",
-                 header = scales::label_comma(
+        parBlock(header = "Number of original locations:",
+                 value = scales::label_comma(
                    accuracy = 1)(nrow(vals$data1))),
 
-        parBlock(text = "Number of new locations:",
-                 header = span(scales::label_comma(
+        parBlock(header = "Number of new locations:",
+                 value = span(scales::label_comma(
                    accuracy = 1)(vals$n_new),
                    style = col_caution))
 
@@ -914,7 +909,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Estimating for initial tracking regime: --------------------------
 
     observe({
-      req(vals$is_valid, vals$data1)
+      req(vals$is_valid, vals$data1, vals$fit1)
 
       tmplist <- list("ctsdBox_speed",
                       "ctsdBox_dist",
@@ -925,133 +920,150 @@ mod_tab_ctsd_server <- function(id, vals) {
       for(i in 1:length(tmplist)) {
         shinyjs::show(id = tmplist[i]) }
 
-      eval_dti <- vals$dti0_dev
-      eval_tauv <- vals$tau_v0 %#% vals$tau_v0_units
+      sumnames <- rownames(summary(vals$fit1)$CI)
+      all_dof <- summary(vals$fit1)$DOF
 
-      if(eval_dti > 3 * eval_tauv) {
+      if(is.null(grep('speed', sumnames))) {
 
         shinyalert::shinyalert(
+          type = "error",
           title = "Warning",
           text = span(
-            "Selected individual has a",
+            "No velocity signature remains in the data.",
+            "Go back to the",
+            fontawesome::fa(name = "stopwatch", fill = hex_main),
+            span('Tracking regime', style = col_main), "tab,",
+            "and set a shorter",
             span("sampling interval", style = txt_key),
-            "3x greater than the",
-            HTML(paste0(span("velocity autocorrelation",
-                             style = txt_caution), ".")),
-            "This means that the error associated with the",
-            "CTSD estimate is too high to continue evaluating",
-            "the study design.", br(),
-            "Please select a different individual, with a smaller",
-            HTML(paste0(span("sampling interval",
-                             style = txt_key), "."))),
+            "(reducing the time between new locations)."
+            ),
 
           html = TRUE,
           size = "xs")
 
       } else {
+        if (all_dof["speed"] > 0) {
 
-        msg_log(
-          style = "warning",
-          message = paste0(
-            "Simulating for ",
-            msg_warning("current trajectory"),
-            msg_step(1, 2, style = "warning")),
+          msg_log(
+            style = "warning",
+            message = paste0(
+              "Simulating for ",
+              msg_warning("current trajectory"),
+              msg_step(1, 2, style = "warning")),
+            detail = "This may take a while...")
+
+          shiny::withProgress({
+            start_ctsd <- Sys.time()
+            vals$ctsd <- ctmm::speed(vals$data1,
+                                     vals$fit1)
+          },
+          message = "Estimating speed/distance.",
           detail = "This may take a while...")
 
-        shiny::withProgress({
-          start_ctsd <- Sys.time()
-          vals$ctsd <- ctmm::speed(vals$data1,
-                                   vals$fit1)
-        },
-        message = "Estimating speed/distance.",
-        detail = "This may take a while...")
+          if("CI" %in% names(vals$ctsd)) {
+            vals$ctsd <- vals$ctsd$CI
+          }
 
-        if("CI" %in% names(vals$ctsd)) {
-          vals$ctsd <- vals$ctsd$CI
-        }
+          tempnames <- rownames(vals$ctsd)
+          vals$ctsd_units <-
+            tempnames[grep('speed', tempnames)] %>%
+            extract_units()
 
-        tempnames <- rownames(vals$ctsd)
-        vals$ctsd_units <-
-          tempnames[grep('speed', tempnames)] %>%
-          extract_units()
+          msg_log(
+            style = 'success',
+            message = paste0(
+              "Estimation ", msg_success("completed"),
+              msg_step(1, 2, style = "success")),
+            detail = paste(
+              "This step took approximately",
+              round(difftime(Sys.time(), start_ctsd,
+                             units = 'mins'), 1),
+              "minutes."))
 
-        msg_log(
-          style = 'success',
-          message = paste0(
-            "Estimation ", msg_success("completed"),
-            msg_step(1, 2, style = "success")),
-          detail = paste(
-            "This step took approximately",
-            round(difftime(Sys.time(), start_ctsd,
-                           units = 'mins'), 1),
-            "minutes."))
+          vals$data_speed <- ctmm::speeds(vals$data1,
+                                          vals$fit1,
+                                          units = FALSE)
 
-        vals$data_speed <- ctmm::speeds(vals$data1,
-                                        vals$fit1,
-                                        units = FALSE)
+          ### Simulating fine-scale trajectory: ---------------------------
 
-        ### Simulating fine-scale trajectory: ---------------------------
+          msg_log(
+            style = "warning",
+            message = paste0(
+              "Simulating for ",
+              msg_warning("fine-scale trajectory"),
+              msg_step(2, 2, style = "warning")),
+            detail = "This may take a while...")
 
-        msg_log(
-          style = "warning",
-          message = paste0(
-            "Simulating for ",
-            msg_warning("fine-scale trajectory"),
-            msg_step(2, 2, style = "warning")),
+          if(vals$data_type == "simulated") {
+            dat <- vals$data0
+          } else {
+            dat <- vals$data1
+          }
+
+          shiny::withProgress({
+            start_truth <- Sys.time()
+            sim_full <- ctmm::simulate(
+              dat,
+              vals$fit0,
+              t = seq(0, vals$dur0_dev, by = 1 %#% "minute"))
+            vals$data_full <- sim_full
+            incProgress(0.25)
+
+            vals$ctsd_truth <- ctmm::speed(
+              sim_full[which(sim_full$t <= (1 %#% "day")), ],
+              vals$fit0,
+              cores = -1)
+
+          },
+          min = 0, max = 1, value = 0.25,
+          message = "Estimating speed of fine-scale trajectory.",
           detail = "This may take a while...")
 
-        if(vals$data_type == "simulated") {
-          dat <- vals$data0
+          if("CI" %in% names(vals$ctsd_truth)) {
+            vals$ctsd_truth <- vals$ctsd_truth$CI
+          }
+
+          tempnames <- rownames(vals$ctsd_truth)
+          vals$ctsd_truth_units <-
+            tempnames[grep('speed', tempnames)] %>%
+            extract_units()
+
+          vals$time_ctsd_truth <- difftime(
+            Sys.time(), start_truth, units = 'mins')
+
+          msg_log(
+            style = "success",
+            message = paste0(
+              "Estimation ", msg_success("completed"),
+              msg_step(2, 2, style = "success")),
+            detail = paste(
+              "This step took approximately",
+              round(vals$time_ctsd_truth, 1),
+              "minutes."))
+
+          vals$time_ctsd <- difftime(Sys.time(),
+                                     start_ctsd,
+                                     units = 'mins')
+
         } else {
-          dat <- vals$data1
+            shinyalert::shinyalert(
+            type = "error",
+            title = "Error",
+            text = span(
+              "No velocity signature remains in the data.",
+              "Go back to the",
+              fontawesome::fa(name = "stopwatch", fill = hex_main),
+              span('Tracking regime', style = col_main), "tab,",
+              "and set a shorter",
+              span("sampling interval", style = txt_key),
+              "(reducing the time between new locations)."
+            ),
+
+            html = TRUE,
+            size = "xs")
+
         }
-
-        shiny::withProgress({
-          start_truth <- Sys.time()
-          sim_full <- ctmm::simulate(
-            dat,
-            vals$fit0,
-            t = seq(0, vals$dur0_dev, by = 1 %#% "minute"))
-          vals$data_full <- sim_full
-          incProgress(0.25)
-
-          vals$ctsd_truth <- ctmm::speed(
-            sim_full[which(sim_full$t <= (1 %#% "day")), ],
-            vals$fit0,
-            cores = -1)
-
-        },
-        min = 0, max = 1, value = 0.25,
-        message = "Estimating speed of fine-scale trajectory.",
-        detail = "This may take a while...")
-
-        if("CI" %in% names(vals$ctsd_truth)) {
-          vals$ctsd_truth <- vals$ctsd_truth$CI
-        }
-
-        tempnames <- rownames(vals$ctsd_truth)
-        vals$ctsd_truth_units <-
-          tempnames[grep('speed', tempnames)] %>%
-          extract_units()
-
-        vals$time_ctsd_truth <- difftime(
-          Sys.time(), start_truth, units = 'mins')
-
-        msg_log(
-          style = "success",
-          message = paste0(
-            "Estimation ", msg_success("completed"),
-            msg_step(2, 2, style = "success")),
-          detail = paste(
-            "This step took approximately",
-            round(vals$time_ctsd_truth, 1),
-            "minutes."))
-
-        vals$time_ctsd <- difftime(Sys.time(),
-                                   start_ctsd,
-                                   units = 'mins')
-
-      } # end of if() dti & tau evaluation
+      } # end of if() evaluation
     }) %>% # end of observe, then:
       bindEvent(input$run_ctsd)
 
@@ -1277,25 +1289,25 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Tracking regime: -------------------------------------------------
 
     output$ctsdInfo_dur <- shiny::renderUI({
-      req(vals$dur0_dev)
+      req(vals$dur0_dev, vals$dur0_units_dev)
 
       out_dur <- fix_time(vals$dur0_units_dev %#% vals$dur0_dev,
                                vals$dur0_units_dev)
 
-      parBlock(text = "Sampling duration",
-               header = paste(out_dur[1], out_dur[2]))
+      parBlock(header = "Sampling duration",
+               value = paste(out_dur[1], out_dur[2]))
 
     }) # end of renderUI // ctsdInfo_dur
 
     output$ctsdInfo_dti <- shiny::renderUI({
-      req(vals$dti0_dev)
+      req(vals$dti0_dev, vals$dti0_units_dev)
 
       out_dti <- fix_time(vals$dti0_units_dev %#% vals$dti0_dev,
                                vals$dti0_units_dev)
 
-      parBlock(text = "Sampling interval",
-               header = paste(out_dti[1], out_dti[2]),
-               number = "between fixes")
+      parBlock(header = "Sampling interval",
+               value = paste(out_dti[1], out_dti[2]),
+               subtitle = "between fixes")
 
     }) # end of renderUI // ctsdInfo_dti
 
@@ -1342,8 +1354,8 @@ mod_tab_ctsd_server <- function(id, vals) {
         tempunits <- vals$dur2_units
         out_dur <- fix_time(dur, tempunits)
 
-        parBlock(text = "Sampling duration",
-                 header = span(paste(out_dur[1], out_dur[2]),
+        parBlock(header = "Sampling duration",
+                 value = span(paste(out_dur[1], out_dur[2]),
                                style = col_caution))
 
       }) # ender of renderUI // ctsdInfo_dur_new
@@ -1356,10 +1368,10 @@ mod_tab_ctsd_server <- function(id, vals) {
 
         out_dti <- fix_time(dti, tempunits)
 
-        parBlock(text = "Sampling interval",
-                 header = span(paste(out_dti[1], out_dti[2]),
+        parBlock(header = "Sampling interval",
+                 value = span(paste(out_dti[1], out_dti[2]),
                                style = col_caution),
-                 number = span("between fixes",
+                 subtitle = span("between fixes",
                                style = col_caution))
 
       }) # ender of renderUI // ctsdInfo_dti_new
@@ -1453,9 +1465,9 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "tachometer-alt",
-        text = "Movement speed",
-        header = paste(round(est, 1), speed_units),
-        number = paste(
+        header = "Movement speed",
+        value = paste(round(est, 1), speed_units),
+        subtitle = paste(
           ifelse(est_min == 0,
                  "0", round(est_min, 3)),
           "—", round(est_max, 3)))
@@ -1488,9 +1500,9 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "tachometer-alt",
-        text = "Movement speed",
-        header = paste(round(est, 1), speed_units),
-        number = paste(
+        header = "Movement speed",
+        value = paste(round(est, 1), speed_units),
+        subtitle = paste(
           ifelse(est_min == 0,
                  "0", round(est_min, 3)),
           "—", round(est_max, 3)))
@@ -1513,7 +1525,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ### Movement metrics: -----------------------------------------------
 
     output$distInfo_total <- shiny::renderUI({
-      req(vals$data1)
+      req(vals$data1, vals$dist_est)
 
       est <- ifelse(
         vals$dist_est <= 1 %#% "kilometer",
@@ -1532,9 +1544,9 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "map-marked-alt",
-        text = "Total distance traveled",
-        header = est,
-        number = paste(lci, "—", uci))
+        header = "Total distance traveled",
+        value = est,
+        subtitle = paste(lci, "—", uci))
 
     }) # end of renderUI // distInfo_total
 
@@ -1552,7 +1564,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     }) # end of renderUI // distInfo_err
 
     output$distInfo_total_new <- shiny::renderUI({
-      req(vals$data2_ctsd)
+      req(vals$data2_ctsd, vals$dist_est_new)
 
       est <- ifelse(
         vals$dist_est_new <= 1,
@@ -1571,9 +1583,9 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "map-marked-alt",
-        text = "Total distance traveled",
-        header = est,
-        number = paste(lci, "—", uci))
+        header = "Total distance traveled",
+        value = est,
+        subtitle = paste(lci, "—", uci))
 
     }) # end of renderUI // distInfo_total_new
 
