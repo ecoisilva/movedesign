@@ -9,11 +9,11 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+# Installation issues:
+
 ## Package dependencies:
 
 The `movedesign` package requires many non-default packages. If you are met with errors during install/upgrade, restart your R session (in the RStudio menu bar, this is `Session` > `Restart R`) and install again to potentially solve the problem. 
-
-# Installation issues:
 
 ## Failed to install 'unknown package' from GitHub
 

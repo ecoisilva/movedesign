@@ -35,6 +35,8 @@ You can install the development version of `movedesign` like so:
 remotes::install_github("ecoisilva/movedesign")
 ```
 
+If you run with any problems, try the solutions listed in [Instalation issues](https://ecoisilva.github.io/movedesign/articles/movedesign_installation.html) vignette.
+
 ## Run the app
 
 To launch the  `movedesign` Shiny app, type the following code into the R console after you have loaded the library:
