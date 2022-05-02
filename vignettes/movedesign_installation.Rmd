@@ -1,0 +1,37 @@
+---
+title: "Installation Issues"
+author: "Inês Silva, Jesse Alston"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Installation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Package dependencies:
+
+The `movedesign` package requires many non-default packages. If you are met with errors during install/upgrade, restart your R session (in the RStudio menu bar, this is `Session` > `Restart R`) and install again to potentially solve the problem. 
+
+# Installation issues:
+
+## Failed to install 'unknown package' from GitHub
+
+**Step 1:** Generate a GitHub personal access token with the following command in the RStudio console:
+```r
+usethis::create_github_token()
+```
+This will take you to GitHub to generate a token. Configure the token (or just scroll down and generate it using the default settings) and copy it to your clipboard.
+
+**Step 2:** Save the personal access token in your R environment. Return to RStudio and enter:
+```
+usethis::edit_r_environ()
+```
+in the console. This opens a new window in RStudio. When that window opens, write:
+```
+GITHUB_PAT="GITHUB_PERSONAL_ACCESS_TOKEN"
+```
+where `GITHUB_PERSONAL_ACCESS_TOKEN` is the token (a string of letters and numbers) you just copied from GitHub.
+
+**Step 3:** Save this file, close it, and restart R. After that, you should be good able to install `movedesign`.
+

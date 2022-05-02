@@ -105,7 +105,7 @@ app_server <- function(input, output, session) {
         shinydashboard::menuItem(
           id = "group_data",
           tabname = "data",
-          text = "Data",
+          text = "Species",
           icon = shiny::icon("paw"),
           startExpanded = TRUE,
 

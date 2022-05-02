@@ -14,3 +14,5 @@ $run_dev.*
 ^pkgdown$
 ^\.github$
 ^codecov\.yml$
+^app\.R$
+^rsconnect$
