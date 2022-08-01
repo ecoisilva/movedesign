@@ -22,6 +22,14 @@ plan ahead and understand how much data is required to accurately answer
 your chosen research questions, and choose the optimal tracking regime
 or schedule.
 
+To facilitate study design, we refer to the
+[ctmm](https://ctmm-initiative.github.io/ctmm/) `R` package. Animal
+movement is inherently autocorrelated (locations are similar as a
+function of space and distance and the `ctmm` package allows us to model
+these data as continuous-time stochastic processes and to deal with
+other known biases (such as small sample sizes, or irregular sampling
+schedules).
+
 The app was built using the `golem` framework.
 
 ## Installation
@@ -33,10 +41,10 @@ You can install the development version of `movedesign` like so:
 remotes::install_github("ecoisilva/movedesign")
 ```
 
-If you run with issues during installation, try the solutions listed in
-[Instalation
+If you run with any problems, try the solutions listed in the
+[instalation
 issues](https://ecoisilva.github.io/movedesign/articles/movedesign_installation.html)
-Vignette.
+vignette.
 
 ## Run the app
 
