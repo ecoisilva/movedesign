@@ -17,71 +17,79 @@ mod_comp_viz_ui <- function(id) {
       tabPanel(
         value = ns("dataPanel_all"),
         title = tagList(
-          fontawesome::fa(name = "paw", fill = hex_border),
-          span("Data", style = ttl_panel)
+          icon("paw", class = "cl-sea"),
+          span("Data", class = "ttl-panel")
         ),
 
-        br(),
-        reactable::reactableOutput(ns("dataTable_all")),
-        br(),
+        p(),
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-7",
+            reactable::reactableOutput(ns("dataTable_all"))
+        ),
 
-        ggiraph::girafeOutput(
-          outputId = ns("dataPlot_all"),
-          width = "100%", height = "100%")
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-5",
+            ggiraph::girafeOutput(
+              outputId = ns("dataPlot_all"),
+              width = "100%", height = "100%")
+        )
 
       ), # end of panels (1 out of 3)
 
       tabPanel(
         value = ns("dataPanel_individual"),
         title = tagList(
-          fontawesome::fa(name = "filter", fill = hex_border),
-          span("Selected individual", style = ttl_panel)
+          icon("filter", class = "cl-sea"),
+          span("Selected individual", class = "ttl-panel")
         ),
 
-        br(),
-        ggiraph::girafeOutput(
-          outputId = ns("dataPlot_id"),
-          width = "100%", height = "100%") %>%
-          shinycssloaders::withSpinner(
-            type = getOption("spinner.type", default = 7),
-            color = getOption("spinner.color",
-                              default = "#f4f4f4")),
+        p(),
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
+            ggiraph::girafeOutput(
+              outputId = ns("dataPlot_id"),
+              width = "100%", height = "100%") %>%
+              shinycssloaders::withSpinner(
+                type = getOption("spinner.type", default = 7),
+                color = getOption("spinner.color",
+                                  default = "#f4f4f4"))
+        ),
 
-        DT::dataTableOutput(ns("dataTable_id")) %>%
-          shinycssloaders::withSpinner(
-            type = getOption("spinner.type", default = 7),
-            color = getOption("spinner.color",
-                              default = "#f4f4f4")),
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
+            reactable::reactableOutput(ns("dataTable_id")),
+            # DT::dataTableOutput(ns("dataTable_id")) %>%
+            #   shinycssloaders::withSpinner(
+            #     type = getOption("spinner.type", default = 7),
+            #     color = getOption("spinner.color",
+            #                       default = "#f4f4f4")),
 
-        uiOutput(ns("dataTable_showVars"))
+            uiOutput(ns("dataTable_showVars"))
+        )
 
       ), # end of panels (2 out of 3)
 
       tabPanel(
         value = ns("dataPanel_svf"),
         title = tagList(
-          fontawesome::fa(name = "chart-line",
-                          fill = hex_border),
-          span("Variogram", style = ttl_panel)
+          icon("chart-line", class = "cl-sea"),
+          span("Variogram", class = "ttl-panel")
         ),
 
         br(),
-        ggiraph::girafeOutput(
-          outputId = ns("dataPlot_svf"),
-          width = "100%", height = "100%") %>%
-          shinycssloaders::withSpinner(
-            proxy.height = "200px",
-            type = getOption("spinner.type", default = 7),
-            color = getOption("spinner.color",
-                              default = "#f4f4f4")
-          ),
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
+            ggiraph::girafeOutput(
+              outputId = ns("dataPlot_svf"),
+              width = "100%", height = "100%") %>%
+              add_spinner(height = "200px")),
 
-        sliderInput(
-          ns("dataVar_timeframe"),
-          label = span(paste("Proportion of the",
-                             "variogram plotted (in %):"),
-                       style = txt_label_bold),
-          min = 0, max = 100, value = 65, step = 5)
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
+            column(
+              width = 12, align = "center",
+              p(),
+              shiny::sliderInput(
+                ns("dataVar_timeframe"),
+                label = span(paste("Proportion of the",
+                                   "variogram plotted (in %):")),
+                min = 0, max = 100, value = 65, step = 5,
+                width = "90%")
+            ))
 
       ) # end of panels (1 out of 3)
     ) # end of tabs
@@ -167,7 +175,7 @@ mod_comp_viz_server <- function(id, vals) {
         inputId = ns("show_vars"),
         width = "100%",
         label = span("Columns to show above:",
-                     style = txt_label_bold),
+                     class = "txt-label"),
         choices = names(vals$data0),
         selected = c(vals$input_x,
                      vals$input_y,
@@ -341,7 +349,6 @@ mod_comp_viz_server <- function(id, vals) {
             tooltip = time,
             data_id = time),
           size = 1.2) +
-        # ggplot2::coord_fixed() +
 
         ggplot2::labs(x = "x coordinate",
                       y = "y coordinate") +
@@ -352,6 +359,7 @@ mod_comp_viz_server <- function(id, vals) {
         ggplot2::scale_y_continuous(
           labels = scales::comma,
           limits = c(ymin, ymax)) +
+
         viridis::scale_color_viridis(
           name = "Tracking time:",
           option = "D", trans = "time",
@@ -366,8 +374,7 @@ mod_comp_viz_server <- function(id, vals) {
         ggplot2::theme(
           legend.position = c(0.76, 0.08),
           legend.direction = "horizontal",
-          legend.title = ggplot2::element_text(
-            size = 11, face = "bold.italic"),
+          legend.title = ggplot2::element_text(size = 11),
           legend.key.height = ggplot2::unit(0.3, "cm"),
           legend.key.width = ggplot2::unit(0.6, "cm")
         )
@@ -378,17 +385,18 @@ mod_comp_viz_server <- function(id, vals) {
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_zoom(max = 5),
-          # ggiraph::opts_hover_inv(css = "opacity:0.4;"),
+          ggiraph::opts_selection(type = "none"),
           # ggiraph::opts_selection(
           #   type = "single",
           #   css = paste("fill:#dd4b39;",
           #               "stroke:#eb5644;",
           #               "r:5pt;")),
+          # ggiraph::opts_hover_inv(css = "opacity:0.4;"),
           ggiraph::opts_tooltip(
-            # opacity = .8,
             # css = paste("background-color:gray;",
             #             "color:white;padding:2px;",
             #             "border-radius:2px;"),
+            opacity = 1,
             use_fill = TRUE),
           ggiraph::opts_hover(
             css = paste("fill:#1279BF;",
@@ -400,19 +408,21 @@ mod_comp_viz_server <- function(id, vals) {
     ## Rendering variogram (svf): ---------------------------------------
 
     output$dataPlot_svf <- ggiraph::renderGirafe({
-      req(vals$data_type != "simulated")
+      req(vals$svf, vals$data_type != "simulated")
 
-      frac <- input$dataVar_timeframe / 100
-      svf <- prepare_svf(vals$data0, fraction = frac)
-      p <- plotting_svf(svf)
+      svf <- vals$svf %>%
+        dplyr::slice_min(lag, prop = input$dataVar_timeframe / 100)
+      vals$var_fraction <- input$dataVar_timeframe
 
+      p <- plotting_svf(svf, fill = "var(--danger)")
       ggiraph::girafe(
         ggobj = p,
         options = list(
-          ggiraph::opts_hover(
-            css = paste("fill:#ffbf00;",
-                        "stroke:#ffbf00;"))
+          ggiraph::opts_sizing(rescale = TRUE, width = .5),
+          ggiraph::opts_hover(css = paste("fill:#ffbf00;",
+                                          "stroke:#ffbf00;"))
         ))
+
     }) # end of renderGirafe // dataPlot_svf
 
     # TABLES ------------------------------------------------------------
@@ -423,22 +433,19 @@ mod_comp_viz_server <- function(id, vals) {
 
       reactable::reactable(
         vals$sum,
-        searchable = TRUE,
         selection = "single",
         onClick = "select",
+        searchable = TRUE,
         highlight = TRUE,
+        compact = FALSE,
+        striped = TRUE,
 
         defaultSelected = match(vals$id, names(vals$dataList)),
         defaultColDef =
           reactable::colDef(
-            headerClass = "rtable_header",
-            align = "left"),
-        theme = reactable::reactableTheme(
-          rowSelectedStyle = list(
-            backgroundColor = "#eee",
-            boxShadow = "inset 2px 0 0 0 #009da0")),
-
+            headerClass = "rtable_header", align = "left"),
         columns = list(
+          n = reactable::colDef(name = "\u2014 n"),
           longitude = reactable::colDef(
             format = reactable::colFormat(digits = 3)),
           latitude = reactable::colDef(
@@ -452,25 +459,52 @@ mod_comp_viz_server <- function(id, vals) {
 
     ## Table for selected individual data: ------------------------------
 
-    output$dataTable_id <- DT::renderDataTable({
+    output$dataTable_id <- reactable::renderReactable({
       req(vals$data0, input$show_vars)
 
-      temp <- NULL
-      temp <- vals$data0[, input$show_vars, drop = FALSE]
-      if(!is.null(temp$timestamp)) {
-        temp$timestamp <- as.character(temp$timestamp)
+      tmpdat <- NULL
+      tmpdat <- as_tele_dt(list(vals$data0))
+      tmpdat <- tmpdat %>% dplyr::select(input$show_vars)
+      if(!is.null(tmpdat$timestamp)) {
+        tmpdat$timestamp <- as.character(tmpdat$timestamp)
       } else { NULL }
 
-      DT::datatable(
-        data = temp,
-        class = "display nowrap",
-        options = list(searching = FALSE,
-                       lengthMenu = c(5, 10, 15))
-      ) %>% DT::formatRound(
-        columns = c("x", "y"),
-        digits = 4,
-        interval = 3,
-        mark = ","
+      reactable::reactable(
+        tmpdat,
+        compact = FALSE,
+        highlight = TRUE,
+        striped = TRUE,
+        defaultPageSize = 5,
+        paginationType = "jump",
+        showPageSizeOptions = TRUE,
+        pageSizeOptions = c(5, 10, 20),
+        showPageInfo = FALSE,
+        minRows = 5,
+
+        defaultColDef =
+          reactable::colDef(
+            headerClass = "rtable_header", align = "right"),
+
+        columns = list(
+          timestamp = reactable::colDef(
+            minWidth = 150,
+            format = reactable::colFormat(datetime = TRUE)),
+          x = reactable::colDef(
+            minWidth = 90,
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)),
+          y = reactable::colDef(
+            minWidth = 90,
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)),
+          longitude = reactable::colDef(
+            minWidth = 90,
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)),
+          latitude = reactable::colDef(
+            minWidth = 90,
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)))
       )
 
     }) # end of renderDataTable // dataTable_id

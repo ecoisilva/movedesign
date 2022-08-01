@@ -12,7 +12,7 @@
 mod_tab_data_upload_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    shiny::fluidRow(
+    fluidRow(
 
       # Introduction: -----------------------------------------------------
 
@@ -20,13 +20,12 @@ mod_tab_data_upload_ui <- function(id) {
 
           shinydashboardPlus::box(
 
-            title = span("Submit movement data:", style =
-                           paste("padding-top: 14px;", ttl_main)),
-            icon = fontawesome::fa(name = "file-upload",
-                                   height = "22px",
+            title = span("Submit movement data:", class = "ttl-tab"),
+            icon = fontawesome::fa(name = "file-arrow-up",
+                                   height = "21px",
                                    margin_left = "14px",
                                    margin_right = "8px",
-                                   fill = "#e3e3e3"),
+                                   fill = "var(--sea-dark)"),
             id = ns("upload_intro"),
             width = NULL,
             solidHeader = FALSE, headerBorder = FALSE,
@@ -38,27 +37,27 @@ mod_tab_data_upload_ui <- function(id) {
               p("The main goal in this tab is to extract relevant",
                 "parameters from pre-existing data.",
                 "Ultimately, you want to choose a species that",
-                span("behaves similarly", style = txt_key),
+                span("behaves similarly", class = "cl-sea-d"),
                 "to your intended study species,",
                 "as all subsequent steps will built upon these",
                 "parameters.",
 
                 "Upload a dataset as a .csv file with at least",
                 "four variables:",
-                HTML(paste0(span("animal ID", style = txt_caution), ",")),
-                span("x", style = txt_caution), "and",
-                span("y", style = txt_caution), "coordinates, and",
-                HTML(paste0(span("timestamp", style = txt_caution), ".")),
+                wrap_none(span("animal ID", class = "cl-dgr"), ","),
+                span("x", class = "cl-dgr"), "and",
+                span("y", class = "cl-dgr"), "coordinates, and",
+                wrap_none(span("timestamp", class = "cl-dgr"), "."),
                 br()),
 
-              p(style = ft_center,
+              p(style = "text-align: center;",
                 "First, browse and choose the appropriate",
-                span(".csv", style = col_border), "file.",
+                span(".csv", class = "cl-sea"), "file.",
                 br(), "Then click",
-                fontawesome::fa(name = "check-circle", fill = hex_main),
-                span("Validate", style = col_main), "and",
-                fontawesome::fa(name = "paper-plane", fill = hex_main),
-                HTML(paste0(span("Extract", style = col_main), ".")))
+                icon("circle-check", class = "cl-mdn"),
+                span("Validate", class = "cl-mdn"), "and",
+                icon("paper-plane", class = "cl-mdn"),
+                wrap_none(span("Extract", class = "cl-mdn"), "."))
 
             ) # end of column (text)
 
@@ -67,12 +66,12 @@ mod_tab_data_upload_ui <- function(id) {
 
       # [right column] ----------------------------------------------------
 
-      div(class = div1_column_right,
+      div(class = div_column_left,
 
           # Submit file: --------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Upload file", style = ttl_box.solid),
+            title = span("Upload file", class = "ttl-box_solid"),
             id = ns("uploadBox_file"),
             status = "primary",
             width = NULL,
@@ -90,7 +89,7 @@ mod_tab_data_upload_ui <- function(id) {
 
             shinyWidgets::prettyCheckbox(
               inputId = ns("file_header"),
-              label = span("Header", style = col_black),
+              label = span("Header", class = "cl-blk"),
               status = "primary",
               animation = "tada",
               outline = TRUE,
@@ -110,7 +109,7 @@ mod_tab_data_upload_ui <- function(id) {
                                      "Single quote (\')" = "'"),
                          selected = '"'),
 
-            shiny::actionButton(
+            footer = shiny::actionButton(
               inputId = ns("confirm_upload"),
               label = "Confirm",
               icon =  icon("upload"),
@@ -121,7 +120,7 @@ mod_tab_data_upload_ui <- function(id) {
           # Select species & individual: ----------------------------------
 
           shinydashboardPlus::box(
-            title = span("Species", style = ttl_box.solid),
+            title = span("Species", class = "ttl-box_solid"),
             id = ns("uploadBox_species"),
             status = "primary",
             width = NULL,
@@ -150,7 +149,7 @@ mod_tab_data_upload_ui <- function(id) {
           # Select variables: ---------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Variables", style = ttl_box.solid),
+            title = span("Variables", class = "ttl-box_solid"),
             id = ns("uploadBox_variables"),
             status = "primary",
             width = NULL,
@@ -182,7 +181,7 @@ mod_tab_data_upload_ui <- function(id) {
           # Tracking regime: ----------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Tracking regime", style = ttl_box.solid),
+            title = span("Tracking regime", class = "ttl-box_solid"),
             id = ns("uploadBox_regime"),
             status = "info",
             width = NULL,
@@ -199,12 +198,12 @@ mod_tab_data_upload_ui <- function(id) {
 
       # [center column] ---------------------------------------------------
 
-      div(class = div1_column_left,
+      div(class = div_column_right,
 
           # Visualization: ------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Data vizualization:", style = ttl_box),
+            title = span("Data vizualization:", class = "ttl-box"),
             id = ns("uploadBox_viz"),
             width = NULL,
             solidHeader = FALSE,
@@ -227,7 +226,7 @@ mod_tab_data_upload_ui <- function(id) {
 
           ## Sample sizes:
           shinydashboardPlus::box(
-            title = span("Displaying sample sizes:", style = ttl_box),
+            title = span("Displaying sample sizes:", class = "ttl-box"),
             id = ns("uploadBox_sizes"),
             width = NULL,
             solidHeader = FALSE,
@@ -243,7 +242,7 @@ mod_tab_data_upload_ui <- function(id) {
           # Additional information: ---------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Additional information:", style = ttl_box),
+            title = span("Additional information:", class = "ttl-box"),
             id = ns("uploadBox_misc"),
             width = NULL, solidHeader = FALSE,
 
@@ -262,6 +261,7 @@ mod_tab_data_upload_ui <- function(id) {
 mod_tab_data_upload_server <- function(id, vals) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    pal <- load_pal()
 
     # DYNAMIC UI ELEMENTS -----------------------------------------------
     ## Hide all boxes at start: -----------------------------------------
@@ -282,7 +282,7 @@ mod_tab_data_upload_server <- function(id, vals) {
 
       tmpbutton <- shiny::actionButton(
         inputId = ns("validate_upload"),
-        icon =  icon("magic"),
+        icon =  icon("wand-magic-sparkles"),
         label = "Validate",
         width = "100%",
         class = "btn-danger")
@@ -294,7 +294,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         if (vals$is_valid) {
           shiny::actionButton(
             inputId = ns("validate_upload"),
-            icon =  icon("check-circle"),
+            icon =  icon("circle-check"),
             label = "Validated!",
             width = "100%",
             class = "btn-info")
@@ -478,9 +478,8 @@ mod_tab_data_upload_server <- function(id, vals) {
           text = span(
             'Please input the scientific name of',
             'your study species, then click the',
-            fontawesome::fa(name = "check-circle",
-                            fill = hex_main),
-            span("Validate", style = btn_primary),
+            icon("circle-check", class = "cl-mdn"),
+            span("Validate", class = "cl-mdn"),
             'button again.'),
           html = TRUE,
           size = "xs")
@@ -506,16 +505,15 @@ mod_tab_data_upload_server <- function(id, vals) {
                                  tempnames)])
       eval_dur <- dur %#% tempunits
 
-      if(eval_dur < (10 %#% "days") || eval_n < 200) {
+      if(eval_dur < (1 %#% "days") || eval_n < 5) {
 
         shinyalert::shinyalert(
           title = "Warning",
           text = span(
-            "Selected individual has a sampling duration",
-            "of less than", span("10 days", style = txt_caution),
+            "Chosen individual has a sampling duration",
+            "of less than", span("one day", class = "cl-dgr"),
             "and/or less than",
-            HTML(paste0(span("200 locations",
-                             style = txt_caution), ".")),
+            wrap_none(span("5 locations", class = "cl-dgr"), "."),
             "Please select a different individual for validation."),
 
           html = TRUE,
@@ -568,10 +566,10 @@ mod_tab_data_upload_server <- function(id, vals) {
           text = span(
             'Please select a species/dataset and an individual',
             'first, then click the',
-            fontawesome::fa(name = "check-circle", fill = hex_main),
-            span('Validate', style = col_main), "and",
-            fontawesome::fa(name = "paper-plane", fill = hex_main),
-            span('Extract', style = col_main),
+            icon("circle-check", class = "cl-mdn"),
+            span('Validate', class = "cl-mdn"), "and",
+            icon("paper-plane", class = "cl-mdn"),
+            span('Extract', class = "cl-mdn"),
             'buttons.'),
           html = TRUE,
           size = "xs")
@@ -625,16 +623,27 @@ mod_tab_data_upload_server <- function(id, vals) {
 
       } else {
 
+        inputList <- list(list(vals$data0, guess0()))
         fit0 <- reactive({
-          ctmm::ctmm.select(vals$data0, guess0(), trace = TRUE)
+          # ctmm::ctmm.select(vals$data0, guess0(), trace = TRUE)
+          par_ctmm.select(inputList, parallel = vals$parallel)
         }) %>% bindCache(vals$species_binom,
                          vals$id)
 
         msg_log(
           style = "warning",
-          message = "...Selecting movement models.",
-          detail = "Please wait for model selection to finish."
-        )
+          message = paste0("Selecting ",
+                           msg_warning("movement models"), "."),
+          detail = "Please wait for 'ctmm.select()' to finish:")
+
+        shiny::withProgress({
+          exptime <- estimate_time(vals$data0, parallel = vals$parallel)
+          exptime <- ifelse(exptime < 5, exptime,
+                            round_any(exptime, 5 , f = ceiling))
+          exptime_units <- ifelse(exptime == 1, "minute", "minutes")
+        },
+        message = "Calculating run time...",
+        detail = "")
 
         shiny::withProgress({
           vals$fit0 <- fit0()
@@ -669,7 +678,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       output$uploadUI_parameters <- renderUI({
 
         shinydashboardPlus::box(
-          title = span("Displaying parameters:", style = ttl_box),
+          title = span("Displaying parameters:", class = "ttl-box"),
           id = ns("uploadBox_parameters"),
           width = NULL,
           solidHeader = FALSE,
@@ -682,23 +691,17 @@ mod_tab_data_upload_server <- function(id, vals) {
               } else {
 
                 p("These parameters have been extracted from",
-                  "individual", span(vals$tmpid,
-                                     style = txt_key),
+                  "individual", span(vals$tmpid, class = "cl-sea-d"),
                   "and species",
-                  HTML(
-                    paste0(span(vals$tmpsp,
-                                style = txt_key),
-                           ".")),
+                  wrap_none(span(vals$tmpsp, class = "cl-sea-d"), "."),
                   "They will only update if you change the",
                   "individual and/or species selected, and then",
                   "click the buttons",
-                  fontawesome::fa(name = "check-circle",
-                                  fill = hex_main),
-                  span("Validate", style = btn_primary), "and",
-                  fontawesome::fa(name = "paper-plane",
-                                  fill = hex_main),
-                  span(HTML(paste0(
-                    span("Extract", style = btn_primary), "."))))
+                  icon("circle-check", class = "cl-mdn"),
+                  span("Validate", class = "cl-mdn"), "and",
+                  icon("paper-plane", class = "cl-mdn"),
+                  wrap_none("Extract", css = "cl-mdn", end = "."))
+
               } # end of if() statement
             }) # end of renderUI
 
@@ -734,10 +737,10 @@ mod_tab_data_upload_server <- function(id, vals) {
           title = "Speed & distance invalid",
           text = span(
             "No statistically significant signature of the animal's",
-            span("velocity", style = txt_caution),
+            span("velocity", class = "cl-dgr"),
             "remains in this dataset.",
             "Please select a different individual or dataset to",
-            "proceed with", span("distance/speed", style = txt_caution),
+            "proceed with", span("distance/speed", class = "cl-dgr"),
             "estimation"),
 
           confirmButtonText = "Dismiss",
@@ -767,7 +770,7 @@ mod_tab_data_upload_server <- function(id, vals) {
               style = paste("margin-bottom: -14px;"),
               actionButton(
                 inputId = ns("uploadHelp_mods"),
-                icon = icon("question-circle"),
+                icon = icon("circle-question"),
                 label = NULL,
                 style = paste("background-color: #fff;",
                               "color: black;",
@@ -812,7 +815,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                 style = paste("margin-bottom: -14px;"),
                 actionButton(
                   inputId = ns("dataHelp_taup"),
-                  icon = icon("question-circle"),
+                  icon = icon("circle-question"),
                   label = NULL,
                   style = paste("background-color: #fff;",
                                 "color: black;",
@@ -875,7 +878,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                 style = paste("margin-bottom: -14px;"),
                 actionButton(
                   inputId = ns("dataHelp_tauv"),
-                  icon = icon("question-circle"),
+                  icon = icon("circle-question"),
                   label = NULL,
                   style = paste("background-color: #fff;",
                                 "color: black;",
@@ -907,23 +910,24 @@ mod_tab_data_upload_server <- function(id, vals) {
       if(vals$tmpid == "Simulated individual") {
         NULL } else {
 
-          vals$sigma0 <- ctmm:::var.covm(vals$fit0$sigma, ave = TRUE)
+          vals$sigma0 <- ctmm:::var.covm(vals$fit0$sigma, ave = T)
           vals$sigma0_units <- "m^2"
-          sig <- fix_spatial(vals$sigma0, unit = "m^2")
+          sig <- fix_unit(vals$sigma0, unit = "m^2",
+                          convert = TRUE, ui = TRUE)
 
           parBlock(
             header = shiny::fluidRow(
               style = paste("margin-bottom: -14px;"),
               actionButton(
                 inputId = ns("dataHelp_sigma"),
-                icon = icon("question-circle"),
+                icon = icon("circle-question"),
                 label = NULL,
                 style = paste("background-color: #fff;",
                               "color: black;",
                               "padding: 0;")), br(),
               span(HTML("Semi-variance (\u03C3)"))
             ),
-            value = span(HTML("&nbsp;", sig[1], sig[3])),
+            value = span(HTML("&nbsp;", sig[1], sig[2])),
             subtitle =
               paste(
                 ifelse(vals$sigma0_min == 0,
@@ -955,7 +959,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$dur0 <- dur
       vals$dur0_units <- tempunits
 
-      out <- fix_time(dur, vals$dur0_units)
+      out <- fix_unit(dur, vals$dur0_units)
       parBlock(header = "Sampling duration",
                value = paste(out[1], out[2]))
 
@@ -976,7 +980,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$dti0 <- dti
       vals$dti0_units <- tempunits
 
-      out <- fix_time(dti, vals$dti0_units)
+      out <- fix_unit(dti, vals$dti0_units)
       parBlock(header = "Sampling interval",
                value = paste(out[1], out[2]),
                subtitle = "between fixes")

@@ -14,7 +14,7 @@ mod_comp_tour_ui <- function(id) {
       inputId = ns("default_tour"),
       label = "Click here for a guided tutorial",
       icon = icon("compass"),
-      width = "240px",
+      width = "238px",
       class = "btn-primary")
   )
 }
@@ -32,20 +32,17 @@ mod_comp_tour_server <- function(id, vals) {
       } else {
         HTML(paste(
           "If the",
-          span("estimate CIs",
-               style =  paste(txt_tour, col_border)),
+          span("confidence intervals", class = "cl-grn"),
           "are wide, and the",
-          span("effective sample size",
-               style = paste(txt_tour, col_border)),
+          span("effective sample size", class = "cl-sea"),
           "is low, then we can adjust the tracking regime to see how",
           "to obtain a more precise estimate.", shiny::p(),
 
           add_action,
           "Click ",
-          fontawesome::fa(name = "wrench", fill = hex_border),
-          span("'Adjust regime'",
-               style = paste(txt_tour, col_border)),
-          "and press 'Next'."
+          icon("wrench", class = "cl-sea"),
+          span("'Adjust regime'", class = "cl-sea"),
+          "and click 'Next'."
         ))
       }
 
@@ -57,7 +54,7 @@ mod_comp_tour_server <- function(id, vals) {
 
     # Build tours: ------------------------------------------------------
 
-    add_action <- span("Action:", style = paste(txt_action))
+    add_action <- span("Action:", class = "tour-action")
 
     build_mainTour <- function(ns, vals) {
       element <- intro <- character(0)
@@ -67,40 +64,37 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
 
-          p(span("Welcome to", style = paste(ttl_tour,
-                                             "color: white;")),
-            HTML(
-              paste0("move",
-                     span("design",
-                          style = paste(ttl_tour, col_border)))),
-            style = ttl_tour),
+          p(class = "ttl-tour cl-wht",
+
+            "Welcome to",
+            wrap_none("move", span("design", class = "cl-sea"))),
 
           "Here, you will be guided step-by-step through the",
           "app. At times, you will be prompted to perform a",
           "specific action, which will be",
-          HTML(paste0(span("highlighted", style = txt_action), ".")),
+          HTML(paste0(span("highlighted", class = "txt_action"), ".")),
           "Please take care to follow these instructions,",
           "since later parts of the tutorial require that all",
           "previous steps are performed.",
           p(), "If no action is requested, simply proceed",
           "to the next step by",
           span("clicking on the 'Next' button or using the right",
-               "arrow of your keyboard.", style = txt_action)
+               "arrow of your keyboard.", class = "tour_action")
         )))
 
       element <- c(element, "#Tour_start")
       intro <- c(
         intro,
         HTML(paste(
-          span("Warning:", style = paste(txt_tour, col_caution)),
+          span("Warning:", class = "cl-dgr"),
           "do not interact with anything outside of highlighted zones",
           "create alongside the tutorial boxes.",
           p(),
           "This tutorial will",
-          span("not", style = paste(txt_tour, col_caution)),
+          span("not", class = "cl-dgr"),
           "cover definitions in detail.",
           "If you want to check the more comprehensive",
-          fontawesome::fa(name = "question-circle"),
+          icon("circle-question"),
           "help tips, please do so outside of the tutorial."
         )))
 
@@ -110,12 +104,12 @@ mod_comp_tour_server <- function(id, vals) {
       #   HTML(paste(
       #     span(
       #       "Please choose",
-      #       fontawesome::fa(name = "check",
-      #                       fill = hex_item),
+      #       icon(name = "check",
+      #            class = "cl-sea-d"),
       #       span("a data source",
-      #            style = txt_tour_item),
+      #            class = "cl-sea-d"),
       #       "and your research question(s).",
-      #       style = txt_action)
+      #       class = "tour_action")
       #   )))
 
       element <- c(element, "#workflow-content")
@@ -124,26 +118,28 @@ mod_comp_tour_server <- function(id, vals) {
         HTML(paste(
           "In this tutorial, you will be guided through a real",
           "tracking project already available through the",
-          span("ctmm", style = txt_tour_grey),
+          span("ctmm", class = "cl-grn"),
           "R package.",
           "For assistance with a simulation from scratch, exit",
-          "this tour (press the ", span("x", style = txt_tour_grey),
+          "this tour (click the ", span("x", class = "cl-grey"),
           " button above) and click on the",
-          fontawesome::fa(name = "file-signature", fill = hex_border),
-          span("Simulate data", style = txt_tour_border),
+          icon("file-signature", class = "cl-sea"),
+          span("Simulate data", class = "cl-sea"),
           "tab. A secondary guided tour will be available there.",
           p(),
           span(
+            class = "tour_action",
+
             "Please choose",
-            fontawesome::fa(name = "check", fill = hex_item),
-            span("Select from available species", style = txt_tour_item),
+            icon(name = "check", class = "cl-sea-d"),
+            span("Select from available species", class = "cl-sea-d"),
             "and the two research questions:",
-            fontawesome::fa(name = "check-square", fill = hex_item),
-            HTML(paste0(span("Home range", style = txt_tour_item), ",")),
+            icon(name = "check-square", class = "cl-sea-d"),
+            HTML(paste0(span("Home range", class = "cl-sea-d"), ",")),
             "and",
-            fontawesome::fa(name = "check-square", fill = hex_item),
-            HTML(paste0(span("Speed & distance", style = txt_tour_item),
-                        ".")), style = txt_action)
+            icon(name = "check-square", class = "cl-sea-d"),
+            HTML(paste0(span("Speed & distance", class = "cl-sea-d"),
+                        ".")))
         )))
 
       element <- c(element, ".sidebar")
@@ -152,18 +148,18 @@ mod_comp_tour_server <- function(id, vals) {
         HTML(paste(
           "The corresponding steps are now marked in bold.",
           "First, we will go to the",
-          fontawesome::fa(name = "file", fill = hex_border),
-          span("Select data", style = txt_tour_border), "tab",
+          icon(name = "file", class = "cl-sea"),
+          span("Select data", class = "cl-sea"), "tab",
           HTML("&mdash;"), "to load a dataset from the",
-          span("ctmm", style = txt_tour_grey), "R package",
+          span("ctmm", class = "cl-grn"), "R package",
           HTML("&mdash;"), "then the",
-          fontawesome::fa(name = "stopwatch", fill = hex_border),
-          span("Tracking regime", style = txt_tour_border), "tab",
+          icon(name = "stopwatch", class = "cl-sea"),
+          span("Tracking regime", class = "cl-sea"), "tab",
           HTML("&mdash;"),
           "to set the sampling duration and interval for evaluation",
           HTML("&mdash;"), "and finally the",
-          fontawesome::fa(name = "drafting-compass", fill = hex_border),
-          span("Analyses", style = txt_tour_border), "tabs."
+          icon(name = "compass-drafting", class = "cl-sea"),
+          span("Analyses", class = "cl-sea"), "tabs."
         )))
 
       ## Data tabs: -------------------------------------------------------
@@ -188,15 +184,15 @@ mod_comp_tour_server <- function(id, vals) {
           "may help inform animal tracking studies of other",
           "species with similar",
           paste0(span("movement behaviors",
-                      style = txt_tour_border), "."),
+                      class = "cl-sea"), "."),
 
           span(
             "First, make sure the species currently selected",
             "from the list is the",
             HTML(paste0(
-              span("African Buffalo", style = txt_tour_item), ".")),
+              span("African Buffalo", class = "cl-sea-d"), ".")),
             "Do not click any other button as of yet.",
-            style = txt_action)
+            class = "tour_action")
         )))
 
       element <- c(element, "#comp_viz_selected-dataTabs_viz")
@@ -204,16 +200,14 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "These are the data vizualization tabs. The first",
-          "tab", fontawesome::fa(name = "paw", fill = hex_border),
+          "tab", icon("paw", class = "cl-sea"),
           "covers all individuals present in the selected dataset.",
-          "The second tab", fontawesome::fa(name = "filter",
-                                             fill = hex_border),
+          "The second tab", icon("filter", class = "cl-sea"),
           "filters to the chosen individual for",
           "parameter extraction.",
-          "The third tab ", fontawesome::fa(name = "chart-line",
-                                             fill = hex_border),
+          "The third tab ", icon("chart-line", class = "cl-sea"),
           "will show you the", span("variogram",
-                                      style = txt_tour_item),
+                                      class = "cl-sea-d"),
           "for that particular individual."
         )))
 
@@ -225,15 +219,15 @@ mod_comp_tour_server <- function(id, vals) {
           "most likely to provided accurate parameter",
           "estimates that represent your intended",
           paste0(span("movement behavior",
-                      style = txt_tour_border), "."),
+                      class = "cl-sea"), "."),
           p(),
           "Ideally, this means an individual",
           "with a considerably high number of fixes",
-          paste0(span("(n)", style = txt_tour_item),
+          paste0(span("(n)", class = "cl-sea-d"),
                  ", long sampling duration ",
-                 span("(period)", style = txt_tour_item),
+                 span("(period)", class = "cl-sea-d"),
                  ", and/or short time between fixes ",
-                 span("(interval)", style = txt_tour_item), " "),
+                 span("(interval)", class = "cl-sea-d"), " "),
           HTML("&#x2014"), "depending on your research question,",
           "respectively."
         )))
@@ -244,14 +238,14 @@ mod_comp_tour_server <- function(id, vals) {
         HTML(paste(
           span(
             "Now, select an individual from the dropdown menu",
-            "and click the", fontawesome::fa(name = "magic"),
+            "and click the", icon("wand-magic-sparkles"),
             "'Validate' button before proceeding.",
-            style = txt_action),
+            class = "tour_action"),
           p(),
           "Outside of this tutorial, you can also select an",
           "individual from the table or",
           "the plot in the data vizualization",
-          fontawesome::fa(name = "paw", fill = hex_border),
+          icon("paw", class = "cl-sea"),
           " tab."
         )))
 
@@ -265,13 +259,12 @@ mod_comp_tour_server <- function(id, vals) {
           "parameters will be too high.",
           p(),
           "If the button changes to",
-          fontawesome::fa(name = "check-circle"),
+          icon(name = "circle-check"),
           "'Validated!',",
           span(
             "then you can proceed by clicking the",
-            fontawesome::fa(name = "paper-plane"),
-            "'Extract' button.",
-            style = txt_action)
+            icon("paper-plane"), "'Extract' button.",
+            class = "tour_action")
         )))
 
       element <- c(element, paste0(tab3, "selectBox_regime"))
@@ -279,9 +272,9 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "This is the current tracking regime, extracted from",
-          "the original dataset. You will be able to test out",
-          "a different", span("tracking regime",
-                              style = txt_tour_item),
+          "the original dataset. You will also be able to test out",
+          "different", span("tracking regimes",
+                              class = "cl-sea-d"),
           "later on."
         )))
 
@@ -290,12 +283,12 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "All relevant temporal",
-          paste0("(", span("e.g.", style = txt_tour_italic),
-                 ", ", span("position", style = txt_tour_border),
+          paste0("(", span("e.g.", style = "font-style: italic;"),
+                 ", ", span("position", class = "cl-sea"),
                  " and ", span("velocity autocorrelation ",
-                               style = txt_tour_border),
+                               class = "cl-sea"),
                  "timescale)"), "and spatial parameters",
-          paste0("(", span("semi-variance", style = txt_tour_border),
+          paste0("(", span("semi-variance", class = "cl-sea"),
                  ")"), "will show up here.",
           "All subsequent steps will built upon these",
           "parameters."
@@ -306,17 +299,17 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Here, you can see the",
-          span("sample sizes", style = txt_tour_item),
+          span("sample sizes", class = "cl-sea-d"),
           "of the original dataset.",
-          span("Absolute sample size (n)", style = txt_tour_border),
+          span("Absolute sample size (n)", class = "cl-sea"),
           "corresponds to the total number of observations in a",
           "dataset. The more important information comes from the",
-          span("effective sample sizes (N)", style = txt_tour_border),
-          "for", span("home range", style = txt_tour_border), "and",
-          span("speed & distance", style = txt_tour_border),
+          span("effective sample sizes (N)", class = "cl-sea"),
+          "for", span("home range", class = "cl-sea"), "and",
+          span("speed & distance", class = "cl-sea"),
           "estimation.",
           "The", span("effective sample size",
-                      style = txt_tour_border),
+                      class = "cl-sea"),
           "is equal to number of home range crossings that",
           "occurred during the study period."
         )))
@@ -328,10 +321,9 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           span("Now we are ready to evaluate the intended",
-               span("tracking regime", style = txt_tour_item),
+               span("tracking regime", class = "cl-sea-d"),
                "for a future tracking project.",
-               style = paste(txt_tour,
-                             "text-align: center !important;"))
+               style = "text-align: center !important;")
         )))
 
       tab4 <- paste0("#tab_device_1", "-")
@@ -351,7 +343,7 @@ mod_comp_tour_server <- function(id, vals) {
           p(),
           span(
             "First, choose GPS as your tracking device.",
-            style = txt_action)
+            class = "tour_action")
         )))
 
       element <- c(element, paste0(tab4, "regBox_device"))
@@ -359,14 +351,14 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "With", HTML(paste0(
-            span("GPS & satellite loggers", style = txt_tour_item), ",")),
-          "sampling is", span("automated", style = txt_tour_border),
+            span("GPS & satellite loggers", class = "cl-sea-d"), ",")),
+          "sampling is", span("automated", class = "cl-sea"),
           "and conducted by satellite systems. Therefore,",
-          span("sampling frequency", style = txt_tour_caution),
-          "and", span("sampling duration", style = txt_tour_caution),
+          span("sampling frequency", class = "cl-dgr"),
+          "and", span("sampling duration", class = "cl-dgr"),
           "are both inherently linked with",
           HTML(paste0(span("GPS battery life",
-                           style = txt_tour_border), ".")),
+                           class = "cl-sea"), ".")),
           "This tradeoff restricts the volume of data that",
           "can be collected by GPS & satellite loggers."
         )))
@@ -376,12 +368,12 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Here, we can set the maximum",
-          span("GPS battery life", style = txt_tour_item),
+          span("GPS battery life", class = "cl-sea-d"),
           "(how long the GPS is expected to last),",
-          "the maximum", span("GPS fix rate", style = txt_tour_item),
+          "the maximum", span("GPS fix rate", class = "cl-sea-d"),
           "(the longest time interval between fixes available",
           "at the duration above), and the",
-          span("decay rate", style = txt_tour_item),
+          span("decay rate", class = "cl-sea-d"),
           "(how fast the GPS battery is expected to decay by increasing",
           "the sampling interval).",
 
@@ -399,9 +391,9 @@ mod_comp_tour_server <- function(id, vals) {
           HTML(paste(
             "Now we are ready to move on to either the",
             "estimation of",
-            span("home range", style = txt_tour_item),
+            span("home range", class = "cl-sea-d"),
             "and", HTML(paste0(span("distance/speed traveled",
-                                    style = txt_tour_item), ".")),
+                                    class = "cl-sea-d"), ".")),
             "This tutorial will run through one and then the other."
           )))
 
@@ -424,11 +416,11 @@ mod_comp_tour_server <- function(id, vals) {
         # intro <- c(
         #   intro,
         #   HTML(paste(
-        #     p(span("Lets estimate", style = paste(ttl_tour,
+        #     p(span("Lets estimate", style = paste(ttl-tour,
         #                                           "color: white;")),
         #       span("home range",
-        #            style = paste(ttl_tour, col_border)),
-        #       style = ttl_tour),
+        #            style = paste(ttl-tour, col_border)),
+        #       style = ttl-tour),
         #
         #     add_action,
         #     "'Run estimation' button to run the AKDE function",
@@ -451,7 +443,7 @@ mod_comp_tour_server <- function(id, vals) {
         #                 style =  paste(txt_tour, col_border)),
         #            ") as the point estimate is subject ",
         #            "to uncertainty."), br(),
-        #     fontawesome::fa(name = "exclamation-circle",
+        #     fontawesome::fa(name = "circle-exclamation",
         #                     fill = "#bdbdbd"),
         #     paste0(span("Expected error",
         #                 style = paste(txt_tour, "color: #bdbdbd;")),
@@ -478,7 +470,7 @@ mod_comp_tour_server <- function(id, vals) {
         #     "as much as possible. If not, the point estimate is highly",
         #     "uncertain, and the dataset may require a longer",
         #     paste0(span("sampling duration",
-        #                 style = paste(txt_tour, col_caution)), ".")
+        #                 class = "cl-dgr"), ".")
         #   )))
         #
         #
@@ -512,14 +504,11 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          p(span("Thank you for using",
-                 style = paste(ttl_tour, "color: white;")),
-            HTML(
-              paste0("move",
-                     span("design",
-                          style = paste(ttl_tour, col_border)),
-                     "!")),
-            style = ttl_tour)
+
+          p(class = "ttl-tour cl-wht",
+
+            "Thank you for using",
+            wrap_none("move", span("design", class = "cl-sea"), "!"))
         )))
 
       data.frame(element = element,

@@ -9,7 +9,7 @@
 #' @importFrom shiny NS tagList
 #' @importFrom stats runif
 #'
-mod_tab_sims_ui <- function(id){
+mod_tab_sims_ui <- function(id) {
   ns <- NS(id)
   tagList(
     fluidRow(
@@ -20,13 +20,12 @@ mod_tab_sims_ui <- function(id){
 
           shinydashboardPlus::box(
 
-            title = span("Simulate movement data:", style =
-                           paste("padding-top: 14px;", ttl_main)),
+            title = span("Simulate movement data:", class = "ttl-tab"),
             icon = fontawesome::fa(name = "file-signature",
-                                   height = "20px",
+                                   height = "21px",
                                    margin_left = "14px",
                                    margin_right = "8px",
-                                   fill = "#e3e3e3"),
+                                   fill = "var(--sea-dark)"),
             id = ns("sims_intro"),
             width = NULL,
             solidHeader = FALSE, headerBorder = FALSE,
@@ -35,15 +34,15 @@ mod_tab_sims_ui <- function(id){
             column(
               align = "center", width = 12,
 
-              p("Choose values that reflect your intended",
+              p("Choose parameters that reflect your intended",
                 "study species, then click the",
-                fontawesome::fa(name = "seedling", fill = hex_main),
-                span("Generate seed", style = col_main), "and",
-                fontawesome::fa(name = "bolt", fill = hex_main),
-                HTML(paste0(span("Run simulation", style = col_main))),
-                "buttons (in that order). If needed, re-adjust values",
-                "until you achieve a simulation that behaves similarly",
-                "to your study species.")
+                icon("seedling", class = "cl-sea"),
+                span("Generate seed", class = "cl-sea"), "and",
+                icon("bolt", class = "cl-mdn"),
+                HTML(paste0(span("Run simulation", class = "cl-mdn"))),
+                "buttons (in that order). If needed, re-adjust any",
+                "value until you achieve a simulation that behaves",
+                "similarly to your study species.")
 
             ) # end of column (for text)
           ) # end of box // sims_intro
@@ -51,13 +50,14 @@ mod_tab_sims_ui <- function(id){
 
       # [right column] ----------------------------------------------------
 
-      div(class = div1_column_right,
+      div(class = div_column_left,
 
           # PARAMETERS: ---------------------------------------------------
           ## Timescale parameters -----------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Temporal parameters", style = ttl_box.solid),
+            title = span("Temporal parameters",
+                         class = "ttl-box_solid"),
             id = ns("simBox_timescales"),
             status = "primary",
             width = NULL,
@@ -70,31 +70,28 @@ mod_tab_sims_ui <- function(id){
 
               p(HTML("&nbsp;"),
                 HTML(paste0("Position autocorrelation ",
-                            "(\u03C4", tags$sub("p"), "):")),
-                style = paste0(ft, col_main,
-                               "font-size: 14px;",
-                               "letter-spacing: 0.5px;",
-                               "margin: 0 0 5px -7px;",
-                               "overflow: hidden;")),
+                            "(\u03C4", tags$sub("p"), "):"))) %>%
+                tagAppendAttributes(class = 'label_split'),
 
               actionButton(
                 inputId = ns("simsHelp_taup"),
-                icon = icon("question-circle"),
+                icon = icon("circle-question"),
                 label = NULL,
                 style = paste("background-color: #fff;",
                               "color: black;",
                               "padding: 0;",
                               "float: right;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_tau_p0")
+                bsplus::bs_attach_modal(id_modal = "modal_taup_sim")
             ),
 
             splitLayout(
               cellWidths = c("40%", "60%"),
 
               numericInput(
-                inputId = ns('tau_p0'),
+                inputId = ns("tau_p0"),
                 label = NULL,
-                min = 1, value = 1),
+                min = 1, value = 1,
+                width =  "100%"),
 
               selectInput(
                 inputId = ns("tau_p0_units"),
@@ -103,7 +100,8 @@ mod_tab_sims_ui <- function(id){
                             "Weeks(s)" = "weeks",
                             "Day(s)" = "days",
                             "Hour(s)" = "hours"),
-                selected = "days")
+                selected = "days",
+                width = "100%")
 
             ), # end of splitLayout // tau_p
 
@@ -114,31 +112,27 @@ mod_tab_sims_ui <- function(id){
 
               p(HTML("&nbsp;"),
                 HTML(paste0("Velocity autocorrelation ",
-                            "(\u03C4", tags$sub("v"), "):")),
-                style = paste0(ft, col_main,
-                               "font-size: 14px;",
-                               "letter-spacing: 0.5px;",
-                               "margin: 0 0 5px -7px;",
-                               "overflow: hidden;")),
+                            "(\u03C4", tags$sub("v"), "):"))) %>%
+                tagAppendAttributes(class = 'label_split'),
 
               actionButton(
                 inputId = ns("simsHelp_tauv"),
-                icon = icon("question-circle"),
+                icon = icon("circle-question"),
                 label = NULL,
                 style = paste("background-color: #fff;",
                               "color: black;",
                               "padding: 0;",
                               "float: right;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_tau_v0")
+                bsplus::bs_attach_modal(id_modal = "modal_tauv_sim")
             ),
 
             splitLayout(
               cellWidths = c("40%", "60%"),
 
               numericInput(
-                inputId = ns('tau_v0'),
+                inputId = ns("tau_v0"),
                 label = NULL,
-                min = 1, max = 500, value = 1),
+                min = 1, max = 500, value = 5),
 
               selectInput(
                 inputId = ns("tau_v0_units"),
@@ -155,7 +149,7 @@ mod_tab_sims_ui <- function(id){
           ## Spatial parameters -------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Spatial parameters", style = ttl_box.solid),
+            title = span("Spatial parameters", class = "ttl-box_solid"),
             id = ns("simBox_spatialscales"),
             status = "primary",
             width = NULL,
@@ -165,28 +159,25 @@ mod_tab_sims_ui <- function(id){
               cellWidths = c("92%", "15px"),
 
               p(HTML("&nbsp;"),
-                HTML("Semi-variance (\u03C3):"),
-                style = paste0(ft, col_main,
-                               "font-size: 14px;",
-                               "letter-spacing: 0.5px;",
-                               "margin: 0 0 5px -7px;")),
+                HTML("Semi-variance (\u03C3):")) %>%
+                tagAppendAttributes(class = 'label_split'),
 
               actionButton(
                 inputId = ns("simsHelp_var"),
-                icon = icon("question-circle"),
+                icon = icon("circle-question"),
                 label = NULL,
                 style = paste("background-color: #fff;",
                               "color: black;",
                               "padding: 0;",
                               "float: right;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_sigma0")
+                bsplus::bs_attach_modal(id_modal = "modal_sigma_sim")
             ),
 
             splitLayout(
               cellWidths = c("40%", "60%"),
 
               numericInput(
-                inputId = ns('sigma0'),
+                inputId = ns("sigma0"),
                 label = NULL,
                 min = 1, max = 500, value = 1),
 
@@ -206,14 +197,15 @@ mod_tab_sims_ui <- function(id){
           ## Submit parameters --------------------------------------------
 
           shinydashboardPlus::box(
-            id = "simBox_submit",
+            id = ns("simBox_submit"),
             width = NULL,
             headerBorder = FALSE,
 
             actionButton(inputId = ns("generateSeed"),
                          icon = icon("seedling"),
                          label = "Generate seed",
-                         width = "100%"),
+                         width = "100%",
+                         class = "btn-info"),
 
             fluidRow(
               column(width = 12,
@@ -232,48 +224,49 @@ mod_tab_sims_ui <- function(id){
 
       # [center column] ---------------------------------------------------
 
-      div(class = div1_column_left,
+      div(class = div_column_right,
 
           # Visualization: ------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Visualizing simulated data:", style = ttl_box),
+            title = span("Visualizing simulated data:", class = "ttl-box"),
             id = ns("simBox_viz"),
             width = NULL,
             solidHeader = FALSE,
             collapsible = TRUE,
 
+            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-7",
             tabsetPanel(
               id = ns("simTabs_viz"),
 
               tabPanel(
                 value = ns("simPanel_id"),
                 title = tagList(
-                  fontawesome::fa(name = "paw", fill = hex_border),
-                  span("Data", style = ttl_panel)),
-
+                  icon("paw", class = "cl-sea"),
+                  span("Data", class = "ttl-panel")),
                 br(),
 
                 ggiraph::girafeOutput(
                   outputId = ns("simPlot_id"),
-                  width = "95%", height = "100%") %>%
+                  width = "100%", height = "100%") %>%
                   shinycssloaders::withSpinner(
-                    type = getOption("spinner.type", default = 7),
+                    type = getOption("spinner.type", default = 4),
+                    size = getOption("spinner.size", default = 1.5),
                     color = getOption("spinner.color",
-                                      default = "#f4f4f4"))
-
+                                      default = "#f4f4f4"),
+                    proxy.height = "300px"), p()
 
               ), # end of panels (1 out of 3)
 
               tabPanel(
                 value = ns("simPanel_animated"),
                 title = tagList(
-                  fontawesome::fa(name = "route", fill = hex_border),
-                  span("Animation", style = ttl_panel)
+                  icon("route", class = "cl-sea"),
+                  span("Trajectory details", class = "ttl-panel")
                 ), br(),
 
                 ggiraph::girafeOutput(
-                  outputId = ns("simPlot_animated"),
+                  outputId = ns("simPlot_route"),
                   width = "95%", height = "100%"),
 
                 column(width = 12, align = "center",
@@ -281,102 +274,141 @@ mod_tab_sims_ui <- function(id){
                 ), br()
 
               ) # end of panels (2 out of 2)
-            ) # end of tabs
+            )), # end of tabs
 
-          ), # end of box // simBox_viz
+            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-5",
 
-          shinydashboardPlus::box(
-            id = ns("simBox_repeat"),
-            width = NULL,
-            headerBorder = FALSE,
+                p(class = "fluid-padding"),
+                div(id = ns("help_sim_guide"),
+                    p("Quick", wrap_none(span("guidelines",
+                                              class = "cl-sea"), ":")) %>%
+                      tagAppendAttributes(class = 'subheader'),
 
-            column(
-              width = 12, align = "center",
+                    helpText(
+                      style = "text-align: justify",
+                      "To change the distance traveled, modify",
+                      span("position autocorrelation", class = "cl-sea"),
+                      HTML(paste0("(\u03C4", tags$sub("p"), ").")),
+                      "To change movement speed, modify",
+                      span("velocity autocorrelation", class = "cl-sea"),
+                      HTML(paste0("(\u03C4", tags$sub("v"), ").")),
+                      "To change the area covered,",
+                      "modify", span("sigma", class = "cl-sea"),
+                      "(\u03C3)."), p(style = "padding-bottom: 25px;")
+                ),
 
-              p("Do you wish to compare multiple simulations?",
-                style = paste(ft, ft_center,
-                              "color: #006466;",
-                              "font-size: 20px;")),
+                div(id = ns("sim_details"),
+                    p("Do you wish to compare",
+                      wrap_none(span("multiple simulations",
+                                     class = "cl-sea"), "?")) %>%
+                      tagAppendAttributes(class = 'subheader'),
 
-              p(style = "text-align: justify",
-                "You can add all chosen parameters",
-                "to a table for easy comparisons,",
-                "by clicking the",
-                fontawesome::fa(name = "bookmark", fill = hex_main),
-                span("Add to table", style = btn_primary),
-                "button below after each simulation run.")
+                    helpText(
+                      style = "text-align: justify",
 
-            ), # end of column (box body)
+                      "You can add all parameters",
+                      "to a table for easy comparisons.",
+                      "Click the",
+                      icon("bookmark", class = "cl-mdn"),
+                      span("Add to table", class = "cl-mdn"),
+                      "button below after each run.")
+                )
 
-            footer = column(
-              width = 12, align = "center",
+            ), # end of div (body)
 
-              splitLayout(
-                cellWidths = c("40%", "30%", "30%"),
-                cellArgs = list(style = "align: right;"),
+            footer = tagList(
+              column(
+                width = 12, align = "right",
+                style = "padding-right: 0px;",
 
-                br(),
                 actionButton(
                   inputId = ns("repeat_sim"),
                   label = "Repeat",
-                  icon = icon("redo"),
+                  icon = icon("rotate-right"),
                   class = "btn-info",
-                  width = "90%"),
-
+                  width = "120px"),
+                HTML("&nbsp;"),
                 actionButton(
                   inputId = ns("simButton_save"),
                   label = span("Add to",
-                               span("table", style = col_border)),
+                               span("table", class = "cl-sea")),
                   icon = icon("bookmark"),
-                  width = "100%")
+                  width = "120px")
+              ),
 
-              ) # end of splitLayout
-            ) # end of column (footer)
+              div(
+                style = "position: absolute; left: 10px;",
+                shinyWidgets::checkboxGroupButtons(
+                  inputId = ns("simHelp_guide"),
+                  label = NULL,
+                  choices =
+                    c(`<i class='fa fa-circle-question'></i>` = "show"),
+                  justified = TRUE,
+                  width = "39px",
+                  status = "warning"
+                ))
 
-          ) # end of box // simBox_repeat
+            ) # end of tagList (footer)
+          ), # end of box // simBox_viz
+
+          # Table: --------------------------------------------------------
+
+          shinydashboardPlus::box(
+            title = span("Simulation details:", class = "ttl-box"),
+            id = ns("simBox_summary"),
+            width = NULL,
+            solidHeader = FALSE,
+
+            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
+
+                p(style = "text-align: justify;",
+                  "This information will be added to the",
+                  icon("box-archive", class = "cl-mdn"),
+                  span("Report", class = "cl-mdn"), "tab,",
+                  "so it can be reviewed at any point.",
+                  span("Note:", class = "cl-dgr"),
+                  "only the last simulation will be used",
+                  "for further analyses.")
+
+            ), # end of div (left)
+
+            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
+                p(style = "padding-top: 5px;"),
+                reactable::reactableOutput(ns("simTable")),
+
+                br(),
+                helpText(style = "padding: 0px 0px;",
+                         "The", span("movement speed",
+                                     style = "color: #000000;"),
+                         "value returned here",
+                         "assumes a Gaussian stochastic process for",
+                         "a faster computation, but the true value may",
+                         "not necessarily be normally distributed.")
+
+            ), # end of div (right)
+
+            footer = tagList(
+              div(style = "display:inline-block; float:right",
+
+                  actionButton(
+                    inputId = ns("simTable_clear"),
+                    label = "Clear table",
+                    icon =  icon("trash"),
+                    width = "110px")
+
+              )) # end of tagList (footer)
+          ) # end of box // simBox_summary
+
       ), # end of column (center)
 
       # [bottom column] ---------------------------------------------------
 
       div(class = div_column_main,
 
-          # Table: --------------------------------------------------------
-
-          shinydashboardPlus::box(
-            title = span("Summary table:", style = ttl_box),
-            id = ns("simBox_summary"),
-            width = NULL,
-            solidHeader = FALSE,
-
-            DT::dataTableOutput(ns("simsTable")),
-            column(
-              width = 12, align = "center",
-
-              p(style = ft_center,
-                br(), span("Note:", style = col_caution),
-                "the", span("movement speed",
-                            style = "color: #000000;"),
-                "value returned here",
-                "assumes a Gaussian stochastic process for",
-                "a faster computation, but the true value may",
-                "not necessarily be normally distributed.")
-
-            ), # end of column (text)
-
-            br(),
-            div(style = "display:inline-block; float:right",
-                actionButton(
-                  inputId = ns("simsTable_clear"),
-                  label = "Clear table",
-                  icon =  icon("trash"),
-                  width = "110px")), br()
-
-          ), # end of box
-
           # Information and R console: ------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Additional information:", style = ttl_box),
+            title = span("Additional information:", class = "ttl-box"),
             id = ns("simBox_misc"),
             width = NULL,
             solidHeader = FALSE,
@@ -385,29 +417,29 @@ mod_tab_sims_ui <- function(id){
 
           ) # end of box
 
-      ), # end of column (bottom)
+      ) # end of column (bottom)
 
       # FIXED PANELS: -----------------------------------------------------
       ## Help button: -----------------------------------------------------
 
-      fixedPanel(
-        actionButton(
-          inputId = ns("help_sims"),
-          label = "Help",
-          icon = icon("question-circle"),
-          style = paste("color: #fff;",
-                        "background-color: #222d32;",
-                        "border-color: #222d32")),
-
-        right = 25, top = 75, width = "40px")
+      # fixedPanel(
+      #   actionButton(
+      #     inputId = ns("help_sims"),
+      #     label = "Help",
+      #     icon = icon("circle-question"),
+      #     style = paste("color: #fff;",
+      #                   "background-color: #222d32;",
+      #                   "border-color: #222d32")),
+      #
+      #   right = 25, top = 75, width = "45px")
 
     ), # end of fluidRow
 
     # MODALS: -------------------------------------------------------------
 
-    modal_tau_p0,
-    modal_tau_v0,
-    modal_sigma0,
+    create_modal(var = "taup",  id = "sim"),
+    create_modal(var = "tauv",  id = "sim"),
+    create_modal(var = "sigma", id = "sim"),
     NULL
 
   ) # end of tagList
@@ -419,14 +451,50 @@ mod_tab_sims_ui <- function(id){
 mod_tab_sims_server <- function(id, vals) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    pal <- load_pal()
 
-    # DYNAMIC UI ELEMENTS -----------------------------------------------
+    # DYNAMIC UI ELEMENTS -------------------------------------------------
 
     ## Hide boxes initially:
-    shinyjs::hide(id = "simBox_summary")
-    shinyjs::hide(id = "simBox_repeat")
 
-    ## Reset values from import or select data tabs: --------------------
+    shinyjs::hide(id = "simBox_viz")
+    shinyjs::hide(id = "simBox_summary")
+    shinyjs::hide(id = "sim_details")
+
+    observe({
+      shinyjs::hide(id = "help_sim_guide")
+
+      req(input$simHelp_guide)
+      if (input$simHelp_guide == "show") {
+        shinyjs::show(id = "help_sim_guide")
+      } else { shinyjs::hide(id = "help_sim_guide") }
+    })
+
+    ## Re-run simulations via multiple ways:
+
+    to_run <- reactive({
+      list(input$run_sim, input$repeat_sim)
+    })
+
+    to_rerun <- reactive({
+      list(input$repeat_sim,
+           input$generateSeed)
+    })
+
+    ## Stored parameters:
+
+    saved_pars <- reactive({
+
+      list(input$generateSeed,
+                input$tau_p0,
+                input$tau_p0_units,
+                input$tau_v0,
+                input$tau_v0_units,
+                input$sigma0,
+                input$sigma0_units)
+    })
+
+    ## Reset values from import or select data tabs:
 
     observe({
       req(vals$active_tab == 'sims')
@@ -435,209 +503,285 @@ mod_tab_sims_server <- function(id, vals) {
     }) %>% # end of observe,
       bindEvent(input$generateSeed)
 
-    # SIMULATIONS -------------------------------------------------------
-    ## Initial sampling parameters: -------------------------------------
+    ## Convert values/units: ----------------------------------------------
 
     observe({
+      req(input$tau_p0_units != vals$tau_p0_units)
+
+      new_tau_p0 <- sigdigits(input$tau_p0_units %#%
+                                vals$tau_p0 %#% vals$tau_p0_units, 3)
+
+      updateNumericInput(
+        session,
+        inputId = "tau_p0",
+        label = NULL,
+        min = 1, value = new_tau_p0)
+
+    }) %>% bindEvent(input$tau_p0_units)
+
+    observe({
+      req(input$tau_v0_units != vals$tau_v0_units)
+
+      new_tau_v0 <- sigdigits(input$tau_v0_units %#%
+                                vals$tau_v0 %#% vals$tau_v0_units, 3)
+
+      updateNumericInput(
+        session,
+        inputId = "tau_v0",
+        label = NULL,
+        min = 1, value = new_tau_v0)
+
+    }) %>% bindEvent(input$tau_v0_units)
+
+    observe({
+      req(input$sigma0_units != vals$sigma0_units)
+
+      new_sigma0 <- sigdigits(input$sigma0_units %#%
+                                vals$sigma0 %#% vals$sigma0_units, 3)
+
+      updateNumericInput(
+        session,
+        inputId = "sigma0",
+        label = NULL,
+        min = 1, value = new_sigma0)
+
+    }) %>% bindEvent(input$sigma0_units)
+
+    # SIMULATIONS ---------------------------------------------------------
+    ## Generate random seed: ----------------------------------------------
+
+    observe({
+      vals$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
+    }) %>% bindEvent(to_rerun(), ignoreInit = TRUE)
+
+    output$seedvalue <- renderPrint({
+      req(vals$seed0)
+      return(vals$seed0)
+    })
+
+    ## Prepare model and run simulation: ----------------------------------
+
+    observe({
+      req(vals$active_tab == 'sims')
+
+      vals$tau_p0 <- input$tau_p0
+      vals$tau_p0_units <- input$tau_p0_units
+      vals$tau_v0 <- input$tau_v0
+      vals$tau_v0_units <- input$tau_v0_units
+      vals$sigma0 <- input$sigma0
+      vals$sigma0_units <- input$sigma0_units
+      vals$is_run <- FALSE
+
+    }) %>% bindEvent(saved_pars())
+
+    sim0 <- reactive({
+
+      vals$ctmm_mod <- prepare_mod(
+        tau_p = input$tau_p0, tau_p_units = input$tau_p0_units,
+        tau_v = input$tau_v0, tau_v_units = input$tau_v0_units,
+        sigma = input$sigma0, sigma_units = input$sigma0_units)
 
       tmp_taup <- "days" %#% input$tau_p0 %#% input$tau_p0_units
       vals$dur0 <- ifelse(tmp_taup > 1, tmp_taup * 10, 10)
       vals$dur0_units <- "days"
 
-    }) %>% bindEvent(input$tau_p0, input$tau_p0_units)
-
-    observe({
       tmp_tauv <- input$tau_v0 %#% input$tau_v0_units
       vals$dti0 <- ifelse(tmp_tauv <= 120, 1, round(
         "minutes" %#% (input$tau_v0 %#% input$tau_v0_units)/4, 0))
       vals$dti0_units <- "minutes"
 
-    }) %>% bindEvent(input$tau_v0, input$tau_v0_units)
+      simulate_data(
+        mod0 = vals$ctmm_mod,
+        dur0 = vals$dur0, dur0_units = vals$dur0_units,
+        dti0 = vals$dti0, dti0_units = vals$dti0_units,
+        seed0 = vals$seed0)
 
-    to_run <- reactive({
-      list(input$run_sim, input$repeat_sim)
-    })
+    }) %>%
+      bindCache(input$tau_p0,
+                input$tau_p0_units,
+                input$tau_v0,
+                input$tau_v0_units,
+                input$sigma0,
+                input$sigma0_units,
+                vals$seed0, cache = "app")
 
-    to_rerun <- reactive({
-      list(input$generateSeed, input$repeat_sim)
-    })
-    seed0 <- reactive({
-      round(stats::runif(1, min = 1, max = 10000), 0)
-    }) %>% bindEvent(to_rerun(), ignoreInit = TRUE)
+    fit0 <- reactive({
+      req(vals$data0, vals$ctmm_mod)
 
-    ## Prepare model and run simulation: --------------------------------
+      # print("CHECKPOINT")
+      # start_time <- Sys.time()
+      inputList <- list(list(vals$data0, vals$ctmm_mod))
+      fit <- par_ctmm.fit(inputList, parallel = TRUE)
+      # print((end_time <- Sys.time() - start_time))
+
+      return(fit)
+
+    }) %>%
+      bindCache(input$tau_p0,
+                input$tau_p0_units,
+                input$tau_v0,
+                input$tau_v0_units,
+                input$sigma0,
+                input$sigma0_units,
+                vals$seed0, cache = "app")
 
     observe({
+      req(vals$active_tab == 'sims')
+
       if(!is.null(vals$seed0)) {
 
-        vals$ctmm_mod <- prepare_pars(
-          tau_p0 = input$tau_p0,
-          tau_p0_units = input$tau_p0_units,
-          tau_v0 = input$tau_v0,
-          tau_v0_units = input$tau_v0_units,
-          sigma0 = input$sigma0,
-          sigma0_units = input$sigma0_units)
+        validate(
+          need(vals$tau_p0 != '', "Select a value."),
+          need(vals$tau_p0_units != '', "Please choose a unit."),
+          need(vals$tau_v0 != '', "Select a value."),
+          need(vals$tau_v0_units != '', "Please choose a unit."),
+          need(vals$sigma0 != '', "Select a value."),
+          need(vals$sigma0_units != '', "Please choose a unit."))
 
-        sim0 <- reactive({
-          simulate_data(
-            mod0 = vals$ctmm_mod,
-            dur0 = vals$dur0, dur0_units = vals$dur0_units,
-            dti0 = 20, dti0_units = "seconds",
-            seed0 = vals$seed0)
-        }) %>%
-          bindCache(vals$tau_p0,
-                    vals$tau_p0_units,
-                    vals$tau_v0,
-                    vals$tau_v0_units,
-                    vals$sigma0,
-                    vals$sigma0_units,
-                    vals$seed0)
+        ### Simulate full dataset: ----------------------------------------
 
-        # Simulate full data:
-
+        msg_header("Data simulation:")
         msg_log(
           style = "warning",
-          message = paste0("Simulation ",
-                           msg_warning("in progress"), "..."),
+          message = paste0("Generating ",
+                           msg_warning("simulated data"), "..."),
           detail = "Please wait for the simulation to finish."
         )
 
+        shinybusy::show_modal_spinner(
+          spin = "fading-circle",
+          color = pal$sea,
+
+          text = span(
+            style = "font-size: 18px;",
+            span("Simulating", style = "color: #797979;"),
+            HTML(paste0(span("movement data", class = "cl-sea"),
+                        span(".", style = "color: #797979;"))),
+            p("This may take a while...",
+              style = paste("color: #797979;",
+                            "font-size: 16px;",
+                            "text-align: center;")),
+            p())
+
+        ) # end of show_modal_spinner
+
         start_sim <- Sys.time()
-        withProgress({
-          vals$data_full <- sim0()
-        },
-        message = "Simulation in progress.",
-        detail = "This may take a while...")
-
-        # Subset data:
-
-        tmpsim <- vals$data_full[which(
-          vals$data_full$t <= vals$dur0 %#% vals$dur0_units), ]
-        rows.thin <- seq(1, nrow(tmpsim), by = vals$dti0)
-        vals$data0 <- tmpsim[rows.thin, ]
+        vals$data0 <- sim0()
 
         # Store relevant values:
-
         vals$data_type <- "simulated"
         vals$species_binom <- vals$species <- "Simulated"
-        vals$id <- vals$tmpid <- "Simulated individual"
+        vals$id <- vals$tmpid <- as.character(vals$seed0)
 
-        vals$tau_p0 <- input$tau_p0
-        vals$tau_p0_units <- input$tau_p0_units
-        vals$tau_v0 <- input$tau_v0
-        vals$tau_v0_units <- input$tau_v0_units
-        vals$sigma0 <- input$sigma0
-        vals$sigma0_units <- input$sigma0_units
+        vals$tau_p <- vals$tau_p0
+        vals$tau_p_units <- vals$tau_p0_units
+        vals$tau_v <- vals$tau_v0
+        vals$tau_v_units <- vals$tau_v0_units
+        vals$sigma <- vals$sigma0
+        vals$sigma_units <- vals$sigma0_units
+        vals$is_run <- TRUE
+
+        time_sim <- difftime(Sys.time(), start_sim, units = "min")
+
+        if (round(time_sim, 1) < 1) {
+          tmpdetail <- paste("This step took less than one minute.")
+        } else {
+          tmpdetail <- paste("This step took approximately",
+                             round(time_sim, 0), "minutes.")
+        }
 
         msg_log(
           style = "success",
           message = paste0("Simulation ",
                            msg_success("completed"), "."),
-          detail = paste(
-            "This step took approximately",
-            round(difftime(Sys.time(), start_sim,
-                           units = 'min'), 1),
-            "minutes."))
+          detail = tmpdetail)
+
         vals$is_valid <- TRUE
+        shinybusy::remove_modal_spinner()
 
-        shinyjs::enable("simButton_save")
+        ### Run model fit: ------------------------------------------------
 
-        ## Run model fit: -----------------------------------------------
+        shinybusy::show_modal_spinner(
+          spin = "fading-circle",
+          color = pal$sea,
+
+          text = span(
+            style = "font-size: 18px;",
+            span("Fitting", style = "color: #797979;"),
+            HTML(paste0(span("movement model", class = "cl-sea"),
+                        span(".", style = "color: #797979;"))),
+            p("This may take a while...",
+              style = paste(# "background-color: #eaeaea;",
+                            "color: #797979;",
+                            "font-size: 16px;",
+                            "text-align: center;")),
+            p())
+
+        ) # end of show_modal_spinner
 
         vals$guess <- NULL
         vals$needs_fit <- FALSE
 
-        start <- Sys.time()
         msg_log(
           style = "warning",
           message = paste0("...", msg_warning("Fitting"),
                            " movement model."),
           detail = "Please wait for model fit to finish.")
 
-        withProgress({
-          vals$fit0 <- ctmm::ctmm.fit(
-            vals$data0, vals$ctmm_mod,
-            method = 'pHREML')
-        },
-        message = "Fitting movement model.",
-        detail = "This may take a while...")
-
-        vals$time_sims <- difftime(Sys.time(), start,
+        vals$fit0 <- fit0()
+        vals$time_sims <- difftime(Sys.time(), start_sim,
                                    units = "mins")
+
+        if (round(vals$time_sims, 1) < 1) {
+          tmpdetail <- paste("This step took less than one minute.")
+        } else {
+          tmpdetail <- paste("This step took approximately",
+                             round(vals$time_sims, 1), "minutes.")
+        }
+
         msg_log(
           style = "success",
           message = paste0("Model fitting ",
                            msg_success("completed"), "."),
-          detail = paste(
-            "This step took approximately",
-            round(vals$time_sims, 1), "minutes."))
+          detail = tmpdetail)
 
+        shinyjs::enable("simButton_save")
         shinyjs::show(id = "simBox_misc")
+        shinyjs::show(id = "sim_details")
+        shinyjs::show(id = "simBox_viz")
+
+        shinybusy::remove_modal_spinner()
+
 
       } else {
 
         shinyalert::shinyalert(
           title = "No seed found",
           text = span(
-            'Please generate a seed value first, by', br(),
-            'clicking the',
-            fontawesome::fa(name = "seedling", fill = hex_main),
-            span('Generate seed', style = col_main),
-            'button.'),
+            "Please generate a seed value first, by", br(),
+            "clicking the",
+            icon("seedling", class = "cl-mdn"),
+            span("Generate seed", class = "cl-mdn"),
+            "button."),
           html = TRUE,
           size = "xs")
 
       } # end of if() statement
-
-      shinyjs::show(id = "simBox_repeat")
-
     }) %>% # end of observe,
-      bindEvent(to_run(), ignoreInit = TRUE)
+      bindEvent(to_run())
 
-    # PREPARE -----------------------------------------------------------
-
-    calculate_dist <- reactive({
-      # Distance traveled:
-
-      tmpdat <- data.frame(
-        x = vals$data0$x,
-        y = vals$data0$y)
-
-      tmpdist <- list()
-      for(i in 2:nrow(vals$data0)) {
-        tmpdist[[i]] <-
-          sqrt((tmpdat$x[i] - tmpdat$x[i-1])^2 +
-                 (tmpdat$y[i] - tmpdat$y[i-1])^2)
-      }
-      dist <- c(0, do.call("rbind", tmpdist))
-      return(dist)
-    })
-
-    ## Preparing data for animation plot: -------------------------------
-
-    data_animated <- reactive({
-      req(vals$data0, vals$data_type == "simulated")
-
-      dat <- vals$data0
-      t_origin <- "1111-10-31 23:06:32"
-      dat$timestamp <- as.POSIXct(dat$t, origin = t_origin)
-
-      data_animated <- dat[which(dat$t <= input$timeline), ]
-      return(data_animated)
-
-    })
-
-    # PLOTS -------------------------------------------------------------
-    ## Rendering simulated data plot (xy): ------------------------------
+    # PLOTS ---------------------------------------------------------------
+    ### Rendering simulated data plot (xy): -------------------------------
 
     output$simPlot_id <- ggiraph::renderGirafe({
-      req(vals$data0, vals$data_type == "simulated")
+      req(vals$data0, vals$is_run, vals$data_type == "simulated")
 
       newdat <- vals$data0
-      newdat <- newdat[which(newdat$t <= (1 %#% "day")), ]
+      newdat <- newdat[which(newdat$t <= (
+        vals$tau_p0 %#% vals$tau_p0_units)), ]
 
-      out_tp <- fix_time(vals$tau_p0, vals$tau_p0_units)
-      out_dur <- fix_time(vals$dur0, vals$dur0_units)
+      out_tp <- fix_unit(vals$tau_p0, vals$tau_p0_units)
+      out_dur <- fix_unit(vals$dur0, vals$dur0_units)
       subtitle <- paste(
         "Highlighting one \u03C4\u209A cycle",
         paste0("(\u2248 ", out_tp[1], " ", out_tp[2], ")"),
@@ -645,6 +789,7 @@ mod_tab_sims_server <- function(id, vals) {
 
       ymin <- min(vals$data0$y) - diff(range(vals$data0$y)) * .2
       ymax <- max(vals$data0$y) + diff(range(vals$data0$y)) * .2
+
       p <- ggplot2::ggplot() +
         ggplot2::geom_path(
           vals$data0, mapping = ggplot2::aes(
@@ -654,14 +799,13 @@ mod_tab_sims_server <- function(id, vals) {
         ggiraph::geom_path_interactive(
           newdat, mapping = ggplot2::aes(
             x = x, y = y, color = timestamp),
-          size = 0.8) +
+          size = 0.5, alpha = .6) +
         ggiraph::geom_point_interactive(
           newdat, mapping = ggplot2::aes(
             x = x, y = y,
             color = timestamp,
-            tooltip = timestamp,
-            data_id = timestamp),
-          size = 2.5) +
+            tooltip = timestamp),
+          size = 1.5) +
 
         ggplot2::labs(
           title = "Simulated individual:",
@@ -686,61 +830,74 @@ mod_tab_sims_server <- function(id, vals) {
           color = ggplot2::guide_colorbar(
             title.vjust = 1.02)) +
         ggplot2::theme(
-          legend.position = c(0.76, 0.08),
+          legend.position = c(0.78, 0.08),
           legend.direction = "horizontal",
           legend.title = ggplot2::element_text(
-            size = 11, face = "bold.italic"),
+            size = 11, face = "italic"),
           legend.key.height = ggplot2::unit(0.3, "cm"),
           legend.key.width = ggplot2::unit(0.6, "cm")
         )
 
       ggiraph::girafe(
         ggobj = p,
-        width_svg = 6, height_svg = 6,
+        width_svg = 5.5, height_svg = 5,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .1),
           ggiraph::opts_zoom(max = 5),
           ggiraph::opts_tooltip(use_fill = TRUE),
-          ggiraph::opts_hover(
-            css = paste("fill:#1279BF;",
-                        "stroke:#1279BF;",
-                        "cursor:pointer;")),
+          # ggiraph::opts_hover(
+          #   css = paste("fill:#1279BF;",
+          #               "stroke:#1279BF;",
+          #               "cursor:pointer;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
 
     }) # end of renderGirafe // simPlot_id
 
-    ## Rendering animation (xy), for 1-day of data: ---------------------
+    ## Preparing data for animation plot: ---------------------------------
+
+    data_animated <- reactive({
+      req(vals$data0, vals$fit0, vals$data_type == "simulated")
+
+      dat <- ctmm::simulate(vals$data0, CTMM = vals$fit0,
+                            dt = 15 %#% "minutes")
+
+      t_origin <- "1111-10-31 23:06:32"
+      dat$timestamp <- as.POSIXct(dat$t, origin = t_origin)
+      data_animated <- dat[which(dat$t <= input$timeline), ]
+      return(data_animated)
+
+    })
+
+    ### Rendering route (xyt), for 1-day of data: -------------------------
 
     output$simInput_timeline <- renderUI({
-      req(vals$data0, vals$data_type == "simulated")
+      req(vals$data0, vals$is_run, vals$data_type == "simulated")
 
       tags$div(
         class = "timelineinput",
         sliderInput(
           inputId = ns("timeline"),
-          label = p("Animating one full day,",
-                    paste0(vals$dti0, "-min steps:"),
-                    style = txt_label_bold),
+          label = p("Rendering one full day,",
+                    paste0(vals$dti0, "-min steps:")),
 
-          min = vals$dti0 %#% vals$dti0_units,
-          max = 1 %#% "day",
           value = 1 %#% "day",
-          step = vals$dti0 %#% vals$dti0_units,
-          animate = animationOptions(interval = 400),
+          step = 15 %#% "minutes", # vals$dti0 %#% vals$dti0_units,
+          min = 15 %#% "minutes", # vals$dti0 %#% vals$dti0_units,
+          max = 1 %#% "day",
+          # animate = animationOptions(interval = 500),
           ticks = FALSE,
           width = "85%"))
 
     }) # end of renderUI // simInput_timeline
 
-    # ANIMATION
-
-    output$simPlot_animated <- ggiraph::renderGirafe({
+    output$simPlot_route <- ggiraph::renderGirafe({
       req(input$timeline)
 
       # Time elapsed:
 
       dat <- data_animated()
-      datfull <- vals$data0[which(vals$data0$t <= (1 %#% "day")), ]
+      maxt <- vals$tau_p0 %#% vals$tau_p0_units # 1 %#% "day"
+      datfull <- vals$data0[which(vals$data0$t <= maxt), ]
       nday <- format(max(dat$timestamp), "%d")
 
       subtitle <- paste("Day", nday,
@@ -751,21 +908,10 @@ mod_tab_sims_server <- function(id, vals) {
                             vals$dti0_units)
 
       # Distance traveled:
-
-      tmpdat <- data.frame(
-        x = dat$x,
-        y = dat$y)
-
-      tmpdist <- list()
-      for(i in 2:nrow(tmpdat)) {
-        tmpdist[[i]] <-
-          sqrt((tmpdat$x[i] - tmpdat$x[i-1])^2 +
-                 (tmpdat$y[i] - tmpdat$y[i-1])^2)
-      }
-      tmpdat$dist <- c(0, do.call("rbind", tmpdist))
+      dat$dist <- calc_dist(dat)
       dist <- paste(
         scales::label_comma(
-          accuracy = 1)(sum(tmpdat$dist, na.rm = TRUE)),
+          accuracy = 1)(sum(dat$dist, na.rm = TRUE)),
         "meters")
 
       ymin <- min(datfull$y) - diff(range(datfull$y)) * .2
@@ -778,6 +924,7 @@ mod_tab_sims_server <- function(id, vals) {
         ggplot2::geom_point(
           data = datfull, mapping = ggplot2::aes(x = x, y = y),
           col = "grey90", size = 2) +
+
         ggplot2::geom_path(
           data = dat,
           mapping = ggplot2::aes(x = x, y = y, color = timestamp),
@@ -791,14 +938,14 @@ mod_tab_sims_server <- function(id, vals) {
 
         ggplot2::annotate(
           "text", family = "Roboto Condensed",
-          col = hex_main,
+          col = pal$mdn,
           x = min(datfull$x) + diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
           fontface = 2, size = 5, lineheight = 1.5,
           label = paste("Time elapsed:\n")) +
         ggplot2::annotate(
           "text", family = "Roboto Condensed",
-          col = hex_main,
+          col = pal$mdn,
           x = min(datfull$x) + diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
           fontface = 1, size = 4, lineheight = 1.5,
@@ -808,14 +955,14 @@ mod_tab_sims_server <- function(id, vals) {
 
         ggplot2::annotate(
           "text", family = "Roboto Condensed",
-          col = hex_main,
+          col = pal$mdn,
           x = max(datfull$x) - diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
           fontface = 2, size = 5, lineheight = 1.5,
           label = paste("Distance traveled:\n")) +
         ggplot2::annotate(
           "text", family = "Roboto Condensed",
-          col = hex_main,
+          col = pal$mdn,
           x = max(datfull$x) - diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
           fontface = 1, size = 4, lineheight = 1.5,
@@ -846,198 +993,357 @@ mod_tab_sims_server <- function(id, vals) {
           ggiraph::opts_sizing(rescale = TRUE, width = .1),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
 
-    }) # end of renderUI
+    }) # end of renderUI // simPlot_route
 
-    # TABLES ------------------------------------------------------------
-    ## Listing multiple simulation parameters: --------------------------
+    # TABLES --------------------------------------------------------------
+    ## Listing multiple simulations: --------------------------------------
 
-    observe({
-      shinyjs::show(id = "simBox_summary")
+    simRow <- reactive({
 
-      simrow <- data.frame(
+      out <- data.frame(
         taup = NA,
         tauv = NA,
         sigma = NA,
-        dist = NA,
-        meandist = NA,
+        time_elapsed = NA,
+        tdist = NA,
+        mdist = NA,
         speed = NA)
 
-      simrow$taup <-
+      out$taup <-
         paste(scales::label_comma(
-          accuracy = .1)(vals$tau_p0), vals$tau_p0_units)
+          accuracy = .1)(vals$tau_p0),
+          abbrv_unit(vals$tau_p0_units))
 
-      simrow$tauv <-
+      out$tauv <-
         paste(scales::label_comma(
-          accuracy = .1)(vals$tau_v0), vals$tau_v0_units)
+          accuracy = .1)(vals$tau_v0),
+          abbrv_unit(vals$tau_v0_units))
 
-      simrow$sigma <-
+      out$sigma <-
         paste(scales::label_comma(
-          accuracy = .1)(vals$sigma0), vals$sigma0_units)
+          accuracy = .1)(vals$sigma0),
+          abbrv_unit(vals$sigma0_units))
 
-      tmpdist <- calculate_dist()
-      simrow$dist <-
-        paste(scales::label_comma(
-          accuracy = 1)(sum(tmpdist, na.rm = TRUE)), "meters")
+      out$time_elapsed <- paste(
+        round("days" %#% max(vals$data0$t), 0), "days")
 
-      simrow$meandist <-
-        paste(scales::label_comma(
-          accuracy = .1)(mean(tmpdist)), "meters")
+      distances <- calc_dist(vals$data0)
+      tdist <- sum(distances, na.rm = TRUE)
+      mdist <- mean(distances)
+
+      if(tdist > 1000) {
+        out$tdist <- paste(scales::label_comma(
+          accuracy = 1)("km" %#% mdist), "km")
+      } else {
+        out$tdist <- paste(scales::label_comma(
+          accuracy = 1)(mdist), "m")
+      }
+
+      out$mdist <- paste(scales::label_comma(
+        accuracy = .1)(mdist), "m")
 
       tmpnames <- rownames(summary(vals$fit0)$CI)
       speed <- summary(vals$fit0)$CI[
-        grep('speed', tmpnames), 2]
-      speedunits <- tmpnames[grep('speed', tmpnames)] %>%
-        extract_units()
+        grep("speed", tmpnames), 2]
+      speedunits <- tmpnames[grep("speed", tmpnames)] %>%
+        extract_units() %>% abbrv_unit()
 
-      if(speedunits == "kilometers/day") {
-        speedunits <- "km/day" }
-
-      simrow$speed <-
+      out$speed <-
         paste(scales::label_comma(
           accuracy = .1)(speed), speedunits)
 
-      vals$df_sims <<- rbind(vals$df_sims, simrow)
+      return(out)
+
+    }) %>% bindEvent(to_run())
+
+    observe({
+      shinyjs::show(id = "simBox_summary")
       shinyjs::disable("simButton_save")
+
+      vals$dt_sims <<- rbind(vals$dt_sims, simRow())
+      vals$report_sims_yn <- TRUE
 
     }) %>% # end of observe
       bindEvent(input$simButton_save)
 
-    output$simsTable <- DT::renderDataTable({
+    output$simTable <- reactable::renderReactable({
+      req(vals$dt_sims)
 
       columnNames <- list(
         taup = "\u03C4\u209A",
         tauv = "\u03C4\u1D65",
         sigma = "\u03C3",
-        dist = "Tot. Distance",
-        meandist = "Avg. Distance",
-        speed = "Avg. Speed")
+        time_elapsed = "Time elapsed:",
+        tdist = "Dist (total)",
+        mdist = "Dist (mean)",
+        speed = "Speed (mean)")
 
-      DT::datatable(
-        data = vals$df_sims,
-        colnames = as.vector(unlist(columnNames)),
-        escape = FALSE,
-        options = list(
-          paging = F, dom = "t",
-          rowGroup = list(dataSrc = 1),
-          columnDefs = list(list(className = 'dt-center',
-                                 targets = 6))))
+      reactable::reactable(
+        vals$dt_sims,
+        compact = TRUE,
+        highlight = TRUE,
+        striped = TRUE,
 
-    }) # end of renderDataTable // simsTable
+        defaultPageSize = 5,
+        paginationType = "jump",
+        showPageSizeOptions = TRUE,
+        pageSizeOptions = c(5, 10, 20),
+        showPageInfo = FALSE,
+
+        defaultColDef =
+          reactable::colDef(
+            headerClass = "rtable_header",
+            align = "right",
+            minWidth = 55),
+
+        columns = list(
+          taup = reactable::colDef(
+            name = columnNames[["taup"]],
+            style = list(fontWeight = "bold")),
+          tauv = reactable::colDef(
+            name = columnNames[["tauv"]],
+            style = list(fontWeight = "bold")),
+          sigma = reactable::colDef(
+            minWidth = 60, name = columnNames[["sigma"]],
+            style = list(fontWeight = "bold")),
+          time_elapsed = reactable::colDef(
+            minWidth = 100, name = columnNames[["time_elapsed"]]),
+          tdist = reactable::colDef(
+            minWidth = 85, name = columnNames[["tdist"]]),
+          mdist = reactable::colDef(
+            minWidth = 85, name = columnNames[["mdist"]]),
+          speed = reactable::colDef(
+            minWidth = 100, name = columnNames[["speed"]])
+        ))
+
+    }) # end of renderDataTable // simTable
+
+
 
     observe({
-      vals$df_sims <- NULL
+      vals$dt_sims <- NULL
     }) %>% # end of observe,
-      bindEvent(input$simsTable_clear)
+      bindEvent(input$simTable_clear)
 
-    # HELP TOUR & MODALS: -----------------------------------------------
+    # HELP TOUR & MODALS: -------------------------------------------------
 
-    # build_simsTour <- function(ns, vals) {
-    #
-    #   element <- intro <- character(0)
-    #
-    #   element <- c(element, "#Tour_start")
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   element <- c(element, paste0("#tab_sims_1", "-",
-    #                                "sims_intro"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste(
-    #
-    #       span("Action:", style = paste(txt_action)),
-    #       "In this box, please choose",
-    #       paste0(span("Option 1. Select species",
-    #                   style = paste(txt_tour, col_grey)), ","),
-    #       "then go to the next step."
-    #
-    #     ))
-    #   )
-    #
-    #   element <- c(element, paste0("#tab_sims_1", "-",
-    #                                "simBox_timescales"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   element <- c(element, paste0("#tau_v0_units"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   element <- c(element, paste0("#tab_sims_1", "-",
-    #                                "simBox_spatialscales"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   element <- c(element, paste0("#tab_sims_1", "-",
-    #                                "simBox_simulate"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   element <- c(element, paste0("#tab_sims_1", "-",
-    #                                "simBox_viz"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   element <- c(element, paste0("#tab_sims_1", "-",
-    #                                "simBox_samplesizes"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   element <- c(element, paste0("#tab_sims_1", "-",
-    #                                "simBox_mvmetrics"))
-    #   intro <- c(
-    #     intro,
-    #     HTML(paste("Sims tab"))
-    #   )
-    #
-    #   data.frame(element = element,
-    #              intro = intro,
-    #              stringsAsFactors = FALSE)
-    #
-    # } # end of sims tour
-    #
+    build_simsTour <- function(ns, vals) {
+
+      element <- intro <- character(0)
+      tabinfo <- paste0("#tab_sims_1", "-")
+
+      element <- c(element, "#Tour_start")
+      intro <- c(
+        intro,
+        HTML(paste(
+         "This tab allows you to simulate a new dataset from scratch,",
+          "if you do not have access to any real dataset for parameter",
+          "extraction."
+        ))
+      )
+
+      element <- c(element, paste0(tabinfo, "simBox_timescales"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "First, you need to set the",
+          span("timescale", style = txt_tour_border), "parameters,",
+          "which are the", span("position", style = txt_tour_border),
+          " and the", span("velocity autocorrelation",
+                           style = txt_tour_border),
+          paste0(span("position", style = txt_tour_border),
+                 " and ", span("velocity autocorrelation ",
+                               style = txt_tour_border),
+                 "parameters."),
+
+          "For a more in-depth explanation on what these parameters",
+          "mean, click the", icon("circle-question"),
+          "help tips outside of the tutorial."
+
+        ))
+      )
+
+      element <- c(element, paste0(tabinfo, "simBox_spatialscales"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "Secondly, you set the",
+          span("semi-variance", style = txt_tour_border),
+          "parameter.", "will show up here."
+        ))
+      )
+
+      element <- c(element, paste0(tabinfo, "simBox_submit"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "Now you click the", icon("seedling"),
+          "'Generate seed' button before clicking the",
+          icon("bolt"), "'Run simulation' button."
+        ))
+      )
+
+      element <- c(element, paste0(tabinfo, "simBox_viz"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "This tab allows you to visualize the dataset you have",
+          "just simulated. The",
+          icon("paw", class = "cl-sea"),
+          span("Data", style = txt_tour_border), "tab",
+          HTML("&mdash;"), "plots a single",
+          span("position autocorrelation", style = txt_tour_border),
+          "cycle", # paste0("(", span("e.g.", style = txt_tour_italic),
+          "while the",
+          icon("route", class = "cl-sea"),
+          span("Animation", style = txt_tour_border), "tab",
+          "will animate a single day of data collection for data",
+          "validation."
+        ))
+      )
+
+      element <- c(element, paste0(tabinfo, "simBox_repeat"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "Once you are satisfied with the current parameters,",
+          "you can save their information in a table below by",
+          "clicking the",
+          icon("bookmark", class = "cl-sea"),
+          span("Add to table", style = txt_tour_border), "button."
+        ))
+      )
+
+      element <- c(element, paste0(tabinfo, "simBox_summary"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "You will be able to see other parameters such as",
+          span("Tot. distance", style = txt_tour_grey),
+          "(total distance traveled within 10", icon("xmark"),
+          span("position autocorrelation", style = txt_tour_border),
+          "cycle),", "the", span("Avg. distance", style = txt_tour_grey),
+          "(average distance traveled)", "and the",
+          span("Avg. Speed", style = txt_tour_grey),
+          "(average movement speed)."
+        ))
+      )
+
+      data.frame(element = element,
+                 intro = intro,
+                 stringsAsFactors = FALSE)
+
+    } # end of sims tour
+
+    observe({
+      tour_sims <- build_simsTour(ns, vals)
+
+      rintrojs::introjs(
+        session = session,
+        options = list(
+          steps = tour_sims,
+          nextLabel = "Next",
+          prevLabel = "Previous",
+          showStepNumbers = F,
+          showButtons = T,
+          showBullets = T
+        ))
+
+    }) %>% bindEvent(input$help_sims)
+
+    # SETTINGS ------------------------------------------------------------
+    ## Restore state: -----------------------------------------------------
+
+    observe({
+
+      # Initial parameters:
+
+      shiny::updateNumericInput(
+        session = session,
+        inputId = "tau_p0",
+        value = vals$restored_vals$"tau_p0")
+
+      shiny::updateSelectInput(
+        session = session,
+        inputId = "tau_p0_units",
+        selected = vals$restored_vals$"tau_p0_units")
+
+      shiny::updateNumericInput(
+        session,
+        inputId = "tau_v0",
+        value = vals$restored_vals$"tau_v0")
+
+      shiny::updateSelectInput(
+        session = session,
+        inputId = "tau_v0_units",
+        selected = vals$restored_vals$"tau_v0_units")
+
+      shiny::updateNumericInput(
+        session,
+        inputId = ns("sigma0"),
+        value = vals$restored_vals$"sigma0")
+
+      shiny::updateSelectInput(
+        session = session,
+        inputId = "sigma0_units",
+        selected = vals$restored_vals$"sigma0_units")
+
+      vals$tau_p0 <- vals$restored_vals$"tau_p0"
+      vals$tau_p0_units <- vals$restored_vals$"tau_p0_units"
+      vals$tau_v0 <- vals$restored_vals$"tau_v0"
+      vals$tau_v0_units <- vals$restored_vals$"tau_v0_units"
+      vals$sigma0 <- vals$restored_vals$"sigma0"
+      vals$sigma0_units <- vals$restored_vals$"sigma0_units"
+
+      vals$seed0 <- vals$restored_vals$"seed0"
+
+      vals$dur0 <- vals$restored_vals$"dur0"
+      vals$dur0_units <- vals$restored_vals$"dur0_units"
+      vals$dti0 <- vals$restored_vals$"dti0"
+      vals$dti0_units <- vals$restored_vals$"dti0_units"
+
+      # Data and model fit:
+
+      vals$data_type <- vals$restored_vals$"data_type"
+      vals$data0 <- vals$restored_vals$"data0"
+      vals$fit0 <- vals$restored_vals$"fit0"
+
+      # Validation parameters:
+
+      vals$is_run <- vals$restored_vals$"is_run"
+
+    }) %>% bindEvent(vals$restored_vals)
+
     # observe({
-    #   tour_sims <- build_simsTour(ns, vals)
-    #
-    #   rintrojs::introjs(
-    #     session = session,
-    #     options = list(
-    #       steps = tour_sims,
-    #       nextLabel = "Next",
-    #       prevLabel = "Previous",
-    #       showStepNumbers = F,
-    #       showButtons = T,
-    #       showBullets = T
-    #     ))
-    #
-    # }) %>% bindEvent(input$help_sims)
+    #   vals$seed0 <- vals$restored_vals$"seed0"
+    # }) %>% bindEvent(vals$restored_vals, once = TRUE)
 
-    # Additional information: -------------------------------------------
 
-    output$seedvalue <- renderPrint({
-      vals$seed0 <- seed0()
-      return(vals$seed0)
+    ## Additional information: --------------------------------------------
+
+    # Save information for report if table is not requested:
+
+    observe({
+      req(vals$active_tab == 'sims', vals$data_type == "simulated")
+      vals$report_sims_yn <- FALSE
+      vals$report_sims <- simRow()
     })
+
+    # Display time elapsed:
 
     output$console_sims <- renderText({
       req(vals$time_sims)
       paste0("The simulation took approximately ",
              round(vals$time_sims, 1), " minutes.")
     })
+
+    # Detected browser size:
+
+    # observe({
+    #   # print("Dimensions")
+    #   # print(shinybrowser::get_all_info()$dimensions)
+    #   print(shinybrowser::get_width())
+    # })
 
   }) # end of moduleServer
 }

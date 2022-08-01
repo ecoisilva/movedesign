@@ -12,6 +12,7 @@ app_ui <- function(request) {
 
     # UI ELEMENTS ---------------------------------------------------------
 
+    tags$html(lang = "en"),
     shinydashboardPlus::dashboardPage(
 
       options = list(sidebarExpandOnHover = TRUE),
@@ -21,6 +22,7 @@ app_ui <- function(request) {
       # HEADER ------------------------------------------------------------
 
       header = shinydashboardPlus::dashboardHeader(
+        titleWidth = 220,
         title = tagList(
           tags$span(
             class = "logo-mini",
@@ -35,7 +37,7 @@ app_ui <- function(request) {
                      height = "50px"))
         ),
 
-        controlbarIcon = icon("cogs"),
+        controlbarIcon = icon("gears"),
         shinydashboard::dropdownMenu(
 
           shinydashboardPlus::messageItem(
@@ -43,14 +45,14 @@ app_ui <- function(request) {
             message = "Documentation, source, & citation",
             icon = tags$i(class = "fa fa-github",
                           style = "color: #000000"),
-            href = "https://github.com/movedesign"),
+            href = "https://github.com/ecoisilva/movedesign"),
 
           shinydashboardPlus::messageItem(
             from = "Issues",
             message = "Report Issues",
-            icon = icon("exclamation-circle"),
-            href = link_issues),
-          icon = icon("info-circle"),
+            icon = icon("circle-exclamation"),
+            href = "https://github.com/ecoisilva/movedesign/issues"),
+          icon = icon("circle-info"),
 
           type = "messages",
           badgeStatus = NULL,
@@ -61,6 +63,8 @@ app_ui <- function(request) {
       # SIDEBAR -----------------------------------------------------------
 
       sidebar = shinydashboardPlus::dashboardSidebar(
+        width = 220,
+
         shinydashboard::sidebarMenuOutput("side_menu")
 
       ), # end of dashboardSidebar
@@ -70,20 +74,20 @@ app_ui <- function(request) {
       controlbar = shinydashboardPlus::dashboardControlbar(
         id = "controlbar",
         skin = "dark",
-        width = 230,
+        width = 300,
 
         shinydashboardPlus::controlbarMenu(
           id = "controlbarMenu",
 
           shinydashboardPlus::controlbarItem(
-            title = "Settings", icon = icon("sliders-h"),
+            title = "Settings", icon = icon("sliders"),
 
             mod_comp_settings_ui("comp_settings_1")
 
           ), # end of controlbar item (settings)
 
           shinydashboardPlus::controlbarItem(
-            title = "Share", icon = icon("share-alt"),
+            title = "Share", icon = icon("share-nodes"),
 
             fluidRow(
               tags$div(
@@ -128,15 +132,10 @@ app_ui <- function(request) {
             tabName = "sims",
             mod_tab_sims_ui("tab_sims_1")),
 
-          # Tab 4.1 'Device'
+          # Tab 4 'Device'
           shinydashboard::tabItem(
             tabName = "regime",
             mod_tab_device_ui("tab_device_1")),
-
-          # # Tab 4.2 'Caveats'
-          # shinydashboard::tabItem(
-          #   tabName = "caveats",
-          #   mod_tab_caveats_ui("tab_caveats_1")),
 
           # Tab 5 'Home range estimation'
           shinydashboard::tabItem(
@@ -161,11 +160,11 @@ app_ui <- function(request) {
         left = tags$div(
           HTML(paste0('<i class="fa fa-code-branch"',
                       'style = "color:#222d32;"> </i>',
-                      HTML('&nbsp;'), app_version))),
+                      HTML('&nbsp;'), golem::get_golem_version()))),
         right = tags$div(
           HTML(paste('<i class="fa fa-copyright"',
                      'style = "color:#222d32;"> </i>',
-                     "2021-2022")))
+                     "2022")))
 
       ) # end of dashboardFooter
     ) # end of dashboardPage
@@ -197,28 +196,19 @@ golem_add_external_resources <- function() {
       app_title = "movedesign"
     ),
 
-    waiter::use_waiter(),
-    waiter::waiter_preloader(
-      html = tagList(
-        waiter::spin_fading_circles(),
-        HTML(paste0(
-          span("Loading "),
-          span("move", style = "font-weight:600"),
-          span("design", style = "font-weight:600;color:#009da0;"),
-          span("...", style = "font-weight:600")
-        )))
-    ),
+    shinyFeedback::useShinyFeedback(),
+    shinybrowser::detect(),
 
     # Activate tooltips and popovers:
     bsplus::use_bs_tooltip(),
     bsplus::use_bs_popover(),
 
     # Font types:
-    # extrafont::loadfonts(),
     tags$link(href = paste0("https://fonts.googleapis.com/css?",
                             "family=",
-                            "Anek+Tamil", "|",
+                            "Plus+Jakarta+Sans", "|",
                             "Roboto+Condensed", "|",
+                            "Roboto+Condensed:wght@700", "|",
                             "Fira+Mono", "|",
                             "Fira+Sans+Condensed",
                             "&display=fallback"),

@@ -16,17 +16,17 @@ app_server <- function(input, output, session) {
     x
   }
 
-  # Render sidebar menu: --------------------------------------------------
+  ## Render sidebar menu: -------------------------------------------------
 
   output$side_menu <- shinydashboard::renderMenu({
 
     # title, icon
-    info_upload <- c("Import data", "file-upload")
+    info_upload <- c("Import data", "file-arrow-up")
     info_select <- c("Select data", "file")
     info_sims <- c("Simulate data", "file-signature")
     info_regs <- c("Tracking regime", "stopwatch")
-    info_hr <- c("Home range estimation", "map-marked-alt")
-    info_ctsd <- c("CTSD estimation", "tachometer-alt")
+    info_hr <- c("Home range", "map-location-dot")
+    info_ctsd <- c("Speed & distance", "gauge-high")
 
     upload_title <- info_upload[1]
     upload_icon <- shiny::icon(info_upload[2])
@@ -46,50 +46,6 @@ app_server <- function(input, output, session) {
     ctsd_title <- info_ctsd[1]
     ctsd_icon <- shiny::icon(info_ctsd[2])
 
-    # Workflows for data type path:
-
-    if(!is.null(vals$which_data)) {
-
-      regs_title <- highlight_title(info_regs[1])
-      regs_icon <- highlight_icon(info_regs[2])
-
-      if(vals$which_data == "Upload") {
-        upload_title <- highlight_title(info_upload[1])
-        upload_icon <- highlight_icon(name = info_upload[2])
-      }
-
-      if(vals$which_data == "Select") {
-        select_title <- highlight_title(info_select[1])
-        select_icon <- highlight_icon(name = info_select[2])
-      }
-
-      if(vals$which_data == "Simulate") {
-        sims_title <- highlight_title(info_sims[1])
-        sims_icon <- highlight_icon(name = info_sims[2])
-      }
-    }
-
-    # Workflow for research question path:
-
-    if(!is.null(vals$which_question)) {
-
-      if("Home range" %in% vals$which_question) {
-        hr_title <- highlight_title(info_hr[1])
-        hr_icon <- highlight_icon(name = info_hr[2])
-      } else {
-        hr_title <- info_hr[1]
-        hr_icon <- shiny::icon(info_hr[2])
-      }
-
-      if("Speed & distance" %in% vals$which_question) {
-        ctsd_title <- highlight_title(info_ctsd[1])
-        ctsd_icon <- highlight_icon(name = info_ctsd[2])
-      } else {
-        ctsd_title <- info_ctsd[1]
-        ctsd_icon <- shiny::icon(info_ctsd[2])
-      }
-    }
-
     shinydashboard::sidebarMenu(
       id = "tabs",
 
@@ -97,7 +53,7 @@ app_server <- function(input, output, session) {
       shinydashboard::menuItem(
         text = "Home",
         tabName = "about",
-        icon = shiny::icon("home")
+        icon = icon("house")
       ),
 
       # Tab 2 and 3: Upload or simulate data
@@ -109,20 +65,26 @@ app_server <- function(input, output, session) {
           icon = shiny::icon("paw"),
           startExpanded = TRUE,
 
-          shinydashboard::menuSubItem(
-            tabName = "data_upload",
-            text = upload_title,
-            icon = upload_icon),
+          if(is.null(vals$which_data) ||
+             vals$which_data == "Upload") {
+            shinydashboard::menuSubItem(
+              tabName = "data_upload",
+              text = upload_title,
+              icon = upload_icon) },
 
-          shinydashboard::menuSubItem(
-            tabName = "data_select",
-            text = select_title,
-            icon = select_icon),
+          if(is.null(vals$which_data) ||
+             vals$which_data == "Select") {
+            shinydashboard::menuSubItem(
+              tabName = "data_select",
+              text = select_title,
+              icon = select_icon) },
 
-          shinydashboard::menuSubItem(
-            tabName = "sims",
-            text = sims_title,
-            icon = sims_icon)
+          if(is.null(vals$which_data) ||
+             vals$which_data == "Simulate") {
+            shinydashboard::menuSubItem(
+              tabName = "sims",
+              text = sims_title,
+              icon = sims_icon) }
         )),
 
       # Tab 4: Device
@@ -131,18 +93,13 @@ app_server <- function(input, output, session) {
           id = "group_device",
           tabname = "device",
           text = "Device",
-          icon = shiny::icon("map-marker-alt"),
+          icon = shiny::icon("location-dot"),
           startExpanded = TRUE,
 
           shinydashboard::menuSubItem(
             tabName = "regime",
             text = regs_title,
             icon = regs_icon)
-
-          # shinydashboard::menuSubItem(
-          #   tabName = "caveats",
-          #   text = "Limitations",
-          #   icon =  shiny::icon("bomb"))
         )),
 
       # Tab 5 and 6: Home range or CTSD estimation
@@ -151,24 +108,29 @@ app_server <- function(input, output, session) {
           id = "group_design",
           tabname = "design",
           text = "Analyses",
-          icon = shiny::icon("drafting-compass"),
+          icon = shiny::icon("compass-drafting"),
           startExpanded = TRUE,
 
-          shinydashboard::menuSubItem(
-            tabName = "hr",
-            text = hr_title,
-            icon = hr_icon),
-          shinydashboard::menuSubItem(
-            tabName = "ctsd",
-            text = ctsd_title,
-            icon = ctsd_icon)
+          if (is.null(vals$which_question) ||
+              "Home range" %in% vals$which_question) {
+            shinydashboard::menuSubItem(
+              tabName = "hr",
+              text = hr_title,
+              icon = hr_icon) },
+
+          if (is.null(vals$which_question) ||
+              "Speed & distance" %in% vals$which_question) {
+            shinydashboard::menuSubItem(
+              tabName = "ctsd",
+              text = ctsd_title,
+              icon = ctsd_icon) }
         )),
 
       # Tab 7: Report
       shinydashboard::menuItem(
         text = "Report",
         tabName = "report",
-        icon = shiny::icon("archive")
+        icon = icon("box-archive")
       ), tags$hr(),
 
       # Source code:
@@ -196,7 +158,6 @@ app_server <- function(input, output, session) {
 
   # Device tab:
   mod_tab_device_server("tab_device_1", vals = vals)
-  mod_tab_caveats_server("tab_caveats_1", vals = vals)
 
   # Analyses tabs:
   mod_tab_hrange_server("tab_hrange_1", vals = vals)
@@ -207,7 +168,7 @@ app_server <- function(input, output, session) {
 
   # Misc: -----------------------------------------------------------------
 
-  # Viz:
+  # Data viz:
   mod_comp_viz_server("comp_viz_uploaded", vals = vals) # data_upload
   mod_comp_viz_server("comp_viz_selected", vals = vals) # data_select
 
@@ -219,19 +180,20 @@ app_server <- function(input, output, session) {
 
   # -----------------------------------------------------------------------
 
+  options(reactable.theme = reactable::reactableTheme(
+    borderColor = "#f2f2f2",
+    rowSelectedStyle = list(
+      backgroundColor = "#eee",
+      boxShadow = "inset 2px 0 0 0 #009da0")
+  ))
+
+
   onStop(function() {
 
     message("Session stopped")
 
-    # if(!is.null(output_sims)) {
-    #   rm("output_sims", envir = .GlobalEnv) }
-    # if(!is.null(gps_fixrate)) {
-    #   rm("gps_fixrate", envir = .GlobalEnv) }
-    # if(!is.null(gps_tradeoffs)) {
-    #   rm("gps_tradeoffs", envir = .GlobalEnv) }
-    # if(!is.null(movmods)) {
+    # if(is.null(movmods)) {
     #   rm("movmods", envir = .GlobalEnv) }
-
     # print(ls(envir = .GlobalEnv))
 
   }) # end of onStop

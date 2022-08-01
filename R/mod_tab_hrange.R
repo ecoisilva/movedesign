@@ -9,7 +9,7 @@
 #' @importFrom shiny NS tagList
 #' @importFrom stats qt sd
 #'
-mod_tab_hrange_ui <- function(id){
+mod_tab_hrange_ui <- function(id) {
   ns <- NS(id)
   tagList(
     fluidRow(
@@ -20,13 +20,12 @@ mod_tab_hrange_ui <- function(id){
 
           shinydashboardPlus::box(
 
-            title = span("Home range estimation:", style =
-                           paste("padding-top: 14px;", ttl_main)),
-            icon = fontawesome::fa(name = "map-marked-alt",
-                                   height = "22px",
+            title = span("Home range estimation:", class = "ttl-tab"),
+            icon = fontawesome::fa(name = "map-location-dot",
+                                   height = "21px",
                                    margin_left = "14px",
                                    margin_right = "8px",
-                                   fill = "#e3e3e3"),
+                                   fill = "var(--sea-dark)"),
             id = ns("hr_intro"),
             width = NULL,
             solidHeader = FALSE, headerBorder = FALSE,
@@ -35,24 +34,16 @@ mod_tab_hrange_ui <- function(id){
             column(
               align = "center", width = 12,
 
-              p(span("Home range", style = txt_key),
+              p(span("Home range", class = "cl-sea-d"),
                 "is the area repeatedly used throughout an animal's",
                 "lifetime for all its normal behaviors and activities,",
-                "excluding occasional exploratory excursions.",
-                "As animal movement",
-                "is inherently", span("autocorrelated", style = txt_key),
-                "(locations are similar as a function of space and",
-                " distance), the",
-                span("Autocorrelated Kernel Density Estimators (AKDEs)",
-                     style = txt_border),
-                "are the most appropriate method for",
-                span("home range", style = txt_key), "estimation."),
+                "excluding occasional exploratory excursions."),
 
-              p(style = ft_center,
-                "If home range estimation is is your goal,",
+              p(style = "text-align: center;",
+                "If home range estimation is is your goal,", br(),
                 "then click the",
-                fontawesome::fa(name = "paper-plane", fill = hex_main),
-                HTML(paste0(span("Run estimation", style = btn_primary))),
+                icon("paper-plane", class = "cl-mdn"),
+                HTML(paste0(span("Run estimation", class = "cl-mdn"))),
                 "button."),
 
               splitLayout(
@@ -60,10 +51,10 @@ mod_tab_hrange_ui <- function(id){
                 cellArgs = list(style = 'align: center;'),
 
                 shiny::actionButton(
-                  inputId = ns("hrHelp_akde"),
+                  inputId = ns("hrHelp_method"),
                   label = NULL,
                   width = "100%",
-                  icon = icon("question-circle"),
+                  icon = icon("circle-question"),
                   class = "btn-warning"),
                 br(),
                 shiny::actionButton(
@@ -78,18 +69,19 @@ mod_tab_hrange_ui <- function(id){
             ) # end of column (for text)
           ), # end of box // hr_intro
 
-          uiOutput(ns("hrInput_show_all"))
+          uiOutput(ns("hrInput_show_all")),
+          br()
 
       ), # end of div (top row)
 
       # [right column] ----------------------------------------------------
 
-      div(class = div1_column_right,
+      div(class = div_column_left,
 
           ## Tracking regime: ---------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Tracking regime", style = ttl_box.solid),
+            title = span("Tracking regime", class = "ttl-box_solid"),
             id = ns("hrBox_regime"),
             status = "info",
             width = NULL,
@@ -101,8 +93,7 @@ mod_tab_hrange_ui <- function(id){
 
               tabPanel(
                 value = ns("hrPanel_regime"),
-                title = fontawesome::fa(name = "map-marker-alt",
-                                        fill = hex_border),
+                title = icon("stopwatch", class = "cl-sea"),
                 p(),
                 fluidRow(
                   column(width = 12, uiOutput(ns("hrInfo_dur"))),
@@ -113,8 +104,7 @@ mod_tab_hrange_ui <- function(id){
 
               tabPanel(
                 value = ns("hrPanel_regime_new"),
-                title = fontawesome::fa(name = "bolt",
-                                        fill = hex_caution),
+                title = icon("bolt", class = "cl-mdn"),
                 p(),
                 fluidRow(
                   column(width = 12, uiOutput(ns("hrInfo_dur_new"))),
@@ -135,13 +125,13 @@ mod_tab_hrange_ui <- function(id){
                   inputId = ns("hrHelp_regime"),
                   label = NULL,
                   width = "100%",
-                  icon = icon("question-circle"),
+                  icon = icon("circle-question"),
                   class = "btn-warning"),
                 br(),
                 shiny::actionButton(
                   inputId = ns("hr_adjRegime"),
                   label = "Modify",
-                  icon = icon("redo"), # wrench
+                  icon = icon("rotate-right"),
                   class = "btn-info",
                   width = "100%")
 
@@ -150,37 +140,133 @@ mod_tab_hrange_ui <- function(id){
             ) # end of column (footer)
           ), # end of box // hrBox_regime
 
-          ## Home range area: ---------------------------------------------
+          ## Sample sizes: ------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Home range area:", style = ttl_box),
-            id = ns("hrBox_areas"),
+            title = span("Sample sizes:", class = "ttl-box"),
+            id = ns("hrBox_sizes"),
             width = NULL,
             solidHeader = FALSE,
             collapsible = FALSE,
 
             tabsetPanel(
-              id = ns("hrTabs_area"),
+              id = ns("hrTabs_sizes"),
 
               tabPanel(
-                value = ns("hrPanel_area"),
-                title = fontawesome::fa(name = "map-marker-alt",
-                                        fill = hex_border),
+                value = ns("hrPanel_sizes"),
+                title = icon("stopwatch", class = "cl-sea"),
 
-                uiOutput(ns("hrInfo_est")),
-                uiOutput(ns("hrInfo_err")),
-                p()
+                fluidRow(
+                  column(width = 12, uiOutput(ns("hrBlock_n"))),
+                  column(width = 12, uiOutput(ns("hrBlock_N1"))),
+                ) # end of fluidRow
 
               ), # end of panels (1 out of 2)
 
               tabPanel(
-                value = ns("hrPanel_area_new"),
-                title = fontawesome::fa(name = "bolt",
-                                        fill = hex_caution),
+                value = ns("hrPanel_sizes_new"),
+                title = icon("bolt", class = "cl-mdn"),
 
-                uiOutput(ns("hrInfo_est_new")),
-                uiOutput(ns("hrInfo_err_new")),
-                p()
+                fluidRow(
+                  column(width = 12, uiOutput(ns("hrBlock_n_new"))),
+                  column(width = 12, uiOutput(ns("hrBlock_N1_new"))),
+                ) # end of fluidRow
+
+              ) # end of panels (2 out of 2)
+            ) # end of tabs
+          ), # end of box // hrBox_sizes
+
+      ), # end of div (right column)
+
+      # [center column] ---------------------------------------------------
+
+      div(class = div_column_right,
+
+          ## Home range plot: ---------------------------------------------
+
+          shinydashboardPlus::box(
+            title = span("Home range estimates:", class = "ttl-box"),
+            id = ns("hrBox_viz"),
+            width = NULL,
+            solidHeader = FALSE,
+            collapsible = TRUE,
+
+            tabsetPanel(
+              id = ns("hrTabs_viz"),
+
+              tabPanel(
+                value = ns("hrPanel_viz"),
+                title = tagList(
+                  icon("stopwatch", class = "cl-sea"),
+                  span("Regime", class = "ttl-panel")
+                ),
+
+                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
+                    p(),
+                    shinyWidgets::checkboxGroupButtons(
+                      inputId = ns("hrShow_levels"),
+                      label = "Show estimate levels:",
+                      choices = c("95% low CI",
+                                  "Estimate",
+                                  "95% high CI"),
+                      selected = "Estimate",
+                      checkIcon = list(yes = icon("circle-check")),
+                      justified = TRUE),
+
+                    ggiraph::girafeOutput(
+                      outputId = ns("hrPlot_initial"),
+                      width = "100%", height = "100%")),
+
+                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
+                    p(class = "fluid-padding"),
+                    uiOutput(ns("hrInfo_est")),
+                    uiOutput(ns("hrInfo_err")))
+
+              ), # end of panels (1 out of 2)
+
+              tabPanel(
+                value = ns("hrPanel_viz_new"),
+                title = tagList(
+                  icon("bolt", class = "cl-mdn"),
+                  span("Modified regime") %>%
+                    tagAppendAttributes(class = 'ttl-panel cl-mdn')
+                ),
+
+                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-9",
+                    p(),
+                    shinyWidgets::checkboxGroupButtons(
+                      inputId = ns("hrhrShow_levels_sim"),
+                      label = "Show estimate levels:",
+                      choices = c("95% low CI",
+                                  "Estimate",
+                                  "95% high CI"),
+                      selected = "Estimate",
+                      checkIcon = list(yes = icon("circle-check")),
+                      justified = TRUE),
+
+                    ggiraph::girafeOutput(
+                      outputId = ns("hrPlot_modified"),
+                      width = "100%", height = "100%"),
+
+                    column(
+                      width = 12, align = "center",
+                      span("Add the",
+                           icon("stopwatch", class = "cl-sea"),
+                           span("Data", class = "cl-sea"),
+                           "locations to the plot above:"),
+
+                      shinyWidgets::switchInput(
+                        inputId = ns("hrShow_datasets"),
+                        onLabel = "Yes",
+                        offLabel = "No",
+                        labelWidth = "25px"))
+                    ),
+
+                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
+                    p(class = "fluid-padding"),
+                    uiOutput(ns("hrText_sims")),
+                    uiOutput(ns("hrInfo_est_new")),
+                    uiOutput(ns("hrInfo_err_new")))
 
               ) # end of panels (2 out of 2)
             ), # end of tabs
@@ -196,159 +282,18 @@ mod_tab_hrange_ui <- function(id){
                   inputId = ns("hrHelp_bias"),
                   label = NULL,
                   width = "100%",
-                  icon = icon("question-circle"),
+                  icon = icon("circle-question"),
                   class = "btn-warning"),
                 br(),
                 shiny::actionButton(
-                  inputId = ns("show_ctsdTable"),
-                  label = "Table",
-                  icon = icon("list"),
+                  inputId = ns("show_hrTable"),
+                  label = span("Add to",
+                               span("table", class = "cl-sea")),
+                  icon = icon("bookmark"),
                   width = "100%",
                   class = "btn-primary")
-              ) # end of splitLayout
 
-            ) # end of column (footer)
-          ) # end of box // hrBox_areas
-
-      ), # end of div (right column)
-
-      # [center column] ---------------------------------------------------
-
-      div(class = div1_column_left,
-
-          ## Sample sizes: ------------------------------------------------
-
-          shinydashboardPlus::box(
-            title = span("Sample sizes:", style = ttl_box),
-            id = ns("hrBox_sizes"),
-            width = NULL,
-            solidHeader = FALSE,
-            collapsible = FALSE,
-
-            tabsetPanel(
-              id = ns("hrTabs_size"),
-
-              tabPanel(
-                value = ns("hrPanel_size"),
-                title = tagList(
-                  fontawesome::fa(name = "map-marker-alt",
-                                  fill = hex_border),
-                  span("Data", style = ttl_panel)
-                ),
-
-                fluidRow(
-                  column(width = 6, uiOutput(ns("hrBlock_n"))),
-                  column(width = 6, uiOutput(ns("hrBlock_Narea"))),
-                ) # end of fluidRow
-
-              ), # end of panels (1 out of 2)
-
-              tabPanel(
-                value = ns("hrPanel_size_new"),
-                title = tagList(
-                  fontawesome::fa(name = "bolt", fill = hex_caution),
-                  span("Conditional simulation", style =
-                         paste0(ttl_panel, col_caution))
-                ),
-
-                fluidRow(
-                  column(width = 6, uiOutput(ns("hrBlock_n_new"))),
-                  column(width = 6, uiOutput(ns("hrBlock_Narea_new"))),
-                ) # end of fluidRow
-
-              ) # end of panels (2 out of 2)
-            ) # end of tabs
-          ), # end of box // hrBox_sizes
-
-          ## Home range plot: ---------------------------------------------
-
-          shinydashboardPlus::box(
-            title = span("Plotting home range:", style = ttl_box),
-            id = ns("hrBox_viz"),
-            width = NULL,
-            solidHeader = FALSE,
-            collapsible = TRUE,
-
-            tabsetPanel(
-              id = ns("hrTabs_viz"),
-
-              tabPanel(
-                value = ns("hrPanel_viz"),
-                title = tagList(
-                  fontawesome::fa(name = "map-marker-alt",
-                                  fill = hex_border),
-                  span("Data", style = ttl_panel)
-                ),
-
-                ggiraph::girafeOutput(
-                  outputId = ns("hrPlot_main"),
-                  width = "100%", height = "100%"),
-
-                shinyWidgets::checkboxGroupButtons(
-                  inputId = ns("hrShow_levels"),
-                  label = "Show estimate levels:",
-                  choices = c("95% low CI",
-                              "Estimate",
-                              "95% high CI"),
-                  selected = "Estimate",
-                  checkIcon = list(yes = icon("check-circle")),
-                  justified = TRUE)
-
-              ), # end of panels (1 out of 2)
-
-              tabPanel(
-                value = ns("hrPanel_viz_new"),
-                title = tagList(
-                  fontawesome::fa(name = "bolt", fill = hex_caution),
-                  span("Conditional simulation", style =
-                         paste0(ttl_panel, col_caution))
-                ),
-
-                ggiraph::girafeOutput(
-                  outputId = ns("hrPlot_simulation"),
-                  width = "100%", height = "100%"),
-                # %>%
-                #   shinycssloaders::withSpinner(
-                #     proxy.height = "200px",
-                #     type = getOption("spinner.type", default = 7),
-                #     color = getOption("spinner.color",
-                #                       default = "#f4f4f4")
-                #   ),
-
-                uiOutput(ns("hrText_sims")),
-
-                column(
-                  width = 12, align = "center",
-                  span("Add the",
-                       fontawesome::fa(name = "map-marker-alt",
-                                       fill = hex_border),
-                       span("Data",
-                            style = paste0(txt_label_bold, col_border)),
-                       "locations to the plot above:",
-                       style = paste0(ft_center,
-                                      txt_label_bold,
-                                      col_main)),
-
-                  shinyWidgets::switchInput(
-                    inputId = ns("hrShow_datasets"),
-                    onLabel = "Yes",
-                    offLabel = "No",
-                    labelWidth = "25px")
-                ), # end of column
-
-                shinyWidgets::checkboxGroupButtons(
-                  inputId = ns("hrhrShow_levels_sim"),
-                  label = span("Show estimate levels:",
-                               style = txt_label_bold),
-                  choices = c("95% low CI",
-                              "Estimate",
-                              "95% high CI"),
-                  selected = "Estimate",
-                  checkIcon = list(yes = icon("check-circle")),
-                  justified = TRUE)
-
-              ) # end of panels (2 out of 2)
-            ) # end of tabs
+              )) # end of footer
           ) # end of box // hrBox_viz
 
       ), # end of column (center)
@@ -360,27 +305,23 @@ mod_tab_hrange_ui <- function(id){
           ## Table: -------------------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Table:", style = ttl_box),
+            title = span("Table:", class = "ttl-box"),
             id = ns("hrBox_summary"),
             width = NULL,
             solidHeader = FALSE,
 
-            DT::dataTableOutput(ns("hrTable")),
-            p(),
-            uiOutput(ns("show_errScale"))
+            reactable::reactableOutput(ns("hrTable"))
 
           ), # end of box // hrBox_summary
 
           ## Additional information: --------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Additional information:", style = ttl_box),
+            title = span("Additional information:", class = "ttl-box"),
             id = ns("hrBox_misc"),
             width = NULL,
             solidHeader = FALSE,
 
-            # verbatimTextOutput(ns("hrInfo_console")),
-            verbatimTextOutput(outputId = ns("time_simulate")),
             verbatimTextOutput(outputId = ns("time_hr"))
 
           ) # end of box
@@ -397,15 +338,11 @@ mod_tab_hrange_server <- function(id, vals) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # DYNAMIC UI ELEMENTS -----------------------------------------------
-    ## Hide secondary tabs at start: ------------------------------------
+    vals$hr <- reactiveValues()
+    pal <- load_pal()
 
-    vec <- c("regime", "area", "size", "viz")
-    for(i in 1:length(vec)) {
-      tmp_id <- paste0("hrTabs_", vec[i])
-      tmp_target <- paste0("hrPanel_", vec[i], "_new")
-      hideTab(inputId = tmp_id, target = ns(tmp_target))
-    }
+    # DYNAMIC UI ELEMENTS -------------------------------------------------
+    ## Hide secondary elements at start: ----------------------------------
 
     tmpnames <- c("regime",
                   "sizes",
@@ -418,13 +355,18 @@ mod_tab_hrange_server <- function(id, vals) {
       shinyjs::hide(id = paste0("hrBox_", tmpnames[i]))
     }
 
+    vec <- c("regime", "area", "sizes", "viz")
+    for(i in 1:length(vec)) {
+      tmp_id <- paste0("hrTabs_", vec[i])
+      tmp_target <- paste0("hrPanel_", vec[i], "_new")
+      hideTab(inputId = tmp_id, target = ns(tmp_target))
+    }
+
     ## Quick select all boxes after adjusting tracking regime: ----------
 
     observe({
 
-      if(input$hrInput_show == 1) { tmp <- ""
-      } else { tmp <- "_new" }
-
+      tmp <- ifelse(input$hrInput_show == 1, "", "_new")
       tabs <- paste0("hrTabs_", vec)
       panels <- paste0("hrPanel_", vec)
 
@@ -437,8 +379,8 @@ mod_tab_hrange_server <- function(id, vals) {
     }) %>% # end of observe.
       bindEvent(input$hrInput_show)
 
-    # COMPUTATIONS ------------------------------------------------------
-    # Fitting movement model (if needed): -------------------------------
+    # PROCESSING ----------------------------------------------------------
+    ## Fitting movement model (if needed): --------------------------------
 
     observe({
       req(vals$active_tab == 'hr')
@@ -447,65 +389,138 @@ mod_tab_hrange_server <- function(id, vals) {
 
         shinyalert::shinyalert(
           type = "error",
-          title = "No data found",
+          title = "No tracking regime set",
           text = span(
             "Please go to the",
-            fontawesome::fa(name = "map-marked-alt", fill = hex_main),
-            span("Tracking regime", style = col_main), "tab",
+            icon("stopwatch", class = "cl-mdn"),
+            span("Tracking regime", class = "cl-mdn"), "tab",
             "and make sure to both (1) set a tracking regime, and",
             "(2) run a new simulation by pressing the",
-            fontawesome::fa(name = "bolt", fill = hex_caution),
-            span("'Run'", style = col_main), "button."
+            icon("bolt", class = "cl-dgr"),
+            span("'Run'", class = "cl-mdn"), "button."
           ),
           html = TRUE,
           size = "xs")
 
       } else {
-
-        if(vals$needs_fit) {
+        if(is.null(vals$fit1)) {
 
           msg_log(
             style = "danger",
             message = paste0("Model fit ",
                              msg_danger("not found"), "."),
-            detail = "Please wait for 'ctmm.select()' to finish.")
+            detail = "Please wait for model selection to finish.")
+
+          expt <- estimate_time(vals$data1, parallel = vals$parallel)
+          vals$expt_max <- expt$max
+          vals$expt_min <- expt$min
+          vals$expt_units <- expt$units
+
+          if ((vals$expt_max %#% vals$expt_units) > 900) {
+
+            vals$hr$check_time <- FALSE
+            shinyalert::shinyalert(
+              className = "modal_warning",
+              title = "Do you wish to proceed?",
+              callbackR = function(x) {
+                vals$hr$check_time <- x
+              },
+              text = span(
+                "Expected run time for the next phase", br(),
+                "is approximately",
+                span(vals$expt_min, "\u2013", vals$expt_max,
+                     class = "cl-dgr"),
+                wrap_none(span(vals$expt_units,
+                               class = "cl-dgr"), ".")
+              ),
+              type = "warning",
+              showCancelButton = TRUE,
+              cancelButtonText = "Stop",
+              confirmButtonCol = pal$mdn,
+              confirmButtonText = "Proceed",
+              html = TRUE
+            )
+          } else {
+            vals$hr$check_time <- TRUE
+          }
+
+          req(vals$hr$check_time)
+          if (vals$expt_max == vals$expt_min) {
+            tmptxt <- paste("\u2264", vals$expt_max, vals$expt_units)
+          } else {
+            tmptxt <- paste(vals$expt_min, "\u2013",
+                            vals$expt_max, vals$expt_units)
+          }
+
+          shinybusy::show_modal_spinner(
+            spin = "fading-circle",
+            color = "var(--sea)",
+
+            text = span(
+              style = "font-size: 18px;",
+              span("!!!Selecting", style = "color: #797979;"),
+              HTML(paste0(span("movement model", class = "cl-sea"),
+                          span(".", style = "color: #797979;"))),
+              p(),
+              p("Expected run time:",
+                style = paste("background-color: #eaeaea;",
+                              "color: #797979;",
+                              "font-size: 16px;",
+                              "text-align: center;")), br(),
+              p(tmptxt,
+                style = paste("background-color: #eaeaea;",
+                              "color: #009da0;",
+                              "font-size: 16px;",
+                              "text-align: center;",
+                              "margin-top: -40px;")),
+              p()
+
+            ) # end of text
+          ) # end of modal
 
           start <- Sys.time()
-          newmod <- prepare_pars(
-            tau_p0 = vals$tau_p0, tau_p0_units = vals$tau_p0_units,
-            tau_v0 = vals$tau_v0, tau_v0_units = vals$tau_v0_units,
-            sigma0 = vals$sigma0, sigma0_units = vals$sigma0_units)
+          guess1 <- ctmm::ctmm.guess(vals$data1, interactive = FALSE)
 
-          shiny::withProgress({
-            fit0 <- ctmm::ctmm.fit(vals$data1, newmod)
-          },
-          message = "Fitting movement model.",
-          detail = "This may take a while...")
+          inputList <- list(list(vals$data1, guess1))
+          fit1 <- par_ctmm.select(inputList, parallel = vals$parallel)
+          time_fit1 <- difftime(Sys.time(), start, units = "mins")
 
-          msg_log(
-            style = 'success',
-            message = paste0("Model fit ",
-                             msg_success("completed"), "."),
-            detail = paste(
-              "This step took approximately",
-              round(difftime(Sys.time(), start, units = 'mins'), 1),
-              "minutes."))
+          if (round(time_fit1, 1) < 1) {
+            tmpdetail <- paste("This step took less than one minute.")
+          } else {
+            tmpdetail <- paste("This step took approximately",
+                               round(difftime(Sys.time(), start,
+                                              units = 'min'), 0),
+                               "minutes.")
+          }
 
-          vals$guess <- NULL
-          vals$fit1 <- fit0
-          vals$needs_fit <- FALSE
+          if (!is.null(fit1)) {
+            msg_log(
+              style = 'success',
+              message = paste0("Model fit ",
+                               msg_success("completed"), "."),
+              detail = tmpdetail)
+
+            vals$guess <- NULL
+            vals$needs_fit <- FALSE
+            vals$fit1 <- fit1
+
+          } # end of if(), !is.null(fit1)
+
+          shinybusy::remove_modal_spinner()
 
         } # end of if(vals$needs_fit)
       } # end of if(is.null(vals$data1))
 
-    }) # end of observe
+    }) # %>% # end of observe,
+      # bindEvent(input$run_hr)
 
     observe({
-      shinyjs::show(id = 'hrBox_regime')
-      shinyjs::show(id = 'hrBox_sizes')
+      shinyjs::show(id = "hrBox_regime")
+      shinyjs::show(id = "hrBox_sizes")
     }) %>% bindEvent(vals$fit1)
 
-    # ADJUSTING TRACKING REGIME -----------------------------------------
+    # ADJUSTING TRACKING REGIME -------------------------------------------
     # Adjust sampling parameters necessary for simulation:
 
     observe({
@@ -515,12 +530,13 @@ mod_tab_hrange_server <- function(id, vals) {
 
         # Sampling duration:
 
-        dur <- round("days" %#% vals$dur0_dev, 0)
+        dur <- round("days" %#% vals$dur0_dev %#% vals$dur0_units_dev, 0)
         tau_p0 <- round("days" %#% vals$tau_p0 %#% vals$tau_p0_units, 0)
         dur_choices <- c(
           10, dur, tau_p0, tau_p0 * 10,
           tau_p0 * 50, tau_p0 * 100, tau_p0 * 200,
-          tau_p0 * 400, tau_p0 * 600, tau_p0 * 800
+          tau_p0 * 400, tau_p0 * 600, tau_p0 * 800,
+          tau_p0 * 1000, tau_p0 * 2000
         ) %>% plyr::round_any(5, f = round) %>%
           unique() %>% sort()
         dur_choices <- dur_choices[dur_choices != 0]
@@ -529,7 +545,7 @@ mod_tab_hrange_server <- function(id, vals) {
 
         fixrate <- movedesign::gps_fixrate
         df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(freq))
-        value <- vals$dti0_dev
+        value <- vals$dti0_dev %#% vals$dti0_units_dev
         index <- which.min(abs(df_fixrate$nu - value))
         dti_choices <- df_fixrate$nu_notes
 
@@ -563,32 +579,30 @@ mod_tab_hrange_server <- function(id, vals) {
 
               p("If home range estimation is your goal,",
                 "we recommend that the",
-                span("sampling duration", style = txt_border),
+                span("sampling duration", class = "cl-sea"),
                 "is that least 10 times the",
                 span(HTML(paste0("position autocorrelation ",
                                  "(\u03C4", tags$sub("p"), ")")),
-                     style = txt_border), "value (shown above).",
+                     class = "cl-sea"), "value (shown above).",
                 "The", span("sampling interval", HTML("(\u0394t)"),
-                            style = txt_border),
-                "is not reliably related to the accuracy",
+                            class = "cl-sea"),
+                "is not directly related to the accuracy",
                 "of home range estimation, so you can",
                 "increase it if the total number of locations",
                 "is a concern.",
                 p(),
-                span(style = col_black,
+                span(class = "cl-blk",
                      "The recommended",
-                     span("sampling duration", style = txt_border),
+                     span("sampling duration", class = "cl-sea"),
                      "is already set below, so you can just click",
-                     fontawesome::fa(name = "bolt",
-                                     fill = hex_caution),
-                     span("Run simulation",
-                          style = paste(txt_tour, col_caution)),
+                     icon("bolt", class = "cl-dgr"),
+                     span("Run simulation", class = "cl-dgr"),
                      "to proceed."),
                 p()
               ),
 
               shinyWidgets::sliderTextInput(
-                inputId = ns('hr_dur0'),
+                inputId = ns("hr_dur"),
                 label = "Sampling duration (in days):",
                 width = "100%",
                 choices = dur_choices,
@@ -598,12 +612,12 @@ mod_tab_hrange_server <- function(id, vals) {
                                   dur, tau_p0 * 10) %>%
                   plyr::round_any(5, f = round),
                 from_max = ifelse(dur > tau_p0 * 800,
-                                  dur, tau_p0 * 800) %>%
+                                  dur, tau_p0 * 2000) %>%
                   plyr::round_any(5, f = round)
               ),
 
               shinyWidgets::sliderTextInput(
-                inputId = ns('hr_dti0'),
+                inputId = ns("hr_dti"),
                 label = "Sampling interval:",
                 width = "100%",
 
@@ -614,10 +628,10 @@ mod_tab_hrange_server <- function(id, vals) {
 
               uiOutput(ns("hrText_sampling")),
 
-              p(span("Proceed with caution!", style = txt_caution),
-                "Longer sampling durations and lower sampling",
-                "intervals may add significant run time to model",
-                "fitting and estimation functions."),
+              p(span("Proceed with caution!", class = "cl-dgr"),
+                "Longer sampling durations + lower sampling",
+                "intervals will add run time to simulation, model",
+                "fitting, and estimation functions."),
 
             ), # end of fluidRow
 
@@ -641,8 +655,8 @@ mod_tab_hrange_server <- function(id, vals) {
             "First, estimate the home range",
             "based on the original dataset",
             "by clicking the",
-            fontawesome::fa(name = "paper-plane", fill = hex_main),
-            HTML(paste0(span("Run estimation", style = btn_primary))),
+            icon("paper-plane", class = "cl-mdn"),
+            HTML(paste0(span("Run estimation", class = "cl-mdn"))),
             "button."),
 
           html = TRUE,
@@ -652,15 +666,15 @@ mod_tab_hrange_server <- function(id, vals) {
     }) %>% bindEvent(input$hr_adjRegime)
 
     output$hrText_sampling <- renderUI({
-      req(vals$data1, input$hr_dur0, input$hr_dti0)
+      req(vals$data1, input$hr_dur, input$hr_dti)
 
       fixrate <- movedesign::gps_fixrate
-      tmp <- fixrate$nu[match(input$hr_dti0,
+      tmp <- fixrate$nu[match(input$hr_dti,
                               fixrate$nu_notes)]
 
       n_new <- length(
         seq(from = 1,
-            to = input$hr_dur0 %#% "days",
+            to = input$hr_dur %#% "days",
             by = tmp))
 
       splitLayout(
@@ -668,13 +682,13 @@ mod_tab_hrange_server <- function(id, vals) {
         parBlock(header = "Initial tracking regime:",
                  value = scales::label_comma(
                    accuracy = 1)(nrow(vals$data1)),
-                 subtitle = span("locations", style = col_main)),
+                 subtitle = span("locations", class = "cl-mdn")),
 
-        parBlock(header =  "New tracking regime:",
+        parBlock(header =  "Modified tracking regime:",
                  value = span(scales::label_comma(
                    accuracy = 1)(n_new),
-                   style = col_caution),
-                 subtitle = span("locations", style = col_caution))
+                   class = "cl-dgr"),
+                 subtitle = span("locations", class = "cl-dgr"))
 
       ) # end of splitLayout
     }) # end of renderUI // hrText_sampling
@@ -682,10 +696,9 @@ mod_tab_hrange_server <- function(id, vals) {
     # HOME RANGE ESTIMATION ---------------------------------------------
 
     ## Estimating for initial tracking regime: --------------------------
-    # Estimate home range after pressing the 'run_hr' button:
+    # Estimate home range after pressing the "run_hr" button:
 
     observe({
-      req(vals$is_valid)
 
       # Check if data is available:
       if(!is.null(vals$data1)) {
@@ -698,21 +711,19 @@ mod_tab_hrange_server <- function(id, vals) {
           shinyjs::show(id = tmplist[i])
         }
 
-        req(vals$data1, vals$fit1, vals$tmpid, vals$id)
+        req(vals$fit1, vals$tmpid, vals$id)
         if(vals$tmpid != vals$id) {
 
           shinyalert::shinyalert(
             title = "Oops!",
             text = span(
               "Data selected is from individual",
-              HTML(paste0(span(vals$id, style = col_caution),
+              HTML(paste0(span(vals$id, class = "cl-dgr"),
                           ",")), "but parameters are from",
-              HTML(paste0(span(vals$tmpid, style = col_caution), ".")),
-              br(),
-
-              "Please extract parameters in the",
-              fontawesome::fa(name = "paw", fill = hex_main),
-              span("Data", style = col_main), "tab",
+              HTML(paste0(span(vals$tmpid, class = "cl-dgr"), ".")),
+              br(), "Please extract parameters in the",
+              icon("paw", class = "cl-mdn"),
+              span("Data", class = "cl-mdn"), "tab",
               "for the appropriate individual before",
               "estimating home range."),
             html = TRUE,
@@ -721,61 +732,91 @@ mod_tab_hrange_server <- function(id, vals) {
         } else {
 
           start <- Sys.time()
-          shiny::withProgress({
-            vals$akde <- ctmm::akde(data = vals$data1,
-                                    CTMM = vals$fit1)
-          },
-          message = "Estimating home range.",
-          detail = "This may take a while...")
 
+          msg_log(
+            style = "warning",
+            message = paste0(
+              "Estimating ",
+              msg_warning("home range"), "..."),
+            detail = "This may take a while...")
+
+          shinybusy::show_modal_spinner(
+            spin = "fading-circle",
+            color = "var(--sea)",
+            text = span(
+              span("Estimating", style = "color: #797979;"),
+              HTML(paste0(span("home range", class = "cl-sea"),
+                          span("...", style = "color: #797979;")))
+            )
+          )
+
+          vals$akde <- ctmm::akde(data = vals$data1,
+                                  CTMM = vals$fit1)
+
+          vals$is_analyses <- TRUE
           vals$hrEst <- summary(vals$akde)$CI[2]
           vals$hrEst_min <- summary(vals$akde)$CI[1]
           vals$hrEst_max <- summary(vals$akde)$CI[3]
 
-          vals$time_hr <- difftime(Sys.time(), start,
-                                   units = "mins")
+          truth <- -2 * log(0.05) * pi * (vals$sigma0 %#%
+                                            vals$sigma0_units)
+
+          tempnames <- rownames(summary(vals$akde)$CI)
+          units <- extract_units(
+            tempnames[grep('^area', tempnames)])
+          vals$hr_units <- units
+
+          err <- ((vals$hrEst %#% units) - truth) / truth
+
+          vals$hrErr <- err
+          vals$hrErr_min <- ((vals$hrEst_min %#% units) -
+                               truth) / truth
+          vals$hrErr_max <- ((vals$hrEst_max %#% units) -
+                               truth) / truth
+
+          vals$time_hr <- difftime(Sys.time(), start, units = "mins")
+
+          msg_log(
+            style = "success",
+            message = paste0(
+              "Estimation ", msg_success("completed"),
+              msg_step(1, 3, style = "success")),
+            detail = paste(
+              "This step took approximately",
+              round(difftime(Sys.time(), start,
+                             units = 'mins'), 1),
+              "minutes."))
+
+
+          shinybusy::remove_modal_spinner()
 
         } # end of if() statement
-
-        truth <- -2 * log(0.05) * pi * (vals$sigma0 %#%
-                                          vals$sigma0_units)
-
-        tempnames <- rownames(summary(vals$akde)$CI)
-        units <- extract_units(
-          tempnames[grep('^area', tempnames)])
-        vals$hr_units <- units
-
-        err <- ((vals$hrEst %#% units) - truth) / truth
-
-        vals$hrErr <- err
-        vals$hrErr_min <- ((vals$hrEst_min %#% units) -
-                             truth) / truth
-        vals$hrErr_max <- ((vals$hrEst_max %#% units) -
-                             truth) / truth
-
-
       } else {
 
         shinyalert::shinyalert(
           type = "error",
-          title = "No data found",
+          title = "No tracking regime set",
           text = span(
-            'Please upload, select or simulate an', br(),
-            span('movement dataset', style = col_caution),
-            'first in the',
-            fontawesome::fa(name = "paw", fill = hex_main),
-            span('Data', style = col_main), "tabs."),
+            "Please go to the",
+            icon("stopwatch", class = "cl-mdn"),
+            span("Tracking regime", class = "cl-mdn"), "tab",
+            "and make sure to both (1) set a tracking regime, and",
+            "(2) run a new simulation by pressing the",
+            icon("bolt", class = "cl-dgr"),
+            span("'Run'", class = "cl-mdn"), "button."
+          ),
           html = TRUE,
           size = "xs")
 
-      } # end of ifelse statement
+      } # end of !is.null(vals$data1)
 
-    }) %>% # observeEvent
+    }) %>% # end of observe,
       bindEvent(input$run_hr)
 
-    ## Estimating for new tracking regime: ------------------------------
+    ## Estimating for new tracking regime: --------------------------------
 
     observe({
+      req(vals$data0, vals$fit0)
 
       # Show "conditional simulation" panels:
       for(i in 1:length(vec)) {
@@ -794,102 +835,100 @@ mod_tab_hrange_server <- function(id, vals) {
                             panels[v], "_new")) }
 
       # Capture new sampling duration and interval:
-      vals$dti1_units <- sub('^.* ([[:alnum:]]+)$',
-                             '\\1', input$hr_dti0)
+      vals$hr$dti_unit <- sub('^.* ([[:alnum:]]+)$',
+                             '\\1', input$hr_dti)
 
       fixrate <- movedesign::gps_fixrate
-      tmp <- fixrate$nu[match(input$hr_dti0,
-                              fixrate$nu_notes)]
-
-      vals$dti1 <- vals$dti1_units %#% round(tmp, 0)
-      vals$dur1 <- input$hr_dur0
-      vals$dur1_units <- "days"
+      tmp <- fixrate$nu[match(input$hr_dti, fixrate$nu_notes)]
+      vals$hr$dti <- vals$hr$dti_unit %#% round(tmp, 0)
+      vals$hr$dur <- input$hr_dur
+      vals$hr$dur_unit <- "days"
 
       ### 1. Simulate new dataset:
       # Fill in the gaps of original dataset + new duration:
 
       vals$conditional <- TRUE
+      removeModal()
+
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = span(
+          span("Estimating", style = "color: #797979;"),
+          HTML(paste0(span("home range", class = "cl-sea"),
+                      span("...", style = "color: #797979;")))
+        )
+      )
 
       msg_log(
         style = "warning",
-        message = "Simulating with new tracking regime.",
+        message = paste0("Simulating ",
+                         msg_warning("new tracking regime"), "."),
         detail = "This may take a while...")
 
-      start <- begin <- Sys.time()
-      df2 <- ctmm::simulate(
+      begin <- Sys.time()
+      dat <- ctmm::simulate(
         vals$data0,
         vals$fit0,
-        t = seq(0,
-                vals$dur1 %#% vals$dur1_units,
-                by = vals$dti1 %#% vals$dti1_units))
+        t = seq(0, vals$hr$dur %#% vals$hr$dur_unit,
+                by = vals$hr$dti %#% vals$hr$dti_unit))
 
-      df2 <- ctmm:::pseudonymize(df2)
-      df2$index <- 1:nrow(df2)
-      vals$data2_hr <- df2
+      dat <- ctmm:::pseudonymize(dat)
+      dat$index <- 1:nrow(dat)
+      vals$hr$newdata <- dat
 
       msg_log(
         style = "success",
         message = "Simulation completed.",
         detail = paste(
           "This step took approximately",
-          round(difftime(Sys.time(), start, units = 'secs'), 1),
+          round(difftime(Sys.time(), begin, units = 'secs'), 1),
           "seconds."))
 
       ### 2. Fit models to simulation:
-
-      guess1 <- reactive({
-        ctmm::ctmm.guess(vals$data2_hr, interactive = FALSE)
-      }) %>% bindCache(vals$dti1,
-                       vals$dur1)
-
-      vals$guess_new <- guess1()
 
       msg_log(
         style = "warning",
         message = "Fitting models to simulation.",
         detail = "This may take a while...")
 
-      start <- Sys.time()
+      start_fit <- Sys.time()
 
-      if(vals$data_type != "simulated") {
-        mod1 <- prepare_pars(
-          tau_p0 = vals$tau_p0,
-          tau_p0_units = vals$tau_p0_units,
-          tau_v0 = vals$tau_v0,
-          tau_v0_units = vals$tau_v0_units,
-          sigma0 = vals$sigma0,
-          sigma0_units = vals$sigma0_units)
-      } else {
+      guess1 <- reactive({
+        ctmm::ctmm.guess(vals$hr$newdata, interactive = FALSE)
+      }) %>% bindCache(vals$hr$dti,
+                       vals$hr$dur)
+      vals$guess_new <- guess1()
+
+      if(vals$data_type == "simulated") {
         mod1 <- vals$ctmm_mod
+      } else {
+        mod1 <- prepare_mod(
+          tau_p = vals$tau_p0, tau_p_units = vals$tau_p0_units,
+          tau_v = vals$tau_v0, tau_v_units = vals$tau_v0_units,
+          sigma = vals$sigma0, sigma_units = vals$sigma0_units)
       }
 
-      fit1 <- reactive({
-        ctmm::ctmm.fit(
-          vals$data2_hr,
-          mod1,
-          method = "pHREML",
-          control = list(method = "pNewton",
-                         cores = -1))
+      newfit <- reactive({
+        inputList <- list(list(vals$hr$newdata, mod1))
+        fit <- par_ctmm.fit(inputList, parallel = TRUE)
+        return(fit)
+      }) %>% bindCache(vals$hr$dti,
+                       vals$hr$dti_unit,
+                       vals$hr$dur,
+                       vals$hr$dur_unit)
 
-      }) %>% bindCache(vals$dti1,
-                       vals$dur1)
-
-      start <- Sys.time()
-      shiny::withProgress({
-        vals$fit1 <- fit1()
-      },
-      message = "Fitting models to simulation.",
-      detail = "This may take a while...")
+      vals$hr$fit <- newfit()
 
       msg_log(
         style = "success",
         message = "Model fit completed.",
         detail = paste(
           "This step took approximately",
-          round(difftime(Sys.time(), start, units = 'mins'), 1),
+          round(difftime(Sys.time(), start_fit, units = 'mins'), 1),
           "minutes."))
 
-      vec <- c("regime", "area", "size", "viz")
+      vec <- c("regime", "area", "sizes", "viz")
       for(i in 1:length(vec)) {
         updateTabsetPanel(
           session,
@@ -900,164 +939,175 @@ mod_tab_hrange_server <- function(id, vals) {
 
       ### 3. Run the home range estimator (AKDE):
 
-      start <- Sys.time()
-      shiny::withProgress({
-        akde_new <- ctmm::akde(data = vals$data2_hr,
-                               CTMM = vals$fit1)
-        end <- Sys.time()
-      },
-      message = "Estimating simulated home range.",
-      detail = "This may take a while...")
+      nms <- names(summary(vals$hr$fit)$DOF)
+      N <- summary(vals$hr$fit)$DOF[grep('area', nms)][[1]]
+      vals$N1_new <- N
 
-      vals$akde_new <- akde_new
-      vals$hrEst_new <- summary(vals$akde_new)$CI[2]
-      vals$hrEst_min_new <- summary(vals$akde_new)$CI[1]
-      vals$hrEst_max_new <- summary(vals$akde_new)$CI[3]
+      if (N < 5) {
 
-      truth <- -2 * log(0.05) * pi * (vals$sigma0 %#%
-                                        vals$sigma0_units)
+        shinyalert::shinyalert(
+          title = "Low sample size!",
+          text = span(
+            "Effective sample size for area estimation",
+            "is too low."
+          ),
+          html = TRUE,
+          size = "xs")
 
-      tempnames <- rownames(summary(vals$akde_new)$CI)
-      units <- extract_units(
-        tempnames[grep('^area', tempnames)])
-      vals$hr_units_new <- units
+        msg_log(
+          style = "error",
+          message = "Effective sample size too low.",
+          detail = "Please select a different tracking regime.")
 
-      vals$hrErr_new <- ((vals$hrEst_new %#% units) -
-                           truth) / truth
-      vals$hrErr_min_new <- ((vals$hrEst_min_new %#% units) -
-                               truth) / truth
-      vals$hrErr_max_new <- ((vals$hrEst_max_new %#% units) -
-                               truth) / truth
+      } else {
 
-      vals$time_simulate <- difftime(Sys.time(), begin,
-                                     units = 'mins')
+        start_est <- Sys.time()
+        msg_log(
+          style = "warning",
+          message = paste0(
+            "Estimating ",
+            msg_warning("home range"), "..."),
+          detail = "This may take a while...")
 
-      removeModal()
+        akde_new <- ctmm::akde(data = vals$hr$newdata,
+                               CTMM = vals$hr$fit)
 
-      # Show buttons to change panels:
-      output$hrInput_show_all <- renderUI({
-        shinyWidgets::radioGroupButtons(
-          inputId = ns("hrInput_show"),
-          label = NULL,
-          choices = c("Show initial tracking regime" = 1,
-                      "Show modified tracking regime" = 2),
-          checkIcon = list(yes = icon("check-circle")),
-          selected = 2,
-          justified = TRUE)
-      })
+        vals$is_analyses <- TRUE
 
-    }) %>% bindEvent(input$run_hr_new)
+        vals$akde_new <- akde_new
+        vals$hrEst_new <- summary(vals$akde_new)$CI[2]
+        vals$hrEst_min_new <- summary(vals$akde_new)$CI[1]
+        vals$hrEst_max_new <- summary(vals$akde_new)$CI[3]
 
-    # BLOCKS ------------------------------------------------------------
-    ## Tracking regime: -------------------------------------------------
+        truth <- -2 * log(0.05) * pi * (vals$sigma0 %#%
+                                          vals$sigma0_units)
+
+        nms <- rownames(summary(vals$akde_new)$CI)
+        units <- extract_units(nms[grep('^area', nms)])
+        vals$hr_units_new <- units
+
+        vals$hrErr_new <- ((vals$hrEst_new %#% units) -
+                             truth) / truth
+        vals$hrErr_min_new <- ((vals$hrEst_min_new %#% units) -
+                                 truth) / truth
+        vals$hrErr_max_new <- ((vals$hrEst_max_new %#% units) -
+                                 truth) / truth
+
+        # Show buttons to change panels:
+        output$hrInput_show_all <- renderUI({
+          shinyWidgets::radioGroupButtons(
+            inputId = ns("hrInput_show"),
+            label = NULL,
+            choices = c("Show initial tracking regime" = 1,
+                        "Show modified tracking regime" = 2),
+            checkIcon = list(yes = icon("circle-check")),
+            selected = 2,
+            justified = TRUE)
+        })
+
+        vals$hr$time_new <- difftime(Sys.time(), begin, units = 'mins')
+
+        msg_log(
+          style = "success",
+          message = "Home range estimation completed.",
+          detail = paste(
+            "This step took approximately",
+            round(vals$hr$time_new, 1), "minutes."))
+
+      }
+
+      shinybusy::remove_modal_spinner()
+
+    }) %>% # end of observe,
+      shiny::bindEvent(input$run_hr_new)
+
+    # BLOCKS --------------------------------------------------------------
+    ## Tracking regime: ---------------------------------------------------
 
     observe({
       req(vals$data1)
 
       sumdat <- summary(vals$data1)
-      tempnames <- names(sumdat)
+      nms <- names(sumdat)
 
       output$hrInfo_dur <- shiny::renderUI({
 
-        tempunits <- tempnames[
-          grep('sampling period', tempnames)] %>%
-          extract_units()
+        tmpunits <- nms[grep('sampling period', nms)] %>% extract_units()
+        dur <- as.numeric(sumdat[grep('sampling period', nms)])
+        out <- fix_unit(dur, tmpunits)
 
-        dur <- as.numeric(
-          sumdat[grep('sampling period', tempnames)])
-
-        out <- fix_time(dur, tempunits)
         parBlock(header = "Sampling duration",
-                 value = paste(out[1], out[2]))
+                 value = paste(out$value, out$unit))
 
       }) # end of renderUI // hrInfo_dur
 
       output$hrInfo_dti <- shiny::renderUI({
 
-        dti <- as.numeric(
-          sumdat[grep('sampling interval', tempnames)])
+        dti <- as.numeric(sumdat[grep('sampling interval', nms)])
+        out <- fix_unit(dti, vals$dti0_units)
 
-        out <- fix_time(dti, vals$dti0_units)
         parBlock(header = "Sampling interval",
-                 value = paste(out[1], out[2]),
+                 value = paste(out$value, out$unit),
                  subtitle = "between fixes")
 
       }) # end of renderUI // hrInfo_dti
     }) # end of observe
 
     observe({
-      req(vals$dti1, vals$dur1)
+      req(vals$hr$dti, vals$hr$dur)
 
       output$hrText_sims <- renderUI({
 
-        dti1 <- vals$dti1
-        dti1_txt <- vals$dti1_units
-        dur1 <- vals$dur1
-        dur1_mth <- "months" %#% vals$dur1 %#% vals$dur1_units
+        out_dti <- fix_unit(vals$hr$dti, vals$hr$dti_unit)
+        txt_dti <- ifelse(out_dti$value == 1,
+                          paste(out_dti$unit),
+                          paste(out_dti$value, out_dti$unit))
 
-        if(dur1 == 1) {
-          dur1_txt <- HTML(paste0(
-            "for ",  span("1 day", style = txt_key), "."))
-        } else { if(dur1 == 365) {
-          dur1_txt <- HTML(paste0(
-            "for ",  span("1 year", style = txt_key), "."))
+        dur <- vals$hr$dur
+        dur_mth <- "months" %#% vals$hr$dur %#% vals$hr$dur_unit
+
+        if (dur == 1) {
+          txt_dur <- wrap_none(
+            "for ",  span("1 day", class = "cl-sea-d"), ".")
+        } else if (dur == 365) {
+          txt_dur <- wrap_none(
+            "for ",  span("1 year", class = "cl-sea-d"), ".")
         } else {
-          dur1_txt <- HTML(paste(
+          txt_dur <- HTML(paste(
             "for a duration of",
-            span(round(dur1, 1),
-                 "days", style = txt_caution), "(or",
-            HTML(paste0(
-              span(paste0(round(dur1_mth, 1),
-                          " months"), style = txt_caution), ")."))
-          )) }
+            span(round(dur, 1), "days", class = "cl-dgr"), "(or",
+            wrap_none(round(dur_mth, 1), " months",
+                      css = "cl-dgr", end = ").")))
         }
 
         p(br(),
           "This new tracking regime is equal to",
-          "a new location every",
-          span(round(dti1, 1), dti1_txt,
-               style = txt_key),
-          dur1_txt)
+          "a new location every", span(txt_dti, class = "cl-sea-d"),
+          txt_dur)
 
       }) # end of renderUI // hrText_sims
 
       output$hrInfo_dur_new <- shiny::renderUI({
 
-        dur <- vals$dur0_units %#% vals$dur1 %#% vals$dur1_units
-        tempunits <- vals$dur0_units
+        dur <- vals$dur0_units %#% vals$hr$dur %#% vals$hr$dur_unit
+        dur_unit <- vals$dur0_units
 
-        dur <- ifelse(
-          dur %% 1 == 0,
-          scales::label_comma(accuracy = 1)(dur),
-          scales::label_comma(accuracy = .1)(dur))
+        out <- fix_unit(dur, dur_unit)
 
         parBlock(
           header = "Sampling duration",
-          value = span(paste(dur, tempunits),
-                        style = col_caution))
+          value = span(out$value, out$unit, class = "cl-mdn"))
 
       }) # ender of renderUI // hrInfo_dur_new
 
       output$hrInfo_dti_new <- shiny::renderUI({
 
-        dti <- vals$dti1
-        tempunits <- vals$dti1_units
-
-        check_if <- sub('.*(?=.$)', '', tempunits, perl = T)
-        if(check_if == "s") { tempunits
-        } else { tempunits <- paste0(tempunits, "s") }
-
-        dti <- ifelse(
-          dti %% 1 == 0,
-          scales::label_comma(accuracy = 1)(dti),
-          scales::label_comma(accuracy = .1)(dti))
+        out <- fix_unit(vals$hr$dti, vals$hr$dti_unit)
 
         parBlock(
           header = "Sampling interval",
-          value = span(paste(dti, tempunits),
-                        style = col_caution),
-          subtitle = span("between fixes",
-                        style = col_caution))
+          value = span(out$value, out$unit, class = "cl-mdn"),
+          subtitle = span("between fixes", class = "cl-mdn"))
 
       }) # ender of renderUI // hrInfo_dti_new
     }) # end of observe
@@ -1077,20 +1127,20 @@ mod_tab_hrange_server <- function(id, vals) {
 
     }) # end of renderUI // hrBlock_n (absolute sample size)
 
-    output$hrBlock_Narea <- shiny::renderUI({
+    output$hrBlock_N1 <- shiny::renderUI({
       req(vals$fit1)
 
-      tempnames <- names(summary(vals$fit1)$DOF)
-      N <- summary(vals$fit1)$DOF[grep('area', tempnames)][[1]]
+      nms <- names(summary(vals$fit1)$DOF)
+      N <- summary(vals$fit1)$DOF[grep('area', nms)][[1]]
       n <- nrow(vals$data1)
 
-      diff_perc <- paste0(
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
 
-      vals$Narea <- N
+      vals$N1 <- N
 
       sampleBlock(
-        number = diff_perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",
@@ -1098,14 +1148,14 @@ mod_tab_hrange_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = FALSE)
 
-    }) # end of renderUI // hrBlock_Narea (effective)
+    }) # end of renderUI // hrBlock_N1 (effective)
 
     output$hrBlock_n_new <- shiny::renderUI({
-      req(vals$data2_hr)
+      req(vals$hr$newdata)
 
       sampleBlock(
         numberIcon = FALSE,
-        header = nrow(vals$data2_hr),
+        header = nrow(vals$hr$newdata),
         line1 = "Absolute sample size",
         line2 = "(n)",
         rightBorder = FALSE,
@@ -1113,18 +1163,17 @@ mod_tab_hrange_server <- function(id, vals) {
 
     }) # end of renderUI // hrBlock_n_new (absolute sample size)
 
-    output$hrBlock_Narea_new <- shiny::renderUI({
-      req(vals$fit1)
+    output$hrBlock_N1_new <- shiny::renderUI({
+      req(vals$hr$fit)
 
-      tempnames <- names(summary(vals$fit1)$DOF)
-      N <- summary(vals$fit1)$DOF[grep('area', tempnames)][[1]]
-      n <- nrow(vals$data2_hr)
+      n <- nrow(vals$hr$newdata)
+      N <- vals$N1_new
 
-      diff_perc <- paste0(
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
 
       sampleBlock(
-        number = diff_perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",
@@ -1132,47 +1181,57 @@ mod_tab_hrange_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = FALSE)
 
-    }) # end of renderUI // hrBlock_Narea_new (effective)
+    }) # end of renderUI // hrBlock_N1_new (effective)
 
     ## Outputs: ---------------------------------------------------------
     ### Home range area: ------------------------------------------------
 
     output$hrInfo_est <- shiny::renderUI({
+      req(vals$akde, vals$hrEst)
 
-      est <- fix_spatial(vals$hrEst, vals$hr_units)
-      est_min <- fix_spatial(vals$hrEst_min, vals$hr_units)
-      est_max <- fix_spatial(vals$hrEst_max, vals$hr_units)
+      est <- fix_unit(vals$hrEst, vals$hr_units, convert = TRUE)
+
+      est_min <- fix_unit(est$unit %#% vals$hrEst_min %#% vals$hr_units,
+                          est$unit, ui = TRUE)
+      est_max <- fix_unit(est$unit %#% vals$hrEst_max %#% vals$hr_units,
+                          est$unit, ui = TRUE)
+      hr_unit <- est_max$unit
 
       parBlock(
-        icon = "map-marked-alt",
+        icon = "map-location-dot",
         header = "Estimate",
-        value = span(HTML("&nbsp;", est[1], est[3]),
-                      style = col_main),
-        subtitle = span(paste(est_min[1], "—", est_max[1]),
-                      style = col_main))
+        value = span(HTML("&nbsp;", est$value, hr_unit),
+                     class = "cl-mdn"),
+        subtitle = span(paste(est_min$value, "—", est_max$value),
+                        class = "cl-mdn"))
 
 
     }) # end of renderUI // hrInfo_est
 
     output$hrInfo_est_new <- shiny::renderUI({
-      req(vals$akde_new)
+      req(vals$akde_new, vals$hrEst_new)
 
-      est <- fix_spatial(vals$hrEst_new, vals$hr_units_new)
-      est_min <- fix_spatial(vals$hrEst_min_new, vals$hr_units_new)
-      est_max <- fix_spatial(vals$hrEst_max_new, vals$hr_units_new)
+      est <- fix_unit(vals$hrEst_new, vals$hr_units_new, convert = TRUE)
+
+      est_min <- fix_unit(est$unit %#%
+                            vals$hrEst_min_new %#% vals$hr_units_new,
+                          est$unit, ui = TRUE)
+      est_max <- fix_unit(est$unit %#%
+                            vals$hrEst_max_new %#% vals$hr_units_new,
+                          est$unit, ui = TRUE)
+      hr_unit <- est_max$unit
 
       parBlock(
-        icon = "map-marked-alt",
+        icon = "map-location-dot",
         header = "Estimate",
-        value = span(HTML("&nbsp;", est[1], est[3]),
-                      style = col_main),
-        subtitle = span(paste(est_min[1], "—", est_max[1]),
-                      style = col_main))
+        value = span(HTML("&nbsp;", est$value, hr_unit),
+                     class = "cl-mdn"),
+        subtitle = span(paste(est_min$value, "—", est_max$value),
+                        class = "cl-mdn"))
 
     }) # end of renderUI // hrInfo_est_new
 
     ### Relative error: -------------------------------------------------
-    # Calculate bias in estimate versus expected value:
 
     output$hrInfo_err <- shiny::renderUI({
       req(vals$hrErr)
@@ -1191,7 +1250,7 @@ mod_tab_hrange_server <- function(id, vals) {
       req(vals$hrErr_new)
 
       errorBlock(
-        icon = "radiation", # "exclamation-circle",
+        icon = "radiation",
         text = "Expected error",
         value = vals$hrErr_new,
         min = vals$hrErr_min_new,
@@ -1203,12 +1262,13 @@ mod_tab_hrange_server <- function(id, vals) {
     # PLOTS -------------------------------------------------------------
     ## Rendering home range estimate plot (xy): -------------------------
 
-    output$hrPlot_main <- ggiraph::renderGirafe({
+    output$hrPlot_initial <- ggiraph::renderGirafe({
       req(vals$akde)
 
       ud <- plotting_hr(dat = vals$data1,
                         ud = vals$akde,
-                        levels = input$hrShow_levels)
+                        levels = input$hrShow_levels,
+                        color = pal$sea, fill = pal$dgr)
 
       ggiraph::girafe(
         ggobj = ud,
@@ -1227,16 +1287,22 @@ mod_tab_hrange_server <- function(id, vals) {
 
     ## Rendering simulation plot (xy): --------------------------------
 
-    output$hrPlot_simulation <- ggiraph::renderGirafe({
-      req(vals$data2_hr, vals$akde_new)
+    output$hrPlot_modified <- ggiraph::renderGirafe({
+      req(vals$hr$newdata, vals$akde_new)
 
       # Rendering home range estimate plot:
 
-      ud_sim <- plotting_hrsim(dat = vals$data1,
-                               datsim = vals$data2_hr,
-                               ud = vals$akde_new,
-                               levels = input$hrhrShow_levels_sim,
-                               show = input$hrShow_datasets)
+      ud_sim <- plotting_hr_new(
+        data1 = vals$data1,
+        data2 = vals$hr$newdata,
+        ud = vals$akde_new,
+
+        levels = input$hrhrShow_levels_sim,
+        show = input$hrShow_datasets,
+
+        color = pal$sea,
+        sim_color = pal$mdn,
+        fill = pal$dgr)
 
       ggiraph::girafe(
         ggobj = ud_sim,
@@ -1253,213 +1319,166 @@ mod_tab_hrange_server <- function(id, vals) {
 
     }) # end of renderGirafe
 
-    # TABLES ------------------------------------------------------------
-    # Save estimation outputs to data.frame:
+    # TABLES --------------------------------------------------------------
+    ## Initial tracking regime: -------------------------------------------
 
-    observe({
-      req(vals$Narea, vals$hrErr)
+    hrRow <- reactive({
 
-      shinyjs::show(id = "hrBox_summary")
-
-      ### Original tracking regime: -------------------------------------
-
-      originalrow <- data.frame(
-        data = "Original",
+      out <- data.frame(
+        data = "Initial",
         taup = NA,
         dur = NA,
         n = nrow(vals$data1),
-        N = vals$Narea,
+        N1 = vals$Narea,
         area = NA,
-        err = vals$hrErr,
-        err_min = vals$hrErr_min,
-        err_max = vals$hrErr_max)
+        area_err = vals$hrErr,
+        area_err_min = vals$hrErr_min,
+        area_err_max = vals$hrErr_max)
 
-      originalrow$taup <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$tau_p0),
-          abbreviate_time(vals$tau_p0_units))
+      out$taup <- paste(scales::label_comma(
+        accuracy = .1)(vals$tau_p0),
+        abbrv_unit(vals$tau_p0_units))
 
-      originalrow$dur <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$dur0),
-          abbreviate_time(vals$dur0_units))
+      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
 
-      tempunits <- vals$hr_units
-      if(tempunits == "square kilometers") {
-        tempunits <- paste0("km", tags$sup(2)) }
-      if(tempunits == "hectares") { tempunits <- "ha" }
+      area <- scales::label_comma(accuracy = .1)(vals$hrEst)
+      out$area <- paste(area, abbrv_unit(vals$hr_units))
 
-      originalrow$area <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$hrEst),
-          tempunits)
+      return(out)
 
-      vals$df_areas <<- rbind(vals$df_areas, originalrow)
-
-    }) %>% # end of observe, then:
-      bindEvent(input$show_ctsdTable)
+    }) %>%
+      bindCache(vals$dur0_dev, vals$dur0_units_dev,
+                vals$dti0_dev, vals$dti0_units_dev)
 
     observe({
+      req(vals$data1, vals$Narea, vals$hrErr)
 
-      ### New tracking regime: ------------------------------------------
+      shinyjs::show(id = "hrBox_summary")
 
-      fitnames <- names(summary(vals$fit1)$DOF)
-      N_new <- summary(vals$fit1)$DOF[
-        grep('area', fitnames)][[1]]
+      vals$dt_hr <<- rbind(vals$dt_hr, hrRow())
+      vals$dt_hr <- dplyr::distinct(vals$dt_hr)
+      vals$report_hr_yn <- TRUE
 
-      newrow <- data.frame(
-        data = "Simulated",
+    }) %>% # end of observe
+      bindEvent(input$show_hrTable)
+
+    ## Modified tracking regime: ------------------------------------------
+
+    hrRow_new <- reactive({
+
+      out <- data.frame(
+        data = "Modified",
         taup = NA,
         dur = NA,
-        n = nrow(vals$data2_hr),
-        N = N_new,
+        n = nrow(vals$hr$newdata),
+        N1 = vals$N1_new,
         area = NA,
-        err = vals$hrErr_new,
-        err_min = vals$hrErr_min_new,
-        err_max = vals$hrErr_max_new)
+        area_err = vals$hrErr_new,
+        area_err_min = vals$hrErr_min_new,
+        area_err_max = vals$hrErr_max_new)
 
-      newrow$taup <-
+      out$taup <-
         paste(scales::label_comma(
           accuracy = .1)(vals$tau_p0),
-          abbreviate_time(vals$tau_p0_units))
+          abbrv_unit(vals$tau_p0_units))
 
-      newrow$dur <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$dur0_units %#%
-                           vals$dur1 %#% vals$dur1_units),
-          abbreviate_time(vals$dur0_units))
+      out_dur <- fix_unit(vals$hr$dur, vals$hr$dur_unit, convert = TRUE)
+      out$dur <- paste(out_dur[1], abbrv_unit(out_dur[,2]))
 
-      tempunits <- vals$hr_units_new
-      if(tempunits == "square kilometers") {
-        tempunits <- paste0("km", tags$sup(2)) }
-      if(tempunits == "hectares") { tempunits <- "ha" }
+      area <- scales::label_comma(accuracy = .1)(vals$hrEst_new)
+      out$area <- paste(area, abbrv_unit(vals$hr_units_new))
 
-      newrow$area <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$hrEst_new),
-          tempunits)
+      return(out)
 
-      df_areas <- dplyr::bind_rows(vals$df_areas, newrow)
-      vals$df_areas <- df_areas
+    }) %>%
+      bindCache(vals$hr$dur, vals$hr$dur_unit,
+                vals$hr$dti, vals$hr$dti_unit)
 
-    }) %>%  # end of observe, then:
-      bindEvent(vals$akde_new)
+    observe({
+      req(vals$hr$fit, vals$hrEst_new)
 
-    ## Rendering output table: ------------------------------------------
+      vals$dt_hr <<- rbind(vals$dt_hr, hrRow_new())
+      vals$dt_hr <- dplyr::distinct(vals$dt_hr)
+      vals$report_hr_yn <- TRUE
 
-    output$hrTable <- DT::renderDataTable({
-      req(vals$df_areas)
+    }) %>% # end of observe
+      bindEvent(vals$hr$fit)
+
+    ## Rendering output table: --------------------------------------------
+
+    output$hrTable <- reactable::renderReactable({
+      req(vals$dt_hr)
 
       columnNames <- list(
         data = "Data:",
-        taup = paste0("\u03C4","\u209A"),
+        taup = "\u03C4\u209A",
         dur = "Duration",
         n = "n",
-        N = paste0("N", tags$sub("area")),
+        N1 = "N (area)",
         area = "HR area",
-        err = "Error",
-        err_min = "Error (min)",
-        err_max = "Error (max)")
+        area_err = "Error",
+        area_err_min = "Error (min)",
+        area_err_max = "Error (max)")
 
-      DT::datatable(
-        data = vals$df_areas,
-        colnames = as.vector(unlist(columnNames)),
-        rownames = FALSE,
-        escape = FALSE,
-        options = list(
-          paging = F, dom = "t",
-          order = list(list(0, 'asc')),
-          columnDefs = list(list(className = 'dt-center',
-                                 targets = 0:8)))
-      ) %>%
-        sparkline::spk_add_deps() %>%
-        DT::formatStyle(
-          columns = c("n", "N"),
-          fontWeight = "bold",
-          color = DT::styleInterval(
-            c(5, 30),
-            c(hex_caution, '#f5b700', hex_main))
-        ) %>%
-        DT::formatCurrency(
-          columns = c("n", "N"),
-          currency = "",
-          digits = 0
-        ) %>%
-        DT::formatStyle(
-          columns = "err",
-          fontWeight = "bold",
-          color = DT::styleInterval(
-            c(-0.8, -0.2, 0.2, 0.8),
-            c(hex_caution, '#f5b700',
-              hex_border,
-              '#f5b700', hex_caution))
-        ) %>%
-        DT::formatStyle(
-          columns = c("err_min", "err_max"),
-          color = DT::styleInterval(
-            c(-0.8, -0.2, 0.2, 0.8),
-            c(hex_caution, '#f5b700',
-              hex_border,
-              '#f5b700', hex_caution))
-        ) %>%
-        DT::formatPercentage(
-          columns = c("err", "err_min", "err_max"),
-          digits = 1
-        )
+      reactable::reactable(
+        data = vals$dt_hr,
+        compact = TRUE,
+        highlight = TRUE,
+        striped = TRUE,
 
-    }) # end of renderDataTable // hrTable
+        defaultPageSize = 5,
+        paginationType = "jump",
+        showPageSizeOptions = TRUE,
+        pageSizeOptions = c(5, 10, 20),
+        showPageInfo = FALSE,
 
-    ### Show error scale (slider): --------------------------------------
+        defaultColDef =
+          reactable::colDef(
+            headerClass = "rtable_header",
+            align = "center",
+            minWidth = 60),
 
-    output$show_errScale <- renderUI({
-      req(vals$hrErr_new)
+        columns = list(
+          data = reactable::colDef(
+            name = columnNames[["data"]]),
+          taup = reactable::colDef(
+            minWidth = 80, name = columnNames[["taup"]],
+            style = list(fontWeight = "bold")),
+          dur = reactable::colDef(
+            minWidth = 80, name = columnNames[["dur"]],
+            style = list(fontWeight = "bold")),
+          n = reactable::colDef(
+            name = columnNames[["n"]],
+            style = list(color = format_num),
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 0)),
+          N1 = reactable::colDef(
+            minWidth = 80, name = columnNames[["N1"]],
+            style = list(color = format_num),
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 1)),
+          area = reactable::colDef(
+            minWidth = 80, name = columnNames[["area"]]),
 
-      min <- round(vals$hrErr_min * 100, 0)
-      max <- round(vals$hrErr_max * 100, 0)
+          area_err = reactable::colDef(
+            minWidth = 80, name = columnNames[["area_err"]],
+            style = list(color = format_perc),
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)),
+          area_err_min = reactable::colDef(
+            minWidth = 80, name = columnNames[["area_err_min"]],
+            style = list(color = format_perc),
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)),
+          area_err_max = reactable::colDef(
+            minWidth = 80, name = columnNames[["area_err_max"]],
+            style = list(color = format_perc),
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1))
+        ))
 
-      min_new <- round(vals$hrErr_min_new * 100, 0)
-      max_new <- round(vals$hrErr_max_new * 100, 0)
-      tmp <- which.max(c(abs(min),
-                         abs(max),
-                         abs(min_new),
-                         abs(max_new)))
-      tmp <- ifelse(tmp < 100, 100, tmp)
-
-      column(
-        width = 12, align = "center",
-
-        br(),
-        p("Visualizing error (%) range:",
-          style = paste(ft, ft_center,
-                        "color: #006466;",
-                        "font-size: 21px;")),
-
-        shinyWidgets::sliderTextInput(
-          inputId = "viz_err1",
-          label = span("Original tracking dataset:",
-                       style = txt_label_bold),
-          choices = c(0, seq(-tmp, tmp, by = 1)) %>% sort(),
-          selected = c(min, max),
-          from_min = min,
-          from_max = min,
-          to_min = max,
-          to_max = max
-        ),
-
-        shinyWidgets::sliderTextInput(
-          inputId = "viz_err2",
-          label = span("New tracking dataset:",
-                       style = txt_label_bold),
-          choices = c(0, seq(-tmp, tmp, by = 1)) %>% sort(),
-          selected = c(min_new, max_new),
-          from_min = min_new,
-          from_max = min_new,
-          to_min = max_new,
-          to_max = max_new
-        ),
-
-      ) # end of column
-    }) # end of renderUI // show_errScale
+    }) # end of renderReactable // hrTable
 
     # HELP TOUR & MODALS: -----------------------------------------------
     ## Help tour (tracking regime): -------------------------------------
@@ -1473,8 +1492,8 @@ mod_tab_hrange_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Click the ",
-          fontawesome::fa(name = "wrench", fill = hex_border),
-          span("Modify", style = col_border), "button",
+          icon("wrench", class = "cl-sea"),
+          span("Modify", class = "cl-sea"), "button",
           "to adjust the tracking regime."))
       )
 
@@ -1500,91 +1519,32 @@ mod_tab_hrange_server <- function(id, vals) {
 
     ## Help modal (biases): ---------------------------------------------
 
-    output$helpPlot_error <- ggiraph::renderGirafe({
+    observe({
 
-      df0 <- movedesign::output_sims %>%
-        dplyr::filter(method == "pHREML_AKDEc") %>%
-        dplyr::mutate(error = (bias - 1) / 1) %>%
-        dplyr::group_by(duration)
+      shiny::showModal(
+        shiny::modalDialog(
+          title = h3("Home range:"),
 
-      dfsum0 <- df0 %>%
-        dplyr::summarise(
-          mean.error = mean(error, na.rm = TRUE),
-          sd.error = sd(error, na.rm = TRUE),
-          n.error = dplyr::n()) %>%
-        dplyr::mutate(
-          se.error = sd.error / sqrt(n.error),
-          lci.error = mean.error -
-            qt(1-(0.05/2), n.error - 1) * se.error,
-          uci.error = mean.error +
-            qt(1-(0.05/2), n.error - 1) * se.error)
+          p("As animal movement",
+            "is inherently", span("autocorrelated", class = "cl-sea-d"),
+            "(locations are similar as a function of space and",
+            " distance), the",
+            span("Autocorrelated Kernel Density Estimators (AKDEs)",
+                 class = "cl-sea"),
+            "are the most appropriate method for",
+            span("home range", class = "cl-sea-d"), "estimation."),
 
-      brks <- as.numeric(levels(as.factor(dfsum0$duration)))
-      p <- ggplot2::ggplot() +
-        ggplot2::geom_hline(yintercept = 0) +
+          footer = modalButton("Dismiss"),
+          size = "m")) # end of modal
 
-        ggiraph::geom_point_interactive(
-          data = df0,
-          mapping = ggplot2::aes(
-            x = duration,
-            y = error,
-            data_id = error),
-          color = "grey90", size = 3) +
-
-        ggiraph::geom_point_interactive(
-          data = dfsum0,
-          mapping = ggplot2::aes(
-            x = duration,
-            y = mean.error,
-            tooltip = paste0(round(mean.error * 100, 1), "%"),
-            data_id = mean.error,
-            group = duration,
-            color = duration),
-          size = 2) +
-
-        viridis::scale_color_viridis(option = "D") +
-        ggplot2::scale_x_continuous(
-          trans = "log", labels = brks, breaks = brks) +
-        ggplot2::scale_y_continuous(labels = scales::percent) +
-
-        ggplot2::labs(x = "Duration (in days)",
-                      y = "Relative error (%)") +
-        ggplot2::theme_minimal() +
-        ggplot2::theme(
-          panel.grid.major = ggplot2::element_blank(),
-          panel.grid.minor = ggplot2::element_blank(),
-
-          legend.position = "none",
-          text = ggplot2::element_text(
-            family = "Roboto Condensed"),
-          axis.title.x = ggplot2::element_text(
-            family = "Roboto Condensed",
-            face = "bold", hjust = .97),
-          axis.title.y = ggplot2::element_text(
-            family = "Roboto Condensed",
-            face = "bold", hjust = .5))
-
-      ggiraph::girafe(
-        ggobj = p,
-        options = list(
-          ggiraph::opts_zoom(max = 5),
-          ggiraph::opts_hover(
-            css = paste("r:5pt;",
-                        "fill:#ffbf00;",
-                        "stroke:#ffbf00;")),
-          ggiraph::opts_selection(
-            type = "single",
-            css = paste("r:3pt;",
-                        "fill:#dd4b39;",
-                        "stroke:#eb5644;"))))
-
-    }) # end of renderGirafe // helpPlot_error
+    }) %>% # observe event, bound to:
+      bindEvent(input$hrHelp_method)
 
     observe({
 
       shiny::showModal(
         shiny::modalDialog(
-          title = h4("Explaining biases:"),
+          title = h3("Explaining biases:"),
 
           withMathJax(
             paste0("$$\\small{\\text{Relative error (%)}",
@@ -1592,34 +1552,20 @@ mod_tab_hrange_server <- function(id, vals) {
                    "{\\text{truth}}\\times 100}$$")
           ),
 
-          p(
-            style = paste(ft_center, col_main),
+          p(class = "cl-mdn",
+            style = "text-align: center;",
             "How much uncertainty is associated",
             "with an estimate?"),
 
-          p(
-            "The",
-            span("relative error (%)", style = txt_caution),
-            "of an", span("home range estimate", style = txt_key),
+          p("The", span("relative error (%)", class = "cl-dgr"),
+            "of an", span("home range estimate", class = "cl-sea-d"),
             "decreases as",
-            span("sampling duration", style = txt_border),
+            span("sampling duration", class = "cl-sea"),
             "increases, and is ultimately dependent on the",
             span("position autocorrelation",
-                 HTML(paste0("(\u03C4", tags$sub("p"), ")")),
-                 "timescale.", style = txt_border),
-            "In the case of",
-            span(
-              HTML(paste0(
-                span(
-                  HTML(paste0("\u03C4", tags$sub("p"),
-                              " = 1 day")),
-                  style = col_black), ","))),
-            "we can expect bias to decrease as shown",
-            "below:"),
-
-          ggiraph::girafeOutput(
-            outputId = ns("helpPlot_error"),
-            width = "100%", height = "100%"),
+                 wrap_none("(\u03C4", tags$sub("p"), ")"),
+                 "timescale.", class = "cl-sea-d"),
+          ),
 
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
@@ -1629,22 +1575,45 @@ mod_tab_hrange_server <- function(id, vals) {
 
     # Additional information: -------------------------------------------
 
-    output$time_simulate <- renderText({
-      req(vals$time_simulate)
-      paste0("New tracking regime simulation took approximately ",
-             round(vals$time_simulate, 1), " minutes.")
-    })
-
     output$time_hr <- renderText({
       req(vals$time_hr)
-      paste0("Home range estimation took approximately ",
-             round(vals$time_hr, 1), " minutes.")
-    })
 
-    output$hrInfo_console <- renderPrint({
-      return(list(summary(vals$akde),
-                  summary(vals$fit1)))
-    })
+      time_total <- vals$time_hr
+
+      if (round(time_total, 1) < 1) {
+        tmptxt <- "less than one minute."
+      } else {
+        tmptxt <- paste("approximately",
+                        round(time_total, 1), "minutes.") }
+
+      out <- paste("Home range estimation took", tmptxt)
+      return(out)
+
+    }) # end of renderText // time_hr
+
+
+
+    observe({
+      # Save information for report if table is not requested:
+
+      req(vals$is_analyses,
+          vals$active_tab == 'hr')
+
+      req(is.null(vals$dt_hr))
+      vals$report_regs_yn <- FALSE
+
+      if (!is.null(vals$hrErr_new)) {
+        req(vals$hrErr_new)
+        vals$report_regs_yn <- TRUE
+        vals$dt_hr <- hrRow_new()
+      } else {
+        req(vals$hrErr)
+        vals$report_regs_yn <- TRUE
+        vals$dt_hr <- hrRow()
+      }
+
+    }) %>% bindEvent(list(input$run_hr, input$run_hr_new))
+
 
   }) # end of moduleServer
 }
