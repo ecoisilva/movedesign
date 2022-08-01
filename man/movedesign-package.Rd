@@ -6,7 +6,7 @@
 \alias{movedesign-package}
 \title{movedesign: Study design of movement ecology studies}
 \description{
-\if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
 A shiny app to design movement ecology studies.
 }
