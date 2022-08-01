@@ -1,32 +1,4 @@
 
-#' Highlight tab titles
-#'
-#' @description Highlight tab titles for workflows.
-#' @return The return value, if any, from executing the utility.
-#' @keywords internal
-#'
-#' @noRd
-highlight_title <- function(title) {
-
-  span(title,
-       style = paste("font-size: 16px;",
-                     "font-family: Anek Tamil;",
-                     "font-weight: 700;",
-                     "padding-left: 5px;"))
-}
-
-#' Highlight tab icons
-#'
-#' @description Highlight tab icons for workflows.
-#' @return The return value, if any, from executing the utility.
-#' @keywords internal
-#'
-#' @noRd
-highlight_icon <- function(name) {
-
-  fontawesome::fa(name = name, height = "17px")
-}
-
 #' Parameter blocks
 #'
 #' @description Display parameters.
@@ -81,16 +53,16 @@ sampleBlock <- function(number = NULL,
   if (!is.null(header)) {
 
     if(as.numeric(header) <= 5) {
-      numberColor <- paste0("color: ", hex_caution, "!important;")
-      if(numberIcon) { numberIcon <- icon("angle-double-down")
+      numberColor <- "color: var(--danger) !important;"
+      if(numberIcon) { numberIcon <- icon("angles-down")
       } else { numberIcon <- HTML("&nbsp;") }
     } else { if(as.numeric(header) >= 30) {
-      numberColor <- paste0("color: ", hex_border, "!important;")
+      numberColor <- "color: var(--sea) !important;"
       header <- scales::label_comma(accuracy = 1)(header)
       if(numberIcon) { numberIcon <- icon("angle-down")
       } else { numberIcon <- HTML("&nbsp;") }
     } else {
-      numberColor <- paste0("color: ", hex_gold, "!important;")
+      numberColor <- "color: var(--gold) !important;"
       if(numberIcon) { numberIcon <- icon("angle-down")
       } else { numberIcon <- HTML("&nbsp;") }
     }}
@@ -137,22 +109,22 @@ errorBlock <- function(icon = NULL,
   range <- paste0(min, "% — ", max, "%")
 
   if (!is.null(value)) {
-    if(value > 0) {
+    if(abs(value) > 0) {
       tmptext <- span("Overestimation", icon("angle-up"))
     } else {
       tmptext <- span("Underestimation", icon("angle-down"))
     }
 
-    if(value >= 0.8) {
-      numberColor <- paste0("color: ", hex_caution, "!important;") }
-    if(value < 0.2 || value < 0.8) {
-      numberColor <- paste0("color: ", hex_gold, "!important;") }
-    if(value <= 0.2) {
-      numberColor <- paste0("color: ", hex_border, "!important;")
-    }
+    if(abs(value) >= 0.8) {
+      numberColor <- "color: var(--danger) !important;" }
+    if(abs(value) < 0.2 || abs(value) < 0.8) {
+      numberColor <- "color: var(--gold) !important;" }
+    if(abs(value) <= 0.2) {
+      numberColor <- "color: var(--sea) !important;" }
   }
 
-  value <- round(value * 100, 1)
+  value <- sigdigits(value * 100, 3)
+
   shiny::tags$div(
     class = "errorblock",
 
@@ -166,9 +138,50 @@ errorBlock <- function(icon = NULL,
                      span(HTML(paste0(
                        HTML("&nbsp;"), value, "%"))),
                      style = numberColor),
-    shiny::tags$span(class = "errorblock-percentage", br(), range,
-                     style = numberColor)
+    shiny::tags$span(class = "errorblock-percentage", br(), range)
   )
+}
+
+#' Parameter blocks
+#'
+#' @description Display parameters.
+#' @return The return value, if any, from executing the utility.
+#' @keywords internal
+#'
+#' @noRd
+staticBlock <- function(text,
+                        type = "logical",
+                        active = FALSE) {
+
+  if (type == "logical") {
+    icon_T <- "square-check"
+    icon_F <- "circle-xmark"
+  }
+
+  if (type == "maximum" | type == "max") {
+    icon_T <- "less-than-equal"
+    icon_F <- "circle-xmark"
+  }
+
+  if (active) {
+    cl <- "staticblock_active"
+    icon <- icon(name = icon_T)
+  } else {
+    cl <- "staticblock"
+    icon <- icon(name = icon_F)
+  }
+
+  shiny::tags$div(
+    class = cl,
+
+    tagList(
+      shiny::tags$span(class = "staticblock-icon",
+                       shiny::HTML("&nbsp;"), icon),
+      shiny::tags$span(class = "staticblock-text",
+                       text)
+    )
+  )
+
 }
 
 #' Extract units.
@@ -195,7 +208,7 @@ help_text <- function(title, subtitle, content) {
     title, style = "margin-bottom: -14px;",
 
     bsplus::shiny_iconlink(
-      name = "info-circle",
+      name = "circle-info",
       class = "icon_help") %>%
       bsplus::bs_embed_popover(
         title = subtitle,
@@ -215,7 +228,7 @@ help_tip <- function(input, text, placement = "bottom") {
   bsplus::shinyInput_label_embed(
     input,
     bsplus::shiny_iconlink(
-      name = "info-circle",
+      name = "circle-info",
       class = "icon_help") %>%
       bsplus::bs_embed_tooltip(
         title = text, placement = placement))
@@ -253,6 +266,22 @@ msg_log <- function(message, detail, style) {
       ' ', line1,
       line2, message, "\n",
       ' ', msg_main(detail), "\n")
+}
+
+
+#' Create main log
+#'
+#' @description Create message logs to show throughout app run.
+#' @return The return value, if any, from executing the utility.
+#' @keywords internal
+#'
+#' @noRd
+msg_header <- function(header) {
+
+  time_stamp <- stringr::str_c(
+    "[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "]")
+
+  cat(msg_main(time_stamp), header, "\n")
 }
 
 #' Create message steps
@@ -317,6 +346,63 @@ as_tele_list <- function(tele) {
   }
 }
 
+#' Convert as.telemetry to data.frame
+#'
+#' @description Convert as.telemetry to data.frame
+#' @keywords internal
+#'
+#' @noRd
+as_tele_df <- function(data) {
+
+  data_df <- list()
+  for(i in 1:length(data)) {
+    tempdf <- data[[i]]
+    tempdf$id <- names(data)[i]
+    data_df[[i]] <- tempdf
+  }
+  data_df <- do.call(rbind.data.frame, data_df)
+
+  return(data_df)
+}
+
+#' Convert as.telemetry to data.table
+#'
+#' @description Convert as.telemetry to data.table
+#' @keywords internal
+#'
+#' @importFrom data.table data.table
+#' @importFrom data.table rbindlist
+#' @importFrom data.table setkey
+#'
+#' @noRd
+#'
+as_tele_dt <- function(data_list) {
+
+  if (class(data_list) != "list") {
+    stop("requires list")
+  }
+
+  animal_count <- length(data_list)
+  animal_data_list <- vector(mode = "list", length = animal_count)
+
+  for (i in 1:animal_count) {
+    animal_data_list[[i]] <- data.table::data.table(data.frame(data_list[[i]]))
+    animal_data_list[[i]][, `:=`(id, data_list[[i]]@info$identity)]
+    animal_data_list[[i]][, `:=`(row_name, row.names(data_list[[i]]))]
+  }
+  data_dt <- data.table::rbindlist(animal_data_list, fill = TRUE)
+  data_dt[, `:=`(id, factor(id))]
+  data_dt[, `:=`(row_no, .I)]
+  data.table::setkey(data_dt, row_no)
+  any_dup <- anyDuplicated(data_dt, by = c("id", "row_name"))
+  if (any_dup != 0) {
+    message("duplicated row name found within same individual:\n")
+    print(data_dt[any_dup, .(id, row_name)])
+  }
+  return(data_dt)
+}
+
+
 #' Add help modal
 #'
 #' @description Add help modal to inputs
@@ -328,7 +414,7 @@ help_modal <- function(input, file) {
   bsplus::shinyInput_label_embed(
     input,
     bsplus::shiny_iconlink(
-      name = "question-circle",
+      name = "circle-question",
       class = "icon_help") %>%
       bsplus::bs_attach_modal(
         id_modal = file))
@@ -344,7 +430,7 @@ help_modal <- function(input, file) {
 #'
 #' @param ft_size Base font size.
 #' @noRd
-theme_movedesign <- function(ft_size = 14) {
+theme_movedesign <- function(ft_size = 13) {
   font <- "Roboto Condensed" # assign font family
 
   ggplot2::theme_minimal() %+replace% # replace elements
@@ -353,10 +439,10 @@ theme_movedesign <- function(ft_size = 14) {
       text = ggplot2::element_text(family = font, size = ft_size),
 
       plot.title = ggplot2::element_text(
-        face = "bold", size = ft_size + 2, vjust = 1.2, hjust = .5),
+        size = ft_size + 3, vjust = 1.2, hjust = .5),
       plot.subtitle = ggplot2::element_text(
-        color = "black", hjust = .5),
-      plot.margin = ggplot2::unit(c(0.3, 0.3, 1, 0.3), "cm"),
+        color = "#666666", hjust = .5),
+      plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
 
       panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
       panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
@@ -364,12 +450,10 @@ theme_movedesign <- function(ft_size = 14) {
       axis.text.x = ggplot2::element_text(colour = "#878787"),
       axis.text.y = ggplot2::element_text(colour = "#878787"),
       axis.title.x = ggplot2::element_text(
-        family = font, face = "bold", hjust = 1, vjust = -1),
+        family = font, hjust = 1, vjust = -1),
       axis.title.y = ggplot2::element_text(
-        family = font, face = "bold", angle = 90, vjust = 2))
+        family = font, angle = 90, vjust = 2))
 }
-
-
 
 #' Plot home range
 #'
@@ -377,7 +461,8 @@ theme_movedesign <- function(ft_size = 14) {
 #' @keywords internal
 #'
 #' @noRd
-plotting_hr <- function(dat, ud, levels) {
+plotting_hr <- function(data, ud, levels,
+                        color, fill) {
 
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
     ud, level.UD = .95)@polygons[[3]] # upper
@@ -388,7 +473,8 @@ plotting_hr <- function(dat, ud, levels) {
       data = pol_ud_high,
       mapping = ggplot2::aes(x = long, y = lat,
                              group = group),
-      fill = hex_caution,
+      fill = fill, col = fill,
+      linetype = "dotted",
       alpha = .3)
   }
 
@@ -412,7 +498,7 @@ plotting_hr <- function(dat, ud, levels) {
       data = pol_ud_low,
       mapping = ggplot2::aes(x = long, y = lat,
                              group = group),
-      fill = hex_caution,
+      fill = fill,
       alpha = .3)
   }
 
@@ -427,15 +513,15 @@ plotting_hr <- function(dat, ud, levels) {
                              group = group),
       fill = NA, alpha = 1) +
 
-    ggplot2::geom_path(dat,
+    ggplot2::geom_path(data,
                        mapping = ggplot2::aes(
                          x = x, y = y),
-                       color = hex_border, size = 0.2,
+                       color = color, size = 0.2,
                        alpha = .4) +
-    ggplot2::geom_point(dat,
+    ggplot2::geom_point(data,
                         mapping = ggplot2::aes(
                           x = x, y = y),
-                        color = hex_border, size = 1.5) +
+                        color = color, size = 1.5) +
 
     { if("95% high CI" %in% levels) p1 } +
     { if("Estimate" %in% levels) p2 } +
@@ -450,15 +536,7 @@ plotting_hr <- function(dat, ud, levels) {
       labels = scales::comma,
       limits = c(tmp, NA)) +
 
-    # viridis::scale_color_viridis(
-    #   name = "Tracking time:",
-    #   option = "D", trans = "time",
-    #   breaks = c(min(dat$timestamp),
-    #              max(dat$timestamp)),
-    #   labels = c("Start", "End")) +
-
     theme_movedesign() +
-
     ggplot2::guides(
       color = ggplot2::guide_colorbar(
         title.vjust = 1.02)) +
@@ -471,9 +549,9 @@ plotting_hr <- function(dat, ud, levels) {
       legend.title = ggplot2::element_text(
         size = 11, face = "bold.italic"),
       legend.key.height = ggplot2::unit(0.3, "cm"),
-      legend.key.width = ggplot2::unit(0.6, "cm")
-    )
+      legend.key.width = ggplot2::unit(0.6, "cm"))
 }
+
 
 #' Plot home range with simulated data
 #'
@@ -481,7 +559,9 @@ plotting_hr <- function(dat, ud, levels) {
 #' @keywords internal
 #'
 #' @noRd
-plotting_hrsim <- function(dat, datsim, ud, levels, show) {
+plotting_hr_new <- function(data1, data2,
+                            ud, levels, show,
+                            bbox, color, sim_color, fill) {
 
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
     ud, level.UD = .95)@polygons[[3]] # upper
@@ -492,7 +572,7 @@ plotting_hrsim <- function(dat, datsim, ud, levels, show) {
       data = pol_ud_high,
       mapping = ggplot2::aes(x = long, y = lat,
                              group = group),
-      fill = hex_caution,
+      fill = fill,
       alpha = .3)
   }
 
@@ -516,11 +596,11 @@ plotting_hrsim <- function(dat, datsim, ud, levels, show) {
       data = pol_ud_low,
       mapping = ggplot2::aes(x = long, y = lat,
                              group = group),
-      fill = hex_caution,
+      fill = fill,
       alpha = .3)
   }
 
-  show_col <- ifelse(show, hex_border, "white")
+  show_col <- ifelse(show, color, "white")
   show_alpha <- ifelse(show, 1, 0)
 
   p <- ggplot2::ggplot() +
@@ -531,15 +611,15 @@ plotting_hrsim <- function(dat, datsim, ud, levels, show) {
       fill = NA, alpha = 0) +
 
     ggplot2::geom_point(
-      datsim, mapping = ggplot2::aes(x = x, y = y),
-      color = hex_main, size = 1.5) +
+      data2, mapping = ggplot2::aes(x = x, y = y),
+      color = sim_color, size = 1.5) +
 
     { if("95% high CI" %in% levels) p1 } +
     { if("Estimate" %in% levels) p2 } +
     { if("95% low CI" %in% levels) p3 } +
 
     ggplot2::geom_point(
-      dat, mapping = ggplot2::aes(x = x, y = y),
+      data1, mapping = ggplot2::aes(x = x, y = y),
       color = show_col, alpha = show_alpha, size = 2) +
 
     ggplot2::labs(x = "X coordinate",
@@ -552,10 +632,7 @@ plotting_hrsim <- function(dat, datsim, ud, levels, show) {
 
     theme_movedesign() +
     ggplot2::theme(legend.position = "none")
-
 }
-
-
 
 #' Plot variogram
 #'
@@ -563,7 +640,7 @@ plotting_hrsim <- function(dat, datsim, ud, levels, show) {
 #' @keywords internal
 #'
 #' @noRd
-plotting_svf <- function(data) {
+plotting_svf <- function(data, fill) {
 
   p <- data %>%
     ggplot2::ggplot() +
@@ -577,16 +654,357 @@ plotting_svf <- function(data) {
       ggplot2::aes(x = lag_days,
                    ymin = var_low50,
                    ymax = var_upp50),
-      fill = hex_caution,
+      fill = fill,
       alpha = 0.25) +
     ggplot2::geom_line(
       ggplot2::aes(x = lag_days, y = SVF), size = 0.5) +
     ggplot2::labs(
       x = "Time lag (in days)",
-      y = expression(bold("Semi-variance"~"("*km^{"2"}*")"))) +
+      y = expression("Semi-variance"~"("*km^{"2"}*")")) +
     theme_movedesign()
 
   return(p)
 
 }
+
+
+
+#' To significant digits
+#'
+#' @description WIP
+#' @keywords internal
+#'
+#' @importFrom stringr str_pad
+#' @noRd
+#'
+sigdigits <- function(x, d) {
+
+  z <- format(x, digits = d)
+  if (!grepl("[.]",z)) return(z)
+
+  return(stringr::str_pad(z, d + 1, "right" , "0"))
+}
+
+
+#' Subset time frame
+#'
+#' @description Subset time frame
+#' @keywords internal
+#'
+#' @noRd
+#'
+subset_timeframe <- function(var, value) {
+  as.data.frame(var) %>% dplyr::top_frac(value)
+}
+
+
+#' Fall back function from ctmmweb
+#'
+#' @description General fall back function to deal with errors
+#' @keywords internal
+#'
+#' @noRd
+#'
+fall_back <- function(f1, f1_args_list, f2, f2_args_list, msg) {
+  res <- try(do.call(f1, f1_args_list))
+  if (inherits(res, "try-error")) {
+    cat(crayon::white$bgBlack(msg), "\n")
+    res <- do.call(f2, f2_args_list)
+  }
+  return(res)
+}
+
+
+#' Check if error
+#'
+#' @description WIP
+#' @keywords internal
+#'
+#' @noRd
+#'
+has_error <- function(result) {
+  if (inherits(result, "try-error")) {
+    TRUE
+  } else {
+    sapply(result, function(x) {
+      inherits(x, "try-error")
+    })
+  }
+}
+
+#' round_any from plyr
+#'
+#' @description WIP
+#' @keywords internal
+#'
+#' @noRd
+#'
+round_any <- function(x, accuracy, f = round) {
+  f(x/accuracy) * accuracy
+}
+
+#' add_spinner
+#'
+#' @description WIP
+#' @keywords internal
+#'
+#' @noRd
+#'
+add_spinner <- function(ui, type = 4, height = "300px") {
+  shinycssloaders::withSpinner(
+    ui, proxy.height = height,
+    type = getOption("spinner.type", default = type),
+    size = getOption("spinner.size", default = 1.5),
+    color = getOption("spinner.color",
+                      default = "#f4f4f4"))
+}
+
+
+
+#' wrap_none
+#'
+#' @description Wrap text without spaces
+#' @keywords internal
+#'
+#' @noRd
+#'
+wrap_none <- function(text, ...,
+                      end = "",
+                      color = NULL,
+                      css = NULL) {
+
+  out <- shiny::HTML(paste0(text, ...))
+
+  if (!is.null(css)) {
+    out <- shiny::HTML(paste0(shiny::span(
+      paste0(text, ...), class = css), end))
+  }
+
+  if (!is.null(color)) {
+
+    out <- shiny::HTML(paste0(
+      shiny::span(
+        paste0(text, ...),
+        style = paste0("color:", color, "!important;")),
+      end))
+  }
+
+  return(out)
+
+}
+
+#' format_num
+#'
+#' @noRd
+format_num <- function(value) {
+  if (value < 5) {
+    color <- "var(--danger)"
+  } else if (value > 5 & value < 30) {
+    color <- "var(--gold)"
+  } else {
+    color <- "var(--midnight)"
+  }
+}
+
+#' format_perc
+#'
+#' @noRd
+format_perc <- function(value) {
+  if (abs(value) > .8) {
+    color <- "var(--danger)"
+  } else if (abs(value) > .2 & abs(value) < .8) {
+    color <- "#f5b700"
+  } else {
+    color <- "var(--sea)"
+  }
+}
+
+
+#' create_pal
+#'
+#' @noRd
+load_pal <- function() {
+
+  # Palette:
+  out <- list(mdn = "#222d32",
+              sea = "#009da0",
+              sea_m = "#007d80",
+              sea_d = "#006669",
+              grn = "#77b131",
+              dgr = "#dd4b39",
+              gld = "#ffbf00")
+
+  return(out)
+}
+
+
+#' create_modal
+#'
+#' @noRd
+create_modal <- function(var, id) {
+
+  if (var == "taup") {
+    out_title <- shiny::h4(
+      span("Position autocorrelation", class = "cl-sea"),
+      "parameter:")
+
+    out_body <- fluidRow(
+      style = paste("margin-right: 20px;",
+                    "margin-left: 20px;"),
+
+      p("The", span("position autocorrelation", class = "cl-sea"),
+        "timescale", HTML(paste0("(\u03C4", tags$sub("p"), ")")),
+        "is the", HTML(paste0(span("home range crossing time",
+                                   class = "cl-sea"), "."))),
+      p(span("What does this mean?",
+             class = "cl-mdn", style = "text-align: center;"),
+        "The", span("home range crossing time", class = "cl-sea"),
+        "is the time is takes (on average) for an animal to cross",
+        "the linear extent of its home range. As",
+        HTML(paste0("\u03C4", tags$sub("p"))),
+        "increases, we can expect an animal to take longer to travel",
+        "this linear extent. For example:"
+      ),
+
+      column(
+        width = 12,
+        shiny::img(src = "www/explain_taup.gif",
+                   width = "100%", align = "center")),
+      p(HTML('&nbsp;')),
+
+      p("Typically, the",
+        span("sampling duration",  class = "cl-dgr"),
+        "needs to be at least as long as the home range crossing time",
+        "(if not many times longer) for",
+        span("home range", class = "cl-sea-d"), "estimation.")
+
+    ) # end of fluidRow
+  } # end of taup
+
+  if (var == "tauv") {
+    out_title <- shiny::h4(
+      span("Velocity autocorrelation", class = "cl-sea"),
+      "parameter:")
+
+    out_body <- fluidRow(
+      style = paste("margin-right: 20px;",
+                    "margin-left: 20px;"),
+
+      p("The", span("velocity autocorrelation", class = "cl-sea"),
+        "timescale", HTML(paste0("(\u03C4", tags$sub("v"), ")")),
+        "is the", HTML(paste0(span("directional persistence",
+                                   class = "cl-sea"), "."))),
+      p("Animals with strong", span("directional persistence",
+                                    class = "cl-sea"),
+        "(ballistic or more linear movement bursts), will tend to have",
+        "a", span("long", class = "cl-mdn"),
+        HTML(paste0("\u03C4", tags$sub("v"))), "parameter.",
+        "On the other hand, animals with more tortuous",
+        "movement (less linear), will tend to have a much",
+        span("shorter", class = "cl-mdn"),
+        HTML(paste0("\u03C4", tags$sub("v"), " parameter.")),
+        "For example:"
+      ),
+
+      p(HTML('&nbsp;')),
+      column(
+        width = 12,
+        shiny::img(src = "www/explain_tauv.gif",
+                   width = "100%", align = "center")),
+      p(HTML('&nbsp;')),
+
+      p("Typically, the",
+        span("sampling interval", HTML("(\u0394t)"),
+             class = "cl-dgr"),
+        "needs to be at least as long as the",
+        span("velocity autocorrelation", class = "cl-sea"),
+        "timescale for", span("distance/speed traveled",
+                              class = "cl-sea-d"), "estimation.",
+        "If", span(HTML("\u0394t"), class = "cl-dgr"), ">",
+        HTML(paste0("3\u03C4", tags$sub("v"))), "then no",
+        "statistically significant signature of the animal's",
+        "velocity will remain in the tracking dataset.")
+
+    ) # end of fluidRow
+  } # end of tauv
+
+  if (var == "sigma") {
+    out_title <- shiny::h4(
+      span("Semi-variance", class = "cl-sea"), "parameter:")
+
+    out_body <- fluidRow(
+      style = paste("margin-right: 20px;",
+                    "margin-left: 20px;"),
+
+      p("The", span("semi-variance", class = "cl-sea"),
+        "parameter", HTML("(\u03C3)"), "is the",
+        "the average square distance observed",
+        "at two different times,",
+        "and ultimately measures the spatial variability",
+        "between any two locations."
+      ),
+
+      p("We are simulating an",
+        span("isotropic", class = "cl-sea-d"), "movement process,",
+        "so", HTML("\u03C3"),
+        "is the same in both the x and the y directions,",
+        "resulting in a circular", span("home range", class = "cl-sea-d"),
+        "area."
+      ),
+
+      p("As we are also modeling",
+        span("range resident", class = "cl-sea-d"),
+        "individuals (with a tendency to remain within their",
+        "home range),", HTML("\u03C3"), "is asymptotic:",
+        "if the", span("sampling duration", class = "cl-dgr"),
+        "is sufficient, the average square distance between any two",
+        "locations will be equal to the chosen",
+        HTML("\u03C3"), "value.")
+
+    ) # end of fluidRow
+  } # end of tauv
+
+  if (var == "loss") {
+    out_title <- shiny::h4(
+      span("Missing data", class = "cl-sea"), "bias:")
+
+    out_body <- fluidRow(
+      style = paste("margin-right: 20px;",
+                    "margin-left: 20px;"),
+
+      p("Many real-world issues can lead to animal locations",
+        "being sampled", span("irregularly", class = "cl-dgr"),
+        "in time: duty-cycling tags to avoid wasting battery",
+        "during periods of inactivity, device malfunctions,",
+        "habitat-related signal loss, and many others.",
+        "Ultimately, missing data equate to",
+        "a loss of", wrap_none(
+          span("information", class = "cl-sea-d"), "."))
+
+    ) # end of fluidRow
+  } # end of loss
+
+
+  if (var == "error") {
+    out_title <- shiny::h4(
+      span("Location error", class = "cl-sea"), "bias:")
+
+    out_body <- fluidRow(
+      style = paste("margin-right: 20px;",
+                    "margin-left: 20px;"),
+
+      p("TBA")
+
+    ) # end of fluidRow
+
+  } # end of error
+
+  out <- bsplus::bs_modal(
+    id = paste0("modal_", var, "_", id),
+    title = out_title,
+    body = out_body, size = "medium")
+
+  return(out)
+}
+
 
