@@ -1,6 +1,6 @@
 ---
 title: "Installation Issues"
-author: "Inês Silva, Jesse Alston"
+author: "In\u00EAs Silva, Jesse Alston"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
