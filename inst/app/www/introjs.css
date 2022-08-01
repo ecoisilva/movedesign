@@ -14,17 +14,20 @@
   border: none;
   background-color: #222d32;
   max-width: 100%;
-  min-width: 476px; /* 620px; */
+  min-width: 494px; /* 476px */
 }
 
-.introjs-tooltiptext{
+.introjs-tooltipReferenceLayer * {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.introjs-tooltiptext {
   padding: 0 52px 0 52px;
   box-sizing: border-box;
-  font-family: "Anek Tamil", sans-serif;
-  font-size: 17px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
   text-align: justify;
-  color: #ffffff!important;
-  line-height: 1.4;
+  color: #ffffff !important;
+  line-height: 1.6;
   letter-spacing: 0.2px;
 }
 
@@ -69,9 +72,6 @@
 
 .introjs-fixParent {
     z-index: 99999999999999 !important;
-}
-
-.introjs-tooltipReferenceLayer{
 }
 
 .introjs-helperLayer {

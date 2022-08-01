@@ -37,13 +37,12 @@ golem::add_module(name = "tab_hrange") # HR estimation
 golem::add_module(name = "tab_ctsd") # CTSD estimation
 golem::add_module(name = "tab_report") # Report
 
-
-bomb
-
 golem::add_module(name = "comp_tour", with_test = TRUE) # Main tour
 golem::add_module(name = "comp_settings") # Settings
 golem::add_module(name = "comp_glossary") # Glossary
-golem::add_module(name = "comp_viz") # Data viz
+golem::add_module(name = "comp_viz") # Data visualization
+golem::add_module(name = "comp_out") # Output visualization
+
 
 ## Add helper functions ----
 ## Creates fct_* and utils_*
@@ -63,7 +62,8 @@ usethis::use_data_raw(name = "movmods", open = TRUE)
 usethis::use_data_raw(name = "vhf_models", open = TRUE )
 usethis::use_data_raw(name = "gps_fixrate", open = TRUE )
 usethis::use_data_raw(name = "gps_tradeoffs", open = TRUE )
-usethis::use_data_raw(name = "output_sims", open = TRUE )
+usethis::use_data_raw(name = "sims_hrange", open = TRUE )
+usethis::use_data_raw(name = "sims_speed", open = TRUE )
 
 ## Tests ----
 ## Add one line by test you want to create
