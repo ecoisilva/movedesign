@@ -7,18 +7,22 @@
 #'
 #' @noRd
 parBlock <- function(icon = NULL,
+                     color = NULL,
                      header = NULL,
                      value = NULL,
                      subtitle = NULL) {
 
   cl <- "parblock"
 
+  icon <- icon(icon)
+  if (!is.null(color)) icon <- icon(icon, class = color)
+      
   shiny::tags$div(
     class = cl,
 
     if (!is.null(icon)) {
       shiny::tags$span(
-        class = "parblock-icon", icon(icon), br()) },
+        class = "parblock-icon", icon, br()) },
     shiny::tags$span(class = "parblock-text", header, br()),
     shiny::tags$span(class = "parblock-value", value),
     if(is.null(subtitle)) { NULL } else {
@@ -817,6 +821,46 @@ format_perc <- function(value) {
   } else {
     color <- "var(--sea)"
   }
+}
+
+#' Calculate limits for plots.
+#'
+#' @noRd
+calc_limit <- function(data1, data2, data3 = NULL, scale = .1) {
+  
+  xmin <- min(
+    min(data1$x) - diff(range(data1$x)) * scale,
+    min(data2$x) - diff(range(data2$x)) * scale)
+  if(!is.null(data3)) {
+    xmin <- min(xmin, min(data3$x) - diff(range(data3$x)) * scale)
+  }
+  
+  xmax <- max(
+    max(data1$x) + diff(range(data1$x)) * scale,
+    max(data2$x) + diff(range(data2$x)) * scale)
+  if(!is.null(data3)) {
+    xmax <- max(xmax, max(data3$x) + diff(range(data3$x)) * scale)
+  }
+  
+  ymin <- min(
+    min(data1$y) - diff(range(data1$y)) * scale,
+    min(data2$y) - diff(range(data2$y)) * scale)
+  if(!is.null(data3)) {
+    ymin <- min(ymin, min(data3$y) - diff(range(data3$y)) * scale)
+  }
+  ymax <- max(
+    max(data1$y) + diff(range(data1$y)) * scale,
+    max(data2$y) + diff(range(data2$y)) * scale)
+  if(!is.null(data3)) {
+    ymax <- max(ymax, max(data3$y) + diff(range(data3$y)) * scale)
+  }
+  
+  out <- data.frame("xmin" = xmin, 
+                    "xmax" = xmax, 
+                    "ymin" = ymin, 
+                    "ymax" = ymax)
+  
+  return(out)
 }
 
 
