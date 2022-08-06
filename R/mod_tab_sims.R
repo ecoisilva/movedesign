@@ -680,7 +680,11 @@ mod_tab_sims_server <- function(id, vals) {
         vals$sigma <- vals$sigma0
         vals$sigma_units <- vals$sigma0_units
         vals$is_run <- TRUE
-
+        
+        # Reset analyses from previous runs (if needed):
+        vals$hr <- NULL
+        vals$sd <- NULL
+        
         time_sim <- difftime(Sys.time(), start_sim, units = "min")
 
         if (round(time_sim, 1) < 1) {

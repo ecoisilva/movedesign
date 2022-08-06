@@ -174,7 +174,7 @@ mod_tab_hrange_ui <- function(id) {
 
               ) # end of panels (2 out of 2)
             ) # end of tabs
-          ), # end of box // hrBox_sizes
+          ) # end of box // hrBox_sizes
 
       ), # end of div (right column)
 
@@ -182,7 +182,7 @@ mod_tab_hrange_ui <- function(id) {
 
       div(class = div_column_right,
 
-          ## Home range plot: ---------------------------------------------
+          ## Home range plots: --------------------------------------------
 
           shinydashboardPlus::box(
             title = span("Home range estimates:", class = "ttl-box"),
@@ -201,7 +201,7 @@ mod_tab_hrange_ui <- function(id) {
                   span("Regime", class = "ttl-panel")
                 ),
 
-                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
+                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-9",
                     p(),
                     shinyWidgets::checkboxGroupButtons(
                       inputId = ns("hrShow_levels"),
@@ -217,7 +217,7 @@ mod_tab_hrange_ui <- function(id) {
                       outputId = ns("hrPlot_initial"),
                       width = "100%", height = "100%")),
 
-                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
+                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
                     p(class = "fluid-padding"),
                     uiOutput(ns("hrInfo_est")),
                     uiOutput(ns("hrInfo_err")))
@@ -458,7 +458,7 @@ mod_tab_hrange_server <- function(id, vals) {
 
             text = span(
               style = "font-size: 18px;",
-              span("!!!Selecting", style = "color: #797979;"),
+              span("!Selecting", style = "color: #797979;"),
               HTML(paste0(span("movement model", class = "cl-sea"),
                           span(".", style = "color: #797979;"))),
               p(),
@@ -504,6 +504,12 @@ mod_tab_hrange_server <- function(id, vals) {
             vals$guess <- NULL
             vals$needs_fit <- FALSE
             vals$fit1 <- fit1
+            
+            nms <- names(summary(vals$fit1)$DOF)
+            N1 <- summary(vals$fit1)$DOF[grep('area', nms)][[1]]
+            vals$N1 <- N1
+            N2 <- summary(vals$fit1)$DOF[grep('speed', nms)][[1]]
+            vals$N2 <- N2
 
           } # end of if(), !is.null(fit1)
 
@@ -813,7 +819,7 @@ mod_tab_hrange_server <- function(id, vals) {
     }) %>% # end of observe,
       bindEvent(input$run_hr)
 
-    ## Estimating for new tracking regime: --------------------------------
+    ## Estimating for modified tracking regime: ---------------------------
 
     observe({
       req(vals$data0, vals$fit0)
@@ -854,7 +860,7 @@ mod_tab_hrange_server <- function(id, vals) {
         spin = "fading-circle",
         color = "var(--sea)",
         text = span(
-          span("Estimating", style = "color: #797979;"),
+          span("Estimating new", style = "color: #797979;"),
           HTML(paste0(span("home range", class = "cl-sea"),
                       span("...", style = "color: #797979;")))
         )
@@ -866,10 +872,9 @@ mod_tab_hrange_server <- function(id, vals) {
                          msg_warning("new tracking regime"), "."),
         detail = "This may take a while...")
 
-      begin <- Sys.time()
+      start <- Sys.time()
       dat <- ctmm::simulate(
-        vals$data0,
-        vals$fit0,
+        vals$data0, vals$fit0,
         t = seq(0, vals$hr$dur %#% vals$hr$dur_unit,
                 by = vals$hr$dti %#% vals$hr$dti_unit))
 
@@ -882,7 +887,7 @@ mod_tab_hrange_server <- function(id, vals) {
         message = "Simulation completed.",
         detail = paste(
           "This step took approximately",
-          round(difftime(Sys.time(), begin, units = 'secs'), 1),
+          round(difftime(Sys.time(), start, units = 'secs'), 1),
           "seconds."))
 
       ### 2. Fit models to simulation:
@@ -898,6 +903,7 @@ mod_tab_hrange_server <- function(id, vals) {
         ctmm::ctmm.guess(vals$hr$newdata, interactive = FALSE)
       }) %>% bindCache(vals$hr$dti,
                        vals$hr$dur)
+      
       vals$guess_new <- guess1()
 
       if(vals$data_type == "simulated") {
@@ -1005,7 +1011,7 @@ mod_tab_hrange_server <- function(id, vals) {
             justified = TRUE)
         })
 
-        vals$hr$time_new <- difftime(Sys.time(), begin, units = 'mins')
+        vals$hr$time_new <- difftime(Sys.time(), start, units = 'mins')
 
         msg_log(
           style = "success",
@@ -1128,10 +1134,9 @@ mod_tab_hrange_server <- function(id, vals) {
     }) # end of renderUI // hrBlock_n (absolute sample size)
 
     output$hrBlock_N1 <- shiny::renderUI({
-      req(vals$fit1)
+      req(vals$fit1, vals$N1)
 
-      nms <- names(summary(vals$fit1)$DOF)
-      N <- summary(vals$fit1)$DOF[grep('area', nms)][[1]]
+      N <- vals$N1
       n <- nrow(vals$data1)
 
       value <- paste0(
@@ -1164,7 +1169,7 @@ mod_tab_hrange_server <- function(id, vals) {
     }) # end of renderUI // hrBlock_n_new (absolute sample size)
 
     output$hrBlock_N1_new <- shiny::renderUI({
-      req(vals$hr$fit)
+      req(vals$hr$newdata, vals$N1_new)
 
       n <- nrow(vals$hr$newdata)
       N <- vals$N1_new
@@ -1329,7 +1334,7 @@ mod_tab_hrange_server <- function(id, vals) {
         taup = NA,
         dur = NA,
         n = nrow(vals$data1),
-        N1 = vals$Narea,
+        N1 = vals$N1,
         area = NA,
         area_err = vals$hrErr,
         area_err_min = vals$hrErr_min,
@@ -1352,7 +1357,7 @@ mod_tab_hrange_server <- function(id, vals) {
                 vals$dti0_dev, vals$dti0_units_dev)
 
     observe({
-      req(vals$data1, vals$Narea, vals$hrErr)
+      req(vals$data1, vals$N1, vals$hrErr)
 
       shinyjs::show(id = "hrBox_summary")
 
@@ -1416,7 +1421,7 @@ mod_tab_hrange_server <- function(id, vals) {
         dur = "Duration",
         n = "n",
         N1 = "N (area)",
-        area = "HR area",
+        area = "Area",
         area_err = "Error",
         area_err_min = "Error (min)",
         area_err_max = "Error (max)")

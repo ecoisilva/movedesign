@@ -1549,12 +1549,6 @@ mod_tab_device_server <- function(id, vals) {
 
     ## Simulating new conditional data: ---------------------------------
 
-    # observe({
-    #   vals$seed1 <- round(stats::runif(1, min = 1, max = 10000), 0)
-    # }) %>%
-    #   bindEvent(input$run_sim_new)
-    #             # , ignoreInit = TRUE, once = TRUE)
-
     ### Prepare parameters and reactives:
 
     data_sim <- shiny::reactive({
@@ -1562,7 +1556,7 @@ mod_tab_device_server <- function(id, vals) {
       dur <- vals$dur0_dev %#% vals$dur0_units_dev
       dti <- vals$dti0_dev %#% vals$dti0_units_dev
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
-
+      
       ctmm::simulate(
         vals$data0,
         vals$fit0,
@@ -1797,9 +1791,9 @@ mod_tab_device_server <- function(id, vals) {
 
           nms <- names(summary(vals$fit1)$DOF)
           N1 <- summary(vals$fit1)$DOF[grep('area', nms)][[1]]
-          vals$Narea <- N1
+          vals$N1 <- N1
           N2 <- summary(vals$fit1)$DOF[grep('speed', nms)][[1]]
-          vals$Nspeed <- N2
+          vals$N2 <- N2
 
           shinyjs::enable("regButton_save")
 

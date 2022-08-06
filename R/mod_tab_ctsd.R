@@ -25,23 +25,20 @@ mod_tab_ctsd_ui <- function(id) {
                                    margin_left = "14px",
                                    margin_right = "8px",
                                    fill = "var(--sea-dark)"),
-            id = ns("ctsd_intro"),
+            id = ns("sd_intro"),
             width = NULL,
             solidHeader = FALSE, headerBorder = FALSE,
             collapsible = TRUE, closable = FALSE,
 
             column(
               align = "center", width = 12,
-
-              p(span("Continuous-time speed and distance",
-                     "(CTSD)", class = "cl-sea-d"), "estimation",
-                "overcomes the limitations of straight-line displacement",
-                "(SLD) estimation, as", span("CTSD", class = "cl-sea-d"),
-                "provides accurate,",
-                "scale-insensitive estimates with reliable confidence",
-                "intervals;", em("i.e.,"), "do not vary with the",
-                "measurement scale (or error), sampling frequency, or",
-                "the tortuosity of the animal’s movement."),
+              
+              p("Movement metrics, such as",
+                span("speed and distance", class = "cl-sea-d"),
+                "traveled, provide quantifiable links between behavior",
+                "and energetics. For example, how far must animals",
+                "travel to meet their nutritional and/or reproductive",
+                "requirements."),
 
               p(style = "text-align: center;",
                 "If estimating speed or distance traveled",
@@ -55,14 +52,14 @@ mod_tab_ctsd_ui <- function(id) {
                 cellArgs = list(style = 'align: center;'),
 
                 shiny::actionButton(
-                  inputId = ns("ctsdHelp_method"),
+                  inputId = ns("sdHelp_method"),
                   label = NULL,
                   width = "100%",
                   icon = icon("circle-question"),
                   class = "btn-warning"),
                 br(),
                 shiny::actionButton(
-                  inputId = ns("run_ctsd"),
+                  inputId = ns("run_sd"),
                   label = "Run estimation",
                   icon =  icon("paper-plane"),
                   width = "100%",
@@ -71,9 +68,17 @@ mod_tab_ctsd_ui <- function(id) {
               br()
 
             ) # end of column (for text)
-          ), # end of box // ctsd_intro
+          ), # end of box // sd_intro
 
-          uiOutput(ns("ctsdInput_show_all"))
+          shinyWidgets::radioGroupButtons(
+            inputId = ns("ctsdInput_show"),
+            label = NULL,
+            choices = c("Show initial tracking regime" = 1,
+                        "Show modified tracking regime" = 2),
+            checkIcon = list(yes = icon("circle-check")),
+            selected = 2,
+            justified = TRUE),
+          br()
 
       ), # end of div (top row)
 
@@ -85,33 +90,33 @@ mod_tab_ctsd_ui <- function(id) {
 
           shinydashboardPlus::box(
             title = span("Tracking regime", class = "ttl-box_solid"),
-            id = ns("ctsdBox_regime"),
+            id = ns("sdBox_regime"),
             status = "info",
             width = NULL,
             solidHeader = TRUE,
             collapsible = FALSE,
 
             tabsetPanel(
-              id = ns("ctsdTabs_regime"),
+              id = ns("sdTabs_regime"),
 
               tabPanel(
-                value = ns("ctsdPanel_regime"),
+                value = ns("sdPanel_regime"),
                 title = icon("stopwatch", class = "cl-sea"),
                 p(),
                 fluidRow(
-                  column(width = 12, uiOutput(ns("ctsdInfo_dur"))),
-                  column(width = 12, uiOutput(ns("ctsdInfo_dti")))
+                  column(width = 12, uiOutput(ns("sdInfo_dur"))),
+                  column(width = 12, uiOutput(ns("sdInfo_dti")))
                 ) # end of fluidRow
 
               ), # end of panels (1 out of 2)
 
               tabPanel(
-                value = ns("ctsdPanel_regime_new"),
+                value = ns("sdPanel_regime_new"),
                 title = icon("bolt", class = "cl-mdn"),
                 p(),
                 fluidRow(
-                  column(width = 12, uiOutput(ns("ctsdInfo_dur_new"))),
-                  column(width = 12, uiOutput(ns("ctsdInfo_dti_new")))
+                  column(width = 12, uiOutput(ns("sdInfo_dur_new"))),
+                  column(width = 12, uiOutput(ns("sdInfo_dti_new")))
                 ), # end of fluidRow
 
               ) # end of panels (2 out of 2)
@@ -125,7 +130,7 @@ mod_tab_ctsd_ui <- function(id) {
                 cellArgs = list(style = "align: center;"),
 
                 shiny::actionButton(
-                  inputId = ns("ctsdHelp_regime"),
+                  inputId = ns("sdHelp_regime"),
                   label = NULL,
                   width = "100%",
                   icon = icon("circle-question"),
@@ -141,150 +146,134 @@ mod_tab_ctsd_ui <- function(id) {
               ) # end of splitLayout
 
             ) # end of column (footer)
-          ), # end of box // ctsdBox_regime
-
-          ## Speed and distance estimates: --------------------------------
-
+          ), # end of box // sdBox_regime
+          
+          ## Sample sizes: ------------------------------------------------
+          
           shinydashboardPlus::box(
-            title = span("Speed estimate:", class = "ttl-box"),
-            id = ns("ctsdBox_speed"),
+            title = span("Sample sizes:", class = "ttl-box"),
+            id = ns("sdBox_sizes"),
             width = NULL,
             solidHeader = FALSE,
             collapsible = FALSE,
-
+            
             tabsetPanel(
-              id = ns("ctsdTabs_speed"),
-
+              id = ns("sdTabs_sizes"),
+              
               tabPanel(
-                value = ns("ctsdPanel_speed"),
+                value = ns("sdPanel_sizes"),
                 title = icon("stopwatch", class = "cl-sea"),
-
-                uiOutput(ns("ctsdInfo_speed")),
-                uiOutput(ns("ctsdInfo_err")),
-                p()
-
+                
+                fluidRow(
+                  column(width = 12, uiOutput(ns("sdBlock_n"))),
+                  column(width = 12, uiOutput(ns("sdBlock_N2"))),
+                ) # end of fluidRow
+                
               ), # end of panels (1 out of 2)
-
+              
               tabPanel(
-                value = ns("ctsdPanel_speed_new"),
+                value = ns("sdPanel_sizes_new"),
                 title = icon("bolt", class = "cl-mdn"),
-
-                uiOutput(ns("ctsdInfo_speed_new")),
-                uiOutput(ns("ctsdInfo_err_new")),
-
-                p()
-
+                
+                fluidRow(
+                  column(width = 12, uiOutput(ns("sdBlock_n_new"))),
+                  column(width = 12, uiOutput(ns("sdBlock_N2_new"))),
+                ) # end of fluidRow
+                
               ) # end of panels (2 out of 2)
             ) # end of tabs
-          ), # end of box // ctsdBox_speed
-
-          shinydashboardPlus::box(
-            title = span("Distance estimate:", class = "ttl-box"),
-            id = ns("ctsdBox_dist"),
-            width = NULL,
-            solidHeader = FALSE,
-            collapsible = FALSE,
-
-            tabsetPanel(
-              id = ns("ctsdTabs_dist"),
-
-              tabPanel(
-                value = ns("ctsdPanel_dist"),
-                title = icon("stopwatch", class = "cl-sea"),
-
-                uiOutput(ns("distInfo_total")),
-                uiOutput(ns("distInfo_err")),
-                p()
-
-              ), # end of panels (1 out of 2)
-
-              tabPanel(
-                value = ns("ctsdPanel_dist_new"),
-                title = icon("bolt", class = "cl-mdn"),
-
-                uiOutput(ns("distInfo_total_new")),
-                uiOutput(ns("distInfo_err_new")),
-                p()
-
-              ) # end of panels (2 out of 2)
-            ), # end of tabs
-
-            footer = column(
-              width = 12, align = "center",
-
-              splitLayout(
-                cellWidths = c("29%", "1%", "70%"),
-                cellArgs = list(style = "align: center;"),
-
-                shiny::actionButton(
-                  inputId = ns("ctsdHelp_bias"),
-                  label = NULL,
-                  width = "100%",
-                  icon = icon("circle-question"),
-                  class = "btn-warning"),
-                br(),
-                shiny::actionButton(
-                  inputId = ns("show_ctsdTable"),
-                  label = "Table",
-                  icon = icon("list"),
-                  width = "100%",
-                  class = "btn-primary")
-              ) # end of splitLayout
-
-            ) # end of column (footer)
-          ) # end of box // ctsdBox_speed
-
-
+          ) # end of box // sdBox_sizes
+          
       ), # end of div (right column)
 
       # [center column] ---------------------------------------------------
 
       div(class = div_column_right,
 
-          ## Sample sizes: ------------------------------------------------
-
-          shinydashboardPlus::box(
-            title = span("Sample sizes:", class = "ttl-box"),
-            id = ns("ctsdBox_sizes"),
-            width = NULL,
-            solidHeader = FALSE,
-            collapsible = FALSE,
-
-            tabsetPanel(
-              id = ns("ctsdTabs_sizes"),
-
-              tabPanel(
-                value = ns("ctsdPanel_sizes"),
-                title = icon("stopwatch", class = "cl-sea"),
-
-                fluidRow(
-                  column(width = 6, uiOutput(ns("ctsdBlock_n"))),
-                  column(width = 6, uiOutput(ns("ctsdBlock_Nspeed"))),
-                ) # end of fluidRow
-
-              ), # end of panels (1 out of 2)
-
-              tabPanel(
-                value = ns("ctsdPanel_sizes_new"),
-                title = tagList(
-                  icon("bolt", class = "cl-mdn"),
-                  span("Modified regime") %>%
-                    tagAppendAttributes(class = 'ttl-panel cl-mdn')
-                ),
-
-                fluidRow(
-                  column(width = 6, uiOutput(ns("ctsdBlock_n_new"))),
-                  column(width = 6, uiOutput(ns("ctsdBlock_Nspeed_new"))),
-                ) # end of fluidRow
-
-              ) # end of panels (2 out of 2)
-            ) # end of tabs
-          ), # end of box // ctsdBox_sizes
-
           ## Speed & distance plots: --------------------------------------
 
-          uiOutput(ns("ctsdBox_outputs")),
-
+          shinydashboardPlus::box(
+            title = span("Estimates:", class = "ttl-box"),
+            id = ns("sdBox_outputs"),
+            width = NULL,
+            headerBorder = FALSE,
+            
+            tabsetPanel(
+              id = ns("sdTabs_viz"),
+           
+              tabPanel(
+                title = "Distance",
+                value = ns("regPanel_trajectory"),
+                icon = icon("route"),
+                
+                div(
+                  class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
+                  p(), uiOutput(ns("ctsdVar_reveal")),
+                  
+                  ggiraph::girafeOutput(
+                    outputId = ns("sdPlot_path"),
+                    width = "100%", height = "100%")),
+                
+                div(
+                  class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
+                  p(class = "fluid-padding"),
+                  uiOutput(ns("distInfo_est")),
+                  uiOutput(ns("distInfo_est_new")),
+                  uiOutput(ns("distInfo_err")),
+                  uiOutput(ns("distInfo_err_new")))
+                
+              ), # end of panel (1 out of 2)
+              
+              tabPanel(
+                title = "Speed",
+                value = ns("regPanel_speed"),
+                icon = icon("gauge-high"),
+                
+                div(
+                  class = "col-xs-12 col-sm-12 col-md-12 col-lg-9",
+                  p(), ggiraph::girafeOutput(
+                    outputId = ns("sdPlot_main"),
+                    width = "100%", height = "100%"),
+                  uiOutput(ns("ctsdVar_group"))),
+                
+                div(
+                  class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
+                  p(class = "fluid-padding"),
+                  uiOutput(ns("ctsdInfo_est")),
+                  uiOutput(ns("ctsdInfo_est_new")),
+                  uiOutput(ns("ctsdInfo_err")),
+                  uiOutput(ns("ctsdInfo_err_new")))
+                
+              ) # end of panel (2 out of 2)
+            ), # end of tabBox // sdBox_viz
+            
+            footer =  column(
+              width = 12, align = "center",
+              
+              splitLayout(
+                cellWidths = c("29%", "1%", "70%"),
+                cellArgs = list(style = "align: center;"),
+                
+                shiny::actionButton(
+                  inputId = ns("sdHelp_bias"),
+                  label = NULL,
+                  width = "100%",
+                  icon = icon("circle-question"),
+                  class = "btn-warning"),
+                br(),
+                shiny::actionButton(
+                  inputId = ns("show_sdTable"),
+                  label = span("Add to",
+                               span("table", class = "cl-sea")),
+                  icon = icon("bookmark"),
+                  width = "100%",
+                  class = "btn-primary")
+                
+              ) # end of splitLayout
+              
+            ) # end of column (footer)
+          ) # end of sdBox_outputs
+          
       ), # end of column (center)
 
       # [bottom column] ---------------------------------------------------
@@ -295,26 +284,26 @@ mod_tab_ctsd_ui <- function(id) {
 
           shinydashboardPlus::box(
             title = span("Summary table:", class = "ttl-box"),
-            id = ns("ctsdBox_summary"),
+            id = ns("sdBox_summary"),
             width = NULL,
             solidHeader = FALSE,
 
-            reactable::reactableOutput(ns("ctsdTable")),
+            reactable::reactableOutput(ns("sdTable")),
             br(),
             div(style = "display:inline-block; float:right",
                 shiny::actionButton(
-                  inputId = ns("ctsdTable_clear"),
+                  inputId = ns("sdTable_clear"),
                   label = "Clear table",
                   icon =  icon("trash"),
                   width = "110px")), br()
 
-          ), # end of box // ctsdBox_summary
+          ), # end of box // sdBox_summary
 
           ## Additional information: --------------------------------------
 
           shinydashboardPlus::box(
             title = span("Additional information:", class = "ttl-box"),
-            id = ns("ctsdBox_misc"),
+            id = ns("sdBox_misc"),
             width = NULL,
             solidHeader = FALSE,
 
@@ -342,25 +331,24 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Hide secondary elements at start: ----------------------------------
 
     tmpnames <- c("regime",
-                  "speed",
-                  "dist",
                   "sizes",
-                  "viz",
-                  "vizdist",
+                  "outputs",
                   "summary",
                   "misc")
 
     for(i in 1:length(tmpnames)) {
-      shinyjs::hide(id = paste0("ctsdBox_", tmpnames[i]))
+      shinyjs::hide(id = paste0("sdBox_", tmpnames[i]))
     }
 
-    vec <- c("regime", "speed", "sizes", "dist")
+    vec <- c("regime", "sizes", "dist")
     for(i in 1:length(vec)) {
-      tmp_id <- paste0("ctsdTabs_", vec[i])
-      tmp_target <- paste0("ctsdPanel_", vec[i], "_new")
+      tmp_id <- paste0("sdTabs_", vec[i])
+      tmp_target <- paste0("sdPanel_", vec[i], "_new")
       hideTab(inputId = tmp_id, target = ns(tmp_target))
     }
 
+    shinyjs::hide(id = "ctsdInput_show")
+    
     ## Changing grouping options for plot: --------------------------------
 
     output$ctsdVar_group <- renderUI({
@@ -486,54 +474,16 @@ mod_tab_ctsd_server <- function(id, vals) {
           detail = paste0("Select a different individual",
                           "or dataset to proceed."))
 
-        shinyjs::disable("run_ctsd")
+        shinyjs::disable("run_sd")
       }
 
     }) # end of observe
-
-    ## Adding speed & distance plot box: --------------------------------
-
-    output$ctsdBox_outputs <- renderUI({
-      req(vals$ctsd, vals$ctsd_truth)
-
-      shinydashboard::tabBox(
-        id = ns("ctsdTabs_outputs"),
-        title = "Plots",
-        width = NULL,
-
-        tabPanel(
-          title = "Trajectory",
-          value = ns("regPanel_trajectory"),
-          icon = icon("route"),
-
-          ggiraph::girafeOutput(
-            outputId = ns("ctsdPlot_path"),
-            width = "100%", height = "100%"),
-
-          uiOutput(ns("ctsdVar_reveal"))
-
-        ), # end of panel (1 out of 2)
-
-        tabPanel(
-          title = "Speed estimates",
-          value = ns("regPanel_speed"),
-          icon = icon("gauge-high"),
-
-          ggiraph::girafeOutput(
-            outputId = ns("ctsdPlot_main"),
-            width = "100%", height = "100%"),
-
-          uiOutput(ns("ctsdVar_group"))
-
-        ) # end of panel (2 out of 2)
-      ) # end of tabBox
-    }) # end of renderUI // regBox_pars
 
     ## Adding different datasets to trajectory plot: --------------------
 
     output$ctsdVar_reveal <- renderUI({
 
-      if(is.null(vals$data2_ctsd)) {
+      if(is.null(vals$sd$newdata)) {
         shinyWidgets::checkboxGroupButtons(
           inputId = ns("ctsdShow_datasets"),
           label = "Show trajectories:",
@@ -563,8 +513,8 @@ mod_tab_ctsd_server <- function(id, vals) {
     observe({
 
       tmp <- ifelse(input$ctsdInput_show == 1, "", "_new")
-      tabs <- paste0("ctsdTabs_", vec)
-      panels <- paste0("ctsdPanel_", vec)
+      tabs <- paste0("sdTabs_", vec)
+      panels <- paste0("sdPanel_", vec)
 
       for(v in 1:length(vec)) {
         updateTabsetPanel(
@@ -573,167 +523,189 @@ mod_tab_ctsd_server <- function(id, vals) {
           selected = paste0("tab_ctsd_1-", panels[v], tmp)) }
 
       vals$paths_selected <- c("full", "subset", "new")
+      
+      if(input$ctsdInput_show == 1) {
+        shinyjs::show(id = "ctsdInfo_est")
+        shinyjs::show(id = "ctsdInfo_err")
+        shinyjs::hide(id = "ctsdInfo_est_new")
+        shinyjs::hide(id = "ctsdInfo_err_new")
+        
+        shinyjs::show(id = "distInfo_est")
+        shinyjs::show(id = "distInfo_err")
+        shinyjs::hide(id = "distInfo_est_new")
+        shinyjs::hide(id = "distInfo_err_new")
+      } else if (input$ctsdInput_show == 2) {
+        shinyjs::hide(id = "ctsdInfo_est")
+        shinyjs::hide(id = "ctsdInfo_err")
+        shinyjs::show(id = "ctsdInfo_est_new")
+        shinyjs::show(id = "ctsdInfo_err_new")
+        
+        shinyjs::hide(id = "distInfo_est")
+        shinyjs::hide(id = "distInfo_err")
+        shinyjs::show(id = "distInfo_est_new")
+        shinyjs::show(id = "distInfo_err_new")
+      }
 
     }) %>% # end of observe.
-      bindEvent(input$ctsdInput_show)
-
+      bindEvent(input$ctsdInput_show, ignoreInit = TRUE)
+    
     # PROCESSING ----------------------------------------------------------
     ## Fitting movement model (if needed): --------------------------------
 
-    # observe({
-    #   # req(vals$active_tab == 'ctsd')
-    #   print("Fitting movement model from CTSD tab....")
-    #
-    #   if(is.null(vals$data1)) {
-    #
-    #     shinyalert::shinyalert(
-    #       type = "error",
-    #       title = "No tracking regime set",
-    #       text = span(
-    #         "Please go to the",
-    #         icon("stopwatch", class = "cl-mdn"),
-    #         span("Tracking regime", class = "cl-mdn"), "tab",
-    #         "and make sure to both (1) set a tracking regime, and",
-    #         "(2) run a new simulation by pressing the",
-    #         icon("bolt", class = "cl-dgr"),
-    #         span("'Run'", class = "cl-mdn"), "button."
-    #       ),
-    #       html = TRUE,
-    #       size = "xs")
-    #
-    #   } else {
-    #     if(vals$needs_fit) {
-    #
-    #       msg_log(
-    #         style = "danger",
-    #         message = paste0("Model fit ",
-    #                          msg_danger("not found"), "."),
-    #         detail = "Please wait for model selection to finish.")
-    #
-    #
-    #       expt <- runtime()
-    #       vals$expt_max <- expt$max
-    #       vals$expt_min <- expt$min
-    #       vals$expt_units <- expt$units
-    #
-    #       if ((vals$expt_max %#% vals$expt_units) > 900) {
-    #
-    #         vals$hr$check_time <- FALSE
-    #         shinyalert::shinyalert(
-    #           className = "modal_warning",
-    #           title = "Do you wish to proceed?",
-    #           callbackR = function(x) {
-    #             vals$hr$check_time <- x
-    #           },
-    #           text = span(
-    #             "Expected run time for the next phase", br(),
-    #             "is approximately",
-    #             span(vals$expt_min, "\u2013", vals$expt_max,
-    #                  class = "cl-dgr"),
-    #             wrap_none(span(vals$expt_units,
-    #                            class = "cl-dgr"), ".")
-    #           ),
-    #           type = "warning",
-    #           showCancelButton = TRUE,
-    #           cancelButtonText = "Stop",
-    #           confirmButtonCol = pal$mdn,
-    #           confirmButtonText = "Proceed",
-    #           html = TRUE
-    #         )
-    #       } else {
-    #         vals$hr$check_time <- TRUE
-    #       }
-    #
-    #       req(vals$hr$check_time)
-    #       if (vals$expt_max == vals$expt_min) {
-    #         tmptxt <- paste("\u2264", vals$expt_max, vals$expt_units)
-    #       } else {
-    #         tmptxt <- paste(vals$expt_min, "\u2013",
-    #                         vals$expt_max, vals$expt_units)
-    #       }
-    #
-    #       shinybusy::show_modal_spinner(
-    #         spin = "fading-circle",
-    #         color = "var(--sea)",
-    #
-    #         text = span(
-    #           style = "font-size: 18px;",
-    #           span("Selecting", style = "color: #797979;"),
-    #           HTML(paste0(span("movement model", class = "cl-sea"),
-    #                       span(".", style = "color: #797979;"))),
-    #           p(),
-    #           p("Expected run time:",
-    #             style = paste("background-color: #eaeaea;",
-    #                           "color: #797979;",
-    #                           "font-size: 16px;",
-    #                           "text-align: center;")), br(),
-    #           p(tmptxt,
-    #             style = paste("background-color: #eaeaea;",
-    #                           "color: #009da0;",
-    #                           "font-size: 16px;",
-    #                           "text-align: center;",
-    #                           "margin-top: -40px;")),
-    #           p()
-    #
-    #         ) # end of text
-    #       ) # end of modal
-    #
-    #       start <- Sys.time()
-    #       guess1 <- ctmm::ctmm.guess(vals$data1, interactive = FALSE)
-    #
-    #       inputList <- list(list(vals$data1, guess1))
-    #       fit1 <- par_ctmm.select(inputList, parallel = vals$parallel)
-    #       time_fit1 <- difftime(Sys.time(), start, units = "mins")
-    #
-    #       if (round(time_fit1, 1) < 1) {
-    #         tmpdetail <- paste("This step took less than one minute.")
-    #       } else {
-    #         tmpdetail <- paste("This step took approximately",
-    #                            round(difftime(Sys.time(), start,
-    #                                           units = 'min'), 0),
-    #                            "minutes.")
-    #       }
-    #
-    #       if (!is.null(fit1)) {
-    #         msg_log(
-    #           style = 'success',
-    #           message = paste0("Model fit ",
-    #                            msg_success("completed"), "."),
-    #           detail = tmpdetail)
-    #
-    #         vals$guess <- NULL
-    #         vals$needs_fit <- FALSE
-    #         vals$fit1 <- fit1
-    #
-    #       } # end of if(), !is.null(fit1)
-    #
-    #       shinybusy::remove_modal_spinner()
-    #
-    #     } # end of if(vals$needs_fit)
-    #   } # end of if(is.null(vals$data1))
-    #
-    # }) %>% # end of observe,
-    #   bindEvent(input$run_ctsd)
-    #
-    # observe({
-    #   shinyjs::show(id = "ctsdBox_regime")
-    #   shinyjs::show(id = "ctsdBox_sizes")
-    # }) %>% bindEvent(vals$fit1)
+    observe({
+      req(vals$active_tab == 'ctsd')
+      
+      if(is.null(vals$data1)) {
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "No tracking regime set",
+          text = span(
+            "Please go to the",
+            icon("stopwatch", class = "cl-mdn"),
+            span("Tracking regime", class = "cl-mdn"), "tab",
+            "and make sure to both (1) set a tracking regime, and",
+            "(2) run a new simulation by pressing the",
+            icon("bolt", class = "cl-dgr"),
+            span("'Run'", class = "cl-mdn"), "button."
+          ),
+          html = TRUE,
+          size = "xs")
+        
+      } else {
+        if(is.null(vals$fit1)) {
+          
+          msg_log(
+            style = "danger",
+            message = paste0("Model fit ",
+                             msg_danger("not found"), "."),
+            detail = "Please wait for model selection to finish.")
+          
+          expt <- estimate_time(vals$data1, parallel = vals$parallel)
+          vals$expt_max <- expt$max
+          vals$expt_min <- expt$min
+          vals$expt_units <- expt$units
+          
+          if ((vals$expt_max %#% vals$expt_units) > 900) {
+            
+            vals$hr$check_time <- FALSE
+            shinyalert::shinyalert(
+              className = "modal_warning",
+              title = "Do you wish to proceed?",
+              callbackR = function(x) {
+                vals$hr$check_time <- x
+              },
+              text = span(
+                "Expected run time for the next phase", br(),
+                "is approximately",
+                span(vals$expt_min, "\u2013", vals$expt_max,
+                     class = "cl-dgr"),
+                wrap_none(span(vals$expt_units,
+                               class = "cl-dgr"), ".")
+              ),
+              type = "warning",
+              showCancelButton = TRUE,
+              cancelButtonText = "Stop",
+              confirmButtonCol = pal$mdn,
+              confirmButtonText = "Proceed",
+              html = TRUE
+            )
+          } else {
+            vals$hr$check_time <- TRUE
+          }
+          
+          req(vals$hr$check_time)
+          if (vals$expt_max == vals$expt_min) {
+            tmptxt <- paste("\u2264", vals$expt_max, vals$expt_units)
+          } else {
+            tmptxt <- paste(vals$expt_min, "\u2013",
+                            vals$expt_max, vals$expt_units)
+          }
+          
+          shinybusy::show_modal_spinner(
+            spin = "fading-circle",
+            color = "var(--sea)",
+            
+            text = span(
+              style = "font-size: 18px;",
+              span("!Selecting", style = "color: #797979;"),
+              HTML(paste0(span("movement model", class = "cl-sea"),
+                          span(".", style = "color: #797979;"))),
+              p(),
+              p("Expected run time:",
+                style = paste("background-color: #eaeaea;",
+                              "color: #797979;",
+                              "font-size: 16px;",
+                              "text-align: center;")), br(),
+              p(tmptxt,
+                style = paste("background-color: #eaeaea;",
+                              "color: #009da0;",
+                              "font-size: 16px;",
+                              "text-align: center;",
+                              "margin-top: -40px;")),
+              p()
+              
+            ) # end of text
+          ) # end of modal
+          
+          start <- Sys.time()
+          guess1 <- ctmm::ctmm.guess(vals$data1, interactive = FALSE)
+          
+          inputList <- list(list(vals$data1, guess1))
+          fit1 <- par_ctmm.select(inputList, parallel = vals$parallel)
+          time_fit1 <- difftime(Sys.time(), start, units = "mins")
+          
+          if (round(time_fit1, 1) < 1) {
+            tmpdetail <- paste("This step took less than one minute.")
+          } else {
+            tmpdetail <- paste("This step took approximately",
+                               round(difftime(Sys.time(), start,
+                                              units = 'min'), 0),
+                               "minutes.")
+          }
+          
+          if (!is.null(fit1)) {
+            msg_log(
+              style = 'success',
+              message = paste0("Model fit ",
+                               msg_success("completed"), "."),
+              detail = tmpdetail)
+            
+            vals$guess <- NULL
+            vals$needs_fit <- FALSE
+            vals$fit1 <- fit1
+            
+            nms <- names(summary(vals$fit1)$DOF)
+            N1 <- summary(vals$fit1)$DOF[grep('area', nms)][[1]]
+            vals$N1 <- N1
+            N2 <- summary(vals$fit1)$DOF[grep('speed', nms)][[1]]
+            vals$N2 <- N2
+            
+          } # end of if(), !is.null(fit1)
+          
+          shinybusy::remove_modal_spinner()
+          
+        } # end of if(vals$needs_fit)
+      } # end of if(is.null(vals$data1))
+      
+    }) # %>% # end of observe,
+    # bindEvent(input$run_sd)
+    
+    observe({
+      shinyjs::show(id = "sdBox_regime")
+      shinyjs::show(id = "sdBox_sizes")
+    }) %>% bindEvent(vals$fit1)
 
     ## Calculating total and mean distances: ----------------------------
 
     observe({
       req(vals$data1, vals$data_full,
           vals$data_speed, vals$ctsd)
-
+      
       # dat1 <- data.frame(
       #   x = vals$data1$x,
       #   y = vals$data1$y)
-
-      dat_full <- data.frame(
-        x = vals$data_full$x,
-        y = vals$data_full$y)
-
+      
       # tmpdist <- list()
       # for(i in 2:nrow(dat1)) {
       #   tmpdist[[i]] <-
@@ -741,7 +713,16 @@ mod_tab_ctsd_server <- function(id, vals) {
       #            (dat1$y[i] - dat1$y[i-1])^2)
       # }
       # vals$data1$dist <- c(0, do.call("rbind", tmpdist))
+      
+      dat_full <- data.frame(
+        x = vals$data_full$x,
+        y = vals$data_full$y)
 
+      if (!is.null(vals$vals$sd$fit)) {
+        dur <- vals$sd$dur %#% vals$sd$dur_unit
+      } else { dur <- vals$dur0_dev %#% vals$dur0_units_dev }
+      dur_days <- "days" %#% dur
+      
       tmpdist_full <- list()
       for(i in 2:nrow(dat_full)) {
         tmpdist_full[[i]] <-
@@ -750,10 +731,11 @@ mod_tab_ctsd_server <- function(id, vals) {
       }
       vals$data_full$dist <- c(0, do.call("rbind", tmpdist_full))
 
+      print("dist_truth:")
       dist_truth <- sum(vals$data_full$dist, na.rm = TRUE)
       vals$dist_truth <- dist_truth
+      print(vals$dist_truth)
 
-      dur_days <- "days" %#% vals$dur0_dev %#% vals$dur0_units_dev
       vals$dist_lci <- as.numeric(vals$ctsd[1] * dur_days) %#% "km"
       vals$dist_est <- as.numeric(vals$ctsd[2] * dur_days) %#% "km"
       vals$dist_uci <- as.numeric(vals$ctsd[3] * dur_days) %#% "km"
@@ -762,12 +744,16 @@ mod_tab_ctsd_server <- function(id, vals) {
       vals$distErr_min <- (vals$dist_lci - dist_truth) / dist_truth
       vals$distErr_max <- (vals$dist_uci - dist_truth) / dist_truth
 
-    }) # end of observe
-
+    }) %>% # end of observe,
+      bindEvent(vals$ctsd)
+    
     observe({
-      req(vals$ctsd_new)
-
-      dur_days <- "days" %#% vals$dur0_dev %#% vals$dur0_units_dev
+      req(vals$dur0_dev, vals$dist_truth)
+      
+      if (!is.null(vals$vals$sd$fit)) {
+        dur <- vals$sd$dur %#% vals$sd$dur_unit
+      } else { dur <- vals$dur0_dev %#% vals$dur0_units_dev }
+      dur_days <- "days" %#% dur
 
       vals$dist_lci_new <- as.numeric(vals$ctsd_new[1] * dur_days) %#% "km"
       vals$dist_est_new <- as.numeric(vals$ctsd_new[2] * dur_days) %#% "km"
@@ -779,8 +765,9 @@ mod_tab_ctsd_server <- function(id, vals) {
         (vals$dist_lci_new - vals$dist_truth) / vals$dist_truth
       vals$distErr_max_new <-
         (vals$dist_uci_new - vals$dist_truth) / vals$dist_truth
-
-    }) # end of observe
+      
+    }) %>% # end of observe,
+      bindEvent(vals$ctsd_new)
 
     # ADJUSTING TRACKING REGIME -------------------------------------------
     # Adjust sampling parameters necessary for simulation:
@@ -859,14 +846,14 @@ mod_tab_ctsd_server <- function(id, vals) {
                 subtitle = tmprange),
 
               shiny::sliderInput(
-                inputId = ns("ctsd_dur0"),
+                inputId = ns("ctsd_dur"),
                 label = "Sampling duration (in days):",
                 width = "100%",
                 min = 1, max = tau_p0 * 100, value = tau_p0 * 10
               ),
 
               shinyWidgets::sliderTextInput(
-                inputId = ns("ctsd_dti0"),
+                inputId = ns("ctsd_dti"),
                 label = "Sampling interval:",
                 width = "100%",
 
@@ -887,7 +874,7 @@ mod_tab_ctsd_server <- function(id, vals) {
             footer = tagList(
               modalButton("Cancel"),
               actionButton(
-                inputId = ns("run_ctsd_new"),
+                inputId = ns("run_sd_new"),
                 label = "Run simulation",
                 icon =  icon("bolt"),
                 class = "btn-danger")
@@ -917,12 +904,12 @@ mod_tab_ctsd_server <- function(id, vals) {
     output$ctsdText_sampling <- renderUI({
 
       fixrate <- movedesign::gps_fixrate
-      dti <- fixrate$nu[match(input$ctsd_dti0,
+      dti <- fixrate$nu[match(input$ctsd_dti,
                               fixrate$nu_notes)]
 
       n_new <- length(
         seq(from = 1,
-            to = input$ctsd_dur0 %#% "days",
+            to = input$ctsd_dur %#% "days",
             by = dti))
 
       splitLayout(
@@ -943,8 +930,37 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     # CTSD ESTIMATION -----------------------------------------------------
 
+    finescale_speed <- shiny::reactive({
+      
+      if(vals$data_type == "simulated") {
+        dat <- vals$data0
+      } else { dat <- vals$data1 }
+      
+      fit <- vals$fit0
+      
+      dur <- vals$dur0_dev %#% vals$dur0_units_dev
+      tauv <- vals$tau_v0 %#% vals$tau_v0_units
+      
+      sim_full <- ctmm::simulate(
+        dat, fit, t = seq(0, dur, by = 1 %#% "minute"))
+      vals$data_full <- sim_full
+      
+      inputList <- ctmmweb::align_lists(
+        list(sim_full[which(sim_full$t <= tauv * 10), ]),
+        list(fit))
+      
+      ctsd_truth <- par_speed(inputList,
+                              parallel = vals$parallel)
+      
+      return(ctsd_truth)
+      
+    }) %>% # end of reactive, data_sim
+      bindCache(c(vals$id,
+                  vals$dur0_dev, vals$dur0_units_dev,
+                  vals$dti0_dev, vals$dti0_units_dev))
+    
     ## Estimating for initial tracking regime: ----------------------------
-    # Estimate speed & distance after pressing the "run_ctsd" button:
+    # Estimate speed & distance after pressing the "run_sd" button:
 
     observe({
       req(vals$is_valid)
@@ -952,11 +968,10 @@ mod_tab_ctsd_server <- function(id, vals) {
       # Check if data is available:
       if(!is.null(vals$data1)) {
 
-        tmplist <- list("ctsdBox_speed",
-                        "ctsdBox_dist",
-                        "ctsdBox_viz",
-                        "ctsdBox_vizdist",
-                        "ctsdBox_misc")
+        tmplist <- list("sdBox_speed",
+                        "sdBox_dist",
+                        "sdBox_outputs",
+                        "sdBox_misc")
 
         for(i in 1:length(tmplist)) {
           shinyjs::show(id = tmplist[i])
@@ -1042,9 +1057,9 @@ mod_tab_ctsd_server <- function(id, vals) {
                 vals$ctsd <- vals$ctsd$CI
               }
 
-              vals$ctsdEst <- vals$ctsd[2]
-              vals$ctsdEst_min <- vals$ctsd[1]
-              vals$ctsdEst_max <- vals$ctsd[3]
+              vals$sdEst <- vals$ctsd[2]
+              vals$sdEst_min <- vals$ctsd[1]
+              vals$sdEst_max <- vals$ctsd[3]
 
               vals$time_ctsd <- difftime(Sys.time(), start, units = "mins")
 
@@ -1059,8 +1074,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                   msg_step(1, 2, style = "success")),
                 detail = paste(
                   "This step took approximately",
-                  round(vals$time_ctsd, 1),
-                  "minutes."))
+                  round(vals$time_ctsd, 1), "minutes."))
 
               vals$data_speed <- ctmm::speeds(vals$data1,
                                               vals$fit1,
@@ -1076,30 +1090,35 @@ mod_tab_ctsd_server <- function(id, vals) {
                   msg_step(2, 2, style = "warning")),
                 detail = "This may take a while...")
 
-              if(vals$data_type == "simulated") {
-                dat <- vals$data0
-              } else {
-                dat <- vals$data1
-              }
-
-              start_truth <- Sys.time()
-              dur0 <- vals$dur0_dev %#% vals$dur0_units_dev
-              tauv <- vals$tau_v0 %#% vals$tau_v0_units
-
-              sim_full <- ctmm::simulate(
-                dat,
-                vals$fit0,
-                t = seq(0, dur0, by = tauv/4))
-              vals$data_full <- sim_full
-
-              inputList <- ctmmweb::align_lists(
-                list(sim_full[which(sim_full$t <= (10 %#% "day")), ]),
-                list(vals$fit0))
-
-              ##############
-              vals$ctsd_truth <- vals$ctsd
+              
+              #TODO
+              # if(vals$data_type == "simulated") {
+              #   dat <- vals$data0
+              #   fit <- vals$fit0
+              # } else {
+              #   dat <- vals$data1
+              #   fit <- vals$fit1
+              # }
+              # 
+              # start_truth <- Sys.time()
+              # dur0 <- vals$dur0_dev %#% vals$dur0_units_dev
+              # tauv <- vals$tau_v0 %#% vals$tau_v0_units
+              # 
+              # sim_full <- ctmm::simulate(
+              #   dat, fit,
+              #   t = seq(0, dur0, by = tauv/4))
+              # vals$data_full <- sim_full
+              #
+              # inputList <- ctmmweb::align_lists(
+              #   list(sim_full[which(sim_full$t <= (10 %#% "day")), ]),
+              #   list(vals$fit0))
+              # 
+              # vals$ctsd_truth <- vals$ctsd
               # vals$ctsd_truth <- par_speed(inputList,
               #                              parallel = vals$parallel)
+              
+              start_truth <- Sys.time()
+              vals$ctsd_truth <- finescale_speed()
               vals$is_analyses <- TRUE
 
               if ("CI" %in% names(vals$ctsd_truth)) {
@@ -1112,13 +1131,16 @@ mod_tab_ctsd_server <- function(id, vals) {
                 extract_units()
 
               truth <- vals$ctsd_truth[2]
-              vals$ctsdErr <- (vals$ctsd[2] - truth) / truth
-              vals$ctsdErr_min <- (vals$ctsd[1] - truth) / truth
-              vals$ctsdErr_max <- (vals$ctsd[3] - truth) / truth
+              vals$sdErr <- (vals$ctsd[2] - truth) / truth
+              vals$sdErr_min <- (vals$ctsd[1] - truth) / truth
+              vals$sdErr_max <- (vals$ctsd[3] - truth) / truth
 
               vals$time_ctsd_truth <- difftime(
                 Sys.time(), start_truth, units = "mins")
 
+              shinyjs::show(id = "ctsdInfo_est")
+              shinyjs::show(id = "ctsdInfo_err")
+              
               msg_log(
                 style = "success",
                 message = paste0(
@@ -1155,7 +1177,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       } # end of !is.null(vals$data1)
 
     }) %>% # end of observe,
-      bindEvent(input$run_ctsd)
+      bindEvent(input$run_sd)
 
     ## Estimating for new tracking regime: --------------------------------
 
@@ -1164,13 +1186,13 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       # Show "conditional simulation" panels:
       for(i in 1:length(vec)) {
-        tmp_id <- paste0("ctsdTabs_", vec[i])
-        tmp_target <- paste0("ctsdPanel_", vec[i], "_new")
+        tmp_id <- paste0("sdTabs_", vec[i])
+        tmp_target <- paste0("sdPanel_", vec[i], "_new")
         showTab(inputId = tmp_id, target = ns(tmp_target))
       }
 
-      tabs <- paste0("ctsdTabs_", vec)
-      panels <- paste0("ctsdPanel_", vec)
+      tabs <- paste0("sdTabs_", vec)
+      panels <- paste0("sdPanel_", vec)
       for(v in 1:length(vec)) {
         updateTabsetPanel(
           session,
@@ -1179,24 +1201,22 @@ mod_tab_ctsd_server <- function(id, vals) {
                             panels[v], "_new")) }
 
       # Capture new sampling duration and interval:
-      vals$dti2_units <- sub('^.* ([[:alnum:]]+)$',
-                             '\\1', input$ctsd_dti0)
-
+      vals$sd$dti_unit <- sub('^.* ([[:alnum:]]+)$',
+                              '\\1', input$ctsd_dti)
+      
       fixrate <- movedesign::gps_fixrate
-      tmp <- fixrate$nu[match(input$ctsd_dti0,
-                              fixrate$nu_notes)]
+      tmp <- fixrate$nu[match(input$ctsd_dti, fixrate$nu_notes)]
+      vals$sd$dti <- round((vals$sd$dti_unit %#% tmp), 0)
+      vals$sd$dur <- input$ctsd_dur
+      vals$sd$dur_unit <- "days"
+      
+      # Check if storage limitations:
 
-      vals$dti2 <- round((vals$dti2_units %#% tmp), 0)
-      vals$dur2 <- input$ctsd_dur0
-      vals$dur2_units <- "days"
-
-      ### 1. Simulate new dataset:
-      # Fill in the gaps of original dataset + new duration:
-
+      proceed <- TRUE
       if (!is.null(vals$storage)) {
         t0 <- seq(0,
-                  vals$dur2 %#% vals$dur2_units,
-                  by = vals$dti2 %#% vals$dti2_units)
+                  vals$sd$dur %#% vals$sd$dur_unit,
+                  by = vals$sd$dti %#% vals$sd$dti_unit)
 
         if(length(t0) >= vals$storage) {
 
@@ -1222,42 +1242,66 @@ mod_tab_ctsd_server <- function(id, vals) {
             message = paste0("Reached storage limit of",
                              msg_danger(vals$storage), " locations."),
             detail = "Please set a different tracking regime.")
+          
+          proceed <- FALSE
 
         } # end of length(t0) >= vals$storage)
       } # end of !is.null(vals$storage)
 
+      ### 1. Simulate new dataset:
+      # Fill in the gaps of original dataset + new duration:
+      
+      req(proceed)
       vals$conditional <- TRUE
       removeModal()
 
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = span(
+          span("Estimating new", style = "color: #797979;"),
+          HTML(paste0(span("speed & distance", class = "cl-sea"),
+                      span("...", style = "color: #797979;")))
+        )
+      )
+      
       msg_log(
         style = "warning",
         message = paste0("Simulating ",
                          msg_warning("modified tracking regime"), "."),
         detail = "This may take a while...")
 
-      dat <- ifelse(vals$data_type == "simulated",
-                    vals$data0,
-                    vals$data1)
+      start <- Sys.time()
+      if (vals$data_type == "simulated") {
+        input_dat <- vals$data0
+      } else { input_dat <- vals$data1 }
+      
+      if ((vals$sd$dur %#% vals$sd$dur_unit) > 10 %#% "days") {
+        input_dat <- input_dat[which(input_dat$t <= (10 %#% "day")), ]
+      } else { input_dat <- input_dat }
+      
+      dur <- vals$sd$dur %#% vals$sd$dur_unit
+      tauv <- vals$tau_v0 %#% vals$tau_v0_units
+      
+      vals$data_full <- ctmm::simulate(
+        input_dat, vals$fit0, t = seq(0, dur, by = 1 %#% "minute"))
+      
+      dat <- ctmm::simulate(
+        vals$data_full, vals$fit0,
+        t = seq(0, vals$sd$dur %#% vals$sd$dur_unit,
+                by = vals$sd$dti %#% vals$sd$dti_unit),
+        seed = vals$seed0)
 
-      start <- begin <- Sys.time()
-      df2 <- ctmm::simulate(
-        dat,
-        vals$fit0,
-        t = seq(0,
-                vals$dur2 %#% vals$dur2_units,
-                by = vals$dti2 %#% vals$dti2_units))
-
-      df2 <- ctmm:::pseudonymize(df2)
-      df2$index <- 1:nrow(df2)
-      vals$data2_ctsd <- df2
+      dat <- ctmm:::pseudonymize(dat)
+      dat$index <- 1:nrow(dat)
+      vals$sd$newdata <- dat
 
       msg_log(
         style = "success",
         message = "Simulation completed.",
         detail = paste(
           "This step took approximately",
-          round(difftime(Sys.time(), start_sim,
-                         units = 'secs'), 1),
+          round(difftime(Sys.time(), start, units = 'secs'), 1),
           "seconds."))
 
       ### 2. Fit models to simulation:
@@ -1266,113 +1310,128 @@ mod_tab_ctsd_server <- function(id, vals) {
         style = "warning",
         message = "Fitting models to simulation.",
         detail = "This may take a while...")
-
+      
+      start_fit <- Sys.time()
+      
       guess1 <- reactive({
-        ctmm::ctmm.guess(vals$data2_ctsd, interactive = FALSE)
-      }) %>% bindCache(vals$dti2,
-                       vals$dur2)
+        ctmm::ctmm.guess(vals$sd$newdata, interactive = FALSE)
+      }) %>% bindCache(vals$sd$dti,
+                       vals$sd$dur)
 
       vals$guess_new <- guess1()
-      start <- Sys.time()
-      if(vals$data_type != "simulated") {
+      
+      if(vals$data_type == "simulated") {
+        mod2 <- vals$ctmm_mod
+      } else {
         mod2 <- prepare_mod(
           tau_p = vals$tau_p0, tau_p_units = vals$tau_p0_units,
           tau_v = vals$tau_v0, tau_v_units = vals$tau_v0_units,
           sigma = vals$sigma0, sigma_units = vals$sigma0_units)
-      } else {
-        mod2 <- vals$ctmm_mod
       }
-
-      fit2 <- reactive({
-        inputList <- list(list(vals$data2_ctsd, mod2))
+      
+      newfit <- reactive({
+        inputList <- list(list(vals$sd$newdata, mod2))
         fit <- par_ctmm.fit(inputList, parallel = TRUE)
         return(fit)
-      }) %>% bindCache(vals$dti2,
-                       vals$dti2_units,
-                       vals$dur2,
-                       vals$dur2_units)
+      }) %>% bindCache(vals$sd$dti,
+                       vals$sd$dti_unit,
+                       vals$sd$dur,
+                       vals$sd$dur_unit)
 
-      vals$fit2 <- fit2()
+      vals$sd$fit <- newfit()
+      
       msg_log(
         style = "success",
         message = "Model fit completed.",
         detail = paste(
           "This step took approximately",
-          round(difftime(Sys.time(), start, units = 'mins'), 1),
+          round(difftime(Sys.time(), start_fit, units = 'mins'), 1),
           "minutes."))
 
       vec <- c("regime", "speed", "size", "viz")
       for(i in 1:length(vec)) {
         updateTabsetPanel(
           session,
-          inputId = paste0("ctsdTabs_", vec[i]),
-          selected = paste0("tab_ctsd_1-ctsdPanel_",
+          inputId = paste0("sdTabs_", vec[i]),
+          selected = paste0("tab_ctsd_1-sdPanel_",
                             vec[i], "_new"))
       }
-
+      
       ### 3. Run the speed/distance estimator (CTSD):
 
-      msg_log(
-        style = "warning",
-        message = paste0(
-          "Estmating speed for ",
-          msg_warning("newly simulated trajectory.")),
-        detail = "This may take a while...")
-
-      start_ctsd_new <- Sys.time()
-      vals$ctsd_new <- ctmm::speed(
-        vals$data2_ctsd,
-        CTMM = vals$fit0,
-        fast = TRUE)
-
-      vals$ctsd_new <- ifelse("CI" %in% names(vals$ctsd_new),
-                              vals$ctsd_new$CI,
-                              vals$ctsd_new)
-
-      vals$ctsdEst_new <- vals$ctsd_new[2]
-      vals$ctsdEst_min_new <- vals$ctsd_new[1]
-      vals$ctsdEst_max_new <- vals$ctsd_new[3]
-
-      tempnames <- rownames(vals$ctsd_new)
-      vals$ctsd_units_new <-
-        tempnames[grep('speed', tempnames)] %>%
-        extract_units()
-
-      truth <- vals$ctsd_truth[2]
-      vals$ctsdErr_new <- (vals$ctsd_new[2] - truth) / truth
-      vals$ctsdErr_min_new <- (vals$ctsd_new[1] - truth) / truth
-      vals$ctsdErr_max_new <- (vals$ctsd_new[3] - truth) / truth
-
-      msg_log(
-        style = "success",
-        message = "Speed estimation completed.",
-        detail = paste(
-          "This step took approximately",
-          round(vals$time_ctsd_new, 1),
-          "minutes."))
-
-      vals$time_ctsd_new <- difftime(Sys.time(), start,
-                                     units = 'mins')
-
-      # Show buttons to change panels:
-      output$ctsdInput_show_all <- renderUI({
-        shinyWidgets::radioGroupButtons(
-          inputId = ns("ctsdInput_show"),
-          label = NULL,
-          choices = c("Show initial tracking regime" = 1,
-                      "Show modified tracking regime" = 2),
-          checkIcon = list(yes = icon("circle-check")),
-          selected = 2,
-          justified = TRUE)
-      })
+      nms <- names(summary(vals$sd$fit)$DOF)
+      N <- summary(vals$sd$fit)$DOF[grep('speed', nms)][[1]]
+      vals$N2_new <- N
+      
+      if (N < 5) {
+        
+        shinyalert::shinyalert(
+          title = "Low sample size!",
+          text = span(
+            "Effective sample size for speed estimation",
+            "is too low."
+          ),
+          html = TRUE,
+          size = "xs")
+        
+        msg_log(
+          style = "error",
+          message = "Effective sample size too low.",
+          detail = "Please select a different tracking regime.")
+        
+      } else {
+        
+        start_est <- Sys.time()
+        msg_log(
+          style = "warning",
+          message = paste0(
+            "Estimating speed for ",
+            msg_warning("newly simulated trajectory.")),
+          detail = "This may take a while...")
+        
+        vals$ctsd_new <- ctmm::speed(
+          vals$sd$newdata,
+          CTMM = vals$sd$fit,
+          fast = TRUE)
+        
+        if ("CI" %in% names(vals$ctsd_new)) {
+          vals$ctsd_new <- vals$ctsd_new$CI
+        }
+        
+        vals$sdEst_new <- vals$ctsd_new[2]
+        vals$sdEst_min_new <- vals$ctsd_new[1]
+        vals$sdEst_max_new <- vals$ctsd_new[3]
+        
+        nms <- rownames(vals$ctsd_new)
+        vals$ctsd_units_new <- extract_units(nms[grep('speed', nms)])
+        
+        truth <- vals$ctsd_truth[2]
+        vals$sdErr_new <- (vals$ctsd_new[2] - truth) / truth
+        vals$sdErr_min_new <- (vals$ctsd_new[1] - truth) / truth
+        vals$sdErr_max_new <- (vals$ctsd_new[3] - truth) / truth
+        
+        # Show buttons to change panels:
+        shinyjs::show(id = "ctsdInput_show")
+        
+        vals$sd$time_new <- difftime(Sys.time(), start, units = 'mins')
+        
+        msg_log(
+          style = "success",
+          message = "Speed estimation completed.",
+          detail = paste(
+            "This step took approximately",
+            round(vals$sd$time_new, 1), "minutes."))
+      }
+      
+      shinybusy::remove_modal_spinner()
 
     }) %>% # end of observe,
-      shiny::bindEvent(input$run_ctsd_new)
+      shiny::bindEvent(input$run_sd_new)
 
     # BLOCKS --------------------------------------------------------------
     ## Tracking regime: ---------------------------------------------------
 
-    output$ctsdInfo_dur <- shiny::renderUI({
+    output$sdInfo_dur <- shiny::renderUI({
       req(vals$dur0_dev, vals$dur0_units_dev)
 
       out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
@@ -1380,9 +1439,9 @@ mod_tab_ctsd_server <- function(id, vals) {
       parBlock(header = "Sampling duration",
                value = paste(out_dur[1], out_dur[2]))
 
-    }) # end of renderUI // ctsdInfo_dur
+    }) # end of renderUI // sdInfo_dur
 
-    output$ctsdInfo_dti <- shiny::renderUI({
+    output$sdInfo_dti <- shiny::renderUI({
       req(vals$dti0_dev, vals$dti0_units_dev)
 
       out_dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
@@ -1391,17 +1450,17 @@ mod_tab_ctsd_server <- function(id, vals) {
                value = paste(out_dti[1], out_dti[2]),
                subtitle = "between fixes")
 
-    }) # end of renderUI // ctsdInfo_dti
+    }) # end of renderUI // sdInfo_dti
 
     observe({
-      req(vals$dti2, vals$dur2)
+      req(vals$sd$dti, vals$sd$dur)
 
       output$ctsdText_sims <- renderUI({
 
-        dti2 <- vals$dti2
-        dti2_txt <- vals$dti2_units
-        dur2 <- vals$dur2
-        dur2_mth <- "months" %#% vals$dur2 %#% vals$dur2_units
+        dti2 <- vals$sd$dti
+        dti2_txt <- vals$sd$dti_unit
+        dur2 <- vals$sd$dur
+        dur2_mth <- "months" %#% vals$sd$dur %#% vals$sd$dur_unit
 
         if(dur2 == 1) {
           dur2_txt <- HTML(paste0(
@@ -1429,39 +1488,39 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       }) # end of renderUI // ctsdText_sims
 
-      output$ctsdInfo_dur_new <- shiny::renderUI({
-        req(vals$dur2, vals$dur2_units)
+      output$sdInfo_dur_new <- shiny::renderUI({
+        req(vals$sd$dur, vals$sd$dur_unit)
 
-        dur <- vals$dur2
-        tempunits <- vals$dur2_units
+        dur <- vals$sd$dur
+        tempunits <- vals$sd$dur_unit
         out_dur <- fix_unit(dur, tempunits)
 
         parBlock(header = "Sampling duration",
                  value = span(paste(out_dur[1], out_dur[2]),
-                              class = "cl-dgr"))
+                              class = "cl-mdn"))
 
-      }) # ender of renderUI // ctsdInfo_dur_new
+      }) # ender of renderUI // sdInfo_dur_new
 
-      output$ctsdInfo_dti_new <- shiny::renderUI({
-        req(vals$dti2, vals$dti2_units)
+      output$sdInfo_dti_new <- shiny::renderUI({
+        req(vals$sd$dti, vals$sd$dti_unit)
 
-        dti <- vals$dti2
-        tempunits <- vals$dti2_units
+        dti <- vals$sd$dti
+        tempunits <- vals$sd$dti_unit
 
         out_dti <- fix_unit(dti, tempunits)
 
         parBlock(header = "Sampling interval",
                  value = span(paste(out_dti[1], out_dti[2]),
-                              class = "cl-dgr"),
+                              class = "cl-mdn"),
                  subtitle = span("between fixes",
-                                 class = "cl-dgr"))
+                                 class = "cl-mdn"))
 
-      }) # ender of renderUI // ctsdInfo_dti_new
+      }) # ender of renderUI // sdInfo_dti_new
     }) # end of observe
 
     ## Sample sizes: ----------------------------------------------------
 
-    output$ctsdBlock_n <- shiny::renderUI({
+    output$sdBlock_n <- shiny::renderUI({
       req(vals$data1)
 
       sampleBlock(
@@ -1472,18 +1531,19 @@ mod_tab_ctsd_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = TRUE)
 
-    }) # end of renderUI // ctsdBlock_n (absolute sample size)
+    }) # end of renderUI // sdBlock_n (absolute sample size)
 
-    output$ctsdBlock_Nspeed <- shiny::renderUI({
+    output$sdBlock_N2 <- shiny::renderUI({
       req(vals$fit1)
 
       n <- nrow(vals$data1)
-      N <- vals$Nspeed
-      perc <- paste0(
+      N <- vals$N2
+      
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
 
       sampleBlock(
-        number = perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",
@@ -1491,33 +1551,32 @@ mod_tab_ctsd_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = FALSE)
 
-    }) # end of renderUI // ctsdBlock_Nspeed (effective)
+    }) # end of renderUI // sdBlock_N2 (effective)
 
-    output$ctsdBlock_n_new <- shiny::renderUI({
-      req(vals$data2_ctsd)
+    output$sdBlock_n_new <- shiny::renderUI({
+      req(vals$sd$newdata)
 
       sampleBlock(
         numberIcon = FALSE,
-        header = nrow(vals$data2_ctsd),
+        header = nrow(vals$sd$newdata),
         line1 = "Absolute sample size",
         line2 = "(n)",
         rightBorder = FALSE,
         marginBottom = FALSE)
 
-    }) # end of renderUI // ctsdBlock_n_new (absolute sample size)
+    }) # end of renderUI // sdBlock_n_new (absolute)
 
-    output$ctsdBlock_Nspeed_new <- shiny::renderUI({
-      req(vals$data2_ctsd, vals$fit2)
+    output$sdBlock_N2_new <- shiny::renderUI({
+      req(vals$sd$newdata, vals$N2_new)
 
-      tempnames <- names(summary(vals$fit2)$DOF)
-      N <- summary(vals$fit2)$DOF[grep('speed', tempnames)][[1]]
-      n <- nrow(vals$data2_ctsd)
-
-      diff_perc <- paste0(
+      n <- nrow(vals$sd$newdata)
+      N <- vals$N2_new
+      
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
 
       sampleBlock(
-        number = diff_perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",
@@ -1525,12 +1584,12 @@ mod_tab_ctsd_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = FALSE)
 
-    }) # end of renderUI // ctsdBlock_Nspeed_new (effective)
+    }) # end of renderUI // sdBlock_N2_new (effective)
 
     ## Outputs: ---------------------------------------------------------
-    ### Estimates: ------------------------------------------------------
+    ### Speed & distance estimates: -------------------------------------
 
-    output$ctsdInfo_speed <- shiny::renderUI({
+    output$ctsdInfo_est <- shiny::renderUI({
       req(vals$ctsd, vals$ctsd_units)
 
       speed_units <- vals$ctsd_units
@@ -1543,29 +1602,31 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "gauge-high",
-        header = "Movement speed",
+        header = span("Movement speed from", br(),
+                      "initial regime:"),
         value = paste(round(est, 1), speed_units),
         subtitle = paste(
           ifelse(est_min == 0,
                  "0", round(est_min, 3)),
           "—", round(est_max, 3)))
 
-    }) # end of renderUI // ctsdInfo_speed
+    }) # end of renderUI // ctsdInfo_est
 
     output$ctsdInfo_err <- shiny::renderUI({
-      req(vals$ctsd, vals$ctsdErr)
+      req(vals$ctsd, vals$sdErr)
 
       errorBlock(
         icon = "radiation",
-        text = "Expected error",
-        value = vals$ctsdErr,
-        min = vals$ctsdErr_min,
-        max = vals$ctsdErr_max,
+        text = span("Expected error from", br(),
+                    "initial regime:"),
+        value = vals$sdErr,
+        min = vals$sdErr_min,
+        max = vals$sdErr_max,
         rightBorder = FALSE)
 
     }) # end of renderUI // ctsdInfo_err
 
-    output$ctsdInfo_speed_new <- shiny::renderUI({
+    output$ctsdInfo_est_new <- shiny::renderUI({
       req(vals$ctsd_new)
 
       speed_units <- vals$ctsd_units_new
@@ -1578,31 +1639,33 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "gauge-high",
-        header = "Movement speed",
-        value = paste(round(est, 1), speed_units),
-        subtitle = paste(
+        header = span("Movement speed from", br(),
+                    "modified regime:"),
+        value = span(round(est, 1), speed_units, class = "cl-mdn"),
+        subtitle = span(
           ifelse(est_min == 0,
                  "0", round(est_min, 3)),
-          "—", round(est_max, 3)))
+          "—", round(est_max, 3), class = "cl-mdn"))
 
-    }) # end of renderUI // ctsdInfo_speed
+    }) # end of renderUI // ctsdInfo_est
 
     output$ctsdInfo_err_new <- shiny::renderUI({
       req(vals$ctsd_new)
 
       errorBlock(
         icon = "radiation",
-        text = "Expected error",
-        value = vals$ctsdErr_new,
-        min = vals$ctsdErr_min_new,
-        max = vals$ctsdErr_max_new,
+        text = span("Expected error from", br(),
+                    "modified regime:"),
+        value = vals$sdErr_new,
+        min = vals$sdErr_min_new,
+        max = vals$sdErr_max_new,
         rightBorder = FALSE)
 
     }) # end of renderUI // ctsdInfo_err_new
 
     ### Movement metrics: -----------------------------------------------
 
-    output$distInfo_total <- shiny::renderUI({
+    output$distInfo_est <- shiny::renderUI({
       req(vals$data1, vals$dist_est)
 
       est <- ifelse(
@@ -1622,18 +1685,20 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "map-location-dot",
-        header = "Total distance traveled",
+        header = span("Total distance traveled from", br(),
+                       "initial regime:"),
         value = est,
         subtitle = paste(lci, "—", uci))
 
-    }) # end of renderUI // distInfo_total
+    }) # end of renderUI // distInfo_est
 
     output$distInfo_err <- shiny::renderUI({
       req(vals$distErr)
 
       errorBlock(
         icon = "radiation",
-        text = "Expected error",
+        text = span("Expected error from", br(),
+                    "initial regime:"),
         value = vals$distErr,
         min = vals$distErr_min,
         max = vals$distErr_max,
@@ -1641,8 +1706,8 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     }) # end of renderUI // distInfo_err
 
-    output$distInfo_total_new <- shiny::renderUI({
-      req(vals$data2_ctsd, vals$dist_est_new)
+    output$distInfo_est_new <- shiny::renderUI({
+      req(vals$sd$newdata, vals$dist_est_new)
 
       est <- ifelse(
         vals$dist_est_new <= 1,
@@ -1661,18 +1726,20 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       parBlock(
         icon = "map-location-dot",
-        header = "Total distance traveled",
-        value = est,
-        subtitle = paste(lci, "—", uci))
+        header = span("Total distance traveled from", br(),
+                       "modified regime:"),
+        value = span(est, class = "cl-mdn"),
+        subtitle = span(lci, "—", uci, class = "cl-mdn"))
 
-    }) # end of renderUI // distInfo_total_new
+    }) # end of renderUI // distInfo_est_new
 
     output$distInfo_err_new <- shiny::renderUI({
       req(vals$distErr_new)
 
       errorBlock(
         icon = "radiation",
-        text = "Expected error",
+        text = span("Expected error from", br(),
+                    "modified regime:"),
         value = vals$distErr_new,
         min = vals$distErr_min_new,
         max = vals$distErr_max_new,
@@ -1687,41 +1754,41 @@ mod_tab_ctsd_server <- function(id, vals) {
       req(vals$data_speed, vals$ctsd)
 
       tmpunits <- input$ctsdVar_group_units
-      df0 <- vals$data_speed
+      dat <- vals$data_speed
 
       t_origin <- "1111-11-10 23:06:32"
-      df0$timestamp <- as.POSIXct(df0$t, origin = t_origin)
+      dat$timestamp <- as.POSIXct(dat$t, origin = t_origin)
 
       if(tmpunits == "minutes") {
-        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
+        dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "mins")
-        df0 <- df0 %>%
+        dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
       } else if(tmpunits == "hours") {
-        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
+        dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "hours")
-        df0 <- df0 %>%
+        dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
       } else if(tmpunits == "days") {
-        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
+        dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "days")
-        df0 <- df0 %>%
+        dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
       } else if(tmpunits == "weeks") {
-        df0 <- df0 %>% dplyr::mutate(
+        dat <- dat %>% dplyr::mutate(
           t_new = format(timestamp, "%U"))
       } else if(tmpunits == "months") {
-        df0$t_new <- round.POSIXt(as.POSIXct(df0$timestamp),
+        dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "months")
-        df0 <- df0 %>%
+        dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
       }
 
-      df0 <- df0 %>%
+      dat <- dat %>%
         dplyr::group_by(t_new) %>%
         dplyr::summarise(est = mean(est),
                          low = mean(low),
@@ -1734,9 +1801,9 @@ mod_tab_ctsd_server <- function(id, vals) {
       }
 
       label_x <- paste0("Time lag (in ", tmpunits, ")")
-      output$ctsdPlot_main <- ggiraph::renderGirafe({
+      output$sdPlot_main <- ggiraph::renderGirafe({
 
-        p <- df0 %>%
+        p <- dat %>%
 
           ggplot2::ggplot(
             ggplot2::aes(x = t_new, y = est, group = 1)) +
@@ -1760,38 +1827,25 @@ mod_tab_ctsd_server <- function(id, vals) {
 
         ggiraph::girafe(ggobj = p)
 
-      }) # end of renderGirafe // ctsdPlot_main
+      }) # end of renderGirafe // sdPlot_main
 
     }) %>% # end of observe,
       bindEvent(input$ctsdVar_group_units)
 
-
     ## Rendering trajectory: --------------------------------------------
 
-    output$ctsdPlot_path <- ggiraph::renderGirafe({
+    output$sdPlot_path <- ggiraph::renderGirafe({
       req(vals$data1, vals$data_full)
 
       newdat <- vals$data1
       alldat <- vals$data_full
-
-      xmin <- min(
-        min(newdat$x) - diff(range(newdat$x)) * .1,
-        min(alldat$x) - diff(range(alldat$x)) * .1)
-
-      xmax <- max(
-        max(newdat$x) + diff(range(newdat$x)) * .1,
-        max(alldat$x) + diff(range(alldat$x)) * .1)
-
-      ymin <- min(
-        min(newdat$y) - diff(range(newdat$y)) * .1,
-        min(alldat$y) - diff(range(alldat$y)) * .1)
-
-      ymax <- max(
-        max(newdat$y) + diff(range(newdat$y)) * .1,
-        max(alldat$y) + diff(range(alldat$y)) * .1)
-
       datasets <- input$ctsdShow_datasets
 
+      lims <- calc_limit(newdat, alldat)
+      if (!is.null(vals$sd$newdata)) {
+        lims <- calc_limit(newdat, alldat, vals$sd$newdata)
+      }
+      
       if("full" %in% datasets) {
         p1 <- ggplot2::geom_path(
           alldat, mapping = ggplot2::aes(
@@ -1812,13 +1866,14 @@ mod_tab_ctsd_server <- function(id, vals) {
       }
 
       if("new" %in% datasets) {
+        req(vals$sd$newdata)
 
         p3 <- ggiraph::geom_path_interactive(
-          vals$data2_ctsd, mapping = ggplot2::aes(
+          vals$sd$newdata, mapping = ggplot2::aes(
             x = x, y = y),
           size = 0.8, col = pal$dgr)
         p3_points <- ggiraph::geom_point_interactive(
-          vals$data2_ctsd, mapping = ggplot2::aes(
+          vals$sd$newdata, mapping = ggplot2::aes(
             x = x, y = y,
             tooltip = timestamp),
           size = 2.5, col = pal$dgr)
@@ -1827,6 +1882,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       p <- ggplot2::ggplot() +
 
         { if("full" %in% datasets) p1 } +
+        
         { if("subset" %in% datasets) p2 } +
         { if("subset" %in% datasets) p2_points } +
 
@@ -1839,10 +1895,10 @@ mod_tab_ctsd_server <- function(id, vals) {
 
         ggplot2::scale_x_continuous(
           labels = scales::comma,
-          limits = c(xmin, xmax)) +
+          limits = c(lims[["xmin"]], lims[["xmax"]])) +
         ggplot2::scale_y_continuous(
           labels = scales::comma,
-          limits = c(ymin, ymax)) +
+          limits = c(lims[["ymin"]], lims[["ymax"]])) +
         viridis::scale_color_viridis(
           name = "Tracking time:",
           option = "D", trans = "time",
@@ -1876,7 +1932,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                         "cursor:pointer;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
 
-    }) # end of renderGirafe // ctsdPlot_path
+    }) # end of renderGirafe // sdPlot_path
 
     # TABLES --------------------------------------------------------------
     ## Initial tracking regime: -------------------------------------------
@@ -1886,35 +1942,33 @@ mod_tab_ctsd_server <- function(id, vals) {
       out <- data.frame(
         data = "Initial",
         tauv = NA,
+        dur = NA,
         dti = NA,
         n = nrow(vals$data1),
-        N2 = vals$Nspeed,
+        N2 = vals$N2,
         ctsd = NA,
-        ctsd_err = vals$ctsdErr,
-        ctsd_err_min = vals$ctsdErr_min,
-        ctsd_err_max = vals$ctsdErr_max,
+        ctsd_err = vals$sdErr,
+        ctsd_err_min = vals$sdErr_min,
+        ctsd_err_max = vals$sdErr_max,
         dist = NA,
         dist_err = vals$distErr)
 
       out$tauv <- paste(scales::label_comma(
         accuracy = .1)(vals$tau_v0),
         abbrv_unit(vals$tau_v0_units))
-
+      
+      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
+      
       out_dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
 
       out_ctsd <- fix_unit(vals$ctsd[2], vals$ctsd_units)
       out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
 
-      print("CHECKPOINT3")
-
-      print(vals$dist_est)
-      print(class(vals$dist_est))
-
       out_dist <- fix_unit(vals$dist_est, "km", convert = TRUE)
       out$dist <- paste(out_dist$value, out_dist$unit)
 
-      print(out)
       return(out)
 
     }) %>%
@@ -1922,42 +1976,42 @@ mod_tab_ctsd_server <- function(id, vals) {
                 vals$dti0_dev, vals$dti0_units_dev)
 
     observe({
-      req(vals$data1, vals$Nspeed, vals$ctsd, vals$ctsdErr)
+      req(vals$data1, vals$N2, vals$ctsd, vals$sdErr)
 
-      shinyjs::show(id = "ctsdBox_summary")
+      shinyjs::show(id = "sdBox_summary")
 
       vals$dt_sd <<- rbind(vals$dt_sd, sdRow())
       vals$dt_sd <- dplyr::distinct(vals$dt_sd)
       vals$report_sd_yn <- TRUE
 
     }) %>% # end of observe
-      bindEvent(input$show_ctsdTable)
+      bindEvent(input$show_sdTable)
 
     ## Modified tracking regime: ------------------------------------------
 
     sdRow_new <- reactive({
 
-      nms <- names(summary(vals$fit2)$DOF)
-      vals$Nspeed_new <- summary(vals$fit2)$DOF[grep('speed',
-                                                     fitnames)][[1]]
-
       out <- data.frame(
         data = "Modified",
         tauv = NA,
+        dur = NA,
         dti = NA,
-        n = nrow(vals$data2_ctsd),
-        N2 = vals$Nspeed_new,
+        n = nrow(vals$sd$newdata),
+        N2 = vals$N2_new,
         ctsd = NA,
-        ctsd_err = vals$ctsdErr_new,
-        ctsd_err_min = vals$ctsdErr_min_new,
-        ctsd_err_max = vals$ctsdErr_max_new,
+        ctsd_err = vals$sdErr_new,
+        ctsd_err_min = vals$sdErr_min_new,
+        ctsd_err_max = vals$sdErr_max_new,
         dist = NA,
         dist_err = vals$distErr_new)
-
+      
       out$tauv <- paste(scales::label_comma(
         accuracy = .1)(vals$tau_v0),
         abbrv_unit(vals$tau_v0_units))
 
+      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
+      
       out_dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
 
@@ -1965,44 +2019,45 @@ mod_tab_ctsd_server <- function(id, vals) {
       out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
 
       out_dist <- fix_unit(vals$dist_est_new, "km", convert = TRUE)
-      out$dist <- paste(out_dist$value, abbrv_unit(out_dist$unit))
-
+      out$dist <- paste(out_dist$value, out_dist$unit)
+      
       return(out)
 
     }) %>%
-      bindCache(vals$dur0_dev, vals$dur0_units_dev,
-                vals$dti0_dev, vals$dti0_units_dev)
+      bindCache(vals$sd$dur, vals$sd$dur_unit,
+                vals$sd$dti, vals$sd$dti_unit)
 
     observe({
-      req(vals$Nspeed_new, vals$ctsdEst_new)
-
-      vals$dt_sd <<- rbind(vals$dt_sd, sdRow())
+      req(vals$sd$fit, vals$sdEst_new, vals$distErr_new)
+      
+      vals$dt_sd <<- rbind(vals$dt_sd, sdRow_new())
       vals$dt_sd <- dplyr::distinct(vals$dt_sd)
       vals$report_sd_yn <- TRUE
 
-    }) %>%  # end of observe, then:
-      bindEvent(input$run_ctsd_new)
+    }) %>% # end of observe
+      bindEvent(input$show_sdTable)
 
     ## Rendering output table: --------------------------------------------
 
-    output$ctsdTable <- reactable::renderReactable({
+    output$sdTable <- reactable::renderReactable({
       req(vals$dt_sd)
 
       columnNames <- list(
         data = "Data:",
         tauv = "\u03C4\u1D65",
+        dur = "Duration",
         dti = "Interval",
         n = "n",
         N2 = "N (speed)",
-        ctsd = "CTSD",
+        ctsd = "Speed",
         ctsd_err = "Error",
         ctsd_err_min = "Error (min)",
         ctsd_err_max = "Error (max)",
         dist = "Distance",
         dist_err = "Error")
-
+      
       reactable::reactable(
-        data = vals$dt_hr,
+        data = vals$dt_sd,
         compact = TRUE,
         highlight = TRUE,
         striped = TRUE,
@@ -2025,7 +2080,10 @@ mod_tab_ctsd_server <- function(id, vals) {
           tauv = reactable::colDef(
             minWidth = 80, name = columnNames[["tauv"]],
             style = list(fontWeight = "bold")),
-          sti = reactable::colDef(
+          dur = reactable::colDef(
+            minWidth = 80, name = columnNames[["dur"]],
+            style = list(fontWeight = "bold")),
+          dti = reactable::colDef(
             minWidth = 80, name = columnNames[["dti"]],
             style = list(fontWeight = "bold")),
           n = reactable::colDef(
@@ -2061,15 +2119,15 @@ mod_tab_ctsd_server <- function(id, vals) {
             minWidth = 80, name = columnNames[["dist_err"]],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)),
+                                          digits = 1))
         ))
 
-    }) # end of renderReactable // ctsdTable
+    }) # end of renderReactable // sdTable
 
     observe({
       vals$dt_sd <- NULL
     }) %>% # end of observe,
-      bindEvent(input$ctsdTable_clear)
+      bindEvent(input$sdTable_clear)
 
     # Additional information: -------------------------------------------
 
@@ -2081,10 +2139,10 @@ mod_tab_ctsd_server <- function(id, vals) {
     })
 
     output$time_ctsd_new <- renderText({
-      req(vals$time_ctsd_new)
+      req(vals$sd$time)
 
       paste("Newly set tracking regime took approximately",
-            round(vals$time_ctsd_new, 1), "minutes.")
+            round(vals$sd$time, 1), "minutes.")
     })
 
 
@@ -2097,16 +2155,16 @@ mod_tab_ctsd_server <- function(id, vals) {
     #   req(is.null(vals$dt_sd))
     #   vals$report_sd_yn <- FALSE
     #
-    #   if (!is.null(vals$ctsdErr_new)) {
-    #     req(vals$ctsdErr_new)
+    #   if (!is.null(vals$sdErr_new)) {
+    #     req(vals$sdErr_new)
     #     vals$report_sd_yn <- TRUE
     #     vals$dt_sd <- sdRow_new()
     #   } else {
-    #     req(vals$ctsdErr)
+    #     req(vals$sdErr)
     #     vals$report_sd_yn <- TRUE
     #     vals$dt_sd <- sdRow()
     #   }
-    # }) %>% bindEvent(list(input$run_ctsd, input$run_ctsd_new))
+    # }) %>% bindEvent(list(input$run_sd, input$run_sd_new))
 
   }) # end of moduleServer
 }

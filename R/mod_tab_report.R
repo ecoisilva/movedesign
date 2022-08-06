@@ -581,21 +581,8 @@ mod_tab_report_server <- function(id, vals) {
                  rightBorder = FALSE)
 
     }) # end of renderUI // repInfo_ctsdErr
-
-
-
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-
-
-
-    observe({
-      shinyjs::toggle("report_plot", condition = input$map_locs)
-    }) %>%
-      bindEvent(input$map_locs)
-
-
+    
+    
     # VALIDATION ----------------------------------------------------------
 
     observe({
