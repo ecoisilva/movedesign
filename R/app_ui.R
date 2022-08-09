@@ -160,7 +160,7 @@ app_ui <- function(request) {
         left = tags$div(
           HTML(paste0('<i class="fa fa-code-branch"',
                       'style = "color:#222d32;"> </i>',
-                      HTML('&nbsp;'), golem::get_golem_version()))),
+                      HTML('&nbsp;'), packageVersion("movedesign")))),
         right = tags$div(
           HTML(paste('<i class="fa fa-copyright"',
                      'style = "color:#222d32;"> </i>',
