@@ -1322,7 +1322,6 @@ mod_tab_sims_server <- function(id, vals) {
     #   vals$seed0 <- vals$restored_vals$"seed0"
     # }) %>% bindEvent(vals$restored_vals, once = TRUE)
 
-
     ## Additional information: --------------------------------------------
 
     # Save information for report if table is not requested:
@@ -1340,14 +1339,6 @@ mod_tab_sims_server <- function(id, vals) {
       paste0("The simulation took approximately ",
              round(vals$time_sims, 1), " minutes.")
     })
-
-    # Detected browser size:
-
-    # observe({
-    #   # print("Dimensions")
-    #   # print(shinybrowser::get_all_info()$dimensions)
-    #   print(shinybrowser::get_width())
-    # })
 
   }) # end of moduleServer
 }

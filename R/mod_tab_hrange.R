@@ -530,13 +530,13 @@ mod_tab_hrange_server <- function(id, vals) {
     # Adjust sampling parameters necessary for simulation:
 
     observe({
-      req(vals$dur0_dev, vals$dti0_dev)
+      req(vals$reg$dur, vals$reg$dti)
 
       if(!is.null(vals$akde)) {
 
         # Sampling duration:
 
-        dur <- round("days" %#% vals$dur0_dev %#% vals$dur0_units_dev, 0)
+        dur <- round("days" %#% vals$reg$dur %#% vals$reg$dur_unit, 0)
         tau_p0 <- round("days" %#% vals$tau_p0 %#% vals$tau_p0_units, 0)
         dur_choices <- c(
           10, dur, tau_p0, tau_p0 * 10,
@@ -551,7 +551,7 @@ mod_tab_hrange_server <- function(id, vals) {
 
         fixrate <- movedesign::gps_fixrate
         df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(freq))
-        value <- vals$dti0_dev %#% vals$dti0_units_dev
+        value <- vals$reg$dti %#% vals$reg$dti_unit
         index <- which.min(abs(df_fixrate$nu - value))
         dti_choices <- df_fixrate$nu_notes
 
@@ -1049,6 +1049,8 @@ mod_tab_hrange_server <- function(id, vals) {
 
       output$hrInfo_dti <- shiny::renderUI({
 
+        print("output$hrInfo_dti")
+        print(vals$dti0_units)
         dti <- as.numeric(sumdat[grep('sampling interval', nms)])
         out <- fix_unit(dti, vals$dti0_units)
 
@@ -1095,8 +1097,8 @@ mod_tab_hrange_server <- function(id, vals) {
 
       output$hrInfo_dur_new <- shiny::renderUI({
 
-        dur <- vals$dur0_units %#% vals$hr$dur %#% vals$hr$dur_unit
-        dur_unit <- vals$dur0_units
+        dur <- vals$reg$dur_unit %#% vals$hr$dur %#% vals$hr$dur_unit
+        dur_unit <- vals$reg$dur_unit
 
         out <- fix_unit(dur, dur_unit)
 
@@ -1344,7 +1346,7 @@ mod_tab_hrange_server <- function(id, vals) {
         accuracy = .1)(vals$tau_p0),
         abbrv_unit(vals$tau_p0_units))
 
-      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
 
       area <- scales::label_comma(accuracy = .1)(vals$hrEst)
@@ -1353,8 +1355,8 @@ mod_tab_hrange_server <- function(id, vals) {
       return(out)
 
     }) %>%
-      bindCache(vals$dur0_dev, vals$dur0_units_dev,
-                vals$dti0_dev, vals$dti0_units_dev)
+      bindCache(vals$reg$dur, vals$reg$dur_unit,
+                vals$reg$dti, vals$reg$dti_unit)
 
     observe({
       req(vals$data1, vals$N1, vals$hrErr)

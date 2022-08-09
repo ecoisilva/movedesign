@@ -50,8 +50,6 @@ mod_tab_report_ui <- function(id) {
                         ### Research question(s) --------------------------
 
                         uiOutput(outputId = ns("report_question")),
-                        # p(style = "padding-top: 0px"),
-
                         uiOutput(outputId = ns("report_device")),
                         p(style = "padding-top: 0px"),
 
@@ -64,21 +62,7 @@ mod_tab_report_ui <- function(id) {
                           decimalPlaces = 0,
                           minimumValue = 0,
                           maximumValue = 100,
-                          value = 95),
-
-                        # shinyWidgets::radioGroupButtons(
-                        #   inputId = ns("reportInput_scenarios"),
-                        #   label = "Operating life:",
-                        #   choices = c("Best case" = "best",
-                        #               "Average case" = "average",
-                        #               "Worst case" = "worst"),
-                        #   justified = TRUE,
-                        #   direction = "vertical",
-                        #   checkIcon = list(
-                        #     yes = icon("ok", lib = "glyphicon"))),
-                        #
-                        # helpText("These are the three case scenarios for",
-                        #   "your tracking device operating life.")
+                          value = 95)
 
                       ) # end of panel
                     )) # end of tabBox // repTabs_details
@@ -90,7 +74,7 @@ mod_tab_report_ui <- function(id) {
                 headerBorder = FALSE,
 
                 uiOutput(ns("repInfo_hrErr")),
-                uiOutput(ns("repInfo_ctsdErr")),
+                uiOutput(ns("repInfo_sdErr")),
                 br()
 
               )) # end of box
@@ -121,7 +105,7 @@ mod_tab_report_ui <- function(id) {
                              uiOutput(ns("repBlock_tauv"))
                            ), uiOutput(ns("repBlock_sigma"))
 
-                  ), # end of panel (1 out of 3)
+                  ), # end of panel (1 out of 2)
 
                   tabPanel(title = "Tracking regime:",
                            value = ns("repPanel_regime"),
@@ -131,18 +115,8 @@ mod_tab_report_ui <- function(id) {
                              uiOutput(ns("repBlock_dur")),
                              uiOutput(ns("repBlock_dti")))
 
-                  ), # end of panel (2 out of 3)
-
-                  NULL
-
-                  # tabPanel(title = "Sample sizes:",
-                  #          value = ns("repPanel_sizes"),
-                  #          icon = icon("calculator"),
-                  #
-                  #          uiOutput(ns("repUI_sizes"))
-                  #
-                  # )  # end of panel (3 out of 3)
-
+                  ) # end of panel (2 out of 2)
+                  
                 ) # end of tabBox
               )), # end of box // regBox_pars
 
@@ -151,20 +125,18 @@ mod_tab_report_ui <- function(id) {
                 id = ns("regBox_pars_sizes"),
                 width = NULL,
                 headerBorder = FALSE,
-
+                
                 shinydashboard::tabBox(
                   id = ns("repTabs_pars_size"),
                   width = NULL,
-
+                  
                   tabPanel(title = "Sample sizes:",
                            value = ns("repPanel_sizes"),
                            icon = icon("calculator"),
-
-                           uiOutput(ns("repUI_sizes"))
-
-                  )  # end of panel (3 out of 3)
-
+                           
+                           uiOutput(ns("repUI_sizes")))
                 ) # end of tabBox
+                
               ) # end of box // regBox_pars_sizes
           ) # end of div
       ), # end of UI column (right)
@@ -196,7 +168,6 @@ mod_tab_report_ui <- function(id) {
 
                 column(width = 12, align = "center",
                        style = paste("z-index: 999;"),
-                #                      "margin-bottom: -58px;"),
                        uiOutput(ns("highlighting_reg"))),
 
                 uiOutput(outputId = ns("reportPlots_error")),
@@ -256,21 +227,13 @@ mod_tab_report_server <- function(id, vals) {
 
     # DYNAMIC UI ELEMENTS -------------------------------------------------
 
-    # shinyjs::hide(id = "report_comparison")
-
-    observe({
-      boxnames <- c("analyses", "tables")
-
-      if (is.null(vals$which_question)) {
-        for(i in 1:length(boxnames)) {
-          shinyjs::hide(id = paste0("repBox_", boxnames[i])) }
-      } else {
-        req(input$create_report)
-        for(i in 1:length(boxnames)) {
-          shinyjs::show(id = paste0("repBox_", boxnames[i])) }
-      }
-
-    }) # end of observe
+    shinyjs::hide(id = "report_comparison")
+    
+    boxnames <- c("analyses", "tables")
+    
+    for(i in 1:length(boxnames)) {
+        shinyjs::hide(id = paste0("repBox_", boxnames[i])) 
+    }
 
     ## Rendering research questions: --------------------------------------
 
@@ -444,9 +407,9 @@ mod_tab_report_server <- function(id, vals) {
     ## Tracking regime: ---------------------------------------------------
 
     output$repBlock_dur <- renderUI({
-      req(vals$dur0_dev)
+      req(vals$reg$dur)
 
-      out <- fix_unit(vals$dur0_dev, vals$dur0_units_dev,
+      out <- fix_unit(vals$reg$dur, vals$reg$dur_unit,
                       convert = TRUE)
       parBlock(
         header = "Sampling duration",
@@ -455,9 +418,9 @@ mod_tab_report_server <- function(id, vals) {
     }) # end of renderUI // repBlock_dur
 
     output$repBlock_dti <- renderUI({
-      req(vals$dti0_dev, vals$dti0_units_dev)
+      req(vals$reg$dti, vals$reg$dti_unit)
 
-      out <- fix_unit(vals$dti0_dev, vals$dti0_units_dev,
+      out <- fix_unit(vals$reg$dti, vals$reg$dti_unit,
                       convert = TRUE)
 
       parBlock(
@@ -570,17 +533,19 @@ mod_tab_report_server <- function(id, vals) {
 
     }) # end of renderUI // repInfo_hrErr
 
-    output$repInfo_ctsdErr <- shiny::renderUI({
-      req(vals$ctsdErr, "Speed & distance" %in% vals$which_question)
+    output$repInfo_sdErr <- shiny::renderUI({
+      req(vals$sdErr, "Speed & distance" %in% vals$which_question)
 
+      print(vals$sdErr)
+      
       errorBlock(icon = "radiation",
                  text = "Speed error",
-                 value = vals$ctsdErr,
-                 min = vals$ctsdErr_min,
-                 max = vals$ctsdErr_max,
+                 value = vals$sdErr[[2]],
+                 min = vals$sdErr[[1]],
+                 max = vals$sdErr[[3]],
                  rightBorder = FALSE)
 
-    }) # end of renderUI // repInfo_ctsdErr
+    }) # end of renderUI // repInfo_sdErr
     
     
     # VALIDATION ----------------------------------------------------------
@@ -616,10 +581,10 @@ mod_tab_report_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'report')
       req(vals$tau_p0, vals$tau_p0_units,
-          vals$dur0_dev, vals$dur0_units_dev)
+          vals$reg$dur, vals$reg$dur_unit)
 
       input_taup <- "days" %#% vals$tau_p0 %#% vals$tau_p0_units
-      input_dur <- "days" %#% vals$dur0_dev %#% vals$dur0_units_dev
+      input_dur <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
 
       dat <- sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
@@ -643,11 +608,11 @@ mod_tab_report_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'report')
       req(vals$tau_v0, vals$tau_v0_units,
-          vals$dti0_dev, vals$dti0_units_dev)
+          vals$reg$dti, vals$reg$dti_unit)
 
       input_tauv <- vals$tau_v0 %#% vals$tau_v0_units
-      input_dur <- "days" %#% vals$dur0_dev %#% vals$dur0_units_dev
-      input_dti <- vals$dti0_dev %#% vals$dti0_units_dev
+      input_dur <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
+      input_dti <- vals$reg$dti %#% vals$reg$dti_unit
 
       dat <- sims_speed[[1]] %>%
         dplyr::mutate(dur = round("days" %#% dur, 0))
@@ -674,7 +639,7 @@ mod_tab_report_server <- function(id, vals) {
 
     observe({ # For new/modified regimes:
       req(input$highlight_dur > 0)
-      # shinyjs::show(id = "report_comparison")
+      shinyjs::show(id = "report_comparison")
 
       input_taup <- "days" %#% vals$tau_p0 %#% vals$tau_p0_units
 
@@ -696,6 +661,34 @@ mod_tab_report_server <- function(id, vals) {
 
     }) %>% # end of observe,
       bindEvent(input$highlight_dur)
+    
+    observe({ # For new/modified regimes:
+      req(input$highlight_dti > 0)
+      shinyjs::show(id = "report_comparison")
+     
+      input_tauv <- vals$tau_v0 %#% vals$tau_v0_units
+      
+      dat <- sims_speed[[1]]
+      index_tauv <- which.min(abs(dat$tau_v - input_tauv))
+      
+      out_tauv <- dat$tau_v[index_tauv]
+      opts <- sims_speed[[1]] %>%
+        dplyr::select(dti, dti_notes) %>%
+        unique()
+      out_dti <- fix_unit(opts$dti[match(input$highlight_dti,
+                                         opts$dti_notes)],
+                          "seconds")
+      
+      newdat <- dat %>%
+        dplyr::filter(tau_v == out_tauv) %>%
+        dplyr::filter(dti == out_dti$value)
+      
+      CI <- ifelse(is.null(input$ci), .95, input$ci/100)
+      vals$sdCI_new <- bayestestR::ci(newdat$error,
+                                      ci = CI, method = "HDI")
+      
+    }) %>% # end of observe,
+      bindEvent(input$highlight_dti)
 
     # BLOCKS ------------------------------------------------------------
     ## Species & individual: --------------------------------------------
@@ -1021,15 +1014,15 @@ mod_tab_report_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'report')
       req(vals$tau_p0, vals$tau_p0_units,
-          vals$dur0_dev, vals$dur0_units_dev,
-          vals$dti0_dev, vals$dti0_units_dev,
+          vals$reg$dur, vals$reg$dur_unit,
+          vals$reg$dti, vals$reg$dti_unit,
           input$ci)
 
       input_taup <- "days" %#% vals$tau_p0 %#% vals$tau_p0_units
-      input_dur <- "days" %#% vals$dur0_dev %#% vals$dur0_units_dev
+      input_dur <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
 
       input_tauv <- vals$tau_v0 %#% vals$tau_v0_units
-      input_dti <- vals$dti0_dev %#% vals$dti0_units_dev
+      input_dti <- vals$reg$dti %#% vals$reg$dti_unit
 
       tooltip_css <- paste(
         "font-family: 'Roboto Condensed', sans-serif;",
@@ -1231,7 +1224,7 @@ mod_tab_report_server <- function(id, vals) {
       }) # end of renderGirafe // plot_hr_density
 
       output$plot_sd_density <- ggiraph::renderGirafe({
-        # req(vals$ctsdErr, vals$sdCI)
+        req(vals$sdErr, vals$sdCI)
 
         reveal_if <- FALSE
         if (!is.null(input$highlight_dti)) {
@@ -1380,7 +1373,7 @@ mod_tab_report_server <- function(id, vals) {
             size = 6) +
 
           ggplot2::geom_point(
-            ggplot2::aes(x = vals$ctsdErr, y =  0,
+            ggplot2::aes(x = vals$sdErr[[2]], y =  0,
                          col = "now", shape = "now"),
             size = 6, alpha = .7) +
 
@@ -1712,26 +1705,28 @@ mod_tab_report_server <- function(id, vals) {
                          msg_warning("report"), "..."),
         detail = paste("Current question(s):", vals$which_question))
 
+      boxnames <- c("analyses", "tables")
+      for(i in 1:length(boxnames)) {
+        shinyjs::show(id = paste0("repBox_", boxnames[i])) }
+      
       # Timescale parameters:
 
       tau_p <- vals$tau_p0 %#% vals$tau_p0_units
       tau_v <- vals$tau_v0 %#% vals$tau_v0_units
 
       # Ideal regime:
-
+      
       dur_times <- 10 # rule of thumb: 10 x tau_p
       dur_units <- "days"
-      ideal_dur <- fix_unit((dur_units %#% tau_p) * dur_times,
-                            dur_units)
-      ideal_dti <- fix_unit(vals$tau_v0,
-                            vals$tau_v0_units)
+      ideal_dur <- fix_unit((dur_units %#% tau_p) * dur_times, dur_units)
+      ideal_dti <- fix_unit(vals$tau_v0, vals$tau_v0_units)
 
       # Current regime:
 
-      dur <- dur_units %#% vals$dur0_dev %#% vals$dur0_units_dev
+      dur <- dur_units %#% vals$reg$dur %#% vals$reg$dur_unit
       dur <- fix_unit(dur, dur_units)
       dti_units <- ideal_dti$unit
-      dti <- dti_units %#% vals$dti0_dev %#% vals$dti0_units_dev
+      dti <- dti_units %#% vals$reg$dti %#% vals$reg$dti_unit
       dti <- fix_unit(dti, dti_units)
 
       vals$hr_col <- vals$ctsd_col <- data.frame(
@@ -1784,7 +1779,7 @@ mod_tab_report_server <- function(id, vals) {
                "dataset.")
       }
 
-      out_species <- p(
+      vals$report$species <- p(
         out_species,
         "Please see the",
         icon("paw", class = "cl-sea"),
@@ -1844,6 +1839,8 @@ mod_tab_report_server <- function(id, vals) {
 
       } # end of "Speed & distance"
 
+      vals$report$regime <- out_regime
+      
       ### Both home range and speed & distance:
 
       # if (length(vals$which_question) > 1) {
@@ -1907,15 +1904,15 @@ mod_tab_report_server <- function(id, vals) {
       ## Speed and distance estimation:
 
       if ("Speed & distance" %in% vals$which_question) {
-        req(vals$ctsdCI, vals$ctsdErr)
+        req(vals$sdCI, vals$sdErr)
 
         CI <- round(vals$sdCI$CI * 100, 0)
         LCI <- round(vals$sdCI$CI_low * 100, 1)
         UCI <- round(vals$sdCI$CI_high * 100, 1)
 
         txt_level <- ifelse(
-          vals$ctsdCI$CI_high < .3 &
-            vals$ctsdCI$CI_low > -.3,
+          vals$sdCI$CI_high < .3 &
+            vals$sdCI$CI_low > -.3,
           "and with low", "but with high")
 
         dti_options <- 2^seq(1, 12, by = 1)
@@ -1953,50 +1950,52 @@ mod_tab_report_server <- function(id, vals) {
           out_ctsd,
           "Your error estimate",
           "based on a single simulation was",
-          wrap_none(round(vals$ctsdErr * 100, 1), "%",
+          wrap_none(round(vals$sdErr[[2]] * 100, 1), "%",
                     color = vals$ctsd_col[1], end = "."))
 
       } # end of "Speed & distance"
 
+      vals$report$analyses <- out_analyses
+      
       ### Both home range and speed & distance:
 
       # if (length(vals$which_question) > 1) {
       #   #TODO
       # }
-
-      # Rendering complete report: ----------------------------------------
-
-      output$end_report <- renderUI({
-
-        out <- tagList(
-          out_species,
-          out_regime,
-
-          div(width = 12, align = "center",
-              style = "z-index: 999;",
-
-              shinyWidgets::switchInput(
-                inputId = ns("repInput_scaled"),
-                label = span(icon("wrench"),
-                             "Scaled to 1"),
-                labelWidth = "100px")),
-
-          if ("Home range" %in% vals$which_question) {
-            ggiraph::girafeOutput(
-              outputId = ns("plot_hr_density"),
-              width = "100%", height = "100%") },
-
-          if ("Speed & distance" %in% vals$which_question) {
-            ggiraph::girafeOutput(
-              outputId = ns("plot_sd_density"),
-              width = "100%", height = "100%") },
-
-          out_analyses
-
-        ) # end of tagList
-      }) # end of renderUI // end_report
-
+     
     }) %>% bindEvent(input$create_report)
+    
+    # Rendering complete report: ----------------------------------------
+    
+    output$end_report <- renderUI({
+      
+      out <- tagList(
+        vals$report$species,
+        vals$report$regime,
+
+        div(width = 12, align = "center",
+            style = "z-index: 999;",
+
+            shinyWidgets::switchInput(
+              inputId = ns("repInput_scaled"),
+              label = span(icon("wrench"),
+                           "Scaled to 1"),
+              labelWidth = "100px")),
+
+        if ("Home range" %in% vals$which_question) {
+          ggiraph::girafeOutput(
+            outputId = ns("plot_hr_density"),
+            width = "100%", height = "100%") },
+
+        if ("Speed & distance" %in% vals$which_question) {
+          ggiraph::girafeOutput(
+            outputId = ns("plot_sd_density"),
+            width = "100%", height = "100%") },
+
+        vals$report$analyses
+        
+      ) # end of tagList
+    }) # end of renderUI // end_report
 
     ## Reporting COMPARISON (if available): -------------------------------
 
@@ -2013,8 +2012,7 @@ mod_tab_report_server <- function(id, vals) {
         UCI <- round(vals$hrCI_new$CI_high * 100, 1)
 
         txt_level <- ifelse(
-          vals$hrCI_new$CI_high < .3 &
-            vals$hrCI_new$CI_low > -.3,
+          vals$hrCI_new$CI_high < .3 & vals$hrCI_new$CI_low > -.3,
           "and with low", "but with high")
 
         ideal_dur <- fix_unit(
@@ -2050,14 +2048,62 @@ mod_tab_report_server <- function(id, vals) {
       ## Speed and distance estimation:
 
       if ("Speed & distance" %in% vals$which_question) {
-        #TODO
+        req(input$highlight_dti)
+        
+        opts <- sims_speed[[1]] %>%
+          dplyr::select(dti, dti_notes) %>%
+          unique()
+        
+        highlighted_dti <- opts$dti[match(input$highlight_dti,
+                                  opts$dti_notes)]
+        
+        out_dti <- fix_unit(highlighted_dti, "seconds",
+                            convert = TRUE)
+
+        CI <- round(vals$sdCI_new$CI * 100, 0)
+        LCI <- round(vals$sdCI_new$CI_low * 100, 1)
+        UCI <- round(vals$sdCI_new$CI_high * 100, 1)
+        
+        txt_level <- ifelse(
+          vals$sdCI_new$CI_high < .3 & vals$sdCI_new$CI_low > -.3,
+          "and with low", "but with high")
+        
+        ideal_dti <- fix_unit(
+          (vals$tau_v0 %#% vals$tau_p0_units) / 4,
+           "seconds")
+        
+        if (highlighted_dti >= ideal_dti$value) {
+          out_comp <- out_comp_sd <-
+            p("Your new tracking regime would likely be sufficient",
+              "for", span("speed & distance", class = "cl-grn"),
+              "estimation,", txt_level, "uncertainty:",
+              "for a sampling interval of",
+              wrap_none(out_dti$value, " ", out_dti$unit, ", there"),
+              "is a", wrap_none(CI, "%", css = "cl-blk"),
+              "probability that the relative error will lie within",
+              wrap_none(LCI, "%", css = "cl-blk"),
+              "and", wrap_none(UCI, "%", end = ".", css = "cl-blk"))
+          
+        } else {
+          out_comp <- out_comp_sd <-
+            p("Your new tracking regime would likely be insufficient",
+              "for", span("speed & distance", class = "cl-grn"),
+              "estimation.", br(),
+              "For a sampling interval of",
+              wrap_none(out_dti$value, out_dti$unit, ", there is"),
+              "high uncertainty",
+              wrap_none("(", CI, "%", css = "cl-blk"),
+              "probability that the relative error will lie within",
+              wrap_none(LCI, "%", css = "cl-blk"),
+              "and", wrap_none(UCI, "%", end = ").", css = "cl-blk"))
+        }
       } # end of "Speed & distance"
 
-      ### Both home range and speed & distance:
-
-      if (length(vals$which_question) > 1) {
-        #TODO
-      }
+      # ### Both home range and speed & distance:
+      # 
+      # if (length(vals$which_question) > 1) {
+      #   #TODO
+      # }
 
       output$end_comparison <- renderUI({
         div(id = "report_comparison",

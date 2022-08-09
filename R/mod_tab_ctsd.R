@@ -239,10 +239,10 @@ mod_tab_ctsd_ui <- function(id) {
                 div(
                   class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
                   p(class = "fluid-padding"),
-                  uiOutput(ns("ctsdInfo_est")),
-                  uiOutput(ns("ctsdInfo_est_new")),
-                  uiOutput(ns("ctsdInfo_err")),
-                  uiOutput(ns("ctsdInfo_err_new")))
+                  uiOutput(ns("sdInfo_est")),
+                  uiOutput(ns("sdInfo_est_new")),
+                  uiOutput(ns("sdInfo_err")),
+                  uiOutput(ns("sdInfo_err_new")))
                 
               ) # end of panel (2 out of 2)
             ), # end of tabBox // sdBox_viz
@@ -352,10 +352,10 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Changing grouping options for plot: --------------------------------
 
     output$ctsdVar_group <- renderUI({
-      req(vals$dur0_dev, vals$dti0_dev)
+      req(vals$reg$dur, vals$reg$dti)
 
-      eval_dur <- vals$dur0_dev %#% vals$dur0_units_dev
-      eval_dti <- vals$dti0_dev %#% vals$dti0_units_dev
+      eval_dur <- vals$reg$dur %#% vals$reg$dur_unit
+      eval_dti <- vals$reg$dti %#% vals$reg$dti_unit
 
       group_choices <- c(
         "Minutes" = "minutes",
@@ -495,6 +495,14 @@ mod_tab_ctsd_server <- function(id, vals) {
           justified = TRUE)
 
       } else {
+        
+        opts <- c("full", "subset", "new")
+        if (!is.null(input$ctsdInput_show)) {
+          if(input$ctsdInput_show == 1) {
+            opts <- c("full", "subset")
+          }
+        }
+        
         shinyWidgets::checkboxGroupButtons(
           inputId = ns("ctsdShow_datasets"),
           label = "Show trajectories:",
@@ -502,7 +510,7 @@ mod_tab_ctsd_server <- function(id, vals) {
             c("Fine-scale" = "full",
               "Initial regime" = "subset",
               "New regime" = "new"),
-          selected = c("full", "subset", "new"),
+          selected = opts,
           checkIcon = list(yes = icon("circle-check")),
           justified = TRUE) }
 
@@ -525,21 +533,21 @@ mod_tab_ctsd_server <- function(id, vals) {
       vals$paths_selected <- c("full", "subset", "new")
       
       if(input$ctsdInput_show == 1) {
-        shinyjs::show(id = "ctsdInfo_est")
-        shinyjs::show(id = "ctsdInfo_err")
-        shinyjs::hide(id = "ctsdInfo_est_new")
-        shinyjs::hide(id = "ctsdInfo_err_new")
-        
+        shinyjs::show(id = "sdInfo_est")
+        shinyjs::show(id = "sdInfo_err")
+        shinyjs::hide(id = "sdInfo_est_new")
+        shinyjs::hide(id = "sdInfo_err_new")
+
         shinyjs::show(id = "distInfo_est")
         shinyjs::show(id = "distInfo_err")
         shinyjs::hide(id = "distInfo_est_new")
         shinyjs::hide(id = "distInfo_err_new")
       } else if (input$ctsdInput_show == 2) {
-        shinyjs::hide(id = "ctsdInfo_est")
-        shinyjs::hide(id = "ctsdInfo_err")
-        shinyjs::show(id = "ctsdInfo_est_new")
-        shinyjs::show(id = "ctsdInfo_err_new")
-        
+        shinyjs::hide(id = "sdInfo_est")
+        shinyjs::hide(id = "sdInfo_err")
+        shinyjs::show(id = "sdInfo_est_new")
+        shinyjs::show(id = "sdInfo_err_new")
+
         shinyjs::hide(id = "distInfo_est")
         shinyjs::hide(id = "distInfo_err")
         shinyjs::show(id = "distInfo_est_new")
@@ -699,8 +707,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Calculating total and mean distances: ----------------------------
 
     observe({
-      req(vals$data1, vals$data_full,
-          vals$data_speed, vals$ctsd)
+      req(vals$data_full)
       
       # dat1 <- data.frame(
       #   x = vals$data1$x,
@@ -720,7 +727,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       if (!is.null(vals$vals$sd$fit)) {
         dur <- vals$sd$dur %#% vals$sd$dur_unit
-      } else { dur <- vals$dur0_dev %#% vals$dur0_units_dev }
+      } else { dur <- vals$reg$dur %#% vals$reg$dur_unit }
       dur_days <- "days" %#% dur
       
       tmpdist_full <- list()
@@ -731,40 +738,78 @@ mod_tab_ctsd_server <- function(id, vals) {
       }
       vals$data_full$dist <- c(0, do.call("rbind", tmpdist_full))
 
-      print("dist_truth:")
-      dist_truth <- sum(vals$data_full$dist, na.rm = TRUE)
-      vals$dist_truth <- dist_truth
-      print(vals$dist_truth)
+      truth <- sum(vals$data_full$dist, na.rm = TRUE)
+      vals$distTruth <- truth # in meters
+      
+      if (vals$ctsd_units == "kilometers/day") {
+        dist <- vals$ctsd[2] * dur_days
+        dist_lci <- vals$ctsd[1] * dur_days
+        dist_uci <- vals$ctsd[3] * dur_days
+        
+      } else {
+        dist <- ("kilometers/day" %#% 
+                   vals$ctsd[2] %#% vals$ctsd_units) * dur_days
+        dist_lci <- ("kilometers/day" %#% 
+                       vals$ctsd[1] %#% vals$ctsd_units) * dur_days
+        dist_uci <- ("kilometers/day" %#% 
+                       vals$ctsd[3] %#% vals$ctsd_units) * dur_days
+      }
+      
+      unit <- "kilometers"
+      truth <- unit %#% truth
+      
+      vals$distEst <- data.frame("lci" = dist_lci,
+                                 "est" = dist,
+                                 "uci" = dist_uci,
+                                 "unit" = unit)
+      
 
-      vals$dist_lci <- as.numeric(vals$ctsd[1] * dur_days) %#% "km"
-      vals$dist_est <- as.numeric(vals$ctsd[2] * dur_days) %#% "km"
-      vals$dist_uci <- as.numeric(vals$ctsd[3] * dur_days) %#% "km"
-
-      vals$distErr <- (vals$dist_est - dist_truth) / dist_truth
-      vals$distErr_min <- (vals$dist_lci - dist_truth) / dist_truth
-      vals$distErr_max <- (vals$dist_uci - dist_truth) / dist_truth
-
+      err <- (dist - truth) / truth
+      err_lci <- (dist_lci - truth) / truth
+      err_uci <- (dist_uci - truth) / truth
+      vals$distErr <- data.frame("lci" = err_lci,
+                                 "est" = err,
+                                 "uci" = err_uci)
+      
     }) %>% # end of observe,
       bindEvent(vals$ctsd)
     
     observe({
-      req(vals$dur0_dev, vals$dist_truth)
+      req(vals$reg$dur, vals$distTruth)
       
       if (!is.null(vals$vals$sd$fit)) {
         dur <- vals$sd$dur %#% vals$sd$dur_unit
-      } else { dur <- vals$dur0_dev %#% vals$dur0_units_dev }
+      } else { dur <- vals$reg$dur %#% vals$reg$dur_unit }
       dur_days <- "days" %#% dur
-
-      vals$dist_lci_new <- as.numeric(vals$ctsd_new[1] * dur_days) %#% "km"
-      vals$dist_est_new <- as.numeric(vals$ctsd_new[2] * dur_days) %#% "km"
-      vals$dist_uci_new <- as.numeric(vals$ctsd_new[3] * dur_days) %#% "km"
-
-      vals$distErr_new <-
-        (vals$dist_est_new - vals$dist_truth) / vals$dist_truth
-      vals$distErr_min_new <-
-        (vals$dist_lci_new - vals$dist_truth) / vals$dist_truth
-      vals$distErr_max_new <-
-        (vals$dist_uci_new - vals$dist_truth) / vals$dist_truth
+      
+      if (vals$ctsd_units_new == "kilometers/day") {
+        dist <- vals$ctsd_new[2] * dur_days
+        dist_lci <- vals$ctsd_new[1] * dur_days
+        dist_uci <- vals$ctsd_new[3] * dur_days
+        
+      } else {
+        dist <- ("kilometers/day" %#% 
+                   vals$ctsd_new[2] %#% vals$ctsd_units) * dur_days
+        dist_lci <- ("kilometers/day" %#% 
+                       vals$ctsd_new[1] %#% vals$ctsd_units) * dur_days
+        dist_uci <- ("kilometers/day" %#% 
+                       vals$ctsd_new[3] %#% vals$ctsd_units) * dur_days
+      }
+      
+      unit <- "kilometers"
+      truth <- unit %#% vals$distTruth
+      
+      vals$distEst_new <- data.frame("lci" = dist_lci,
+                                     "est" = dist,
+                                     "uci" = dist_uci,
+                                     "unit" = unit)
+      
+      err <- (dist - truth) / truth
+      err_lci <- (dist_lci - truth) / truth
+      err_uci <- (dist_uci - truth) / truth
+      vals$distErr_new <- data.frame("lci" = err_lci,
+                                     "est" = err,
+                                     "uci" = err_uci)
       
     }) %>% # end of observe,
       bindEvent(vals$ctsd_new)
@@ -773,13 +818,13 @@ mod_tab_ctsd_server <- function(id, vals) {
     # Adjust sampling parameters necessary for simulation:
 
     observe({
-      req(vals$dur0_dev, vals$dti0_dev)
+      req(vals$reg$dur, vals$reg$dti)
 
       if(!is.null(vals$ctsd)) {
 
         # Sampling duration:
 
-        dur <- round("days" %#% vals$dur0_dev %#% vals$dur0_units_dev, 0)
+        dur <- round("days" %#% vals$reg$dur %#% vals$reg$dur_unit, 0)
         tau_p0 <- round("days" %#% vals$tau_p0 %#% vals$tau_p0_units, 0)
 
         # Sampling interval:
@@ -938,7 +983,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       
       fit <- vals$fit0
       
-      dur <- vals$dur0_dev %#% vals$dur0_units_dev
+      dur <- vals$reg$dur %#% vals$reg$dur_unit
       tauv <- vals$tau_v0 %#% vals$tau_v0_units
       
       sim_full <- ctmm::simulate(
@@ -951,13 +996,13 @@ mod_tab_ctsd_server <- function(id, vals) {
       
       ctsd_truth <- par_speed(inputList,
                               parallel = vals$parallel)
-      
+
       return(ctsd_truth)
       
     }) %>% # end of reactive, data_sim
       bindCache(c(vals$id,
-                  vals$dur0_dev, vals$dur0_units_dev,
-                  vals$dti0_dev, vals$dti0_units_dev))
+                  vals$reg$dur, vals$reg$dur_unit,
+                  vals$reg$dti, vals$reg$dti_unit))
     
     ## Estimating for initial tracking regime: ----------------------------
     # Estimate speed & distance after pressing the "run_sd" button:
@@ -998,7 +1043,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         } else {
 
           sumnames <- rownames(summary(vals$fit1)$CI)
-          Neff <- summary(vals$fit1)$DOF
+          N <- summary(vals$fit1)$DOF
 
           if(is.null(grep('speed', sumnames))) {
 
@@ -1019,7 +1064,7 @@ mod_tab_ctsd_server <- function(id, vals) {
               size = "xs")
 
           } else {
-            if (Neff["speed"] > 0) {
+            if (N["speed"] > 0) {
 
               start <- Sys.time()
 
@@ -1041,7 +1086,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                 )
               )
 
-              if ((vals$dur0 %#% vals$dur0_units) > 10 %#% "days") {
+              if ((vals$reg$dur %#% vals$reg$dur_unit) > 10 %#% "days") {
                 dat <- vals$data1
                 dat <- dat[which(dat$t <= (10 %#% "day")), ]
               } else { dat <- vals$data1 }
@@ -1056,10 +1101,10 @@ mod_tab_ctsd_server <- function(id, vals) {
               if ("CI" %in% names(vals$ctsd)) {
                 vals$ctsd <- vals$ctsd$CI
               }
-
-              vals$sdEst <- vals$ctsd[2]
-              vals$sdEst_min <- vals$ctsd[1]
-              vals$sdEst_max <- vals$ctsd[3]
+              
+              # vals$sdEst <- vals$ctsd[2]
+              # vals$sdEst_min <- vals$ctsd[1]
+              # vals$sdEst_max <- vals$ctsd[3]
 
               vals$time_ctsd <- difftime(Sys.time(), start, units = "mins")
 
@@ -1090,8 +1135,6 @@ mod_tab_ctsd_server <- function(id, vals) {
                   msg_step(2, 2, style = "warning")),
                 detail = "This may take a while...")
 
-              
-              #TODO
               # if(vals$data_type == "simulated") {
               #   dat <- vals$data0
               #   fit <- vals$fit0
@@ -1101,7 +1144,7 @@ mod_tab_ctsd_server <- function(id, vals) {
               # }
               # 
               # start_truth <- Sys.time()
-              # dur0 <- vals$dur0_dev %#% vals$dur0_units_dev
+              # dur0 <- vals$reg$dur %#% vals$reg$dur_unit
               # tauv <- vals$tau_v0 %#% vals$tau_v0_units
               # 
               # sim_full <- ctmm::simulate(
@@ -1131,15 +1174,19 @@ mod_tab_ctsd_server <- function(id, vals) {
                 extract_units()
 
               truth <- vals$ctsd_truth[2]
-              vals$sdErr <- (vals$ctsd[2] - truth) / truth
-              vals$sdErr_min <- (vals$ctsd[1] - truth) / truth
-              vals$sdErr_max <- (vals$ctsd[3] - truth) / truth
-
+              
+              sdErr <- (vals$ctsd[2] - truth) / truth
+              sdErr_min <- (vals$ctsd[1] - truth) / truth
+              sdErr_max <- (vals$ctsd[3] - truth) / truth
+              vals$sdErr <- data.frame("lci" = sdErr_min,
+                                       "est" = sdErr,
+                                       "uci" = sdErr_max)
+            
               vals$time_ctsd_truth <- difftime(
                 Sys.time(), start_truth, units = "mins")
 
-              shinyjs::show(id = "ctsdInfo_est")
-              shinyjs::show(id = "ctsdInfo_err")
+              shinyjs::show(id = "sdInfo_est")
+              shinyjs::show(id = "sdInfo_err")
               
               msg_log(
                 style = "success",
@@ -1156,7 +1203,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
               shinybusy::remove_modal_spinner()
 
-            } # end of Neff["speed"] > 0
+            } # end of N["speed"] > 0
           } # end of is.null(grep('speed', sumnames))
         } # end of vals$tmpid != vals$id
 
@@ -1398,17 +1445,16 @@ mod_tab_ctsd_server <- function(id, vals) {
           vals$ctsd_new <- vals$ctsd_new$CI
         }
         
-        vals$sdEst_new <- vals$ctsd_new[2]
-        vals$sdEst_min_new <- vals$ctsd_new[1]
-        vals$sdEst_max_new <- vals$ctsd_new[3]
-        
         nms <- rownames(vals$ctsd_new)
         vals$ctsd_units_new <- extract_units(nms[grep('speed', nms)])
         
         truth <- vals$ctsd_truth[2]
-        vals$sdErr_new <- (vals$ctsd_new[2] - truth) / truth
-        vals$sdErr_min_new <- (vals$ctsd_new[1] - truth) / truth
-        vals$sdErr_max_new <- (vals$ctsd_new[3] - truth) / truth
+        sdErr <- (vals$ctsd_new[2] - truth) / truth
+        sdErr_min <- (vals$ctsd_new[1] - truth) / truth
+        sdErr_max <- (vals$ctsd_new[3] - truth) / truth
+        vals$sdErr_new <- data.frame("lci" = sdErr_min,
+                                     "est" = sdErr,
+                                     "uci" = sdErr_max)
         
         # Show buttons to change panels:
         shinyjs::show(id = "ctsdInput_show")
@@ -1432,9 +1478,9 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Tracking regime: ---------------------------------------------------
 
     output$sdInfo_dur <- shiny::renderUI({
-      req(vals$dur0_dev, vals$dur0_units_dev)
+      req(vals$reg$dur, vals$reg$dur_unit)
 
-      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
 
       parBlock(header = "Sampling duration",
                value = paste(out_dur[1], out_dur[2]))
@@ -1442,9 +1488,9 @@ mod_tab_ctsd_server <- function(id, vals) {
     }) # end of renderUI // sdInfo_dur
 
     output$sdInfo_dti <- shiny::renderUI({
-      req(vals$dti0_dev, vals$dti0_units_dev)
+      req(vals$reg$dti, vals$reg$dti_unit)
 
-      out_dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
+      out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
 
       parBlock(header = "Sampling interval",
                value = paste(out_dti[1], out_dti[2]),
@@ -1589,7 +1635,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Outputs: ---------------------------------------------------------
     ### Speed & distance estimates: -------------------------------------
 
-    output$ctsdInfo_est <- shiny::renderUI({
+    output$sdInfo_est <- shiny::renderUI({
       req(vals$ctsd, vals$ctsd_units)
 
       speed_units <- vals$ctsd_units
@@ -1610,23 +1656,23 @@ mod_tab_ctsd_server <- function(id, vals) {
                  "0", round(est_min, 3)),
           "—", round(est_max, 3)))
 
-    }) # end of renderUI // ctsdInfo_est
+    }) # end of renderUI // sdInfo_est
 
-    output$ctsdInfo_err <- shiny::renderUI({
-      req(vals$ctsd, vals$sdErr)
+    output$sdInfo_err <- shiny::renderUI({
+      req(vals$sdErr)
 
       errorBlock(
         icon = "radiation",
         text = span("Expected error from", br(),
                     "initial regime:"),
-        value = vals$sdErr,
-        min = vals$sdErr_min,
-        max = vals$sdErr_max,
+        value = vals$sdErr[[2]],
+        min = vals$sdErr[[1]],
+        max = vals$sdErr[[3]],
         rightBorder = FALSE)
 
-    }) # end of renderUI // ctsdInfo_err
+    }) # end of renderUI // sdInfo_err
 
-    output$ctsdInfo_est_new <- shiny::renderUI({
+    output$sdInfo_est_new <- shiny::renderUI({
       req(vals$ctsd_new)
 
       speed_units <- vals$ctsd_units_new
@@ -1647,48 +1693,41 @@ mod_tab_ctsd_server <- function(id, vals) {
                  "0", round(est_min, 3)),
           "—", round(est_max, 3), class = "cl-mdn"))
 
-    }) # end of renderUI // ctsdInfo_est
+    }) # end of renderUI // sdInfo_est
 
-    output$ctsdInfo_err_new <- shiny::renderUI({
+    output$sdInfo_err_new <- shiny::renderUI({
       req(vals$ctsd_new)
+      
+      print("CHECKPOINT")
+      print(vals$sdErr_new)
 
       errorBlock(
         icon = "radiation",
         text = span("Expected error from", br(),
                     "modified regime:"),
-        value = vals$sdErr_new,
-        min = vals$sdErr_min_new,
-        max = vals$sdErr_max_new,
+        value = vals$sdErr_new[[2]],
+        min = vals$sdErr_new[[1]],
+        max = vals$sdErr_new[[3]],
         rightBorder = FALSE)
 
-    }) # end of renderUI // ctsdInfo_err_new
+    }) # end of renderUI // sdInfo_err_new
 
     ### Movement metrics: -----------------------------------------------
 
     output$distInfo_est <- shiny::renderUI({
-      req(vals$data1, vals$dist_est)
+      req(vals$data1, vals$distEst)
 
-      est <- ifelse(
-        vals$dist_est <= 1 %#% "kilometer",
-        paste(
-          scales::label_comma(
-            accuracy = .1)(vals$dist_est), "m"),
-        paste(
-          scales::label_comma(
-            accuracy = .1)("km" %#% vals$dist_est), "km"))
-
-      lci <- scales::label_comma(
-        accuracy = .1)("km" %#% vals$dist_lci)
-
-      uci <- scales::label_comma(
-        accuracy = .1)("km" %#% vals$dist_uci)
-
+      est <- fix_unit(vals$distEst[[2]], 
+                      vals$distEst[[4]], convert = TRUE)
+      lci <- fix_unit(vals$distEst[[1]], est$unit)
+      uci <- fix_unit(vals$distEst[[3]], est$unit)
+      
       parBlock(
         icon = "map-location-dot",
         header = span("Total distance traveled from", br(),
                        "initial regime:"),
-        value = est,
-        subtitle = paste(lci, "—", uci))
+        value = paste(est$value, est$unit),
+        subtitle = paste(lci$value, "—", uci$value))
 
     }) # end of renderUI // distInfo_est
 
@@ -1699,37 +1738,27 @@ mod_tab_ctsd_server <- function(id, vals) {
         icon = "radiation",
         text = span("Expected error from", br(),
                     "initial regime:"),
-        value = vals$distErr,
-        min = vals$distErr_min,
-        max = vals$distErr_max,
+        value = vals$distErr[[2]],
+        min = vals$distErr[[1]],
+        max = vals$distErr[[3]],
         rightBorder = FALSE)
 
     }) # end of renderUI // distInfo_err
 
     output$distInfo_est_new <- shiny::renderUI({
-      req(vals$sd$newdata, vals$dist_est_new)
-
-      est <- ifelse(
-        vals$dist_est_new <= 1,
-        paste(
-          scales::label_comma(
-            accuracy = .1)(vals$dist_est_new), "m"),
-        paste(
-          scales::label_comma(
-            accuracy = .1)("km" %#% vals$dist_est_new), "km"))
-
-      lci <- scales::label_comma(
-        accuracy = .1)("km" %#% vals$dist_lci_new)
-
-      uci <- scales::label_comma(
-        accuracy = .1)("km" %#% vals$dist_uci_new)
-
+      req(vals$sd$newdata, vals$distEst_new)
+      
+      est <- fix_unit(vals$distEst_new[[2]],
+                      vals$distEst_new[[4]], convert = TRUE)
+      lci <- fix_unit(vals$distEst_new[[1]], est$unit)
+      uci <- fix_unit(vals$distEst_new[[3]], est$unit)
+      
       parBlock(
         icon = "map-location-dot",
         header = span("Total distance traveled from", br(),
                        "modified regime:"),
-        value = span(est, class = "cl-mdn"),
-        subtitle = span(lci, "—", uci, class = "cl-mdn"))
+        value = span(est$value, est$unit, class = "cl-mdn"),
+        subtitle = span(lci$value, "—", uci$value, class = "cl-mdn"))
 
     }) # end of renderUI // distInfo_est_new
 
@@ -1740,9 +1769,9 @@ mod_tab_ctsd_server <- function(id, vals) {
         icon = "radiation",
         text = span("Expected error from", br(),
                     "modified regime:"),
-        value = vals$distErr_new,
-        min = vals$distErr_min_new,
-        max = vals$distErr_max_new,
+        value = vals$distErr_new[[2]],
+        min = vals$distErr_new[[1]],
+        max = vals$distErr_new[[3]],
         rightBorder = FALSE)
 
     }) # end of renderUI // distInfo_err_new
@@ -1797,6 +1826,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       yline <- "day" %#% vals$ctsd[2] %#% "kilometers"
 
       if(!is.null(vals$ctsd_new)) {
+        print(vals$ctsd_new)
         yline_new <- "day" %#% vals$ctsd_new[2] %#% "kilometers"
       }
 
@@ -1938,7 +1968,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Initial tracking regime: -------------------------------------------
 
     sdRow <- reactive({
-
+      
       out <- data.frame(
         data = "Initial",
         tauv = NA,
@@ -1947,36 +1977,39 @@ mod_tab_ctsd_server <- function(id, vals) {
         n = nrow(vals$data1),
         N2 = vals$N2,
         ctsd = NA,
-        ctsd_err = vals$sdErr,
-        ctsd_err_min = vals$sdErr_min,
-        ctsd_err_max = vals$sdErr_max,
+        ctsd_err = vals$sdErr[[2]],
+        ctsd_err_min = vals$sdErr[[1]],
+        ctsd_err_max = vals$sdErr[[3]],
         dist = NA,
-        dist_err = vals$distErr)
-
+        dist_err = vals$distErr[[2]])
+      
       out$tauv <- paste(scales::label_comma(
         accuracy = .1)(vals$tau_v0),
         abbrv_unit(vals$tau_v0_units))
       
-      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
       
-      out_dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
+      out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
 
       out_ctsd <- fix_unit(vals$ctsd[2], vals$ctsd_units)
       out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
 
-      out_dist <- fix_unit(vals$dist_est, "km", convert = TRUE)
+      print(vals$distEst)
+      out_dist <- fix_unit(vals$distEst[[2]], 
+                           vals$distEst[[4]], convert = TRUE)
       out$dist <- paste(out_dist$value, out_dist$unit)
-
+      
       return(out)
 
     }) %>%
-      bindCache(vals$dur0_dev, vals$dur0_units_dev,
-                vals$dti0_dev, vals$dti0_units_dev)
+      bindCache(vals$reg$dur, vals$reg$dur_unit,
+                vals$reg$dti, vals$reg$dti_unit)
 
     observe({
-      req(vals$data1, vals$N2, vals$ctsd, vals$sdErr)
+      req(vals$data1,  
+          vals$ctsd, vals$distErr, vals$distTruth)
 
       shinyjs::show(id = "sdBox_summary")
 
@@ -1991,6 +2024,12 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     sdRow_new <- reactive({
 
+      print("sdRow_new")
+      
+      print(vals$N2_new)
+      print(vals$sdErr_new)
+      print(vals$distErr_new)
+      
       out <- data.frame(
         data = "Modified",
         tauv = NA,
@@ -1999,28 +2038,32 @@ mod_tab_ctsd_server <- function(id, vals) {
         n = nrow(vals$sd$newdata),
         N2 = vals$N2_new,
         ctsd = NA,
-        ctsd_err = vals$sdErr_new,
-        ctsd_err_min = vals$sdErr_min_new,
-        ctsd_err_max = vals$sdErr_max_new,
+        ctsd_err = vals$sdErr_new[[2]],
+        ctsd_err_min = vals$sdErr_new[[1]],
+        ctsd_err_max = vals$sdErr_new[[3]],
         dist = NA,
-        dist_err = vals$distErr_new)
+        dist_err = vals$distErr_new[[2]])
+      
+      print(out)
       
       out$tauv <- paste(scales::label_comma(
         accuracy = .1)(vals$tau_v0),
         abbrv_unit(vals$tau_v0_units))
 
-      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
       
-      out_dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
+      out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
 
       out_ctsd <- fix_unit(vals$ctsd_new[2], vals$ctsd_units_new)
       out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
 
-      out_dist <- fix_unit(vals$dist_est_new, "km", convert = TRUE)
+      out_dist <- fix_unit(vals$distEst_new[[2]], 
+                           vals$distEst_new[[4]], convert = TRUE)
       out$dist <- paste(out_dist$value, out_dist$unit)
       
+      print(out)
       return(out)
 
     }) %>%
@@ -2028,7 +2071,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                 vals$sd$dti, vals$sd$dti_unit)
 
     observe({
-      req(vals$sd$fit, vals$sdEst_new, vals$distErr_new)
+      req(vals$distErr_new)
       
       vals$dt_sd <<- rbind(vals$dt_sd, sdRow_new())
       vals$dt_sd <- dplyr::distinct(vals$dt_sd)
@@ -2148,23 +2191,24 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     # Save information for report if table is not requested:
 
-    # observe({
-    #   req(vals$is_analyses,
-    #       vals$active_tab == 'ctsd')
-    #
-    #   req(is.null(vals$dt_sd))
-    #   vals$report_sd_yn <- FALSE
-    #
-    #   if (!is.null(vals$sdErr_new)) {
-    #     req(vals$sdErr_new)
-    #     vals$report_sd_yn <- TRUE
-    #     vals$dt_sd <- sdRow_new()
-    #   } else {
-    #     req(vals$sdErr)
-    #     vals$report_sd_yn <- TRUE
-    #     vals$dt_sd <- sdRow()
-    #   }
-    # }) %>% bindEvent(list(input$run_sd, input$run_sd_new))
+    observe({
+      req(vals$is_analyses,
+          vals$active_tab == 'ctsd')
+
+      req(is.null(vals$dt_sd))
+      vals$report_sd_yn <- FALSE
+
+      if (is.null(vals$sdErr_new)) {
+        req(vals$ctsd, vals$sdErr, vals$distErr)
+        vals$report_sd_yn <- TRUE
+        vals$dt_sd <- sdRow()
+      } else {
+        req(vals$ctsd_new, vals$sdErr_new, vals$distErr_new)
+        vals$report_sd_yn <- TRUE
+        vals$dt_sd <- sdRow_new()
+      }
+      
+    }) %>% bindEvent(list(input$run_sd, input$run_sd_new))
 
   }) # end of moduleServer
 }

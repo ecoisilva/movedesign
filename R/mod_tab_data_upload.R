@@ -378,14 +378,14 @@ mod_tab_data_upload_server <- function(id, vals) {
 
       vals$data_type <- "uploaded"
       inFile <- input$file_csv
-      # data.table::fread()
+      
       df0 <- read.csv(inFile$datapath,
                       header = input$file_header,
                       sep = input$file_sep,
                       quote = input$file_quote)
 
       df0 <- ctmm::as.telemetry(df0)
-
+      
       if (!("timestamp" %in% names(df0[[1]]))) {
 
         vals$is_anonymized <- TRUE
@@ -442,8 +442,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     # 1.2. Subset data based on individual selection:
 
     observe({
-      req(vals$dataList,
-          vals$id,
+      req(vals$dataList, vals$id,
           vals$active_tab == 'data_upload')
 
       if(names(vals$dataList)[[1]] == "timestamp") {
@@ -496,14 +495,12 @@ mod_tab_data_upload_server <- function(id, vals) {
       }
 
       eval_n <- nrow(vals$data0)
-      tempnames <- names(summary(vals$data0))
-      tempunits <- tempnames[grep('sampling period',
-                                  tempnames)] %>%
+      nms <- names(summary(vals$data0))
+      dur_unit <- nms[grep('sampling period',nms)] %>%
         extract_units()
       dur <- as.numeric(
-        summary(vals$data0)[grep('sampling period',
-                                 tempnames)])
-      eval_dur <- dur %#% tempunits
+        summary(vals$data0)[grep('sampling period', nms)])
+      eval_dur <- dur %#% dur_unit
 
       if(eval_dur < (1 %#% "days") || eval_n < 5) {
 
@@ -554,8 +551,30 @@ mod_tab_data_upload_server <- function(id, vals) {
       bindEvent(input$validate_upload, ignoreInit = TRUE)
 
     # PARAMETERS --------------------------------------------------------
+    
+    runtime <- shiny::reactive({
+      
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = span(
+          style = "font-size: 18px;",
+          span("Calculating", style = "color: #797979;"),
+          HTML(paste0(span("run time", class = "cl-sea"),
+                      span("...", style = "color: #797979;")))
+        )
+      )
+      
+      out <- estimate_time(vals$data0, parallel = vals$parallel)
+      
+      shinybusy::remove_modal_spinner()
+      return(out)
+      
+    }) %>% # end of reactive, data_sim
+      bindCache(c(vals$id, vals$species_binom))
+    
     # After clicking "Extract" button:
-
+    
     observe({
       shinyjs::show(id = "uploadBox_regime")
 
@@ -564,13 +583,13 @@ mod_tab_data_upload_server <- function(id, vals) {
         shinyalert::shinyalert(
           title = "Oops!",
           text = span(
-            'Please select a species/dataset and an individual',
-            'first, then click the',
+            "Please select a species/dataset and an individual",
+            "first, then click the",
             icon("circle-check", class = "cl-mdn"),
-            span('Validate', class = "cl-mdn"), "and",
+            span("Validate", class = "cl-mdn"), "and",
             icon("paper-plane", class = "cl-mdn"),
-            span('Extract', class = "cl-mdn"),
-            'buttons.'),
+            span("Extract", class = "cl-mdn"),
+            "buttons."),
           html = TRUE,
           size = "xs")
 
@@ -579,145 +598,190 @@ mod_tab_data_upload_server <- function(id, vals) {
       }
 
       ## Model fitting: -------------------------------------------------
-
+      
       req(vals$is_valid)
       start <- Sys.time()
-
-      guess0 <- reactive({
-        ctmm::ctmm.guess(vals$data0, interactive = FALSE)
+      
+      # Fit models to current data:
+      
+      msg_log(
+        style = "warning",
+        message = paste0("Model fit ",
+                         msg_warning("in progress"), "."),
+        detail = "Please wait for model selection to finish:")
+      
+      expt <- runtime()
+      
+      expt_max <- expt$max
+      expt_min <- expt$min
+      expt_units <- expt$units
+      
+      if ((expt_max %#% expt_units) > 900) {
+        
+        vals$confirm_time <- FALSE
+        shinyalert::shinyalert(
+          className = "modal_warning",
+          title = "Do you wish to proceed?",
+          callbackR = function(x) {
+            vals$confirm_time <- x
+          },
+          text = span(
+            "Expected run time for the next phase", br(),
+            "is approximately",
+            span(expt_min, "\u2013", expt_max,
+                 class = "cl-dgr"),
+            wrap_none(span(expt_units,
+                           class = "cl-dgr"), ".")
+          ),
+          type = "warning",
+          showCancelButton = TRUE,
+          cancelButtonText = "Stop",
+          confirmButtonCol = pal$mdn,
+          confirmButtonText = "Proceed",
+          html = TRUE
+        )
+      } else {
+        confirm <- TRUE
+      }
+      
+      req(confirm)
+      if (expt_max == expt_min) {
+        tmptxt <- paste("\u2264", expt_max, expt_units)
+      } else {
+        tmptxt <- paste(expt_min, "\u2013",
+                        expt_max, expt_units)
+      }
+      
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        
+        text = span(
+          style = "font-size: 18px;",
+          span("Selecting", style = "color: #797979;"),
+          HTML(paste0(span("movement model", class = "cl-sea"),
+                      span(".", style = "color: #797979;"))),
+          p(),
+          p("Expected run time:",
+            style = paste("background-color: #eaeaea;",
+                          "color: #797979;",
+                          "font-size: 16px;",
+                          "text-align: center;")), br(),
+          p(tmptxt,
+            style = paste("background-color: #eaeaea;",
+                          "color: #009da0;",
+                          "font-size: 16px;",
+                          "text-align: center;",
+                          "margin-top: -40px;")),
+          p()
+          
+        ) # end of text
+      ) # end of modal
+      
+      guess0 <- ctmm::ctmm.guess(vals$data0, interactive = FALSE)
+      inputList <- list(list(vals$data0, guess0))
+      fit0 <- reactive({
+        par_ctmm.select(inputList, parallel = vals$parallel)
       }) %>% bindCache(vals$species_binom,
                        vals$id)
-
-      vals$guess <- guess0()
-
-      # Fit models to current data:
-
-      if(vals$data_type == "selected") {
-
-        tmpspecies <- vals$species
-
-        msg_log(
-          style = "warning",
-          message = paste0("Model fit ",
-                           msg_warning("available"), "."),
-          detail = "...Loading existing model fit now."
-        )
-
-        shiny::withProgress({
-          fitList <- readRDS(
-            system.file("extdata",
-                        paste0(tmpspecies, "_fitList.rds"),
-                        package = "movedesign"));
-          Sys.sleep(1.5) },
-          message = "Loading model fit.",
-          detail = "Please wait...")
-
-        msg_log(
-          style = "success",
-          message = "...Model fit loaded.",
-          detail = ""
-        )
-
-        vals$fit0 <- fitList[[vals$id]][[1]]
-        rm(fitList)
-
+      
+      vals$fit0 <- fit0()
+      time_fit0 <- difftime(Sys.time(), start, units = "mins")
+      vals$uploadOut_time <- time_fit0
+      
+      if (round(time_fit0, 1) < 1) {
+        tmpdetail <- paste("This step took less than one minute.")
       } else {
-
-        inputList <- list(list(vals$data0, guess0()))
-        fit0 <- reactive({
-          # ctmm::ctmm.select(vals$data0, guess0(), trace = TRUE)
-          par_ctmm.select(inputList, parallel = vals$parallel)
-        }) %>% bindCache(vals$species_binom,
-                         vals$id)
-
-        msg_log(
-          style = "warning",
-          message = paste0("Selecting ",
-                           msg_warning("movement models"), "."),
-          detail = "Please wait for 'ctmm.select()' to finish:")
-
-        shiny::withProgress({
-          exptime <- estimate_time(vals$data0, parallel = vals$parallel)
-          exptime <- ifelse(exptime < 5, exptime,
-                            round_any(exptime, 5 , f = ceiling))
-          exptime_units <- ifelse(exptime == 1, "minute", "minutes")
-        },
-        message = "Calculating run time...",
-        detail = "")
-
-        shiny::withProgress({
-          vals$fit0 <- fit0()
-        },
-        message = "Fitting different models.",
-        detail = "This may take a while...")
-
-        vals$uploadOut_time <- difftime(Sys.time(), start,
-                                        units = "mins")
-        msg_log(
-          style = "success",
-          message = "Model fitting complete.",
-          detail = "")
+        tmpdetail <- paste("This step took approximately",
+                           round(difftime(Sys.time(), start,
+                                          units = 'min'), 0),
+                           "minutes.")
       }
-
-      shinyjs::show(id = "uploadBox_sizes")
-
-      vals$tmpsp <- vals$species_binom
-      vals$tmpid <- vals$id
-
-      sum.fit <- summary(vals$fit0)
-      vals$needs_fit <- FALSE
-
-      ## Extract semi-variance parameter: -------------------------------
-
-      svf <- prepare_svf(vals$data0, fraction = .65)
-      vals$sigma0_min <- mean(svf$var_low95)
-      vals$sigma0_max <- mean(svf$var_upp95)
-
-      ## Extract timescale and spatial parameters: ----------------------
-
-      output$uploadUI_parameters <- renderUI({
-
-        shinydashboardPlus::box(
-          title = span("Displaying parameters:", class = "ttl-box"),
-          id = ns("uploadBox_parameters"),
-          width = NULL,
-          solidHeader = FALSE,
-
-          column(
-            align = "center", width = 12,
-
-            renderUI({
-              if(vals$tmpid == "Simulated individual") { NULL
-              } else {
-
-                p("These parameters have been extracted from",
-                  "individual", span(vals$tmpid, class = "cl-sea-d"),
-                  "and species",
-                  wrap_none(span(vals$tmpsp, class = "cl-sea-d"), "."),
-                  "They will only update if you change the",
-                  "individual and/or species selected, and then",
-                  "click the buttons",
-                  icon("circle-check", class = "cl-mdn"),
-                  span("Validate", class = "cl-mdn"), "and",
-                  icon("paper-plane", class = "cl-mdn"),
-                  wrap_none("Extract", css = "cl-mdn", end = "."))
-
-              } # end of if() statement
-            }) # end of renderUI
-
-          ), # end of column (for text)
-
-          column(width = 12, uiOutput(ns("uploadBlock_movprocess"))),
-
-          fluidRow(
-            column(width = 4, uiOutput(ns("uploadBlock_sigma"))),
-            column(width = 4, uiOutput(ns("uploadBlock_taup"))),
-            column(width = 4, uiOutput(ns("uploadBlock_tauv")))
-          )
-
-        ) # end of box
-      }) # end of renderUI
-
+      
+      if (!is.null(vals$fit0)) {
+        msg_log(
+          style = 'success',
+          message = paste0("Model fit ",
+                           msg_success("completed"), "."),
+          detail = tmpdetail)
+        
+        shinyjs::show(id = "uploadBox_sizes")
+        
+        vals$tmpsp <- vals$species_binom
+        vals$tmpid <- vals$id
+        
+        sum.fit <- summary(vals$fit0)
+        vals$needs_fit <- FALSE
+        
+        ## Extract semi-variance parameter: -------------------------------
+        
+        svf <- prepare_svf(vals$data0, fraction = .65)
+        vals$sigma0_min <- mean(svf$var_low95)
+        vals$sigma0_max <- mean(svf$var_upp95)
+        
+        ## Extract timescale and spatial parameters: ----------------------
+        
+        output$uploadUI_parameters <- renderUI({
+          
+          shinydashboardPlus::box(
+            title = span("Displaying parameters:", class = "ttl-box"),
+            id = ns("uploadBox_parameters"),
+            width = NULL,
+            solidHeader = FALSE,
+            
+            column(
+              align = "center", width = 12,
+              
+              renderUI({
+                if(vals$tmpid == "Simulated individual") { NULL
+                } else {
+                  
+                  p("These parameters have been extracted from",
+                    "individual", span(vals$tmpid, class = "cl-sea-d"),
+                    "and species",
+                    wrap_none(span(vals$tmpsp, class = "cl-sea-d"), "."),
+                    "They will only update if you change the",
+                    "individual and/or species selected, and then",
+                    "click the buttons",
+                    icon("circle-check", class = "cl-mdn"),
+                    span("Validate", class = "cl-mdn"), "and",
+                    icon("paper-plane", class = "cl-mdn"),
+                    wrap_none("Extract", css = "cl-mdn", end = "."))
+                  
+                } # end of if() statement
+              }) # end of renderUI
+              
+            ), # end of column (for text)
+            
+            column(width = 12, uiOutput(ns("uploadBlock_movprocess"))),
+            
+            fluidRow(
+              column(width = 4, uiOutput(ns("uploadBlock_sigma"))),
+              column(width = 4, uiOutput(ns("uploadBlock_taup"))),
+              column(width = 4, uiOutput(ns("uploadBlock_tauv")))
+            )
+            
+          ) # end of box
+        }) # end of renderUI
+        
+        if (!vals$tour_active) {
+          
+          shinyalert::shinyalert(
+            className = "modal_success",
+            type = "success",
+            title = "Success!",
+            text = span(
+              "Proceed to the", br(),
+              icon("compass-drafting", class = "cl-mdn"),
+              span('Analyses', class = "cl-mdn"), "tabs."),
+            html = TRUE,
+            size = "xs")
+        }
+        
+      } # end of if(), !is.null(fit1)
+      
+      shinybusy::remove_modal_spinner()
+      
     }) %>% # end of observe, then:
       bindEvent(input$uploadButton_extract)
 
@@ -927,7 +991,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                               "padding: 0;")), br(),
               span(HTML("Semi-variance (\u03C3)"))
             ),
-            value = span(HTML("&nbsp;", sig[1], sig[2])),
+            value = span(HTML("&nbsp;", sig$value, sig$unit)),
             subtitle =
               paste(
                 ifelse(vals$sigma0_min == 0,
@@ -945,44 +1009,31 @@ mod_tab_data_upload_server <- function(id, vals) {
 
     output$uploadInfo_dur <- shiny::renderUI({
 
-      sum.dat <- summary(vals$data0)
-      tempnames <- names(sum.dat)
-
-      tempunits <- tempnames[grep('sampling period',
-                                  tempnames)] %>%
+      dat <- summary(vals$data0)
+      nms <- names(dat)
+      
+      dur <- as.numeric(dat[grep('sampling period', nms)])
+      dur_unit <- nms[grep('sampling period', nms)] %>%
         extract_units()
-
-      dur <- as.numeric(
-        sum.dat[grep('sampling period',
-                     tempnames)])
-
-      vals$dur0 <- dur
-      vals$dur0_units <- tempunits
-
-      out <- fix_unit(dur, vals$dur0_units)
+      
+      out <- fix_unit(dur, dur_unit)
       parBlock(header = "Sampling duration",
-               value = paste(out[1], out[2]))
+               value = paste(out$value, out$unit))
 
     }) # ender of renderUI // uploadInfo_dur
 
     output$uploadInfo_dti <- shiny::renderUI({
 
-      sum.dat <- summary(vals$data0)
-      tempnames <- names(sum.dat)
-
-      tempunits <- tempnames[grep('sampling interval',
-                                  tempnames)] %>%
+      dat <- summary(vals$data0)
+      nms <- names(dat)
+      
+      dti <- as.numeric(dat[grep('sampling interval', nms)])
+      dti_unit <- nms[grep('sampling interval', nms)] %>%
         extract_units()
-
-      dti <- as.numeric(sum.dat[grep('sampling interval',
-                                     tempnames)])
-
-      vals$dti0 <- dti
-      vals$dti0_units <- tempunits
-
-      out <- fix_unit(dti, vals$dti0_units)
+      
+      out <- fix_unit(dti, dti_unit)
       parBlock(header = "Sampling interval",
-               value = paste(out[1], out[2]),
+               value = paste(out$value, out$unit),
                subtitle = "between fixes")
 
     }) # end of renderUI // uploadInfo_dti
@@ -1005,17 +1056,16 @@ mod_tab_data_upload_server <- function(id, vals) {
     output$uploadBlock_Narea <- shiny::renderUI({
       req(vals$fit0)
 
-      tempnames <- names(summary(vals$fit0)$DOF)
-      N <- summary(vals$fit0)$DOF[grep('area', tempnames)][[1]]
+      nms <- names(summary(vals$fit0)$DOF)
+      N <- summary(vals$fit0)$DOF[grep('area', nms)][[1]]
       n <- nrow(vals$data0)
-
-      diff_perc <- paste0(
+      vals$N1 <- N
+      
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
 
-      vals$Narea <- N
-
       sampleBlock(
-        number = diff_perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",
@@ -1028,17 +1078,16 @@ mod_tab_data_upload_server <- function(id, vals) {
     output$uploadBlock_Nspeed <- shiny::renderUI({
       req(vals$fit0)
 
-      tmpnames <- names(summary(vals$fit0)$DOF)
-      N <- summary(vals$fit0)$DOF[grep('speed', tmpnames)][[1]]
+      nms <- names(summary(vals$fit0)$DOF)
+      N <- summary(vals$fit0)$DOF[grep('speed', nms)][[1]]
       n <- nrow(vals$data0)
+      vals$N2 <- N
 
-      diff_perc <- paste0(
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
 
-      vals$Nspeed <- N
-
       sampleBlock(
-        number = diff_perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",

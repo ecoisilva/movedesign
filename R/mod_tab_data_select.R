@@ -93,7 +93,7 @@ mod_tab_data_select_ui <- function(id) {
               choices = "",
               multiple = FALSE,
               options = list(
-                placeholder = '(select id)',
+                placeholder = "(select id)",
                 onInitialize = I('function() { this.setValue(""); }'))
             ),
 
@@ -472,7 +472,6 @@ mod_tab_data_select_server <- function(id, vals) {
 
 
     # PARAMETERS --------------------------------------------------------
-
     # After clicking "Extract" button:
 
     observe({
@@ -511,58 +510,30 @@ mod_tab_data_select_server <- function(id, vals) {
 
       # Fit models to current data:
 
-      if(vals$data_type == "selected") {
-
-        tmpspecies <- vals$species
-
-        msg_log(
-          style = "warning",
-          message = paste0("Model fit ",
-                           msg_warning("available"), "."),
-          detail = "...Loading existing model fit now."
-        )
-
-        fitList <- readRDS(
-          system.file("extdata",
-                      paste0(tmpspecies, "_fitList.rds"),
-                      package = "movedesign"))
-
-        msg_log(
-          style = "success",
-          message = "...Model fit loaded.",
-          detail = ""
-        )
-
-        vals$fit0 <- fitList[[vals$id]][[1]]
-        rm(fitList)
-
-      } else {
-
-        inputList <- list(list(dat0, guess0()))
-        fit0 <- reactive({
-          par_ctmm.select(inputList, parallel = TRUE)
-        }) %>% bindCache(vals$species_binom,
-                         vals$id)
-
-        msg_log(
-          style = "warning",
-          message = "...Fitting movement models.",
-          detail = "Please wait for model selection to finish."
-        )
-
-        shiny::withProgress({
-          vals$fit0 <- fit0()
-        },
-        message = "Fitting different models.",
-        detail = "This may take a while...")
-
-        vals$selectOut_time <- difftime(Sys.time(), start,
-                                        units = "mins")
-        msg_log(
-          style = "success",
-          message = "Model fitting complete.",
-          detail = "")
-      }
+      inputList <- list(list(dat0, guess0()))
+      fit0 <- reactive({
+        par_ctmm.select(inputList, parallel = TRUE)
+      }) %>% bindCache(vals$species_binom,
+                       vals$id)
+      
+      msg_log(
+        style = "warning",
+        message = paste0("Selecting ",
+                         msg_warning("movement models"), "."),
+        detail = "Please wait for 'ctmm.select()' to finish:")
+      
+      shiny::withProgress({
+        vals$fit0 <- fit0()
+      },
+      message = "Fitting different models.",
+      detail = "This may take a while...")
+      
+      vals$selectOut_time <- difftime(Sys.time(), start,
+                                      units = "mins")
+      msg_log(
+        style = "success",
+        message = "Model fitting complete.",
+        detail = "")
 
       shinyjs::show(id = "selectBox_sizes")
 
@@ -838,7 +809,7 @@ mod_tab_data_select_server <- function(id, vals) {
               br(),
               span(HTML("Semi-variance (\u03C3)"))
             ),
-            value = span(HTML("&nbsp;", sig[1], sig[2])),
+            value = span(HTML("&nbsp;", sig$value, sig$unit)),
             subtitle =
               paste(
                 ifelse(vals$sigma0_min == 0,
@@ -856,22 +827,15 @@ mod_tab_data_select_server <- function(id, vals) {
 
     output$selectInfo_dur <- shiny::renderUI({
       req(vals$data0)
-
-      sum.dat <- summary(vals$data0)
-      tempnames <- names(sum.dat)
-
-      tempunits <- tempnames[grep('sampling period',
-                                  tempnames)] %>%
+      
+      dat <- summary(vals$data0)
+      nms <- names(dat)
+      
+      dur <- as.numeric(dat[grep('sampling period', nms)])
+      dur_unit <- nms[grep('sampling period', nms)] %>%
         extract_units()
-
-      dur <- as.numeric(
-        sum.dat[grep('sampling period',
-                     tempnames)])
-
-      vals$dur0 <- dur
-      vals$dur0_units <- tempunits
-
-      out <- fix_unit(dur, vals$dur0_units)
+      
+      out <- fix_unit(dur, dur_unit)
       parBlock(header = "Sampling duration",
                value = paste(out[1], out[2]))
 
@@ -880,20 +844,14 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectInfo_dti <- shiny::renderUI({
       req(vals$data0)
 
-      sum.dat <- summary(vals$data0)
-      tempnames <- names(sum.dat)
+      dat <- summary(vals$data0)
+      nms <- names(dat)
 
-      tempunits <- tempnames[grep('sampling interval',
-                                  tempnames)] %>%
+      dti <- as.numeric(dat[grep('sampling interval', nms)])
+      dti_unit <- nms[grep('sampling interval', nms)] %>%
         extract_units()
-
-      dti <- as.numeric(sum.dat[grep('sampling interval',
-                                     tempnames)])
-
-      vals$dti0 <- dti
-      vals$dti0_units <- tempunits
-
-      out <- fix_unit(dti, vals$dti0_units)
+      
+      out <- fix_unit(dti, dti_unit)
       parBlock(header = "Sampling interval",
                value = paste(out[1], out[2]),
                subtitle = "between fixes")
@@ -918,17 +876,16 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectBlock_Narea <- shiny::renderUI({
       req(vals$fit0)
 
-      tempnames <- names(summary(vals$fit0)$DOF)
-      N <- summary(vals$fit0)$DOF[grep('area', tempnames)][[1]]
+      nms <- names(summary(vals$fit0)$DOF)
+      N <- summary(vals$fit0)$DOF[grep('area', nms)][[1]]
       n <- nrow(vals$data0)
+      vals$N1 <- N
 
-      diff_perc <- paste0(
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
 
-      vals$Narea <- N
-
       sampleBlock(
-        number = diff_perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",
@@ -941,17 +898,16 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectBlock_Nspeed <- shiny::renderUI({
       req(vals$fit0)
 
-      tmpnames <- names(summary(vals$fit0)$DOF)
-      N <- summary(vals$fit0)$DOF[grep('speed', tmpnames)][[1]]
+      nms <- names(summary(vals$fit0)$DOF)
+      N <- summary(vals$fit0)$DOF[grep('speed', nms)][[1]]
       n <- nrow(vals$data0)
+      vals$N2 <- N
 
-      diff_perc <- paste0(
+      value <- paste0(
         "-", round((100 - ((N * 100) / n)), 1), "%")
-
-      vals$Nspeed <- N
-
+      
       sampleBlock(
-        number = diff_perc,
+        number = value,
         numberIcon = TRUE,
         header = round(N, 1),
         line1 = "Effective sample size",
@@ -981,14 +937,12 @@ mod_tab_data_select_server <- function(id, vals) {
     output$dataTable_processes <- reactable::renderReactable({
 
       mods <- movedesign::movmods
+      nm <- sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
 
-      tmpname <-
-        sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
-
-      if(is.null(match(tmpname, mods$name_short))) {
+      if(is.null(match(nm, mods$name_short))) {
         preselected_mod <- NULL
       } else {
-        preselected_mod <- match(tmpname, mods$name_short)
+        preselected_mod <- match(nm, mods$name_short)
       }
       df0 <- mods %>% dplyr::select(!name_short)
 

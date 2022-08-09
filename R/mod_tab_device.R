@@ -695,14 +695,14 @@ mod_tab_device_server <- function(id, vals) {
     ## Render regime text: ------------------------------------------------
 
     output$regText_gps <- renderUI({
-      req(vals$dur0_dev, vals$dti0_dev)
+      req(vals$reg$dur, vals$reg$dti)
 
-      out_dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
+      out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
       dur <- out_dur[1]
       dur_units <- out_dur[2]
 
-      dur_day <- "days" %#% vals$dur0_dev %#% vals$dur0_units_dev
-      dur_mth <- "months" %#% vals$dur0_dev %#% vals$dur0_units_dev
+      dur_day <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
+      dur_mth <- "months" %#% vals$reg$dur %#% vals$reg$dur_unit
 
       if (dur_day == 1) {
         text_dur <- span(
@@ -718,19 +718,19 @@ mod_tab_device_server <- function(id, vals) {
             ").")))
       }
 
-      out_dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
+      out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
       dti <- out_dti[1]
       dti_units <- out_dti[2]
 
-      tmp <- 1/("day" %#% vals$dti0_dev %#% vals$dti0_units_dev)
+      tmp <- 1/("day" %#% vals$reg$dti %#% vals$reg$dti_unit)
       frq <- round(tmp, 1)
       frq_units <- "locations per day"
 
       if (frq > 24) {
-        frq <- 1/("hours" %#% vals$dti0_dev %#% vals$dti0_units_dev)
+        frq <- 1/("hours" %#% vals$reg$dti %#% vals$reg$dti_unit)
         frq_units <- "locations per hour"
       } else if (frq < 1) {
-        frq <- 1/("month" %#% vals$dti0_dev %#% vals$dti0_units_dev)
+        frq <- 1/("month" %#% vals$reg$dti %#% vals$reg$dti_unit)
         frq_units <- "locations per month"
       }
 
@@ -1184,14 +1184,14 @@ mod_tab_device_server <- function(id, vals) {
           size = "xs")
 
       } else {
-        validate(need(vals$dur0_dev != '' && vals$dur0_dev > 0,
+        validate(need(vals$reg$dur != '' && vals$reg$dur > 0,
                       "Requires a non-zero value."),
-                 need(vals$dti0_dev != '' && vals$dti0_dev > 0,
+                 need(vals$reg$dti != '' && vals$reg$dti > 0,
                       "Requires a non-zero value."))
         vals$is_reg_valid <- TRUE
 
-        dur <- vals$dur0_dev %#% vals$dur0_units_dev
-        dti <- vals$dti0_dev %#% vals$dti0_units_dev
+        dur <- vals$reg$dur %#% vals$reg$dur_unit
+        dti <- vals$reg$dti %#% vals$reg$dti_unit
 
         t0 <- seq(1, dur, by = dti)
         vals$device_n <- length(t0)
@@ -1255,16 +1255,16 @@ mod_tab_device_server <- function(id, vals) {
           size = "xs")
 
       } else {
-        validate(need(vals$dur0_dev != '' && vals$dur0_dev > 0,
+        validate(need(vals$reg$dur != '' && vals$reg$dur > 0,
                       "Requires a non-zero value."),
-                 need(vals$dti0_dev != '' && vals$dti0_dev > 0,
+                 need(vals$reg$dti != '' && vals$reg$dti > 0,
                       "Requires a non-zero value."))
 
         vals$is_reg_valid <- TRUE
         vals$is_analyses <- FALSE
 
-        dur <- vals$dur0_dev %#% vals$dur0_units_dev
-        dti <- vals$dti0_dev %#% vals$dti0_units_dev
+        dur <- vals$reg$dur %#% vals$reg$dur_unit
+        dti <- vals$reg$dti %#% vals$reg$dti_unit
 
         t0 <- seq(1, dur, by = dti)
         vals$device_n <- length(t0)
@@ -1380,8 +1380,8 @@ mod_tab_device_server <- function(id, vals) {
     ## Device — sampling duration & interval: ---------------------------
 
     observe({
-      vals$dur0_dev <- NULL
-      vals$dti0_dev <- NULL
+      vals$reg$dur <- NULL
+      vals$reg$dti <- NULL
 
       # GPS:
       if (input$device_type == 1) {
@@ -1394,14 +1394,14 @@ mod_tab_device_server <- function(id, vals) {
           df0 <- vals$df_gps
           selected <- reg_selected()
 
-          vals$dur0_dev <- input$gps_dur_units %#% df0[selected, ]$dur
-          vals$dur0_units_dev <- input$gps_dur_units
+          vals$reg$dur <- input$gps_dur_units %#% df0[selected, ]$dur
+          vals$reg$dur_unit <- input$gps_dur_units
 
           tmpdti_notes <- df0[selected, ]$nu_notes
           tmpdti_units <- sub('^.* ([[:alnum:]]+)$',
                               '\\1', tmpdti_notes)
-          vals$dti0_units_dev <- tmpdti_units
-          vals$dti0_dev <- tmpdti_units %#% df0[selected, ]$nu
+          vals$reg$dti_unit <- tmpdti_units
+          vals$reg$dti <- tmpdti_units %#% df0[selected, ]$nu
 
         } else {
           req(input$gps_dur, input$gps_dti)
@@ -1410,10 +1410,10 @@ mod_tab_device_server <- function(id, vals) {
                    need(input$gps_dti != '' && input$gps_dti > 0,
                         "Requires a non-zero value."))
 
-          vals$dur0_dev <- input$gps_dur
-          vals$dur0_units_dev <- input$gps_dur_units
-          vals$dti0_dev <- input$gps_dti
-          vals$dti0_units_dev <- input$gps_dti_units
+          vals$reg$dur <- input$gps_dur
+          vals$reg$dur_unit <- input$gps_dur_units
+          vals$reg$dti <- input$gps_dti
+          vals$reg$dti_unit <- input$gps_dti_units
         }
 
       } else if (input$device_type == 2) {
@@ -1422,11 +1422,11 @@ mod_tab_device_server <- function(id, vals) {
           req(vals$df_vhf)
 
           selected <- reg_selected()
-          vals$dur0_dev <- vals$df_vhf[selected, ]$dur
-          vals$dur0_units_dev <- vals$df_vhf[selected, ]$dur_units
+          vals$reg$dur <- vals$df_vhf[selected, ]$dur
+          vals$reg$dur_unit <- vals$df_vhf[selected, ]$dur_units
 
-          vals$dti0_dev <- input$vhf_dti
-          vals$dti0_units_dev <- input$vhf_dti_units
+          vals$reg$dti <- input$vhf_dti
+          vals$reg$dti_unit <- input$vhf_dti_units
 
         } else {
           req(input$vhf_dur, input$vhf_dti)
@@ -1434,10 +1434,10 @@ mod_tab_device_server <- function(id, vals) {
           validate(need(input$vhf_dur != '', "Requires a value."),
                    need(input$vhf_dti != '', "Requires a value."))
 
-          vals$dur0_dev <- input$vhf_dur
-          vals$dur0_units_dev <- input$vhf_dur_units
-          vals$dti0_dev <- input$vhf_dti
-          vals$dti0_units_dev <- input$vhf_dti_units
+          vals$reg$dur <- input$vhf_dur
+          vals$reg$dur_unit <- input$vhf_dur_units
+          vals$reg$dti <- input$vhf_dti
+          vals$reg$dti_unit <- input$vhf_dti_units
         }
 
       } # end of if ()
@@ -1447,11 +1447,11 @@ mod_tab_device_server <- function(id, vals) {
 
     observe({
       req(vals$tau_p0, vals$tau_v0,
-          vals$dur0_dev, vals$dti0_dev)
+          vals$reg$dur, vals$reg$dti)
 
-      validate(need(vals$dur0_dev != '' && vals$dur0_dev > 0,
+      validate(need(vals$reg$dur != '' && vals$reg$dur > 0,
                     "Requires a non-zero value."),
-               need(vals$dti0_dev != '' && vals$dti0_dev > 0,
+               need(vals$reg$dti != '' && vals$reg$dti > 0,
                     "Requires a non-zero value."))
 
       n <- NULL
@@ -1461,8 +1461,8 @@ mod_tab_device_server <- function(id, vals) {
       tauv <- vals$tau_v0 %#% vals$tau_v0_units
       taup <- vals$tau_p0 %#% vals$tau_p0_units
 
-      dur <- vals$dur0_dev %#% vals$dur0_units_dev
-      dti <- vals$dti0_dev %#% vals$dti0_units_dev
+      dur <- vals$reg$dur %#% vals$reg$dur_unit
+      dti <- vals$reg$dti %#% vals$reg$dti_unit
 
       t0 <- seq(1, dur, by = dti)
       n <- length(t0)
@@ -1553,8 +1553,8 @@ mod_tab_device_server <- function(id, vals) {
 
     data_sim <- shiny::reactive({
 
-      dur <- vals$dur0_dev %#% vals$dur0_units_dev
-      dti <- vals$dti0_dev %#% vals$dti0_units_dev
+      dur <- vals$reg$dur %#% vals$reg$dur_unit
+      dti <- vals$reg$dti %#% vals$reg$dti_unit
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
       ctmm::simulate(
@@ -1566,8 +1566,8 @@ mod_tab_device_server <- function(id, vals) {
 
     }) %>% # end of reactive, data_sim
       bindCache(c(vals$id,
-                  vals$dur0_dev, vals$dur0_units_dev,
-                  vals$dti0_dev, vals$dti0_units_dev))
+                  vals$reg$dur, vals$reg$dur_unit,
+                  vals$reg$dti, vals$reg$dti_unit))
 
     runtime <- shiny::reactive({
 
@@ -1588,16 +1588,16 @@ mod_tab_device_server <- function(id, vals) {
       return(out)
 
     }) %>% # end of reactive, data_sim
-      bindCache(c(vals$dur0_dev, vals$dur0_units_dev,
-                  vals$dti0_dev, vals$dti0_units_dev))
+      bindCache(c(vals$reg$dur, vals$reg$dur_unit,
+                  vals$reg$dti, vals$reg$dti_unit))
 
     # Run simulation:
 
     observe({
       req(vals$data0,
           vals$fit0,
-          vals$dur0_dev,
-          vals$dti0_dev,
+          vals$reg$dur,
+          vals$reg$dti,
           input$est_type,
           vals$is_reg_valid,
           vals$confirm_n)
@@ -1680,7 +1680,7 @@ mod_tab_device_server <- function(id, vals) {
           style = "warning",
           message = paste0("Model fit ",
                            msg_warning("in progress"), "."),
-          detail = "Please wait for model selection to finish.")
+          detail = "Please wait for model selection to finish:")
 
         expt <- runtime()
 
@@ -2154,8 +2154,8 @@ mod_tab_device_server <- function(id, vals) {
 
       out$device <- vals$device_type
 
-      dur <- fix_unit(vals$dur0_dev, vals$dur0_units_dev)
-      dti <- fix_unit(vals$dti0_dev, vals$dti0_units_dev)
+      dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
+      dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
 
       out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
       out$dti <- paste(dti[1], abbrv_unit(dti[,2]))
@@ -2170,8 +2170,8 @@ mod_tab_device_server <- function(id, vals) {
     })
 
     observe({
-      req(vals$dur0_dev, vals$dur0_units_dev,
-          vals$dti0_dev, vals$dti0_units_dev,
+      req(vals$reg$dur, vals$reg$dur_unit,
+          vals$reg$dti, vals$reg$dti_unit,
           vals$device_n, vals$device_N1, vals$device_N2)
 
       shinyjs::show(id = "regBox_summary")
@@ -2307,9 +2307,9 @@ mod_tab_device_server <- function(id, vals) {
     })
 
     output$regBlock_dur0_dev <- renderUI({
-      req(vals$dur0_dev)
+      req(vals$reg$dur)
 
-      out <- fix_unit(vals$dur0_dev, vals$dur0_units_dev,
+      out <- fix_unit(vals$reg$dur, vals$reg$dur_unit,
                       convert = TRUE)
       parBlock(
         header = "Sampling duration",
@@ -2318,9 +2318,9 @@ mod_tab_device_server <- function(id, vals) {
     }) # end of renderUI // regBlock_dur0_dev
 
     output$regBlock_dti0_dev <- renderUI({
-      req(vals$dti0_dev, vals$dti0_units_dev)
+      req(vals$reg$dti, vals$reg$dti_unit)
 
-      out <- fix_unit(vals$dti0_dev, vals$dti0_units_dev,
+      out <- fix_unit(vals$reg$dti, vals$reg$dti_unit,
                       convert = TRUE)
 
       parBlock(

@@ -7,22 +7,18 @@
 #'
 #' @noRd
 parBlock <- function(icon = NULL,
-                     color = NULL,
                      header = NULL,
                      value = NULL,
                      subtitle = NULL) {
 
   cl <- "parblock"
 
-  icon <- icon(icon)
-  if (!is.null(color)) icon <- icon(icon, class = color)
-      
   shiny::tags$div(
     class = cl,
 
     if (!is.null(icon)) {
       shiny::tags$span(
-        class = "parblock-icon", icon, br()) },
+        class = "parblock-icon", icon(icon), br()) },
     shiny::tags$span(class = "parblock-text", header, br()),
     shiny::tags$span(class = "parblock-value", value),
     if(is.null(subtitle)) { NULL } else {
@@ -327,10 +323,13 @@ reset_data_values <- function(vals) {
   if(!is.null(vals$data_type)) vals$data_type <- NULL
   if(!is.null(vals$data0)) vals$data0 <- NULL
   if(!is.null(vals$dataList)) vals$dataList <- NULL
-
+  
   if(!is.null(vals$tmpid)) vals$tmpid <- NULL
   if(!is.null(vals$fit0)) vals$fit0 <- NULL
-
+  
+  if(!is.null(vals$hr)) vals$hr <- NULL
+  if(!is.null(vals$sd)) vals$sd <- NULL
+  
 }
 
 #' Coerce telemetry object to list

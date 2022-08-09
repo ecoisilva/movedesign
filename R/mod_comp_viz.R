@@ -76,8 +76,7 @@ mod_comp_viz_ui <- function(id) {
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
             ggiraph::girafeOutput(
               outputId = ns("dataPlot_svf"),
-              width = "100%", height = "100%") %>%
-              add_spinner(height = "200px")),
+              width = "100%", height = "100%")),
 
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
             column(
@@ -103,6 +102,8 @@ mod_comp_viz_ui <- function(id) {
 mod_comp_viz_server <- function(id, vals) {
   moduleServer( id, function(input, output, session) {
     ns <- session$ns
+    
+    pal <- load_pal()
 
     observe({
       req(vals$is_valid)
@@ -414,7 +415,7 @@ mod_comp_viz_server <- function(id, vals) {
         dplyr::slice_min(lag, prop = input$dataVar_timeframe / 100)
       vals$var_fraction <- input$dataVar_timeframe
 
-      p <- plotting_svf(svf, fill = "var(--danger)")
+      p <- plotting_svf(svf, fill = pal$dgr)
       ggiraph::girafe(
         ggobj = p,
         options = list(
