@@ -586,7 +586,7 @@ mod_tab_report_server <- function(id, vals) {
       input_taup <- "days" %#% vals$tau_p0 %#% vals$tau_p0_units
       input_dur <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
 
-      dat <- sims_hrange[[1]] %>%
+      dat <- movedesign::sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% duration, 1))
 
@@ -614,7 +614,7 @@ mod_tab_report_server <- function(id, vals) {
       input_dur <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
       input_dti <- vals$reg$dti %#% vals$reg$dti_unit
 
-      dat <- sims_speed[[1]] %>%
+      dat <- movedesign::sims_speed[[1]] %>%
         dplyr::mutate(dur = round("days" %#% dur, 0))
 
       index_tauv <- which.min(abs(dat$tau_v - input_tauv))
@@ -643,7 +643,7 @@ mod_tab_report_server <- function(id, vals) {
 
       input_taup <- "days" %#% vals$tau_p0 %#% vals$tau_p0_units
 
-      dat <- sims_hrange[[1]] %>%
+      dat <- movedesign::sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% duration, 1))
 
@@ -668,11 +668,11 @@ mod_tab_report_server <- function(id, vals) {
      
       input_tauv <- vals$tau_v0 %#% vals$tau_v0_units
       
-      dat <- sims_speed[[1]]
+      dat <- movedesign::sims_speed[[1]]
       index_tauv <- which.min(abs(dat$tau_v - input_tauv))
       
       out_tauv <- dat$tau_v[index_tauv]
-      opts <- sims_speed[[1]] %>%
+      opts <- movedesign::sims_speed[[1]] %>%
         dplyr::select(dti, dti_notes) %>%
         unique()
       out_dti <- fix_unit(opts$dti[match(input$highlight_dti,
@@ -1040,7 +1040,7 @@ mod_tab_report_server <- function(id, vals) {
           if (!is.na(as.numeric(input$highlight_dur))) reveal_if <- TRUE
         }
 
-        dat <- sims_hrange[[1]] %>%
+        dat <- movedesign::sims_hrange[[1]] %>%
           dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
           dplyr::mutate(duration = round("days" %#% duration, 1))
 
@@ -1428,7 +1428,7 @@ mod_tab_report_server <- function(id, vals) {
 
       output$plot_hr_error <- ggiraph::renderGirafe({
 
-        dat <- sims_hrange[[2]] %>%
+        dat <- movedesign::sims_hrange[[2]] %>%
           dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
           dplyr::mutate(duration = round("days" %#% duration, 1))
         dat$id <- 1:nrow(dat)

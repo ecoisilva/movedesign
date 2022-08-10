@@ -1049,8 +1049,6 @@ mod_tab_hrange_server <- function(id, vals) {
 
       output$hrInfo_dti <- shiny::renderUI({
 
-        print("output$hrInfo_dti")
-        print(vals$dti0_units)
         dti <- as.numeric(sumdat[grep('sampling interval', nms)])
         out <- fix_unit(dti, vals$dti0_units)
 

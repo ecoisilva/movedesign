@@ -824,8 +824,6 @@ mod_tab_device_server <- function(id, vals) {
       req(vals$active_tab == 'regime',
           input$device_type == 1)
 
-      # utils::data(gps_fixrate, package = "movedesign")
-
       fixrate <- movedesign::gps_fixrate
       maxrate_choices <- fixrate %>%
         dplyr::filter(choices == "Y") %>%

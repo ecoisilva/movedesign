@@ -54,12 +54,6 @@ mod_comp_viz_ui <- function(id) {
 
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
             reactable::reactableOutput(ns("dataTable_id")),
-            # DT::dataTableOutput(ns("dataTable_id")) %>%
-            #   shinycssloaders::withSpinner(
-            #     type = getOption("spinner.type", default = 7),
-            #     color = getOption("spinner.color",
-            #                       default = "#f4f4f4")),
-
             uiOutput(ns("dataTable_showVars"))
         )
 

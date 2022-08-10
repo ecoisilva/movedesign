@@ -1,6 +1,6 @@
 Package: movedesign
 Title: Study design of movement ecology studies
-Version: 0.0.0.9001
+Version: 0.0.9002
 Authors@R: person('In\u00EAs', 'Silva', email = 'i.simoes-silva@hzdr.de', role = c('cre', 'aut'))
 Description: A shiny app to design movement ecology studies.
 License: MIT + file LICENSE
@@ -8,18 +8,17 @@ URL: https://ecoisilva.github.io/movedesign/
 Depends: 
     R (>= 3.5.0)
 Imports: 
+    bayestestR,
     bsplus,
     config (>= 0.3.1),
     crayon,
     ctmm (>= 0.6.1),
     dplyr,
-    DT,
     data.table,
     fontawesome,
     ggiraph,
     ggplot2,
     golem (>= 0.3.2),
-    mapboxer,
     minpack.lm,
     pkgload,
     plyr,
@@ -35,12 +34,10 @@ Imports:
     shinybusy,
     shinyjs,
     shinyWidgets,
-    sparkline,
     stats,
     stringr,
     utils,
-    viridis,
-    waiter
+    viridis
 Suggests: 
     covr,
     knitr,

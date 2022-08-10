@@ -197,8 +197,7 @@ golem_add_external_resources <- function() {
     ),
 
     shinyFeedback::useShinyFeedback(),
-    shinybrowser::detect(),
-
+    
     # Activate tooltips and popovers:
     bsplus::use_bs_tooltip(),
     bsplus::use_bs_popover(),

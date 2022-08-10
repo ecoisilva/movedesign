@@ -169,8 +169,8 @@ app_server <- function(input, output, session) {
   # Misc: -----------------------------------------------------------------
 
   # Data viz:
-  mod_comp_viz_server("comp_viz_uploaded", vals = vals) # data_upload
-  mod_comp_viz_server("comp_viz_selected", vals = vals) # data_select
+  mod_comp_viz_server("comp_viz_uploaded", vals = vals) # Uploaded
+  mod_comp_viz_server("comp_viz_selected", vals = vals) # Selected
 
   # Header and control tabs:
   mod_comp_settings_server("comp_settings_1", vals = vals)
@@ -192,9 +192,10 @@ app_server <- function(input, output, session) {
 
     message("Session stopped")
 
-    # if(is.null(movmods)) {
-    #   rm("movmods", envir = .GlobalEnv) }
-    # print(ls(envir = .GlobalEnv))
+    if(!is.null(gps_fixrate)) rm("gps_fixrate", envir = .GlobalEnv)
+    if(!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
+    if(!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
+    print(ls(envir = .GlobalEnv))
 
   }) # end of onStop
 
