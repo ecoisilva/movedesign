@@ -26,7 +26,7 @@ abbrv_unit <- function(unit) {
                  "kilometer", "meter", "km", "m",
                  "square kilometer", "square meter", "hectare",
                  "kilometers/hour", "meters/second",
-                 "kilometers/day", "meters/day")
+                 "kilometers/day" , "meters/day")
 
 
   x <- gsub("(.)s$", "\\1", unit)

@@ -1333,6 +1333,7 @@ mod_tab_hrange_server <- function(id, vals) {
         data = "Initial",
         taup = NA,
         dur = NA,
+        dti = NA,
         n = nrow(vals$data1),
         N1 = vals$N1,
         area = NA,
@@ -1347,6 +1348,9 @@ mod_tab_hrange_server <- function(id, vals) {
       out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
 
+      out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
+      out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
+      
       area <- scales::label_comma(accuracy = .1)(vals$hrEst)
       out$area <- paste(area, abbrv_unit(vals$hr_units))
 
@@ -1376,6 +1380,7 @@ mod_tab_hrange_server <- function(id, vals) {
         data = "Modified",
         taup = NA,
         dur = NA,
+        dti = NA,
         n = nrow(vals$hr$newdata),
         N1 = vals$N1_new,
         area = NA,
@@ -1390,7 +1395,10 @@ mod_tab_hrange_server <- function(id, vals) {
 
       out_dur <- fix_unit(vals$hr$dur, vals$hr$dur_unit, convert = TRUE)
       out$dur <- paste(out_dur[1], abbrv_unit(out_dur[,2]))
-
+      
+      out_dti <- fix_unit(vals$hr$dti, vals$hr$dti_unit)
+      out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
+      
       area <- scales::label_comma(accuracy = .1)(vals$hrEst_new)
       out$area <- paste(area, abbrv_unit(vals$hr_units_new))
 
@@ -1419,6 +1427,7 @@ mod_tab_hrange_server <- function(id, vals) {
         data = "Data:",
         taup = "\u03C4\u209A",
         dur = "Duration",
+        dti = "Interval",
         n = "n",
         N1 = "N (area)",
         area = "Area",
@@ -1452,6 +1461,9 @@ mod_tab_hrange_server <- function(id, vals) {
             style = list(fontWeight = "bold")),
           dur = reactable::colDef(
             minWidth = 80, name = columnNames[["dur"]],
+            style = list(fontWeight = "bold")),
+          dti = reactable::colDef(
+            minWidth = 80, name = columnNames[["dti"]],
             style = list(fontWeight = "bold")),
           n = reactable::colDef(
             name = columnNames[["n"]],

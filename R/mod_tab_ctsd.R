@@ -707,7 +707,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     ## Calculating total and mean distances: ----------------------------
 
     observe({
-      req(vals$data_full)
+      req(vals$ctsd)
       
       # dat1 <- data.frame(
       #   x = vals$data1$x,
@@ -771,11 +771,11 @@ mod_tab_ctsd_server <- function(id, vals) {
                                  "est" = err,
                                  "uci" = err_uci)
       
-    }) %>% # end of observe,
-      bindEvent(vals$ctsd)
+    }) # end of observe
     
     observe({
-      req(vals$reg$dur, vals$distTruth)
+      req(vals$reg$dur, vals$distTruth,
+          vals$ctsd_new)
       
       if (!is.null(vals$vals$sd$fit)) {
         dur <- vals$sd$dur %#% vals$sd$dur_unit
@@ -811,8 +811,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                                      "est" = err,
                                      "uci" = err_uci)
       
-    }) %>% # end of observe,
-      bindEvent(vals$ctsd_new)
+    }) # end of observe
 
     # ADJUSTING TRACKING REGIME -------------------------------------------
     # Adjust sampling parameters necessary for simulation:
@@ -1096,7 +1095,6 @@ mod_tab_ctsd_server <- function(id, vals) {
 
               vals$ctsd <- par_speed(inputList,
                                      parallel = vals$parallel)
-              vals$is_analyses <- TRUE
 
               if ("CI" %in% names(vals$ctsd)) {
                 vals$ctsd <- vals$ctsd$CI
@@ -1162,8 +1160,7 @@ mod_tab_ctsd_server <- function(id, vals) {
               
               start_truth <- Sys.time()
               vals$ctsd_truth <- finescale_speed()
-              vals$is_analyses <- TRUE
-
+          
               if ("CI" %in% names(vals$ctsd_truth)) {
                 vals$ctsd_truth <- vals$ctsd_truth$CI
               }
@@ -1200,9 +1197,10 @@ mod_tab_ctsd_server <- function(id, vals) {
 
               vals$time_ctsd <- difftime(Sys.time(), start,
                                          units = 'mins')
-
+              vals$is_analyses <- TRUE
+              
               shinybusy::remove_modal_spinner()
-
+              
             } # end of N["speed"] > 0
           } # end of is.null(grep('speed', sumnames))
         } # end of vals$tmpid != vals$id
@@ -1436,10 +1434,10 @@ mod_tab_ctsd_server <- function(id, vals) {
             msg_warning("newly simulated trajectory.")),
           detail = "This may take a while...")
         
-        vals$ctsd_new <- ctmm::speed(
-          vals$sd$newdata,
-          CTMM = vals$sd$fit,
-          fast = TRUE)
+        inputList <- ctmmweb::align_lists(list(vals$sd$fit),
+                                          list(vals$sd$newdata))
+        vals$ctsd_new <- par_speed(inputList,
+                                   parallel = vals$parallel)
         
         if ("CI" %in% names(vals$ctsd_new)) {
           vals$ctsd_new <- vals$ctsd_new$CI
@@ -1697,9 +1695,6 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     output$sdInfo_err_new <- shiny::renderUI({
       req(vals$ctsd_new)
-      
-      print("CHECKPOINT")
-      print(vals$sdErr_new)
 
       errorBlock(
         icon = "radiation",
@@ -1782,34 +1777,34 @@ mod_tab_ctsd_server <- function(id, vals) {
     observe({
       req(vals$data_speed, vals$ctsd)
 
-      tmpunits <- input$ctsdVar_group_units
+      unit <- input$ctsdVar_group_units
       dat <- vals$data_speed
 
       t_origin <- "1111-11-10 23:06:32"
       dat$timestamp <- as.POSIXct(dat$t, origin = t_origin)
 
-      if(tmpunits == "minutes") {
+      if(unit == "minutes") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "mins")
         dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
-      } else if(tmpunits == "hours") {
+      } else if(unit == "hours") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "hours")
         dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
-      } else if(tmpunits == "days") {
+      } else if(unit == "days") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "days")
         dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
-      } else if(tmpunits == "weeks") {
+      } else if(unit == "weeks") {
         dat <- dat %>% dplyr::mutate(
           t_new = format(timestamp, "%U"))
-      } else if(tmpunits == "months") {
+      } else if(unit == "months") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "months")
         dat <- dat %>%
@@ -1826,11 +1821,11 @@ mod_tab_ctsd_server <- function(id, vals) {
       yline <- "day" %#% vals$ctsd[2] %#% "kilometers"
 
       if(!is.null(vals$ctsd_new)) {
-        print(vals$ctsd_new)
+        req(vals$ctsd_new)
         yline_new <- "day" %#% vals$ctsd_new[2] %#% "kilometers"
       }
 
-      label_x <- paste0("Time lag (in ", tmpunits, ")")
+      label_x <- paste0("Time lag (in ", unit, ")")
       output$sdPlot_main <- ggiraph::renderGirafe({
 
         p <- dat %>%
@@ -1996,7 +1991,6 @@ mod_tab_ctsd_server <- function(id, vals) {
       out_ctsd <- fix_unit(vals$ctsd[2], vals$ctsd_units)
       out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
 
-      print(vals$distEst)
       out_dist <- fix_unit(vals$distEst[[2]], 
                            vals$distEst[[4]], convert = TRUE)
       out$dist <- paste(out_dist$value, out_dist$unit)
@@ -2024,12 +2018,6 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     sdRow_new <- reactive({
 
-      print("sdRow_new")
-      
-      print(vals$N2_new)
-      print(vals$sdErr_new)
-      print(vals$distErr_new)
-      
       out <- data.frame(
         data = "Modified",
         tauv = NA,
@@ -2044,16 +2032,14 @@ mod_tab_ctsd_server <- function(id, vals) {
         dist = NA,
         dist_err = vals$distErr_new[[2]])
       
-      print(out)
-      
       out$tauv <- paste(scales::label_comma(
         accuracy = .1)(vals$tau_v0),
         abbrv_unit(vals$tau_v0_units))
 
-      out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
+      out_dur <- fix_unit(vals$sd$dur, vals$sd$dur_unit)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
       
-      out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
+      out_dti <- fix_unit(vals$sd$dti, vals$sd$dti_unit)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
 
       out_ctsd <- fix_unit(vals$ctsd_new[2], vals$ctsd_units_new)
@@ -2063,7 +2049,6 @@ mod_tab_ctsd_server <- function(id, vals) {
                            vals$distEst_new[[4]], convert = TRUE)
       out$dist <- paste(out_dist$value, out_dist$unit)
       
-      print(out)
       return(out)
 
     }) %>%
@@ -2184,10 +2169,9 @@ mod_tab_ctsd_server <- function(id, vals) {
     output$time_ctsd_new <- renderText({
       req(vals$sd$time)
 
-      paste("Newly set tracking regime took approximately",
+      paste("Modified tracking regime took approximately",
             round(vals$sd$time, 1), "minutes.")
     })
-
 
     # Save information for report if table is not requested:
 
@@ -2199,16 +2183,16 @@ mod_tab_ctsd_server <- function(id, vals) {
       vals$report_sd_yn <- FALSE
 
       if (is.null(vals$sdErr_new)) {
-        req(vals$ctsd, vals$sdErr, vals$distErr)
+        req(vals$distErr)
         vals$report_sd_yn <- TRUE
         vals$dt_sd <- sdRow()
       } else {
-        req(vals$ctsd_new, vals$sdErr_new, vals$distErr_new)
+        req(vals$distErr_new)
         vals$report_sd_yn <- TRUE
         vals$dt_sd <- sdRow_new()
       }
       
-    }) %>% bindEvent(list(input$run_sd, input$run_sd_new))
+    })
 
   }) # end of moduleServer
 }

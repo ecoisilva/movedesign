@@ -201,14 +201,14 @@ mod_tab_report_ui <- function(id) {
             id = ns("repBox_tables"),
             width = NULL,
             solidHeader = FALSE,
-
-            reactable::reactableOutput(ns("endTable")),
-
-            footer = tagList(
-              uiOutput(outputId = ns("reportInput_vars"))
-
-            )) # end of box // tables
-
+            
+            reactable::reactableOutput(ns("endTable"))
+            
+            # footer = tagList(
+            #   uiOutput(outputId = ns("reportInput_vars")))
+            
+          ) # end of box // tables
+          
       ) # end of UI column (bottom)
 
     ) # end of fluidRow
@@ -227,14 +227,17 @@ mod_tab_report_server <- function(id, vals) {
 
     # DYNAMIC UI ELEMENTS -------------------------------------------------
 
-    shinyjs::hide(id = "report_comparison")
-    
-    boxnames <- c("analyses", "tables")
-    
-    for(i in 1:length(boxnames)) {
+    observe({
+      req(vals$active_tab == 'report')
+      shinyjs::hide(id = "report_comparison")
+      
+      boxnames <- c("analyses", "tables")
+      for(i in 1:length(boxnames)) {
         shinyjs::hide(id = paste0("repBox_", boxnames[i])) 
-    }
-
+      }
+      
+    })
+    
     ## Rendering research questions: --------------------------------------
 
     output$report_question <- renderUI({
@@ -385,10 +388,11 @@ mod_tab_report_server <- function(id, vals) {
 
     output$repBlock_sigma <- shiny::renderUI({
       req(vals$sigma0)
-
-      sig <- "km^2" %#% vals$sigma0 %#% "m^2"
-      sig <- fix_unit(sig, unit = "km^2", ui = TRUE)
-
+      
+      sig <- fix_unit(vals$sigma0,
+                      unit = vals$sigma0_units,
+                      convert = TRUE, ui = TRUE)
+      
       parBlock(
         header = span(HTML("Semi-variance (\u03C3)")),
         value = span(HTML("&nbsp;", sig$value, sig$unit)),
@@ -535,8 +539,6 @@ mod_tab_report_server <- function(id, vals) {
 
     output$repInfo_sdErr <- shiny::renderUI({
       req(vals$sdErr, "Speed & distance" %in% vals$which_question)
-
-      print(vals$sdErr)
       
       errorBlock(icon = "radiation",
                  text = "Speed error",
@@ -773,6 +775,12 @@ mod_tab_report_server <- function(id, vals) {
         dt_hr <- vals$dt_hr
         dt_hr <- dt_hr[nrow(dt_hr), ]
       }
+      
+      if ("Speed & distance" %in% vals$which_question) {
+        req(vals$dt_sd)
+        dt_sd <- vals$dt_sd
+        dt_sd <- dt_sd[nrow(dt_sd), ]
+      }
 
       dat <- data.frame(
         device = character(0),
@@ -794,15 +802,33 @@ mod_tab_report_server <- function(id, vals) {
         ctsd_err_max = numeric(0),
         dist = character(0),
         dist_err = numeric(0))
-
+      
       tmpdat <- dt_regs %>% dplyr::select(device:N2)
       tmpdat <- suppressMessages(dplyr::full_join(dat, tmpdat))
 
+      tmpdat$taup <- paste(scales::label_comma(
+        accuracy = .1)(vals$tau_p0),
+        abbrv_unit(vals$tau_p0_units))
+      
+      tmpdat$tauv <- paste(scales::label_comma(
+        accuracy = .1)(vals$tau_v0),
+        abbrv_unit(vals$tau_v0_units))
+      
+      tmpdat$sigma <-
+        paste(scales::label_comma(
+          accuracy = .1)(vals$sigma0),
+          abbrv_unit(vals$sigma0_units))
+      
       if ("Home range" %in% vals$which_question) {
         tmphr <- dt_hr %>% dplyr::select(taup:area_err_max)
         tmpdat <- suppressMessages(dplyr::full_join(tmpdat, tmphr))
       }
-
+      
+      if ("Speed & distance" %in% vals$which_question) {
+        tmpsd <- dt_sd %>% dplyr::select(tauv:dist_err)
+        tmpdat <- suppressMessages(dplyr::full_join(tmpdat, tmpsd))
+      }
+      
       if (nrow(tmpdat == 2)) {
         tmpdat <- dplyr::coalesce(tmpdat[1,], tmpdat[2,])
       }
@@ -812,86 +838,57 @@ mod_tab_report_server <- function(id, vals) {
     }) # end of reactive
 
     observe({
-      req(vals$active_tab == 'report', vals$dt_regs)
-
-      vals$report_full <<- rbind(vals$report_full,
-                                 reportRow())
-
+      req(vals$active_tab == 'report', 
+          vals$dt_regs)
+      
+      vals$report_full <<- rbind(vals$report_full, reportRow())
+      dat <- vals$report_full
+      
+      if (nrow(dat) >= 2) {
+        if (all(dat[nrow(dat)-1,2:6] == dat[nrow(dat),2:6])) {
+          dat <- dplyr::coalesce(dat[1, ], dat[2, ])
+        }}
+      
+      vals$report_full <- dplyr::distinct(dat)
+      
     }) %>% # end of observe
       bindEvent(input$create_report)
 
-    observe({
-      req(vals$is_analyses, vals$which_question)
-
-      nms <- nms_subset <- c(
-        device = "Type",
-        taup = "\u03C4\u209A",
-        tauv = "\u03C4\u1D65",
-        sigma = "\u03C3",
-        dur = "Duration",
-        dti = "Interval",
-        n = "n",
-        N1 = "N (area)",
-        N2 = "N (speed)",
-        area = "HR area",
-        area_err = "Error",
-        area_err_min = "Error (min)",
-        area_err_max = "Error (max)",
-        ctsd = "CTSD",
-        ctsd_err = "Error",
-        ctsd_err_min = "Error (min)",
-        ctsd_err_max = "Error (max)",
-        dist = "Distance",
-        dist_err = "Error")
-
-      choices <- choices_subset <- names(nms)
-      names(choices) <- names(choices_subset) <- nms %>% as.vector()
-
-      if ("Home range" %in% vals$which_question) {
-
-        nms_subset <- c("device",
-                        "taup",
-                        "dur",
-                        "n",
-                        "N1",
-                        "area",
-                        "area_err",
-                        "area_err_min",
-                        "area_err_max")
-        nms_subset <- nms[nms_subset]
-
-        choices_subset <- names(nms_subset)
-        names(choices_subset) <- nms_subset %>% as.vector()
-      }
-
-      output$reportInput_vars <- renderUI({
-
-        div(style = paste("width: 30%;",
-                          "float: right;",
-                          "display: flex;"),
-
-            shinyWidgets::pickerInput(
-              inputId = ns("report_vars"),
-              width = "120px",
-              label = span("Select columns:",
-                           class = "txt-label",
-                           style = paste("text-align: right;",
-                                         "margin: 0 9px 0 0;",
-                                         "line-height: 2.4;")),
-              choices = choices,
-              selected = choices_subset,
-              options = list(
-                `actions-box` = TRUE,
-                `selected-text-format` = "count > 3"
-              ),
-              multiple = TRUE))
-
-      }) # end of renderUI
-    }) # end of observe
-
+    
     output$endTable <- reactable::renderReactable({
-      req(vals$report_full, input$report_vars)
-
+      req(vals$report_full,
+          vals$is_analyses, 
+          vals$which_question)
+      
+      choices <- choices_subset <- c(
+        "device",
+        "taup",
+        "tauv",
+        "sigma",
+        "dur",
+        "dti",
+        "n",
+        "N1",
+        "N2",
+        "area",
+        "area_err",
+        "area_err_min",
+        "area_err_max",
+        "ctsd",
+        "ctsd_err",
+        "ctsd_err_min",
+        "ctsd_err_max",
+        "dist",
+        "dist_err")
+      
+      if ("Home range" %in% vals$which_question) {
+        choices_subset <- choices[c(1:8, 10:13)]
+      }
+      
+      if ("Speed & distance" %in% vals$which_question) {
+        choices_subset <- choices[c(1:7, 9, 14:19)]
+      }
+      
       nms <- data.frame(
         device = "Type",
         taup = "\u03C4\u209A",
@@ -912,77 +909,137 @@ mod_tab_report_server <- function(id, vals) {
         ctsd_err_max = "Error (max)",
         dist = "Distance",
         dist_err = "Error")
-
+      
       dat <- vals$report_full
-      if (!is.null(input$report_vars)) {
-        dat <- dat %>% dplyr::select(input$report_vars)
+      if (!is.null(choices_subset)) {
+        dat <- dat %>% dplyr::select(choices_subset)
       }
-
+      
+      nms_sizes <- c("n", "N1", "N2")
+      if ("Home range" %in% vals$which_question) {
+        nms_sizes <- c("n", "N1")
+        nms_hr <- choices[c(10:13)]
+        colgroups <- list(
+          reactable::colGroup(
+            name = "Home range",
+            columns = nms_hr),
+          reactable::colGroup(
+            name = "Sample sizes", 
+            columns = nms_sizes))
+      }
+      
+      if ("Speed & distance" %in% vals$which_question) {
+        nms_sizes <- c("n", "N2")
+        nms_ctsd <- choices[c(14:17)]
+        nms_dist <- choices[c(18:19)]
+        colgroups <- list(
+          reactable::colGroup(
+            name = "Speed & distance",
+            columns = nms_ctsd),
+          reactable::colGroup(
+            name = "Speed & distance",
+            columns = nms_dist),
+          reactable::colGroup(
+            name = "Sample sizes", 
+            columns = nms_sizes))
+      }
+      
       namedcolumns <- list(
-        device = if("device" %in% input$report_vars) {
+        device = if("device" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "device"]) },
-        taup = if("taup" %in% input$report_vars) {
+        taup = if("taup" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "taup"],
             style = list(fontWeight = "bold")) },
-        tauv = if("tauv" %in% input$report_vars) {
+        tauv = if("tauv" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "tauv"],
             style = list(fontWeight = "bold")) },
-        sigma = if("sigma" %in% input$report_vars) {
+        sigma = if("sigma" %in% choices_subset) {
           reactable::colDef(
             minWidth = 60, name = nms[1, "sigma"]) },
-        dur = if("dur" %in% input$report_vars) {
+        dur = if("dur" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "dur"],
             style = list(fontWeight = "bold")) },
-        dti = if("dti" %in% input$report_vars) {
+        dti = if("dti" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "dti"],
             style = list(fontWeight = "bold")) },
-        n = if("n" %in% input$report_vars) {
+        n = if("n" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "n"],
             style = list(color = format_num),
             format = reactable::colFormat(separators = TRUE,
                                           digits = 0)) },
-        N1 = if("N1" %in% input$report_vars) {
+        N1 = if("N1" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "N1"],
             style = list(color = format_num),
             format = reactable::colFormat(separators = TRUE,
                                           digits = 1)) },
-        N2 = if("N2" %in% input$report_vars) {
+        N2 = if("N2" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "N2"],
             style = list(color = format_num),
             format = reactable::colFormat(separators = TRUE,
                                           digits = 1)) },
-        area = if("area" %in% input$report_vars) {
+        area = if("area" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area"]) },
-        area_err = if("area_err" %in% input$report_vars) {
+        area_err = if("area_err" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        area_err_min = if("area_err_min" %in% input$report_vars) {
+        area_err_min = if("area_err_min" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err_min"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        area_err_max = if("area_err_max" %in% input$report_vars) {
+        area_err_max = if("area_err_max" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err_max"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)) },
+        ctsd = if("ctsd" %in% choices_subset) {
+          reactable::colDef(
+            minWidth = 80, name = nms[1, "ctsd"]) },
+        ctsd_err = if("ctsd_err" %in% choices_subset) { 
+          reactable::colDef(
+            minWidth = 80, name = nms[1, "ctsd_err"],
+            style = list(color = format_perc),
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)) },
+        ctsd_err_min = if("ctsd_err_min" %in% choices_subset) { 
+          reactable::colDef(
+            minWidth = 80, name = nms[1, "ctsd_err_min"],
+            style = list(color = format_perc),
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)) },
+        ctsd_err_max = if("ctsd_err_max" %in% choices_subset) { 
+          reactable::colDef(
+            minWidth = 80, name = nms[1, "ctsd_err_max"],
+            style = list(color = format_perc),
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)) },
+        dist = if("dist" %in% choices_subset) { 
+          reactable::colDef(
+            minWidth = 80, name = nms[1, "dist"]) },
+        dist_err = if("dist_err" %in% choices_subset) { 
+          reactable::colDef(
+            minWidth = 80, name = nms[1, "dist_err"],
+            style = list(color = format_perc),
+            format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) }
       )
+      
       namedcolumns[sapply(namedcolumns, is.null)] <- NULL
-
+      
       dt <- reactable::reactable(
         dat,
         compact = TRUE,
@@ -1000,9 +1057,10 @@ mod_tab_report_server <- function(id, vals) {
             headerClass = "rtable_header",
             align = "center",
             minWidth = 50),
-
-        columns = namedcolumns
-
+        
+        columns = namedcolumns,
+        columnGroups = colgroups
+          
       ) # end of reactable
 
       return(dt)

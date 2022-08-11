@@ -195,7 +195,7 @@ app_server <- function(input, output, session) {
     if(!is.null(gps_fixrate)) rm("gps_fixrate", envir = .GlobalEnv)
     if(!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
     if(!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
-    print(ls(envir = .GlobalEnv))
+    # print(ls(envir = .GlobalEnv))
 
   }) # end of onStop
 

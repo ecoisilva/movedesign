@@ -608,11 +608,8 @@ mod_tab_sims_server <- function(id, vals) {
     fit0 <- reactive({
       req(vals$data0, vals$ctmm_mod)
       
-      # print("CHECKPOINT")
-      # start_time <- Sys.time()
       inputList <- list(list(vals$data0, vals$ctmm_mod))
       fit <- par_ctmm.fit(inputList, parallel = TRUE)
-      # print((end_time <- Sys.time() - start_time))
       
       return(fit)
       
