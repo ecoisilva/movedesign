@@ -817,7 +817,7 @@ mod_tab_report_server <- function(id, vals) {
       tmpdat$sigma <-
         paste(scales::label_comma(
           accuracy = .1)(vals$sigma0),
-          abbrv_unit(vals$sigma0_units))
+          vals$sigma0_units)
       
       if ("Home range" %in% vals$which_question) {
         tmphr <- dt_hr %>% dplyr::select(taup:area_err_max)
