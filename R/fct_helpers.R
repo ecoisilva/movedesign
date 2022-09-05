@@ -24,6 +24,7 @@ abbrv_unit <- function(unit) {
   all_units <- c("year", "month", "week",
                  "day", "hour", "minute", "second",
                  "kilometer", "meter", "km", "m",
+                 "km^2", "m^2",
                  "square kilometer", "square meter", "hectare",
                  "kilometers/hour", "meters/second",
                  "kilometers/day" , "meters/day")
@@ -33,7 +34,7 @@ abbrv_unit <- function(unit) {
   var <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
 
   if (any(is.na(var))) {
-    stop("Invalid time unit: ", paste(x[is.na(var)], collapse = ", "),
+    stop("Invalid unit: ", paste(x[is.na(var)], collapse = ", "),
          call. = FALSE)
   }
 
@@ -49,8 +50,8 @@ abbrv_unit <- function(unit) {
   if (x == "kilometer" ) out <- "km"
   if (x == "meter" ) out <- "m"
 
-  if (x == "square kilometer" ) out <- "km\u00B2"
-  if (x == "square meter" ) out <- paste0("m", tags$sup(2))
+  if (x == "square kilometer" | x == "km^2") out <- "km\u00B2"
+  if (x == "square meter" | x == "m^2" ) out <- "m\u00B2"
   if (x == "hectare" ) out <- "ha"
 
   if (x == "kilometers/hour" ) out <- "km/h"

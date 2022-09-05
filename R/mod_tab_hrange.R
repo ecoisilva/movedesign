@@ -1038,9 +1038,9 @@ mod_tab_hrange_server <- function(id, vals) {
 
       output$hrInfo_dur <- shiny::renderUI({
 
-        tmpunits <- nms[grep('sampling period', nms)] %>% extract_units()
+        tmpunit <- nms[grep('sampling period', nms)] %>% extract_units()
         dur <- as.numeric(sumdat[grep('sampling period', nms)])
-        out <- fix_unit(dur, tmpunits)
+        out <- fix_unit(dur, tmpunit)
 
         parBlock(header = "Sampling duration",
                  value = paste(out$value, out$unit))
@@ -1049,8 +1049,9 @@ mod_tab_hrange_server <- function(id, vals) {
 
       output$hrInfo_dti <- shiny::renderUI({
 
+        tmpunit <- nms[grep('sampling interval', nms)] %>% extract_units()
         dti <- as.numeric(sumdat[grep('sampling interval', nms)])
-        out <- fix_unit(dti, vals$dti0_units)
+        out <- fix_unit(dti, tmpunit)
 
         parBlock(header = "Sampling interval",
                  value = paste(out$value, out$unit),
