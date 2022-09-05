@@ -8,6 +8,10 @@ app_server <- function(input, output, session) {
 
   ns <- session$ns
   vals <- reactiveValues()
+  
+  data(gps_fixrate, package = "movedesign")
+  data(sims_hrange, package = "movedesign")
+  data(sims_speed, package = "movedesign")
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 
@@ -180,6 +184,7 @@ app_server <- function(input, output, session) {
 
   # -----------------------------------------------------------------------
 
+  # Overall table theme:
   options(reactable.theme = reactable::reactableTheme(
     borderColor = "#f2f2f2",
     rowSelectedStyle = list(

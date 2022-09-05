@@ -24,3 +24,8 @@
 #' @noRd
 "sims_hrange"
 
+#' Speed & distance error simulations.
+#'
+#' @format Data frame
+#' @noRd
+"sims_speed"

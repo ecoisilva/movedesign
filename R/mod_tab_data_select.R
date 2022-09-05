@@ -509,31 +509,60 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$guess <- guess0()
 
       # Fit models to current data:
+      
+      if(vals$data_type == "selected") {
 
-      inputList <- list(list(dat0, guess0()))
-      fit0 <- reactive({
-        par_ctmm.select(inputList, parallel = TRUE)
-      }) %>% bindCache(vals$species_binom,
-                       vals$id)
-      
-      msg_log(
-        style = "warning",
-        message = paste0("Selecting ",
-                         msg_warning("movement models"), "."),
-        detail = "Please wait for 'ctmm.select()' to finish:")
-      
-      shiny::withProgress({
-        vals$fit0 <- fit0()
-      },
-      message = "Fitting different models.",
-      detail = "This may take a while...")
-      
-      vals$selectOut_time <- difftime(Sys.time(), start,
-                                      units = "mins")
-      msg_log(
-        style = "success",
-        message = "Model fitting complete.",
-        detail = "")
+        tmpspecies <- vals$species
+        
+        msg_log(
+          style = "warning",
+          message = paste0("Model fit ",
+                           msg_warning("available"), "."),
+          detail = "...Loading existing model fit now."
+        )
+        
+        fitList <- readRDS(
+          system.file("extdata",
+                      paste0(vals$species, "_fitList.rds"),
+                      package = "movedesign"))
+        
+        msg_log(
+          style = "success",
+          message = "...Model fit loaded.",
+          detail = ""
+        )
+        
+        vals$fit0 <- fitList[[vals$id]][[1]]
+        rm(fitList)
+        
+      } else {
+        
+        inputList <- list(list(vals$data0, guess0()))
+        vals$fit0 <- reactive({
+          par_ctmm.select(inputList, parallel = TRUE)
+        }) %>% bindCache(vals$species_binom,
+                         vals$id)
+        
+        msg_log(
+          style = "warning",
+          message = paste0("Selecting ",
+                           msg_warning("movement models"), "."),
+          detail = "Please wait for 'ctmm.select()' to finish:")
+        
+        shiny::withProgress({
+          vals$fit0 <- fit0()
+        },
+        message = "Fitting different models.",
+        detail = "This may take a while...")
+        
+        vals$selectOut_time <- difftime(Sys.time(), start,
+                                        units = "mins")
+        msg_log(
+          style = "success",
+          message = "Model fitting complete.",
+          detail = "")
+        
+      }
 
       shinyjs::show(id = "selectBox_sizes")
 
