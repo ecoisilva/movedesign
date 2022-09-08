@@ -24,7 +24,7 @@ abbrv_unit <- function(unit) {
   all_units <- c("year", "month", "week",
                  "day", "hour", "minute", "second",
                  "kilometer", "meter", "km", "m",
-                 "km^2", "m^2",
+                 "km^2", "m^2", "ha",
                  "square kilometer", "square meter", "hectare",
                  "kilometers/hour", "meters/second",
                  "kilometers/day" , "meters/day")
@@ -45,14 +45,14 @@ abbrv_unit <- function(unit) {
   if (x == "day" ) out <- "d"
   if (x == "hour" ) out <- "hr"
   if (x == "minute" ) out <- "min"
-  if (x == "seconds" ) out <- "sec"
+  if (x == "second" ) out <- "sec"
 
   if (x == "kilometer" ) out <- "km"
   if (x == "meter" ) out <- "m"
 
   if (x == "square kilometer" | x == "km^2") out <- "km\u00B2"
-  if (x == "square meter" | x == "m^2" ) out <- "m\u00B2"
-  if (x == "hectare" ) out <- "ha"
+  if (x == "square meter" | x == "m^2") out <- "m\u00B2"
+  if (x == "hectare" | "ha") out <- "ha"
 
   if (x == "kilometers/hour" ) out <- "km/h"
   if (x == "meters/second" ) out <- "m/s"
