@@ -50,9 +50,9 @@ abbrv_unit <- function(unit) {
   if (x == "kilometer" ) out <- "km"
   if (x == "meter" ) out <- "m"
 
-  if (x == "square kilometer" | x == "km^2") out <- "km\u00B2"
-  if (x == "square meter" | x == "m^2") out <- "m\u00B2"
-  if (x == "hectare" | "ha") out <- "ha"
+  if (x == "square kilometer" || x == "km^2") out <- "km\u00B2"
+  if (x == "square meter" || x == "m^2") out <- "m\u00B2"
+  if (x == "hectare" || x == "ha") out <- "ha"
 
   if (x == "kilometers/hour" ) out <- "km/h"
   if (x == "meters/second" ) out <- "m/s"
@@ -150,11 +150,11 @@ fix_unit <- function(value, unit,
   }
 
   if ((x %in% units_ar)) {
-    if (x == "square kilometer" | x == "km^2") {
+    if (x == "square kilometer" || x == "km^2") {
       x_html <- HTML(paste0("km", tags$sup(2)))
-    } else if (x == "square meter" | x == "m^2") {
+    } else if (x == "square meter" || x == "m^2") {
       x_html <- HTML(paste0("m", tags$sup(2)))
-    } else if (x == "hectare" | x == "ha") {
+    } else if (x == "hectare" || x == "ha") {
       x_html <- "ha"
     }
   }

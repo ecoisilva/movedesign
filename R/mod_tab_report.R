@@ -1791,24 +1791,30 @@ mod_tab_report_server <- function(id, vals) {
       vals$hr_col <- vals$ctsd_col <- data.frame(
         hex = pal$sea, css = "var(--sea)")
 
-      if (dur$value <= ideal_dur$value) {
+      if ((dur$value %#% dur$unit) <= 
+          (ideal_dur$value %#% ideal_dur$unit)) {
         vals$hr_col$hex <- pal$dgr
         vals$hr_col$css <- "var(--danger)"
       }
 
-      if (dti$value <= ideal_dti$value) {
+      if ((dti$value %#% dti$unit) <= 
+          (ideal_dti$value %#% ideal_dti$unit)) {
         diff_dti <- (dti$unit %#% tau_v) / dti$value
-        dti_text <-
-          span(diff_dti, icon(name = "xmark"),
-               wrap_none("\u03C4", tags$sub("v")))
+        
       } else {
         diff_dti <- 1 / ((dti$unit %#% tau_v) / dti$value)
-        dti_text <-
-          span(wrap_none("\u03C4", tags$sub("v")), "/",
-               diff_dti)
-
         vals$ctsd_col$hex <- pal$dgr
         vals$ctsd_col$css <- "var(--danger)"
+      }
+      
+      if ((dti$value %#% dti$unit) <= tau_v) {
+        dti_text <-
+          span(wrap_none("\u03C4", tags$sub("v"), "/",
+                         round(diff_dti, 1)))
+      } else {
+        dti_text <-
+          span(round(diff_dti, 1), icon(name = "xmark"),
+               wrap_none("\u03C4", tags$sub("v")))
       }
 
       ## Reporting DATA: --------------------------------------------------

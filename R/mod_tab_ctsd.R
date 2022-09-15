@@ -1122,6 +1122,19 @@ mod_tab_ctsd_server <- function(id, vals) {
               vals$data_speed <- ctmm::speeds(vals$data1,
                                               vals$fit1,
                                               units = FALSE)
+              
+              shinyFeedback::showToast(
+                type = "success",
+                message = "Current trajectory completed!",
+                .options = list(
+                  timeOut = 3000,
+                  extendedTimeOut = 3500,
+                  progressBar = FALSE,
+                  closeButton = TRUE,
+                  preventDuplicates = TRUE,
+                  positionClass = "toast-bottom-right"
+                )
+              )
 
               ### Simulating fine-scale trajectory: -----------------------
 
@@ -1199,6 +1212,18 @@ mod_tab_ctsd_server <- function(id, vals) {
                                          units = 'mins')
               vals$is_analyses <- TRUE
               
+              shinyFeedback::showToast(
+                type = "success",
+                message = "Fine-scale trajectory completed!",
+                .options = list(
+                  timeOut = 3000,
+                  extendedTimeOut = 3500,
+                  progressBar = FALSE,
+                  closeButton = TRUE,
+                  preventDuplicates = TRUE,
+                  positionClass = "toast-bottom-right"
+                )
+              )
               shinybusy::remove_modal_spinner()
               
             } # end of N["speed"] > 0
@@ -1721,8 +1746,11 @@ mod_tab_ctsd_server <- function(id, vals) {
         icon = "map-location-dot",
         header = span("Total distance traveled from", br(),
                        "initial regime:"),
-        value = paste(est$value, est$unit),
-        subtitle = paste(lci$value, "—", uci$value))
+        value = paste(
+          scales::label_comma()(est$value), est$unit),
+        subtitle = paste(
+          scales::label_comma()(lci$value), "—", 
+          scales::label_comma()(uci$value)))
 
     }) # end of renderUI // distInfo_est
 
@@ -1752,8 +1780,11 @@ mod_tab_ctsd_server <- function(id, vals) {
         icon = "map-location-dot",
         header = span("Total distance traveled from", br(),
                        "modified regime:"),
-        value = span(est$value, est$unit, class = "cl-mdn"),
-        subtitle = span(lci$value, "—", uci$value, class = "cl-mdn"))
+        value = span(scales::label_comma()(est$value), 
+                     est$unit, class = "cl-mdn"),
+        subtitle = span(scales::label_comma()(lci$value), "—",
+                        scales::label_comma()(uci$value),
+                        class = "cl-mdn"))
 
     }) # end of renderUI // distInfo_est_new
 

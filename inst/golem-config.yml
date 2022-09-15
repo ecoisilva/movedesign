@@ -5,4 +5,4 @@ default:
 production:
   app_prod: yes
 dev:
-  golem_wd: C:/Users/imsss/Desktop/R/GitHub/movedesign
+  golem_wd: C:\Users\simoes48\Desktop\R\04 Shiny\movedesign

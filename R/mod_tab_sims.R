@@ -780,13 +780,19 @@ mod_tab_sims_server <- function(id, vals) {
       newdat <- vals$data0
       newdat <- newdat[which(newdat$t <= (
         vals$tau_p0 %#% vals$tau_p0_units)), ]
-      
+
       out_tp <- fix_unit(vals$tau_p0, vals$tau_p0_units)
       out_dur <- fix_unit(vals$dur0, vals$dur0_units)
       subtitle <- paste(
         "Highlighting one \u03C4\u209A cycle",
         paste0("(\u2248 ", out_tp[1], " ", out_tp[2], ")"),
         "out of ", out_dur[1], out_dur[2])
+      
+      # newdat <- newdat[which(newdat$t <= (1 %#% "day")), ]
+      # out_dur <- fix_unit(vals$dur0, vals$dur0_units)
+      # subtitle <- paste(
+      #   "Highlighting 1 day",
+      #   "out of ", out_dur[1], out_dur[2])
       
       ymin <- min(vals$data0$y) - diff(range(vals$data0$y)) * .2
       ymax <- max(vals$data0$y) + diff(range(vals$data0$y)) * .2
