@@ -17,20 +17,6 @@ mod_tab_report_ui <- function(id) {
 
       div(class = "col-xs-12 col-sm-4 col-md-4 col-lg-2",
 
-          shinydashboardPlus::box(
-            id = "intro_report",
-            width = NULL,
-            solidHeader = FALSE, headerBorder = FALSE,
-            collapsible = FALSE, closable = FALSE,
-
-            actionButton(
-              inputId = ns("create_report"),
-              icon = icon("bookmark"),
-              label = span("Build", span("report", style = "var(--sea)")),
-              width = "100%")
-
-          ), # end of box // intro_report
-
           div(class = "tabBox_noheaders",
               shinydashboardPlus::box(
                 id = ns("repBox_details"),
@@ -62,7 +48,15 @@ mod_tab_report_ui <- function(id) {
                           decimalPlaces = 0,
                           minimumValue = 0,
                           maximumValue = 100,
-                          value = 95)
+                          value = 95),
+                        
+                        actionButton(
+                          inputId = ns("create_report"),
+                          icon = icon("bookmark"),
+                          label = span("Build",
+                                       span("report",
+                                            style = "var(--sea)")),
+                          width = "100%")
 
                       ) # end of panel
                     )) # end of tabBox // repTabs_details
@@ -161,7 +155,7 @@ mod_tab_report_ui <- function(id) {
                    uiOutput(ns("end_report"))),
 
             div(class = "col-report-right no-padding-right",
-
+                
                 p("Quick comparison with other",
                   wrap_none(span("regimes", class = "cl-sea"), "?")) %>%
                   tagAppendAttributes(class = "subheader"),
@@ -172,11 +166,11 @@ mod_tab_report_ui <- function(id) {
 
                 uiOutput(outputId = ns("reportPlots_error")),
 
-                helpText(
-                  style = "text-align: right;",
-
-                  HTML("Tooltip reports mean estimate",
-                       "(low \u2014 high 95% CIs).")),
+                # helpText(
+                #   style = "text-align: right;",
+                # 
+                #   HTML("Tooltip reports mean estimate",
+                #        "(low \u2014 high 95% CIs).")),
 
                 helpText(
                   "Note: This comparison is based on aggregated",
@@ -415,9 +409,15 @@ mod_tab_report_server <- function(id, vals) {
 
       out <- fix_unit(vals$reg$dur, vals$reg$dur_unit,
                       convert = TRUE)
+      
+      out_days <- ("days" %#% 
+                     (vals$reg$dur %#% vals$reg$dur_unit)) %>% 
+        fix_unit(., "days")
+      
       parBlock(
         header = "Sampling duration",
-        value = paste(out[1], out[2]))
+        value = paste(out[1], out[2]),
+        subtitle = paste0("(or ", out_days[1], " ", out_days[2], ")"))
 
     }) # end of renderUI // repBlock_dur
 
@@ -551,7 +551,13 @@ mod_tab_report_server <- function(id, vals) {
     
     
     # VALIDATION ----------------------------------------------------------
-
+    
+    observe({
+      
+      vals$ci <- input$ci
+    }) %>% # end of observe
+      bindEvent(input$ci)
+    
     observe({
       req(vals$active_tab == 'report')
 
@@ -602,9 +608,9 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(tau_p == out_taup) %>%
         dplyr::filter(duration == out_dur)
 
-      CI <- ifelse(is.null(input$ci), .95, input$ci/100)
+      CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
       vals$hrCI <- bayestestR::ci(newdat$error, ci = CI, method = "HDI")
-
+      
     }) # end of observe
 
     observe({
@@ -633,7 +639,7 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(dur == out_dur) %>%
         dplyr::filter(dti == out_dti)
 
-      CI <- ifelse(is.null(input$ci), .95, input$ci/100)
+      CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
       vals$sdCI <- bayestestR::ci(newdat$error, ci = CI,
                                   method = "HDI")
 
@@ -657,7 +663,7 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(tau_p == out_taup) %>%
         dplyr::filter(duration == out_dur)
 
-      CI <- ifelse(is.null(input$ci), .95, input$ci/100)
+      CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
       vals$hrCI_new <- bayestestR::ci(newdat$error,
                                       ci = CI, method = "HDI")
 
@@ -685,7 +691,7 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(tau_v == out_tauv) %>%
         dplyr::filter(dti == out_dti$value)
       
-      CI <- ifelse(is.null(input$ci), .95, input$ci/100)
+      CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
       vals$sdCI_new <- bayestestR::ci(newdat$error,
                                       ci = CI, method = "HDI")
       
@@ -1075,7 +1081,7 @@ mod_tab_report_server <- function(id, vals) {
       req(vals$tau_p0, vals$tau_p0_units,
           vals$reg$dur, vals$reg$dur_unit,
           vals$reg$dti, vals$reg$dti_unit,
-          input$ci)
+          vals$ci)
 
       input_taup <- "days" %#% vals$tau_p0 %#% vals$tau_p0_units
       input_dur <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
@@ -1092,63 +1098,76 @@ mod_tab_report_server <- function(id, vals) {
 
       ## Rendering density plots: -----------------------------------------
 
-      output$plot_hr_density <- ggiraph::renderGirafe({
-
+      observe({
+        req(vals$active_tab == 'report',
+            vals$hrCI, vals$hrErr)
+        
         reveal_if <- FALSE
         if (!is.null(input$highlight_dur)) {
           if (!is.na(as.numeric(input$highlight_dur))) reveal_if <- TRUE
         }
-
+        
+        scaled_if <- FALSE
+        if (!is.null(input$repInput_scaled)) {
+          if(input$repInput_scaled) scaled_if <- TRUE
+        }
+          
         dat <- movedesign::sims_hrange[[1]] %>%
           dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
           dplyr::mutate(duration = round("days" %#% duration, 1))
-
+        
         index_taup <- which.min(abs(dat$tau_p - input_taup))
         out_taup <- dat$tau_p[index_taup]
-
+        
         index_dur <- which.min(abs(dat$dur - input_dur))
         out_dur <- dat$dur[index_dur]
-
+        
         df1 <- dat %>%
           dplyr::filter(tau_p == out_taup) %>%
           dplyr::filter(duration == out_dur) %>%
           stats::na.omit()
-
+        
         ds1 <- stats::density(df1$error)
         ds1 <- data.frame(x = ds1$x, y = ds1$y)
-
-        if(input$repInput_scaled) ds1$y <- ds1$y / max(ds1$y)
+        min_x <- min(ds1$x)
+        max_x <- max(ds1$x)
+        
+        if(scaled_if) ds1$y <- ds1$y / max(ds1$y)
         ds1_ci <- subset(ds1, x >= vals$hrCI$CI_low &
                            x <= vals$hrCI$CI_high)
-
+        
+        
         if (reveal_if) {
           dur_new <- as.numeric(input$highlight_dur)
           index_dur_new <- which.min(abs(dat$dur - dur_new))
           out_dur_new <- dat$dur[index_dur_new]
-
-
+          
           df2 <- dat %>%
             dplyr::filter(tau_p == out_taup) %>%
             dplyr::filter(duration == out_dur_new) %>%
             stats::na.omit()
-
+          
           ds2 <- stats::density(df2$error)
           ds2 <- data.frame(x = ds2$x, y = ds2$y)
-
-          CI <- ifelse(is.null(input$ci), .95, input$ci/100)
+          min_x <- min(min_x, min(ds2$x))
+          max_x <- max(max_x, max(ds2$x))
+          
+          CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
           ci2 <- bayestestR::ci(df2$error, ci = CI, method = "HDI")
-          if(input$repInput_scaled) ds2$y <- ds2$y / max(ds2$y)
+          
+          if(scaled_if) ds2$y <- ds2$y / max(ds2$y)
           ds2_ci <- subset(ds2, x >= ci2$CI_low &
                              x <= ci2$CI_high)
+          
           p1 <- ggplot2::geom_line(
             data = ds2, mapping = ggplot2::aes(x = x, y = y),
             col = pal$mdn, linetype = "dotted")
-
+          
           p2 <- ggplot2::geom_area(
             data = ds2_ci,
             mapping = ggplot2::aes(x = x, y = y),
             alpha = 0.2, fill = pal$mdn)
-
+          
           p3 <- ggplot2::geom_segment(
             data = ci2,
             mapping = ggplot2::aes(
@@ -1164,124 +1183,225 @@ mod_tab_report_server <- function(id, vals) {
               col = "est_new", shape = "est_new"),
             size = 6)
         }
-
+        
         lbl <- c(
           paste0("Current error"),
           paste0("Median error + ", vals$hrCI$CI * 100,
                  "% HDI for ", out_dur, " days"))
         brk <- c("now", "est")
-
+        
         val_fill <- val_col <- c("now" = pal$sea_d, "est" = pal$sea)
         val_linetype <- c("now" = "blank", "est" = "solid")
         val_shape <- c("now" = 19, "est" = 18)
-
+        
         override_size <- c(.8, .8)
         override_stroke <- c(4, 4)
-
+        
         if (reveal_if) {
           lbl <- c(
             lbl, paste0("Median error + ", vals$hrCI$CI * 100,
                         "% HDI for ", input$highlight_dur, " days"))
           brk <- c(brk, "est_new")
-
+          
           val_fill <- val_col <- c(val_fill, "est_new" = pal$mdn)
           val_linetype <- c(val_linetype, "est_new" = "solid")
           val_shape <- c(val_shape, "est_new" = 18)
-
+          
           override_size <- c(override_size, .8)
           override_stroke <- c(override_stroke, 4)
         }
-
+        
         y_lab <- ifelse(input$repInput_scaled,
                         "Probability density", "Density")
-
-        p <- ds1 %>%
-          ggplot2::ggplot(ggplot2::aes(x = x, y = y)) +
-          ggplot2::geom_vline(xintercept = 0, alpha = 1) +
-
-          {if (reveal_if) p1 } +
-          {if (reveal_if) p2 } +
-
-          ggplot2::geom_line(
-            ggplot2::aes(col = "est"),
-            linetype = "dotted") +
-
-          ggplot2::geom_area(
-            data = ds1_ci,
-            mapping = ggplot2::aes(x = x, y = y),
-            alpha = 0.4, fill = pal$sea) +
-
-          {if (reveal_if) p3 } +
-
-          ggplot2::geom_segment(
-            mapping = ggplot2::aes(
-              x = vals$hrCI$CI_low,
-              xend = vals$hrCI$CI_high,
-              y = 0, yend = 0, col = "est",
-              linetype = "est"),
-            size = .8) +
-
-          {if (reveal_if) p4 } +
-
-          ggplot2::geom_point(
-            data = df1,
-            mapping = ggplot2::aes(
-              x = stats::median(error), y = 0,
-              col = "est", shape = "est"),
-            size = 6) +
-
-          ggplot2::geom_point(
-            ggplot2::aes(x = vals$hrErr, y =  0,
-                         col = "now", shape = "now"),
-            size = 6, alpha = .7) +
-
-          ggplot2::scale_x_continuous(labels = scales::percent) +
-
-          ggplot2::scale_color_manual(
-            name = "", labels = lbl, breaks = brk,
-            values = val_col) +
-          ggplot2::scale_fill_manual(
-            name = "", labels = lbl, breaks = brk,
-            values = val_fill) +
-          ggplot2::scale_linetype_manual(
-            name = "", labels = lbl, breaks = brk,
-            values = val_linetype) +
-          ggplot2::scale_shape_manual(
-            name = "", labels = lbl, breaks = brk,
-            values = val_shape) +
-
-          ggplot2::labs(x = "Estimate error (%)",
-                        y = y_lab) +
-
-          theme_movedesign() +
-          ggplot2::theme(
-            legend.position = "bottom",
-            legend.direction = "vertical",
-            legend.title = ggplot2::element_blank()) +
-          ggplot2::guides(
-            shape = ggplot2::guide_legend(
-              override.aes = list(
-                alpha = 1,
-                size = override_size,
-                stroke = override_stroke)))
-
-        ggiraph::girafe(
-          ggobj = p,
-          width_svg = 6, height_svg = 4,
-          options = list(
-            ggiraph::opts_zoom(max = 5),
-            ggiraph::opts_hover(
-              css = paste("r: 4pt;",
-                          "fill: #006263;",
-                          "stroke: #006263;")),
-            ggiraph::opts_selection(
-              type = "single",
-              css = paste("r: 4pt;",
-                          "fill: #004647;",
-                          "stroke: #004647;"))))
-
-      }) # end of renderGirafe // plot_hr_density
-
+        
+        output$plot_hr_density <- ggiraph::renderGirafe({
+          
+          p <- ds1 %>%
+            ggplot2::ggplot(ggplot2::aes(x = x, y = y)) +
+            ggplot2::geom_vline(xintercept = 0, alpha = 1) +
+            
+            {if (reveal_if) p1 } +
+            {if (reveal_if) p2 } +
+            
+            ggplot2::geom_line(
+              ggplot2::aes(col = "est"),
+              linetype = "dotted") +
+            
+            ggplot2::geom_area(
+              data = ds1_ci,
+              mapping = ggplot2::aes(x = x, y = y),
+              alpha = 0.4, fill = pal$sea) +
+            
+            {if (reveal_if) p3 } +
+            
+            ggplot2::geom_segment(
+              mapping = ggplot2::aes(
+                x = vals$hrCI$CI_low,
+                xend = vals$hrCI$CI_high,
+                y = 0, yend = 0, col = "est",
+                linetype = "est"),
+              size = .8) +
+            
+            {if (reveal_if) p4 } +
+            
+            ggplot2::geom_point(
+              data = df1,
+              mapping = ggplot2::aes(
+                x = stats::median(error), y = 0,
+                col = "est", shape = "est"),
+              size = 6) +
+            
+            ggplot2::geom_point(
+              ggplot2::aes(x = vals$hrErr, y =  0,
+                           col = "now", shape = "now"),
+              size = 6, alpha = .7) +
+            
+            ggplot2::scale_x_continuous(labels = scales::percent) +
+            
+            ggplot2::scale_color_manual(
+              name = "", labels = lbl, breaks = brk,
+              values = val_col) +
+            ggplot2::scale_fill_manual(
+              name = "", labels = lbl, breaks = brk,
+              values = val_fill) +
+            ggplot2::scale_linetype_manual(
+              name = "", labels = lbl, breaks = brk,
+              values = val_linetype) +
+            ggplot2::scale_shape_manual(
+              name = "", labels = lbl, breaks = brk,
+              values = val_shape) +
+            
+            ggplot2::labs(x = "Estimate error (%)",
+                          y = y_lab) +
+            
+            theme_movedesign() +
+            ggplot2::theme(
+              legend.position = "none",
+              axis.title.x = ggplot2::element_blank())
+          
+          ggiraph::girafe(
+            ggobj = p,
+            width_svg = 6, height_svg = 4,
+            options = list(
+              ggiraph::opts_zoom(max = 5),
+              ggiraph::opts_hover(
+                css = paste("r: 4pt;",
+                            "fill: #006263;",
+                            "stroke: #006263;")),
+              ggiraph::opts_selection(
+                type = "single",
+                css = paste("r: 4pt;",
+                            "fill: #004647;",
+                            "stroke: #004647;"))))
+          
+        }) # end of renderGirafe // plot_hr_density
+        
+        output$plot_hr_density_details <- ggiraph::renderGirafe({
+          
+          girafe_height <- 2
+          
+          hr_details <- data.frame(
+            group = c("now", "est"),
+            labels = c(
+              paste0("Current error"),
+              paste0("Median error + ", vals$hrCI$CI * 100,
+                     "% HDI for ", out_dur, " days")))
+          
+          hr_details$est <- c(vals$hrErr,
+                              median(df1$error))
+          hr_details$low <- c(vals$hrErr, # vals$hrErr_min,
+                              vals$hrCI$CI_low)
+          hr_details$high <- c(vals$hrErr, #vals$hrErr_max,
+                               vals$hrCI$CI_high)
+          
+          if (reveal_if) {
+            hr_details <- hr_details %>% 
+              dplyr::add_row(group = "est_new",
+                             labels = lbl[3],
+                             est = median(df2$error),
+                             low = ci2$CI_low,
+                             high = ci2$CI_high)
+            girafe_height <- 2.5
+          }
+          
+          hr_details <- hr_details %>% 
+            dplyr::mutate(
+              group = factor(group,
+                             levels = c("est_new",
+                                        "est", 
+                                        "now")))
+          p <- hr_details %>%
+            ggplot2::ggplot(
+              ggplot2::aes(x = est, 
+                           y = group,
+                           group = group,
+                           col = group,
+                           fill = group,
+                           shape = group)) +
+            ggplot2::geom_vline(xintercept = 0) +
+            
+            ggplot2::geom_point(size = 6) +
+            ggplot2::geom_segment(
+             ggplot2::aes(
+                x = low,
+                xend = high,
+                y = group,
+                yend = group),
+              size = .8) +
+            
+            ggplot2::scale_x_continuous(
+              labels = scales::percent,
+              limits = c(min_x, max_x)) +   
+            ggplot2::scale_y_discrete(
+              labels = c("___","___","___")) +
+            
+            ggplot2::scale_color_manual(
+              name = "", labels = lbl, breaks = brk,
+              values = val_col) +
+            ggplot2::scale_fill_manual(
+              name = "", labels = lbl, breaks = brk,
+              values = val_fill) +
+            ggplot2::scale_shape_manual(
+              name = "", labels = lbl, breaks = brk,
+              values = val_shape) +
+            
+            ggplot2::labs(x = "Estimate error (%)",
+                          y = "") +
+            
+            theme_movedesign() +
+            ggplot2::theme(
+              axis.text.y = ggplot2::element_text(color = "#ffffff"), 
+              legend.position = "bottom",
+              legend.direction = "vertical",
+              legend.title = ggplot2::element_blank()) +
+            ggplot2::guides(
+              shape = ggplot2::guide_legend(
+                override.aes = list(
+                  alpha = 1,
+                  size = override_size,
+                  stroke = override_stroke)))
+          p
+          
+          ggiraph::girafe(
+            ggobj = p,
+            width_svg = 6, height_svg = girafe_height,
+            options = list(
+              ggiraph::opts_zoom(max = 5),
+              ggiraph::opts_hover(
+                css = paste("r: 4pt;",
+                            "fill: #006263;",
+                            "stroke: #006263;")),
+              ggiraph::opts_selection(
+                type = "single",
+                css = paste("r: 4pt;",
+                            "fill: #004647;",
+                            "stroke: #004647;"))))
+          
+        }) # end of renderGirafe // plot_hr_density_details
+        
+      }) # end of observe
+      
+      
       output$plot_sd_density <- ggiraph::renderGirafe({
         req(vals$sdErr, vals$sdCI)
 
@@ -1337,7 +1457,7 @@ mod_tab_report_server <- function(id, vals) {
           ds2 <- stats::density(df2$error)
           ds2 <- data.frame(x = ds2$x, y = ds2$y)
 
-          CI <- ifelse(is.null(input$ci), .95, input$ci/100)
+          CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
           ci2 <- bayestestR::ci(df2$error, ci = CI, method = "HDI")
           if(input$repInput_scaled) ds2$y <- ds2$y / max(ds2$y)
           ds2_ci <- subset(ds2, x >= ci2$CI_low &
@@ -1398,7 +1518,7 @@ mod_tab_report_server <- function(id, vals) {
 
         p <- ds1 %>%
           ggplot2::ggplot(ggplot2::aes(x = x, y = y)) +
-          ggplot2::geom_vline(xintercept = 0, alpha = 1) +
+          ggplot2::geom_vline(xintercept = 0) +
 
           {if (reveal_if) p1 } +
           {if (reveal_if) p2 } +
@@ -1532,7 +1652,7 @@ mod_tab_report_server <- function(id, vals) {
         }
 
         p <- ggplot2::ggplot() +
-
+          
           ggplot2::geom_ribbon(
             data = dat_filtered,
             mapping = ggplot2::aes(
@@ -1756,7 +1876,11 @@ mod_tab_report_server <- function(id, vals) {
     # REPORT --------------------------------------------------------------
 
     observe({
-      req(vals$which_question)
+      req(vals$which_question,
+          vals$data_type, 
+          vals$is_analyses)
+      
+      print("CHECKPOINT")
 
       msg_log(
         style = "warning",
@@ -1872,10 +1996,11 @@ mod_tab_report_server <- function(id, vals) {
             round(dur$value / (dur$unit %#% tau_p), 0),
             icon(name = "xmark"), wrap_none("\u03C4", tags$sub("p")),
             "\u2248", wrap_none(dur$value, " ", dur$unit,
-                                color = vals$hr_col[1], ","),
-            "resulting in an",
-            "effective sample size of",
-            span(N1, style = vals$hr_col[1]), "locations.")
+                                color = vals$hr_col[1], end = ".") #,
+            # "resulting in an",
+            # "effective sample size of",
+            # span(N1, style = vals$hr_col[1]), "locations."
+          )
 
       } # end of "Home range"
 
@@ -1930,9 +2055,10 @@ mod_tab_report_server <- function(id, vals) {
         index_dur <- which.min(abs(dur_options - dur$value))
         plotted_dur <- dur_options[index_dur]
 
+        out_analyses <- NULL
         if (dur$value >= ideal_dur$value) {
 
-          out_hr <-
+          out_hr <- 
             span("Your current tracking regime is likely sufficient",
                  "for", span("home range", class = "cl-grn"),
                  "estimation,", txt_level, "uncertainty.", br(),
@@ -1945,7 +2071,7 @@ mod_tab_report_server <- function(id, vals) {
 
         } else {
 
-          out_hr <-
+          out_hr <- 
             span("Your current tracking regime is likely insufficient",
                  "for", span("home range", class = "cl-grn"),
                  "estimation.", br(),
@@ -1989,7 +2115,7 @@ mod_tab_report_server <- function(id, vals) {
           out_ctsd <-
             span("Your current tracking regime is likely sufficient",
                  "for", span("home range", class = "cl-grn"),
-                 "estimation,", txt_level, "uncertainty.",
+                 "estimation,", txt_level, "uncertainty.", br(),
                  "Keep in mind that, for a duration of",
                  plotted_dti, "days, there is a",
                  wrap_none(CI, "%", css = "cl-blk"),
@@ -2002,7 +2128,7 @@ mod_tab_report_server <- function(id, vals) {
           out_ctsd <-
             span("Your current tracking regime is likely insufficient",
                  "for", span("home range", class = "cl-grn"),
-                 "estimation.",
+                 "estimation.", br(),
                  "For a duration of",
                  plotted_dti, "days, there is high uncertainty",
                  wrap_none("(", CI, "%", css = "cl-blk"),
@@ -2028,7 +2154,8 @@ mod_tab_report_server <- function(id, vals) {
       #   #TODO
       # }
      
-    }) %>% bindEvent(input$create_report)
+    }) %>% # end of observe,
+      bindEvent(input$create_report)
     
     # Rendering complete report: ----------------------------------------
     
@@ -2050,6 +2177,11 @@ mod_tab_report_server <- function(id, vals) {
         if ("Home range" %in% vals$which_question) {
           ggiraph::girafeOutput(
             outputId = ns("plot_hr_density"),
+            width = "100%", height = "100%") },
+        
+        if ("Home range" %in% vals$which_question) {
+          ggiraph::girafeOutput(
+            outputId = ns("plot_hr_density_details"),
             width = "100%", height = "100%") },
 
         if ("Speed & distance" %in% vals$which_question) {

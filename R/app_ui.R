@@ -111,44 +111,45 @@ app_ui <- function(request) {
       body = shinydashboard::dashboardBody(
 
         shinydashboard::tabItems(
-
+          # shinydashboard::tabItem()
+          
           # Tab 1 'Home'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "about",
             mod_tab_about_ui("tab_about_1")),
 
           # Tab 2.1 'Upload data'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "data_upload",
             mod_tab_data_upload_ui("tab_data_upload_1")),
 
           # Tab 2.2 'Select data'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "data_select",
             mod_tab_data_select_ui("tab_data_select_1")),
 
           # Tab 3 'Simulate data'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "sims",
             mod_tab_sims_ui("tab_sims_1")),
 
           # Tab 4 'Device'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "regime",
             mod_tab_device_ui("tab_device_1")),
 
           # Tab 5 'Home range estimation'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "hr",
             mod_tab_hrange_ui("tab_hrange_1")),
 
           # Tab 6 'CTSD estimation'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "ctsd",
             mod_tab_ctsd_ui("tab_ctsd_1")),
 
           # Tab 7 'Report'
-          shinydashboard::tabItem(
+          newTabItem(
             tabName = "report",
             mod_tab_report_ui("tab_report_1"))
 
@@ -218,6 +219,5 @@ golem_add_external_resources <- function() {
     shinyjs::useShinyjs(), # set up shinyjs
     shinyjs::extendShinyjs(script = "www/fullscreen.js",
                            functions = c("toggleFullScreen"))
-
   )
 }

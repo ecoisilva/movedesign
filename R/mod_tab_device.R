@@ -42,23 +42,25 @@ mod_tab_device_ui <- function(id) {
             "(time between which new locations are collected)."
           ),
 
-          p("Which type are you evaluating?") %>%
-            tagAppendAttributes(class = 'label_center'),
-
-          shiny::selectizeInput(
-            inputId = ns("device_type"),
-            width = "260px",
-            label = NULL,
-            choices = c("GPS/Satellite logger" = 1,
-                        "VHF transmitter" = 2),
-            options = list(
-              placeholder = 'Select an option here',
-              onInitialize = I('function() { this.setValue(""); }'))),
-
+          div(id = "content_device-type",
+              p("Which type are you evaluating?") %>%
+                tagAppendAttributes(class = 'label_center'),
+              
+              shiny::selectizeInput(
+                inputId = ns("device_type"),
+                width = "260px",
+                label = NULL,
+                choices = c("GPS/Satellite logger" = 1,
+                            "VHF transmitter" = 2),
+                options = list(
+                  placeholder = 'Select an option here',
+                  onInitialize = I('function() { this.setValue(""); }')))),
+          
           shinyWidgets::checkboxGroupButtons(
             inputId = ns("which_limitations"),
             label = p("What limitations do you want to consider?") %>%
-                        tagAppendAttributes(class = 'label_center no-bottom'),
+              tagAppendAttributes(
+                class = 'label_center no-bottom'),
             choices = c("Storage limit" = "limit",
                         "Fail rate" = "loss",
                         "Location error" = "error"),
@@ -203,24 +205,26 @@ mod_tab_device_ui <- function(id) {
                                 "Years" = "years"),
                     selected = "months")
 
-                ), # end of splitLayout
+                ) #, # end of splitLayout
 
-                shinyWidgets::sliderTextInput(
-                  inputId = ns("vhf_ppm"),
-                  label = "Pulses per minute (ppm):",
-                  choices = c(15, 20, 25, 30, 35, 40, 55, 120),
-                  selected = 40,
-                  grid = FALSE),
+                #TODO
+                # shinyWidgets::sliderTextInput(
+                #   inputId = ns("vhf_ppm"),
+                #   label = "Pulses per minute (ppm):",
+                #   choices = c(15, 20, 25, 30, 35, 40, 55, 120),
+                #   selected = 40,
+                #   grid = FALSE),
 
               ) # end of fluidRow
-            ), # end of column
+            ) #, # end of column
 
-            footer = shiny::actionButton(
-                inputId = ns("add_vhf_point"),
-                label = span("Add to",
-                             span("plot", class = "cl-sea")),
-                icon = icon("bookmark"),
-                width = "100%")
+            #TODO
+            # footer = shiny::actionButton(
+            #     inputId = ns("add_vhf_point"),
+            #     label = span("Add to",
+            #                  span("plot", class = "cl-sea")),
+            #     icon = icon("bookmark"),
+            #     width = "100%") 
 
           ), # end of box // regBox_vhf_device
 
@@ -400,7 +404,7 @@ mod_tab_device_ui <- function(id) {
                 width = NULL,
                 solidHeader = TRUE,
                 collapsible = FALSE,
-
+                
                 uiOutput(ns("regUI_sampling")),
 
                 footer = uiOutput(ns("regUI_sampling_footer"))
@@ -525,7 +529,7 @@ mod_tab_device_server <- function(id, vals) {
 
     vals$reg <- reactiveValues()
     pal <- load_pal()
-
+    
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at start: --------------------------------------------
 
@@ -1044,9 +1048,10 @@ mod_tab_device_server <- function(id, vals) {
               "(based on how many times you will collect new",
               "locations)."),
 
-            ggiraph::girafeOutput(
-              outputId = ns("regPlot_vhf"),
-              width = "100%", height = "50%"),
+            # TODO
+            # ggiraph::girafeOutput(
+            #   outputId = ns("regPlot_vhf"),
+            #   width = "100%", height = "50%"),
 
             p("What", span("sampling interval", class = "col-hgl"),
               "will you evaluate?") %>%
@@ -1858,56 +1863,57 @@ mod_tab_device_server <- function(id, vals) {
     # }) %>% # end of observe,
     #   bindEvent(input$vhfDat_clear)
 
-    output$regPlot_vhf <- ggiraph::renderGirafe({
-      req(vals$df_vhf) # req(nrow(vals$df_vhf) > 1)
-
-      df0 <- vals$df_vhf
-      df0$id <- 1:nrow(df0)
-      df0$ppm_notes <- paste(df0$ppm, "ppm")
-
-      dur_units <- df0$dur_units[1]
-      df0$dur_new <- dur_units %#% df0$dur_secs
-
-      p <- df0 %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = ppm,
-                       y = dur_new,
-                       data_id = as.numeric(id))) +
-
-        ggplot2::geom_smooth(
-          method = lm,
-          formula = y ~ x,
-          color = "#f4f4f4", se = F,
-          size = 1.5, alpha = .8) +
-
-        ggiraph::geom_point_interactive(
-          ggplot2::aes(tooltip = ppm_notes),
-          size = 2,
-          col = pal$mdn) +
-
-        ggplot2::coord_fixed(ratio = -3) +
-        ggplot2::labs(
-          x = "Pulse rate (ppm)",
-          y = paste0("Durations (in ", dur_units, ")")) +
-        theme_movedesign() +
-        ggplot2::theme(legend.position = "none")
-
-      ggiraph::girafe(
-        ggobj = p,
-        width_svg = 6, height_svg = 5.5,
-        options = list(
-          ggiraph::opts_hover(
-            css = paste("r:5pt;",
-                        "fill:#ffbf00;",
-                        "stroke:#ffbf00;")),
-          ggiraph::opts_selection(
-            type = "single",
-            css = paste("r:5pt;",
-                        "fill:#dd4b39;",
-                        "stroke:#eb5644;")),
-          ggiraph::opts_toolbar(saveaspng = FALSE)))
-
-    }) # end of renderGirafe // regPlot_vhf
+    #TODO
+    # output$regPlot_vhf <- ggiraph::renderGirafe({
+    #   req(vals$df_vhf) # req(nrow(vals$df_vhf) > 1)
+    # 
+    #   df0 <- vals$df_vhf
+    #   df0$id <- 1:nrow(df0)
+    #   df0$ppm_notes <- paste(df0$ppm, "ppm")
+    # 
+    #   dur_units <- df0$dur_units[1]
+    #   df0$dur_new <- dur_units %#% df0$dur_secs
+    # 
+    #   p <- df0 %>%
+    #     ggplot2::ggplot(
+    #       ggplot2::aes(x = ppm,
+    #                    y = dur_new,
+    #                    data_id = as.numeric(id))) +
+    # 
+    #     ggplot2::geom_smooth(
+    #       method = lm,
+    #       formula = y ~ x,
+    #       color = "#f4f4f4", se = F,
+    #       size = 1.5, alpha = .8) +
+    # 
+    #     ggiraph::geom_point_interactive(
+    #       ggplot2::aes(tooltip = ppm_notes),
+    #       size = 2,
+    #       col = pal$mdn) +
+    # 
+    #     ggplot2::coord_fixed(ratio = -3) +
+    #     ggplot2::labs(
+    #       x = "Pulse rate (ppm)",
+    #       y = paste0("Durations (in ", dur_units, ")")) +
+    #     theme_movedesign() +
+    #     ggplot2::theme(legend.position = "none")
+    # 
+    #   ggiraph::girafe(
+    #     ggobj = p,
+    #     width_svg = 6, height_svg = 5.5,
+    #     options = list(
+    #       ggiraph::opts_hover(
+    #         css = paste("r:5pt;",
+    #                     "fill:#ffbf00;",
+    #                     "stroke:#ffbf00;")),
+    #       ggiraph::opts_selection(
+    #         type = "single",
+    #         css = paste("r:5pt;",
+    #                     "fill:#dd4b39;",
+    #                     "stroke:#eb5644;")),
+    #       ggiraph::opts_toolbar(saveaspng = FALSE)))
+    # 
+    # }) # end of renderGirafe // regPlot_vhf
 
     ## Plotting GPS battery decay: --------------------------------------
 
@@ -2012,7 +2018,14 @@ mod_tab_device_server <- function(id, vals) {
         # } else {
         #   preselection <- character(0)
         # }
-
+        
+        if(vals$tour_active) { 
+          tempid <- match("1 fix every hour", df0$nu_notes)
+          preselection <- as.character(tempid)
+        } else {
+          preselection <- character(0) 
+        }
+        
         ggiraph::girafe(
           ggobj = p,
           width_svg = 5, height_svg = 4,
@@ -2022,7 +2035,7 @@ mod_tab_device_server <- function(id, vals) {
                           "fill: #ffbf00;",
                           "stroke: #ffbf00;")),
             ggiraph::opts_selection(
-              # selected = preselection,
+              selected = preselection,
               type = "single",
               css = paste("r:4pt;",
                           "fill: #009da0;",

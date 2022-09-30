@@ -109,7 +109,7 @@ errorBlock <- function(icon = NULL,
   range <- paste0(min, "% — ", max, "%")
 
   if (!is.null(value)) {
-    if(abs(value) > 0) {
+    if(value > 0) {
       tmptext <- span("Overestimation", icon("angle-up"))
     } else {
       tmptext <- span("Underestimation", icon("angle-down"))
@@ -192,9 +192,61 @@ staticBlock <- function(text,
 #'
 #' @noRd
 extract_units <- function(input) {
-  gsub("\\(([^()]+)\\)", "\\1",
-       stringr::str_extract_all(input, "\\(([^()]+)\\)")[[1]])
+  
+  tryCatch(
+    expr = {
+      string <- gsub(
+        "\\(([^()]+)\\)", "\\1",
+        stringr::str_extract_all(input,
+                                 "\\(([^()]+)\\)")[[1]])
+      return(string)
+    },
+    error = function(e) {
+      print(
+        sprintf("An error occurred in extract_units at %s : %s",
+                Sys.time(), e))
+    })
 }
+
+
+#' Extract parameters.
+#'
+#' @description Extracting parameter values and units from ctmm summaries.
+#' @return The return value, if any, from executing the utility.
+#' @keywords internal
+#'
+#' @noRd
+extract_pars <- function(obj, par, type = "est") {
+  
+  if(type == "est")  i <- 2
+  if(type == "low")  i <- 1
+  if(type == "high") i <- 3
+  
+  if(class(obj) == "telemetry") {
+    nms.dat <- suppressWarnings(names(summary(obj)))
+    
+    out_unit <- extract_units(nms.dat[grep(par, nms.dat)])
+    out_value <- suppressWarnings(as.numeric(
+      summary(obj)[grep(par, nms.dat)]))
+    
+  } else if (class(obj) == "ctmm") {
+    sum.fit <- summary(obj)
+    nms.fit <- rownames(sum.fit$CI)
+    
+    out_value <- sum.fit$CI[grep(par, nms.fit), i]
+    if(identical(out_value, numeric(0))) {
+      out_value <- NA
+      out_unit <- NA
+    } else {
+      out_unit <- extract_units(nms.fit[grep(par, nms.fit)])
+    }
+  }
+  
+  return(data.frame(par = par,
+                    value = out_value,
+                    unit = out_unit))
+}
+
 
 #' Add helper text.
 #'
@@ -1050,4 +1102,27 @@ create_modal <- function(var, id) {
   return(out)
 }
 
+
+#' One tab to put inside a tab items container
+#'
+#' @description shinydashboard function, but with data values to fix rintrojs issue.
+#' @keywords internal
+#'
+#' @noRd
+newTabItem <- function(tabName = NULL, ...) {
+  if (is.null(tabName))
+    stop("Need tabName")
+  
+  if (grepl(".", tabName, fixed = TRUE)) {
+    stop("tabName must not have a '.' in it.")
+  }
+  
+  div(
+    role = "tabpanel",
+    class = "tab-pane",
+    id = paste0("shiny-tab-", tabName),
+    `data-value` = tabName,
+    ...
+  )
+}
 

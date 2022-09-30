@@ -986,7 +986,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       tauv <- vals$tau_v0 %#% vals$tau_v0_units
       
       sim_full <- ctmm::simulate(
-        dat, fit, t = seq(0, dur, by = 1 %#% "minute"))
+        dat, fit, t = seq(0, dur, by = tauv/3))
       vals$data_full <- sim_full
       
       inputList <- ctmmweb::align_lists(

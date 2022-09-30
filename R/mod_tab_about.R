@@ -44,24 +44,24 @@ mod_tab_about_ui <- function(id) {
       # Tour/tutorial section: --------------------------------------------
 
       # Section currently in progress:
-      # shinydashboardPlus::box( #TODO
-      #   id = "about_tour",
-      #   title = NULL,
-      #   width = 12,
-      #   solidHeader = FALSE, headerBorder = FALSE,
-      #   collapsible = FALSE, closable = FALSE,
-      # 
-      #   column(
-      #     align = "center", width = 12,
-      # 
-      #     br(),
-      #     h2("How does this",
-      #        span("application", class = "cl-sea"), "work?"),
-      #     p(),
-      #     mod_comp_tour_ui("tour_1"), p()
-      # 
-      #   ) # end of column (text)
-      # ), # end of box // tour
+      shinydashboardPlus::box(
+        id = "about_tour",
+        title = NULL,
+        width = 12,
+        solidHeader = FALSE, headerBorder = FALSE,
+        collapsible = FALSE, closable = FALSE,
+
+        column(
+          align = "center", width = 12,
+
+          br(),
+          h2("How does this",
+             span("application", class = "cl-sea"), "work?"),
+          p(),
+          mod_comp_tour_ui("tour_1"), p()
+
+        ) # end of column (text)
+      ), # end of box // tour
 
       # Workflows section: ------------------------------------------------
 
@@ -77,7 +77,7 @@ mod_tab_about_ui <- function(id) {
 
           fluidRow(
             align = "center",
-            div(id = "workflow-content",
+            div(id = "content-workflow",
 
                 br(),
                 h2("What is your",

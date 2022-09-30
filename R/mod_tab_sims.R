@@ -417,21 +417,21 @@ mod_tab_sims_ui <- function(id) {
             
           ) # end of box
           
-      ) # end of column (bottom)
+      ), # end of column (bottom)
       
       # FIXED PANELS: -----------------------------------------------------
       ## Help button: -----------------------------------------------------
       
-      # fixedPanel(
-      #   actionButton(
-      #     inputId = ns("help_sims"),
-      #     label = "Help",
-      #     icon = icon("circle-question"),
-      #     style = paste("color: #fff;",
-      #                   "background-color: #222d32;",
-      #                   "border-color: #222d32")),
-      #
-      #   right = 25, top = 75, width = "45px")
+      fixedPanel(
+        actionButton(
+          inputId = ns("help_sims"),
+          label = "Help",
+          icon = icon("compass"),
+          style = paste("color: #fff;",
+                        "background-color: #222d32;",
+                        "border-color: #222d32")),
+
+        right = 25, top = 75, width = "45px")
       
     ), # end of fluidRow
     
@@ -1154,13 +1154,13 @@ mod_tab_sims_server <- function(id, vals) {
         intro,
         HTML(paste(
           "First, you need to set the",
-          span("timescale", style = txt_tour_border), "parameters,",
-          "which are the", span("position", style = txt_tour_border),
+          span("timescale", class = "cl-sea"), "parameters,",
+          "which are the", span("position", class = "cl-sea"),
           " and the", span("velocity autocorrelation",
-                           style = txt_tour_border),
-          paste0(span("position", style = txt_tour_border),
+                           class = "cl-sea"),
+          paste0(span("position", class = "cl-sea"),
                  " and ", span("velocity autocorrelation ",
-                               style = txt_tour_border),
+                               class = "cl-sea"),
                  "parameters."),
           
           "For a more in-depth explanation on what these parameters",
@@ -1175,7 +1175,7 @@ mod_tab_sims_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Secondly, you set the",
-          span("semi-variance", style = txt_tour_border),
+          span("semi-variance", class = "cl-sea"),
           "parameter.", "will show up here."
         ))
       )
@@ -1197,13 +1197,13 @@ mod_tab_sims_server <- function(id, vals) {
           "This tab allows you to visualize the dataset you have",
           "just simulated. The",
           icon("paw", class = "cl-sea"),
-          span("Data", style = txt_tour_border), "tab",
+          span("Data", class = "cl-sea"), "tab",
           HTML("&mdash;"), "plots a single",
-          span("position autocorrelation", style = txt_tour_border),
+          span("position autocorrelation", class = "cl-sea"),
           "cycle", # paste0("(", span("e.g.", style = txt_tour_italic),
           "while the",
           icon("route", class = "cl-sea"),
-          span("Animation", style = txt_tour_border), "tab",
+          span("Animation", class = "cl-sea"), "tab",
           "will animate a single day of data collection for data",
           "validation."
         ))
@@ -1217,7 +1217,7 @@ mod_tab_sims_server <- function(id, vals) {
           "you can save their information in a table below by",
           "clicking the",
           icon("bookmark", class = "cl-sea"),
-          span("Add to table", style = txt_tour_border), "button."
+          span("Add to table", class = "cl-sea"), "button."
         ))
       )
       
@@ -1226,12 +1226,12 @@ mod_tab_sims_server <- function(id, vals) {
         intro,
         HTML(paste(
           "You will be able to see other parameters such as",
-          span("Tot. distance", style = txt_tour_grey),
+          span("Tot. distance", class = "cl-grey"),
           "(total distance traveled within 10", icon("xmark"),
-          span("position autocorrelation", style = txt_tour_border),
-          "cycle),", "the", span("Avg. distance", style = txt_tour_grey),
+          span("position autocorrelation", class = "cl-sea"),
+          "cycle),", "the", span("Avg. distance", class = "cl-grey"),
           "(average distance traveled)", "and the",
-          span("Avg. Speed", style = txt_tour_grey),
+          span("Avg. Speed", class = "cl-grey"),
           "(average movement speed)."
         ))
       )
@@ -1254,7 +1254,9 @@ mod_tab_sims_server <- function(id, vals) {
           showStepNumbers = F,
           showButtons = T,
           showBullets = T
-        ))
+        ),
+        events = list(onbeforechange =
+                        rintrojs::readCallback("switchTabs")))
       
     }) %>% bindEvent(input$help_sims)
     

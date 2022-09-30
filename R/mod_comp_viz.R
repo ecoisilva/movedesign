@@ -150,8 +150,8 @@ mod_comp_viz_server <- function(id, vals) {
         sumdfList$n[i] <- nrow(dfList[[i]])
       }
 
-      sum_col1 <- grep('period', names(sumdfList))
-      sum_col2 <- grep('interval', names(sumdfList))
+      sum_col1 <- grep("period", names(sumdfList))
+      sum_col2 <- grep("interval", names(sumdfList))
       sumdfList[,sum_col1] <- round(sumdfList[sum_col1], 1)
       sumdfList[,sum_col2] <- round(sumdfList[sum_col2], 1)
       sumdfList <- sumdfList %>% dplyr::select(-longitude,
@@ -440,7 +440,7 @@ mod_comp_viz_server <- function(id, vals) {
           reactable::colDef(
             headerClass = "rtable_header", align = "left"),
         columns = list(
-          n = reactable::colDef(name = "\u2014 n"),
+          n = reactable::colDef(name = "n"),
           longitude = reactable::colDef(
             format = reactable::colFormat(digits = 3)),
           latitude = reactable::colDef(

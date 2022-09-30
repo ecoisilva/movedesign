@@ -30,7 +30,7 @@ mod_tab_hrange_ui <- function(id) {
             width = NULL,
             solidHeader = FALSE, headerBorder = FALSE,
             collapsible = TRUE, closable = FALSE,
-
+            
             column(
               align = "center", width = 12,
 
@@ -217,7 +217,8 @@ mod_tab_hrange_ui <- function(id) {
                       outputId = ns("hrPlot_initial"),
                       width = "100%", height = "100%")),
 
-                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
+                div(id = "content_hr-areas",
+                    class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
                     p(class = "fluid-padding"),
                     uiOutput(ns("hrInfo_est")),
                     uiOutput(ns("hrInfo_err")))
@@ -784,9 +785,9 @@ mod_tab_hrange_server <- function(id, vals) {
 
           msg_log(
             style = "success",
-            message = paste0(
-              "Estimation ", msg_success("completed"),
-              msg_step(1, 3, style = "success")),
+            message = 
+              paste0("Estimation ",
+                     msg_success("completed"), "."),
             detail = paste(
               "This step took approximately",
               round(difftime(Sys.time(), start,
@@ -1204,7 +1205,7 @@ mod_tab_hrange_server <- function(id, vals) {
       hr_unit <- est_max$unit
 
       parBlock(
-        icon = "map-location-dot",
+        icon = "bullseye",
         header = "Estimate",
         value = span(HTML("&nbsp;", est$value, hr_unit),
                      class = "cl-mdn"),
@@ -1228,7 +1229,7 @@ mod_tab_hrange_server <- function(id, vals) {
       hr_unit <- est_max$unit
 
       parBlock(
-        icon = "map-location-dot",
+        icon = "bullseye",
         header = "Estimate",
         value = span(HTML("&nbsp;", est$value, hr_unit),
                      class = "cl-mdn"),
@@ -1510,11 +1511,19 @@ mod_tab_hrange_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Click the ",
-          icon("wrench", class = "cl-sea"),
+          fontawesome::fa("wrench", fill = pal$sea),
           span("Modify", class = "cl-sea"), "button",
           "to adjust the tracking regime."))
       )
-
+      
+      element <- c(element, "#hr_intro")
+      
+      intro <- c(
+        intro,
+        HTML(paste(
+          "hr_intro."))
+      )
+      
       tour <- data.frame(element = element,
                          intro = intro,
                          stringsAsFactors = FALSE)

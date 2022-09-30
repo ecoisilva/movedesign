@@ -1,7 +1,7 @@
 
 /* general */
 
-.introjs-overlay{
+.introjs-overlay {
  position: absolute;
  z-index: 10000;
  border: none;
@@ -13,8 +13,8 @@
 .introjs-tooltip{
   border: none;
   background-color: #222d32;
-  max-width: 100%;
-  min-width: 494px; /* 476px */
+  max-width: 60%;
+  min-width: 485px;
 }
 
 .introjs-tooltipReferenceLayer * {
@@ -71,7 +71,7 @@
 }
 
 .introjs-fixParent {
-    z-index: 99999999999999 !important;
+    z-index: 100000 !important;
 }
 
 .introjs-helperLayer {

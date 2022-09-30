@@ -25,94 +25,59 @@ mod_comp_tour_ui <- function(id) {
 mod_comp_tour_server <- function(id, vals) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-
-    reactive_modal_text <- reactive({
-      if(!is.null(vals$akde_sim)) {
-        HTML(paste("test"))
-      } else {
-        HTML(paste(
-          "If the",
-          span("confidence intervals", class = "cl-grn"),
-          "are wide, and the",
-          span("effective sample size", class = "cl-sea"),
-          "is low, then we can adjust the tracking regime to see how",
-          "to obtain a more precise estimate.", shiny::p(),
-
-          add_action,
-          "Click ",
-          icon("wrench", class = "cl-sea"),
-          span("'Adjust regime'", class = "cl-sea"),
-          "and click 'Next'."
-        ))
-      }
-
-    })
-
-    # isValue_id <- reactive({
-    #   return(is.null(vals$id))
-    # })
-
+    pal <- load_pal()
+    
     # Build tours: ------------------------------------------------------
 
     add_action <- span("Action:", class = "tour-action")
 
     build_mainTour <- function(ns, vals) {
       element <- intro <- character(0)
-
+  
       element <- c(element, "#Tour_start")
       intro <- c(
         intro,
         HTML(paste(
-
-          p(class = "ttl-tour cl-wht",
+          p(class = "ttl_tour cl-wht",
 
             "Welcome to",
-            wrap_none("move", span("design", class = "cl-sea"))),
+            wrap_none("move", span("design", class = "cl-sea-l"))),
 
           "Here, you will be guided step-by-step through the",
           "app. At times, you will be prompted to perform a",
           "specific action, which will be",
-          HTML(paste0(span("highlighted", class = "txt_action"), ".")),
+          span(
+            class = "tour_action",
+            wrap_none(fontawesome::fa("forward-step"),
+                      " highlighted", ".")),
           "Please take care to follow these instructions,",
           "since later parts of the tutorial require that all",
           "previous steps are performed.",
           p(), "If no action is requested, simply proceed",
           "to the next step by",
-          span("clicking on the 'Next' button or using the right",
-               "arrow of your keyboard.", class = "tour_action")
+          span(
+            class = "tour_action",
+            "clicking on the 'Next' button or using the right",
+            "arrow of your keyboard.")
         )))
 
       element <- c(element, "#Tour_start")
       intro <- c(
         intro,
         HTML(paste(
-          span("Warning:", class = "cl-dgr"),
+          span("Warning:", class = "cl-dgr-l"),
           "do not interact with anything outside of highlighted zones",
           "create alongside the tutorial boxes.",
           p(),
           "This tutorial will",
-          span("not", class = "cl-dgr"),
+          span("not", class = "cl-dgr-l"),
           "cover definitions in detail.",
           "If you want to check the more comprehensive",
-          icon("circle-question"),
-          "help tips, please do so outside of the tutorial."
+          fontawesome::fa("circle-question", fill = "white"),
+          "help tips."
         )))
 
-      # element <- c(element, "#workflow-content")
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     span(
-      #       "Please choose",
-      #       icon(name = "check",
-      #            class = "cl-sea-d"),
-      #       span("a data source",
-      #            class = "cl-sea-d"),
-      #       "and your research question(s).",
-      #       class = "tour_action")
-      #   )))
-
-      element <- c(element, "#workflow-content")
+      element <- c(element, "#content-workflow")
       intro <- c(
         intro,
         HTML(paste(
@@ -123,43 +88,45 @@ mod_comp_tour_server <- function(id, vals) {
           "For assistance with a simulation from scratch, exit",
           "this tour (click the ", span("x", class = "cl-grey"),
           " button above) and click on the",
-          icon("file-signature", class = "cl-sea"),
-          span("Simulate data", class = "cl-sea"),
+          fontawesome::fa("file-signature", fill = pal$sea),
+          span("Simulate data", class = "cl-sea-l"),
           "tab. A secondary guided tour will be available there.",
           p(),
           span(
             class = "tour_action",
 
+            fontawesome::fa("forward-step"),
             "Please choose",
-            icon(name = "check", class = "cl-sea-d"),
-            span("Select from available species", class = "cl-sea-d"),
-            "and the two research questions:",
-            icon(name = "check-square", class = "cl-sea-d"),
-            HTML(paste0(span("Home range", class = "cl-sea-d"), ",")),
-            "and",
-            icon(name = "check-square", class = "cl-sea-d"),
-            HTML(paste0(span("Speed & distance", class = "cl-sea-d"),
-                        ".")))
+            fontawesome::fa("square-check", fill = "white"),
+            "'Select' as your Data source, to choose",
+            "from a list of available species, ",
+            "and", fontawesome::fa("square-check", fill = "white"),
+            "'Home range' as your research question.")
         )))
 
       element <- c(element, ".sidebar")
       intro <- c(
         intro,
         HTML(paste(
-          "The corresponding steps are now marked in bold.",
-          "First, we will go to the",
-          icon(name = "file", class = "cl-sea"),
-          span("Select data", class = "cl-sea"), "tab",
+          "The tabs necessary for this workflow are shown in order.",
+          "First, we will go to (1) the",
+          fontawesome::fa("file", fill = pal$sea),
+          span("Select data", class = "cl-sea-l"), "tab",
           HTML("&mdash;"), "to load a dataset from the",
           span("ctmm", class = "cl-grn"), "R package",
-          HTML("&mdash;"), "then the",
-          icon(name = "stopwatch", class = "cl-sea"),
-          span("Tracking regime", class = "cl-sea"), "tab",
+          HTML("&mdash;"), "then (2) the",
+          fontawesome::fa("stopwatch", fill = pal$sea),
+          span("Tracking regime", class = "cl-sea-l"), "tab",
           HTML("&mdash;"),
           "to set the sampling duration and interval for evaluation",
-          HTML("&mdash;"), "and finally the",
-          icon(name = "compass-drafting", class = "cl-sea"),
-          span("Analyses", class = "cl-sea"), "tabs."
+          HTML("&mdash;"), "and finally (3) the",
+          fontawesome::fa("compass-drafting", fill = pal$sea),
+          span("Analyses", class = "cl-sea-l"), "tab.",
+          p(),
+          "Afterwards, we can see a detailed summary of",
+          "all the outputs in the",
+          fontawesome::fa("box-archive", fill = pal$sea),
+          span("Report", class = "cl-sea-l"), "tab."
         )))
 
       ## Data tabs: -------------------------------------------------------
@@ -169,30 +136,29 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          "Here, you can select one of the seven species",
-          "available within the", a(href = mainlink_ctmm, 'ctmm'),
-          "package and extract their parameters."
+          "In this tab, you will be able to select one of the seven",
+          "species available within the", span("ctmm", class = "cl-grn"),
+          "R package and extract their parameters.",
+
+          "Parameters extracted from one of the species provided",
+          "may help inform animal tracking studies of other",
+          "species with similar",
+          paste0(span("movement behaviors",
+                      class = "cl-sea-l"), ".")
         )))
-
-
 
       element <- c(element, paste0(tab3, "selectBox_species"))
       intro <- c(
         intro,
         HTML(paste(
-          "Parameters extracted from one of the species provided",
-          "may help inform animal tracking studies of other",
-          "species with similar",
-          paste0(span("movement behaviors",
-                      class = "cl-sea"), "."),
-
           span(
+            class = "tour_action",
+
+            fontawesome::fa("forward-step"),
             "First, make sure the species currently selected",
-            "from the list is the",
-            HTML(paste0(
-              span("African Buffalo", class = "cl-sea-d"), ".")),
-            "Do not click any other button as of yet.",
-            class = "tour_action")
+            "from the list is the African Buffalo",
+            wrap_none("(", em("Syncerus caffer"), ")."),
+            "Do not select or click any other options yet.")
         )))
 
       element <- c(element, "#comp_viz_selected-dataTabs_viz")
@@ -200,14 +166,13 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "These are the data vizualization tabs. The first",
-          "tab", icon("paw", class = "cl-sea"),
+          "tab", fontawesome::fa("paw", fill = pal$sea),
           "covers all individuals present in the selected dataset.",
-          "The second tab", icon("filter", class = "cl-sea"),
+          "The second tab", fontawesome::fa("filter", fill = pal$sea),
           "filters to the chosen individual for",
-          "parameter extraction.",
-          "The third tab ", icon("chart-line", class = "cl-sea"),
-          "will show you the", span("variogram",
-                                      class = "cl-sea-d"),
+          "parameter extraction. The third tab ",
+          fontawesome::fa("chart-line", fill = pal$sea),
+          "will show you the", span("variogram", class = "cl-grn"),
           "for that particular individual."
         )))
 
@@ -216,20 +181,21 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "You want to pick the individual",
-          "most likely to provided accurate parameter",
-          "estimates that represent your intended",
-          paste0(span("movement behavior",
-                      class = "cl-sea"), "."),
+          "that accurately represents the",
+          span("movement behavior", class = "cl-sea-l"),
+          "you intend to emulate.",
           p(),
-          "Ideally, this means an individual",
-          "with a considerably high number of fixes",
-          paste0(span("(n)", class = "cl-sea-d"),
-                 ", long sampling duration ",
-                 span("(period)", class = "cl-sea-d"),
-                 ", and/or short time between fixes ",
-                 span("(interval)", class = "cl-sea-d"), " "),
-          HTML("&#x2014"), "depending on your research question,",
-          "respectively."
+          "Ideally, this is an individual with similar",
+          wrap_none(span("directional persistence",
+                         class = "cl-grn"), ","), "and/or",
+          span("home range crossing time", class = "cl-grn"),
+          HTML("&#x2014"), "depending on your research question.",
+          p(),
+          "You will be able to see these parameters after",
+          "the 'Extract' step, but the",
+          span("sampling regime", class = "cl-sea-l"),
+          "will need to be sufficient to detect these",
+          "parameters, so a 'Validate' step is also necessary."
         )))
 
       element <- c(element, paste0(tab3, "selectBox_species"))
@@ -237,34 +203,40 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           span(
-            "Now, select an individual from the dropdown menu",
-            "and click the", icon("wand-magic-sparkles"),
-            "'Validate' button before proceeding.",
-            class = "tour_action"),
+            class = "tour_action",
+
+            fontawesome::fa("forward-step"),
+            "Now, pick individual 'Cilla' from the dropdown menu",
+            "and click the", fontawesome::fa("wand-magic-sparkles"),
+            "'Validate' button before proceeding."),
           p(),
           "Outside of this tutorial, you can also select an",
           "individual from the table or",
           "the plot in the data vizualization",
-          icon("paw", class = "cl-sea"),
-          " tab."
+          fontawesome::fa("paw", fill = pal$sea), " tab."
         )))
 
       element <- c(element, paste0(tab3, "selectBox_species"))
       intro <- c(
         intro,
         HTML(paste(
-          "The validation step ensures that certain datasets (with",
-          "short sampling durations or low number of fixes) are not",
-          "used, as the uncertainty associated with any",
-          "parameters will be too high.",
+          "The validation step ensures that certain datasetst",
+          "are no used (e.g., with no",
+          span("velocity/position autocorrelation",
+               class = "cl-sea-l"), "parameter estimate",
+          "for the respective research question) are not",
+          "used, or if the uncertainty associated with those",
+          "parameters is too high.",
           p(),
-          "If the button changes to",
-          icon(name = "circle-check"),
+          "If the button now reads",
+          fontawesome::fa("circle-check"),
           "'Validated!',",
           span(
-            "then you can proceed by clicking the",
-            icon("paper-plane"), "'Extract' button.",
-            class = "tour_action")
+            class = "tour_action",
+
+            fontawesome::fa("forward-step"),
+            "proceed by clicking the",
+            fontawesome::fa("paper-plane"), "'Extract' button.")
         )))
 
       element <- c(element, paste0(tab3, "selectBox_regime"))
@@ -272,9 +244,8 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "This is the current tracking regime, extracted from",
-          "the original dataset. You will also be able to test out",
-          "different", span("tracking regimes",
-                              class = "cl-sea-d"),
+          "the original dataset. You will be able to test out",
+          "different", span("tracking regimes", class = "cl-sea-l"),
           "later on."
         )))
 
@@ -282,13 +253,13 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          "All relevant temporal",
+          "Here, you can see the relevant temporal",
           paste0("(", span("e.g.", style = "font-style: italic;"),
-                 ", ", span("position", class = "cl-sea"),
+                 ", ", span("position", class = "cl-sea-l"),
                  " and ", span("velocity autocorrelation ",
-                               class = "cl-sea"),
+                               class = "cl-sea-l"),
                  "timescale)"), "and spatial parameters",
-          paste0("(", span("semi-variance", class = "cl-sea"),
+          paste0("(", span("semi-variance", class = "cl-sea-l"),
                  ")"), "will show up here.",
           "All subsequent steps will built upon these",
           "parameters."
@@ -299,17 +270,24 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Here, you can see the",
-          span("sample sizes", class = "cl-sea-d"),
+          span("sample sizes", class = "cl-sea-l"),
           "of the original dataset.",
-          span("Absolute sample size (n)", class = "cl-sea"),
+          span("Absolute sample size (n)", class = "cl-grn"),
           "corresponds to the total number of observations in a",
           "dataset. The more important information comes from the",
-          span("effective sample sizes (N)", class = "cl-sea"),
-          "for", span("home range", class = "cl-sea"), "and",
-          span("speed & distance", class = "cl-sea"),
-          "estimation.",
-          "The", span("effective sample size",
-                      class = "cl-sea"),
+          span("effective sample sizes (N)", class = "cl-grn"),
+          "for", span("home range", class = "cl-sea-l"), "and",
+          span("speed & distance", class = "cl-sea-l"),
+          "estimation."
+        )))
+      
+      element <- c(element, paste0(tab3, "selectBlock_Narea"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "For our research question, we should focus on the",
+          span("effective sample size", class = "cl-grn"),
+          "for home range estimation, which",
           "is equal to number of home range crossings that",
           "occurred during the study period."
         )))
@@ -321,7 +299,7 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           span("Now we are ready to evaluate the intended",
-               span("tracking regime", class = "cl-sea-d"),
+               span("tracking regime", class = "cl-sea-l-d"),
                "for a future tracking project.",
                style = "text-align: center !important;")
         )))
@@ -331,175 +309,329 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          # "In this section, we can select",
-          # span("sampling parameters", style = txt_key),
-          # "to simulate a new dataset from the",
-          # "same", span("movement model", style = txt_key),
-          # "of the species provided.",
-
-          "In this section, we will simulate a new dataset",
+          "We will simulate a new dataset",
           "conditioned upon the previous parameters,",
           "while selecting a custom tracking regime.",
           p(),
           span(
-            "First, choose GPS as your tracking device.",
-            class = "tour_action")
+            class = "tour_action",
+            
+            fontawesome::fa("forward-step"),
+            "First, choose GPS/Satellite logger as",
+            "your tracking device.")
         )))
 
-      element <- c(element, paste0(tab4, "regBox_device"))
+      element <- c(element, "#content_device-type")
       intro <- c(
         intro,
         HTML(paste(
           "With", HTML(paste0(
-            span("GPS & satellite loggers", class = "cl-sea-d"), ",")),
-          "sampling is", span("automated", class = "cl-sea"),
+            span("GPS & satellite loggers", class = "cl-grn"), ",")),
+          "sampling is", span("automated", class = "cl-sea-l"),
           "and conducted by satellite systems. Therefore,",
-          span("sampling frequency", class = "cl-dgr"),
-          "and", span("sampling duration", class = "cl-dgr"),
+          span("sampling frequency", class = "cl-grn"),
+          "and", span("sampling duration", class = "cl-grn"),
           "are both inherently linked with",
           HTML(paste0(span("GPS battery life",
-                           class = "cl-sea"), ".")),
+                           class = "cl-sea-l"), ".")),
           "This tradeoff restricts the volume of data that",
           "can be collected by GPS & satellite loggers."
         )))
 
-      element <- c(element, paste0(tab4, "regBox_device"))
+      element <- c(element, paste0(tab4, "regBox_gps_device"))
       intro <- c(
         intro,
         HTML(paste(
           "Here, we can set the maximum",
-          span("GPS battery life", class = "cl-sea-d"),
+          span("GPS battery life", class = "cl-sea-l"),
           "(how long the GPS is expected to last),",
-          "the maximum", span("GPS fix rate", class = "cl-sea-d"),
+          "the", span("maximum GPS fix rate", class = "cl-sea-l"),
           "(the longest time interval between fixes available",
-          "at the duration above), and the",
-          span("decay rate", class = "cl-sea-d"),
-          "(how fast the GPS battery is expected to decay by increasing",
-          "the sampling interval).",
-
-          ""
-
+          "at the duration above), the",
+          span("minimum GPS fix rate", class = "cl-sea-l"),
+          "(the shortest time interval between fixes,",
+          "when duration approaches", 
+          wrap_none(span("zero", class = "cl-dgr-l"), ","),
+          "and the", span("decay rate", class = "cl-sea-l"),
+          "(how fast the GPS battery is expected to decay by",
+          "increasing the sampling interval).",
+          p(),
+          span(
+            class = "tour_action",
+            
+            fontawesome::fa("forward-step"),
+            "Keep the current inputs as shown,",
+            "and proceed to the next tutorial box.")
         )))
-
-
+      
+      element <- c(element, paste0(tab4, "regBox_sampling"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "Here we plot the sampling duration", em("versus"),
+          "the", span("sampling frequency", class = "cl-grn"),
+          "(number of fixes per hour).",
+          "As frequency increases, the", 
+          span("duration", class = "cl-grn"),
+          "of the device will decrease until it approaches",
+          wrap_none(span("zero", class = "cl-dgr-l"), "."),
+          p(),
+          "For the tutorial, the sampling interval of",
+          span("one hour", class = "cl-sea-l"),
+          "(corresponding to the frequency of",
+          wrap_none(span("1 fix every hour", class = "cl-sea-l"), ")"),
+          "is already been selected."
+        )))
+      
+      element <- c(element, paste0(tab4, "regBox_sampling"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          span(
+            class = "tour_action",
+            
+            fontawesome::fa("forward-step"), 
+            "Click the", fontawesome::fa("wand-magic-sparkles"),
+            "'Validate' button until it reads 'Validated!',",
+            "then click the", fontawesome::fa("bolt"), 
+            "'Run' button."),
+          p(),
+          "You will see two notifications: the first during",
+          "the calculation of the expected run time,",
+          "and the second during the actual simulation and model",
+          "fitting (conditioned by the previously set parameters).",
+          "Wait until both are finished before proceeding."
+        )))
+      
+      element <- c(element, paste0(tab4, "regBox_sizes"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "As mentioned earlier, we focus on the",
+          span("effective sample size", class = "cl-grn"),
+          "for home range estimation",
+          wrap_none("(", HTML("N<sub>area</sub>"), ")."),
+          "For the set species parameters, and tracking regime of",
+          span("1 fix every hour", class = "cl-sea-l"), "for",
+          wrap_none(span("4 months", class = "cl-sea-l"), ","),
+          "we will likely have an effective sample size of",
+          "\u2264 20."
+        )))
+      
+      element <- c(element, paste0(tab4, "regBox_sims"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "In the", fontawesome::fa("location-dot", fill = pal$sea),
+          span("Data", class = "cl-sea-l"), "we plotted the new",
+          "simulated data (in color), and the initial dataset",
+          "(in grey): in this case, the individual Cilla from the",
+          "African Buffalo dataset.",
+          p(),
+          "In the", fontawesome::fa("chart-line", fill = pal$sea),
+          span("Variogram", class = "cl-sea-l"), "we can check if",
+          "the new simulated individual is",
+          wrap_none(span("range resident", class = "cl-grn"), ","),
+          "i.e. the semi-variance reaches an assymptote."
+        )))
+      
+      element <- c(element, paste0(tab4, "regBox_sizes"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          span(
+            class = "tour_action",
+            
+            fontawesome::fa("forward-step"), 
+            "Click on the", fontawesome::fa("bookmark"), "'Add to table'", 
+            "button to save all species and sampling parameters to",
+            "a table for ease of comparison."
+          )
+        )))
+      
+      element <- c(element, paste0(tab4, "regBox_summary"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          span(style = "text-align: center !important;",
+          "Here are the outputs from the",
+          fontawesome::fa("stopwatch", fill = pal$sea),
+          span("Tracking regime", class = "cl-sea-l"), "tab.")
+        )))
+      
       ## Analyses tab: ----------------------------------------------------
       ### Home range ------------------------------------------------------
 
       element <- c(element, "#group_design")
-        intro <- c(
-          intro,
-          HTML(paste(
-            "Now we are ready to move on to either the",
-            "estimation of",
-            span("home range", class = "cl-sea-d"),
-            "and", HTML(paste0(span("distance/speed traveled",
-                                    class = "cl-sea-d"), ".")),
-            "This tutorial will run through one and then the other."
-          )))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "Now we are ready to move on to",
+          span("home range", class = "cl-sea-l"), "estimation."
+        )))
 
-        # element <- c(element, paste0(tab1, "dataBox_regime"))
-        # intro <- c(
-        #   intro,
-        #   HTML(paste(
-        #     "regime box, click adjust", br(),
-        #
-        #     "To simulate new locations",
-        #     "conditioned upon the species' movement model",
-        #     "and data, but with a different sampling rate."
-        #   )))
-        #
-        # # Help for HR tab:
-        #
-        # tab5 <- paste0("#tab_hrange_1", "-")
-        #
-        # element <- c(element, paste0(tab5, "hr_intro"))
-        # intro <- c(
-        #   intro,
-        #   HTML(paste(
-        #     p(span("Lets estimate", style = paste(ttl-tour,
-        #                                           "color: white;")),
-        #       span("home range",
-        #            style = paste(ttl-tour, col_border)),
-        #       style = ttl-tour),
-        #
-        #     add_action,
-        #     "'Run estimation' button to run the AKDE function",
-        #     "in the background."
-        #   )))
-        #
-        # element <- c(element, paste0(tab5, "hrBox_areas"))
-        # intro <- c(
-        #   intro,
-        #   HTML(paste(
-        #     "First, you can see two sets of values:", br(),
-        #     fontawesome::fa(name = "bullseye", fill = "#bdbdbd"),
-        #     paste0(span("Estimate", style = paste(txt_tour,
-        #                                           "color: #bdbdbd;")),
-        #            ", which is the ",
-        #            span("home range area point estimate",
-        #                 style =  paste(txt_tour, col_border)),
-        #            ", followed by the 95% confidence intervals (",
-        #            span("min — max",
-        #                 style =  paste(txt_tour, col_border)),
-        #            ") as the point estimate is subject ",
-        #            "to uncertainty."), br(),
-        #     fontawesome::fa(name = "circle-exclamation",
-        #                     fill = "#bdbdbd"),
-        #     paste0(span("Expected error",
-        #                 style = paste(txt_tour, "color: #bdbdbd;")),
-        #            ", which is the ",
-        #            span("relative error (in %) ",
-        #                 style =  paste(txt_tour, col_caution)),
-        #            "of the point estimate (and of the 95% CIs; ",
-        #            "once again, ",
-        #            span("min — max",
-        #                 style =  paste(txt_tour, col_caution)),
-        #            ") in relation to ",
-        #            "the expected value (truth) derived ",
-        #            "from the distribution.")
-        #   )))
-        #
-        # element <- c(element, paste0(tab5, "hrBox_areas"))
-        # intro <- c(
-        #   intro,
-        #   HTML(paste(
-        #     "You want the",
-        #     span("expected error",
-        #          style = paste(txt_tour, "color: #bdbdbd;")),
-        #     "to be low, and the CIs to 'hug' the point estimate",
-        #     "as much as possible. If not, the point estimate is highly",
-        #     "uncertain, and the dataset may require a longer",
-        #     paste0(span("sampling duration",
-        #                 class = "cl-dgr"), ".")
-        #   )))
-        #
-        #
-        # element <- c(element, paste0(tab5, "hrBox_sizes"))
-        # intro <- c(
-        #   intro,
-        #   HTML(paste(
-        #     "It is also important to consider the sample sizes.",
-        #     "You want the",
-        #     span("effective sample size",
-        #          style = paste(txt_tour, col_border)),
-        #     "to be as high as possible, reducing uncertainty."
-        #   )))
-        #
-        # element <- c(element, paste0(tab5, "hrBox_regime"))
-        # intro <- c(
-        #   intro,
-        #   reactive_modal_text()
-        # )
-        #
-        # element <- c(element, "#Tour_tmp")
-        # intro <- c(
-        #   intro,
-        #   HTML(paste(
-        #     "[work in progress]"
-        #   )))
+      tab5 <- paste0("#tab_hrange_1", "-")
+      element <- c(element, paste0(tab5, "hr_intro"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          span(
+            class = "tour_action",
+            
+            fontawesome::fa("forward-step"), 
+            "Click on the", fontawesome::fa("paper-plane"), 
+            "'Run estimation' button to estimate home range area.",
+            p()),
+          "For this step, we are using the",
+          span("Autocorrelated Kernel Density Estimator (AKDE)",
+               class = "cl-sea-l"), "available in the",
+          span("ctmm", class = "cl-grn"),
+          "R package."
+        )))
+      
+      element <- c(element, paste0(tab5, "hrBox_viz"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "This is the visual output from the",
+          span("home range", class = "cl-sea"), "estimation.",
+          "You want the 95% CIs (in", wrap_none(
+            span("red", class = "cl-dgr-l"), ")"),
+          "to 'hug' the estimate (in grey)",
+          "as much as possible. To show the 95% CIs, click on",
+          "the corresponding grey buttons).",
+          p(),
+          "If the CIs are wide, the estimate is highly",
+          "uncertain, and your study may require a longer",
+          wrap_none(span("sampling duration", class = "cl-grn"), ".")
+        )))
+      
+      element <- c(element, "#content_hr-areas")
+      intro <- c(
+        intro,
+        HTML(paste(
+          "To further help during evaluation,",
+          "you can see two sets of values:",
+          p(),
+          fontawesome::fa(name = "bullseye", fill = "#bdbdbd"),
+          wrap_none(
+            span("Estimate", style = "color: #bdbdbd;"),
+            ", which is the home range area ",
+            span("point estimate", class = "cl-sea-l"), ", ",
+          "followed by the 95% confidence intervals (low — high) ",
+          "as the point estimate is subject to uncertainty."), 
+          p(),
+          fontawesome::fa(name = "radiation", fill = "#bdbdbd"),
+          wrap_none(
+            span("Expected error", style = "color: #bdbdbd;"),
+            ", which is the ", span("relative error (in %) ",
+                                    class = "cl-dgr-l"),
+            "of the point estimate (and of the 95% CIs; ",
+            "once again, low — high) ",
+            "in relation to ",
+            "the expected value (truth) derived ",
+            "from the distribution.")
+        )))
 
-        # ...in progress...
+      
+      element <- c(element, "#content_hr-areas")
+      intro <- c(
+        intro,
+        HTML(paste(
+          "Similarly to the plot, you want the",
+          span("expected error", class = "cl-dgr-l"),
+          "to be low, and the CIs to 'hug' the point estimate",
+          "as much as possible. If not, the point estimate is highly",
+          "uncertain."
+        )))
+     
 
+      element <- c(element, paste0(tab5, "hrBox_sizes"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          HTML("N<sub>area</sub>"), "is \u2264 20,",
+          "which means we have around or less than 20 home range",
+          "crossing events in this dataset. You want this",
+          span("effective sample size", class = "cl-grn"),
+          "to be as high as possible, reducing uncertainty."
+        )))
+
+      element <- c(element, paste0(tab5, "hrBox_viz"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "You can once again save all results to a table",
+          span(
+            class = "tour_action",
+            
+            fontawesome::fa("forward-step"), 
+            "by clicking on the", fontawesome::fa("bookmark")
+            , "'Add to table'", "button."
+          )
+        )))
+      
+      element <- c(element, paste0(tab5, "hrBox_summary"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          span(style = "text-align: center !important;",
+               "Here are the outputs from the",
+               fontawesome::fa("map-location-dot", fill = pal$sea),
+               span("Home range", class = "cl-sea-l"), "tab.")
+        )))
+      
+      
+      ## Report tab: ------------------------------------------------------
+      
+      tab7 <- paste0("#tab_report_1", "-")
+      element <- c(element, paste0(tab7, "repBox_details"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          span(
+            class = "tour_action",
+            
+            fontawesome::fa("forward-step"), 
+            "Click the", fontawesome::fa("bookmark"),
+            "'Built report' button to see a detailed",
+            "interpretation of how likely your current tracking regime",
+            "is to answer your research question."),
+          p(),
+          "In this case,",
+          "is the", span("sampling duration", class = "cl-sea-l"),
+          "sufficient to obtain a reliable",
+          span("home range area", class = "cl-sea-l"), "estimate?"
+          
+          # "Change the credible intervals here."
+        )))
+      
+      # element <- c(element, paste0(tab7, "repBox_pars"))
+      # intro <- c(
+      #   intro,
+      #   HTML(paste(
+      #     "This box recaps all species parameters",
+      #     "and tracking regime details."
+      #   )))
+      
+      element <- c(element, paste0(tab7, "repBox_analyses"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "You can compare your results to our simulations of an",
+          "approximate position autocorrelation parameter."
+        )))
+      
+      element <- c(element, paste0(tab7, "repBox_tables"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "All settings and outputs will be collected here.",
+          "If you compare multiple", 
+          wrap_none(span("tracking regimes", class = "cl-grn"), ","),
+          "they will show up here as well."
+        )))
+      
       element <- c(element, "#Tour_end")
       intro <- c(
         intro,
@@ -508,7 +640,7 @@ mod_comp_tour_server <- function(id, vals) {
           p(class = "ttl-tour cl-wht",
 
             "Thank you for using",
-            wrap_none("move", span("design", class = "cl-sea"), "!"))
+            wrap_none("move", span("design", class = "cl-sea-l"), "!"))
         )))
 
       data.frame(element = element,
@@ -542,11 +674,12 @@ mod_comp_tour_server <- function(id, vals) {
           scrollToElement = T
         ),
         events = list(onbeforechange =
-                        rintrojs::readCallback('switchTabs')))
-
+                        rintrojs::readCallback("switchTabs")))
+      
     }) %>% # observe event, bound to:
       bindEvent(input$default_tour)
-
+    
+    
   }) # end of moduleServer
 }
 
@@ -555,3 +688,6 @@ mod_comp_tour_server <- function(id, vals) {
 
 ## To be copied in the server
 # mod_comp_tour_server("comp_tour_1")
+
+
+      

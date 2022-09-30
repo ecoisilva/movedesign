@@ -120,7 +120,7 @@ mod_tab_data_upload_ui <- function(id) {
           # Select species & individual: ----------------------------------
 
           shinydashboardPlus::box(
-            title = span("Species", class = "ttl-box_solid"),
+            title = span("Dataset", class = "ttl-box_solid"),
             id = ns("uploadBox_species"),
             status = "primary",
             width = NULL,
@@ -130,18 +130,17 @@ mod_tab_data_upload_ui <- function(id) {
             shiny::textInput(
               inputId = ns("sp_uploaded"),
               label = NULL,
-              placeholder = "(scientific name)"),
+              placeholder = "What species?"),
 
-            shiny::selectizeInput(
+            shinyWidgets::pickerInput(
               inputId = ns("id_uploaded"),
-              label = "Select an individual:",
+              label = NULL,
               choices = "",
               multiple = FALSE,
-              options = list(
-                placeholder = '(select id)',
-                onInitialize = I('function() { this.setValue(""); }'))
-            ),
-
+              options = list(`live-search` = TRUE,
+                             title = "Pick an individual"),
+              selected = NULL),
+            
             uiOutput(ns("uploadUI_validate"))
 
           ), # end of box // uploadBox_species
@@ -181,12 +180,12 @@ mod_tab_data_upload_ui <- function(id) {
           # Tracking regime: ----------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Tracking regime", class = "ttl-box_solid"),
+            title = span("Tracking regime:", class = "ttl-box"),
             id = ns("uploadBox_regime"),
             status = "info",
             width = NULL,
-            solidHeader = TRUE,
-            collapsible = FALSE,
+            solidHeader = FALSE,
+            collapsible = TRUE,
 
             fluidRow(
               column(width = 12, uiOutput(ns("uploadInfo_dur"))),
@@ -356,11 +355,11 @@ mod_tab_data_upload_server <- function(id, vals) {
 
     observe({
       req(vals$dataList, vals$id)
-
-      shiny::updateSelectizeInput(
+      
+      shinyWidgets::updatePickerInput(
         session,
         inputId = "id_uploaded",
-        label = "Select an individual:",
+        label = NULL,
         choices = names(vals$dataList),
         selected = isolate(vals$id))
 
@@ -430,10 +429,10 @@ mod_tab_data_upload_server <- function(id, vals) {
         vals$dataList <- tmplist
       }
 
-      shiny::updateSelectizeInput(
+      shinyWidgets::updatePickerInput(
         session,
         inputId = "id_uploaded",
-        label = "Select an individual:",
+        label = NULL,
         choices = names(vals$dataList))
 
     }) %>% # end of observe, then:
@@ -458,99 +457,6 @@ mod_tab_data_upload_server <- function(id, vals) {
     }) # end of observe
 
     ## Validate data: ---------------------------------------------------
-
-    observe({
-      req(vals$data0)
-
-      if(input$sp_uploaded == "") {
-        # If no species name is written down:
-
-        msg_log(
-          style = "danger",
-          message = paste0("Species name ",
-                           msg_danger("not found"), "."),
-          detail = paste("Please input scientific name",
-                         "of your study species."))
-
-        shinyalert::shinyalert(
-          title = "Missing species name",
-          text = span(
-            'Please input the scientific name of',
-            'your study species, then click the',
-            icon("circle-check", class = "cl-mdn"),
-            span("Validate", class = "cl-mdn"),
-            'button again.'),
-          html = TRUE,
-          size = "xs")
-
-      } else {
-        vals$species_binom <- input$sp_uploaded
-        vals$needs_fit <- TRUE
-
-      } # end of if()
-
-      req(vals$species_binom)
-      if(is.null(vals$needs_fit)) {
-        vals$needs_fit <- TRUE
-      }
-
-      eval_n <- nrow(vals$data0)
-      nms <- names(summary(vals$data0))
-      dur_unit <- nms[grep('sampling period',nms)] %>%
-        extract_units()
-      dur <- as.numeric(
-        summary(vals$data0)[grep('sampling period', nms)])
-      eval_dur <- dur %#% dur_unit
-
-      if(eval_dur < (1 %#% "days") || eval_n < 5) {
-
-        shinyalert::shinyalert(
-          title = "Warning",
-          text = span(
-            "Chosen individual has a sampling duration",
-            "of less than", span("one day", class = "cl-dgr"),
-            "and/or less than",
-            wrap_none(span("5 locations", class = "cl-dgr"), "."),
-            "Please select a different individual for validation."),
-
-          html = TRUE,
-          size = "xs")
-
-        msg_log(
-          style = "danger",
-          message = paste0("Individual with low ",
-                           msg_danger("tracking duration"),
-                           " or ", msg_danger("total fixes"), "..."),
-          detail = "Select a different individual to proceed.")
-
-        vals$is_valid <- FALSE
-        shinyjs::hide(id = "uploadBox_parameters")
-
-      } else {
-
-        msg_log(
-          style = "success",
-          message = paste0("Species and individual ",
-                           msg_success("validated"), "."),
-          detail = paste0("Species selected is ",
-                          msg_success(vals$species_binom),
-                          ", and the individual is ",
-                          msg_success(vals$id), "."))
-
-        vals$is_valid <- TRUE
-
-        # print(vals$tour_active)
-        # if(!input$upload_intro$collapsed &&
-        #    vals$tour_active) { NULL } else {
-        #      shinydashboardPlus::updateBox("upload_intro",
-        #                                    action = "toggle")
-        #    }
-
-      } # end of evaluation
-    }) %>% # end of observe,
-      bindEvent(input$validate_upload, ignoreInit = TRUE)
-
-    # PARAMETERS --------------------------------------------------------
     
     runtime <- shiny::reactive({
       
@@ -573,36 +479,40 @@ mod_tab_data_upload_server <- function(id, vals) {
     }) %>% # end of reactive, data_sim
       bindCache(c(vals$id, vals$species_binom))
     
-    # After clicking "Extract" button:
-    
     observe({
-      shinyjs::show(id = "uploadBox_regime")
+      req(vals$which_question, vals$data0)
 
-      if(is.null(vals$species_binom)) {
+      if(input$sp_uploaded == "") {
+        # If no species name is written down:
+
+        msg_log(
+          style = "danger",
+          message = paste0("Species name ",
+                           msg_danger("not found"), "."),
+          detail = paste("Please input scientific name",
+                         "of your study species."))
 
         shinyalert::shinyalert(
-          title = "Oops!",
+          title = "Missing species name",
           text = span(
-            "Please select a species/dataset and an individual",
-            "first, then click the",
+            'Please input the name of',
+            'your study species, then click the',
             icon("circle-check", class = "cl-mdn"),
-            span("Validate", class = "cl-mdn"), "and",
-            icon("paper-plane", class = "cl-mdn"),
-            span("Extract", class = "cl-mdn"),
-            "buttons."),
+            span("Validate", class = "cl-mdn"),
+            'button again.'),
           html = TRUE,
           size = "xs")
 
       } else {
-        req(vals$data0, vals$id, vals$species_binom)
-      }
+        vals$species_binom <- input$sp_uploaded
+        vals$needs_fit <- TRUE
 
-      ## Model fitting: -------------------------------------------------
+      } # end of if()
       
-      req(vals$is_valid)
+      ### Model fitting: --------------------------------------------------
+      
+      req(vals$species_binom)
       start <- Sys.time()
-      
-      # Fit models to current data:
       
       msg_log(
         style = "warning",
@@ -611,12 +521,11 @@ mod_tab_data_upload_server <- function(id, vals) {
         detail = "Please wait for model selection to finish:")
       
       expt <- runtime()
-      
       expt_max <- expt$max
       expt_min <- expt$min
       expt_units <- expt$units
       
-      if ((expt_max %#% expt_units) > 900) {
+      if ((expt_max %#% expt_units) > (15 %#% "minutes")) {
         
         vals$confirm_time <- FALSE
         shinyalert::shinyalert(
@@ -710,117 +619,276 @@ mod_tab_data_upload_server <- function(id, vals) {
         vals$tmpsp <- vals$species_binom
         vals$tmpid <- vals$id
         
-        sum.fit <- summary(vals$fit0)
         vals$needs_fit <- FALSE
-        
-        ## Extract semi-variance parameter: -------------------------------
-        
-        svf <- prepare_svf(vals$data0, fraction = .65)
-        vals$sigma0_min <- mean(svf$var_low95)
-        vals$sigma0_max <- mean(svf$var_upp95)
-        
-        ## Extract timescale and spatial parameters: ----------------------
-        
-        output$uploadUI_parameters <- renderUI({
-          
-          shinydashboardPlus::box(
-            title = span("Displaying parameters:", class = "ttl-box"),
-            id = ns("uploadBox_parameters"),
-            width = NULL,
-            solidHeader = FALSE,
-            
-            column(
-              align = "center", width = 12,
-              
-              renderUI({
-                if(vals$tmpid == "Simulated individual") { NULL
-                } else {
-                  
-                  p("These parameters have been extracted from",
-                    "individual", span(vals$tmpid, class = "cl-sea-d"),
-                    "and species",
-                    wrap_none(span(vals$tmpsp, class = "cl-sea-d"), "."),
-                    "They will only update if you change the",
-                    "individual and/or species selected, and then",
-                    "click the buttons",
-                    icon("circle-check", class = "cl-mdn"),
-                    span("Validate", class = "cl-mdn"), "and",
-                    icon("paper-plane", class = "cl-mdn"),
-                    wrap_none("Extract", css = "cl-mdn", end = "."))
-                  
-                } # end of if() statement
-              }) # end of renderUI
-              
-            ), # end of column (for text)
-            
-            column(width = 12, uiOutput(ns("uploadBlock_movprocess"))),
-            
-            fluidRow(
-              column(width = 4, uiOutput(ns("uploadBlock_sigma"))),
-              column(width = 4, uiOutput(ns("uploadBlock_taup"))),
-              column(width = 4, uiOutput(ns("uploadBlock_tauv")))
-            )
-            
-          ) # end of box
-        }) # end of renderUI
-        
-        if (!vals$tour_active) {
-          
-          shinyalert::shinyalert(
-            className = "modal_success",
-            type = "success",
-            title = "Success!",
-            text = span(
-              "Proceed to the", br(),
-              icon("compass-drafting", class = "cl-mdn"),
-              span('Analyses', class = "cl-mdn"), "tabs."),
-            html = TRUE,
-            size = "xs")
-        }
-        
-      } # end of if(), !is.null(fit1)
+      }
       
       shinybusy::remove_modal_spinner()
       
-    }) %>% # end of observe, then:
-      bindEvent(input$uploadButton_extract)
+      ### Set up for validation: ------------------------------------------
+      
+      taup <- extract_pars(vals$fit0, par = "position")
+      taup_lci <- extract_pars(vals$fit0, par = "position", type = "low")
+      taup_uci <- extract_pars(vals$fit0, par = "position", type = "high")
+      
+      tauv <- extract_pars(vals$fit0, par = "velocity")
+      tauv_lci <- extract_pars(vals$fit0, par = "velocity", type = "low")
+      tauv_uci <- extract_pars(vals$fit0, par = "velocity", type = "high")
+      
+      ### Validate based on research questions: ---------------------------
+      
+      if ("Home range" %in% vals$which_question) {
+        if (is.na(taup$value)) {
+          
+          shinyalert::shinyalert(
+            type = "error",
+            
+            title = "Dataset invalid",
+            text = span(
+              "No significant signature of the animal's",
+              span("position autocorrelation", class = "cl-dgr"),
+              "parameter remains in this dataset.",
+              "Please select a different individual or dataset to",
+              "proceed with", span("home range", class = "cl-dgr"),
+              "estimation."),
+            
+            confirmButtonText = "Dismiss",
+            html = TRUE)
+          
+          msg_log(
+            style = "danger",
+            message = paste0("Dataset has no remaining ",
+                             msg_danger("range residency"),
+                             " signature."),
+            detail = paste("Select a different individual",
+                           "or dataset to proceed."))
+          
+          vals$is_valid <- FALSE
+          
+        } else if (taup_uci$value/taup_lci$value > 5) {
+          
+          shinyalert::shinyalert(
+            type = "error",
+            
+            title = "Dataset invalid",
+            text = span(
+              "The estimation of the",
+              span("position autocorrelation parameter", 
+                   class = "cl-dgr"),
+              "is too uncertain.",
+              "Please select a different individual or dataset to",
+              "proceed with", span("home range", class = "cl-dgr"),
+              "estimation."),
+            
+            confirmButtonText = "Dismiss",
+            html = TRUE)
+          
+          msg_log(
+            style = "danger",
+            message = paste0("Parameter has wide ",
+                             msg_danger("confidence intervals"), "."),
+            detail = paste0("Select a different individual",
+                            "or dataset to proceed."))
+          vals$is_valid <- FALSE
+        }
+        vals$is_valid <- TRUE
+      }
+      
+      if ("Speed & distance" %in% vals$which_question) {
+        if (is.na(tauv$value)) {
+          
+          shinyalert::shinyalert(
+            type = "error",
+            
+            title = "Dataset invalid",
+            text = span(
+              "No significant signature of the animal's",
+              span("velocity autocorrelation", class = "cl-dgr"),
+              "parameter remains in this dataset.",
+              "Please select a different individual or dataset to",
+              "proceed with", span("distance/speed", class = "cl-dgr"),
+              "estimation."),
+            
+            confirmButtonText = "Dismiss",
+            html = TRUE)
+          
+          msg_log(
+            style = "danger",
+            message = paste0("Dataset has no remaining ",
+                             msg_danger("velocity"), 
+                             " signature."),
+            detail = paste0("Select a different individual",
+                            "or dataset to proceed."))
+          
+          vals$is_valid <- FALSE
+          
+        } else if (tauv_uci$value/tauv_lci$value > 5) {
+          
+          shinyalert::shinyalert(
+            type = "error",
+            
+            title = "Dataset invalid",
+            text = span(
+              "The estimation of the",
+              span("position autocorrelation parameter", 
+                   class = "cl-dgr"),
+              "is too uncertain.",
+              "Please select a different individual or dataset to",
+              "proceed with", span("home range", class = "cl-dgr"),
+              "estimation."),
+            
+            confirmButtonText = "Dismiss",
+            html = TRUE)
+          
+          msg_log(
+            style = "danger",
+            message = paste0("Parameter has wide ",
+                             msg_danger("confidence intervals"), "."),
+            detail = paste0("Select a different individual",
+                            "or dataset to proceed."))
+          
+          vals$is_valid <- FALSE
+        }
+        vals$is_valid <- TRUE
+      }
+      
+      req(vals$is_valid)
+      vals$input_x <- ifelse(!is.null(vals$data0$"x"),
+                             "x", "longitude")
+      vals$input_y <- ifelse(!is.null(vals$data0$"y"),
+                             "y", "latitude")
+      vals$input_t <- ifelse(!is.null(vals$data0$"timestamp"),
+                             "timestamp", "t")
+      
+      if(is.null(vals$is_success)) {
+        msg_log(
+          style = "success",
+          message = paste0("Species and individual ",
+                           msg_success("validated"), "."),
+          detail = paste0("Species selected is the ",
+                          msg_success(vals$species),
+                          ", and the individual is ",
+                          msg_success(vals$id), "."))
+      }
+      vals$is_success <- TRUE
+      
+      shinyFeedback::showToast(
+        type = "success",
+        message = "Data validated!",
+        .options = list(
+          timeOut = 3000,
+          extendedTimeOut = 3500,
+          progressBar = FALSE,
+          closeButton = TRUE,
+          preventDuplicates = TRUE,
+          positionClass = "toast-bottom-right"
+        )
+      )
+      
+      # if(!input$select_intro$collapsed &&
+      #    vals$tour_active) { NULL } else {
+      #      shinydashboardPlus::updateBox("select_intro",
+      #                                    action = "toggle")
+      #    }
+      
+    }) %>% # end of observe,
+      bindEvent(input$validate_upload, ignoreInit = TRUE)
 
-    ## Validate parameters: ---------------------------------------------
-
-    ### Checking if tau v available for initial dataset:
-
+    # PARAMETERS --------------------------------------------------------
+   
+    # After clicking "Extract" button:
+    
     observe({
+      shinyjs::show(id = "uploadBox_regime")
 
-      req(vals$valid_tauv)
-      if(vals$valid_tauv == "No" &&
-         "Speed & distance" %in% vals$which_question) {
+      if(is.null(vals$is_valid) || vals$is_valid == FALSE) {
 
         shinyalert::shinyalert(
-          type = "error",
-
-          title = "Speed & distance invalid",
+          title = "Oops!",
           text = span(
-            "No statistically significant signature of the animal's",
-            span("velocity", class = "cl-dgr"),
-            "remains in this dataset.",
-            "Please select a different individual or dataset to",
-            "proceed with", span("distance/speed", class = "cl-dgr"),
-            "estimation"),
+            'Please select a species and an individual',
+            'first, then click the',
+            icon("wand-magic-sparkles", class = "cl-mdn"),
+            span('Validate', class = "cl-mdn"), "and",
+            icon("paper-plane", class = "cl-mdn"),
+            span('Extract', class = "cl-mdn"),
+            'buttons.'),
+          html = TRUE,
+          size = "xs")
 
-          confirmButtonText = "Dismiss",
-          html = TRUE)
+      } else {
+        req(vals$data_type == "uploaded", vals$fit0,
+            vals$data0, vals$id, vals$species_binom,
+            vals$is_valid, vals$is_success)
+      }
 
-        msg_log(
-          style = "danger",
-          message = paste0("Data has no remaining ",
-                           msg_danger("velocity"), " signature."),
-          detail = paste("Select a different individual",
-                         "or dataset to proceed."))
-
-      } # end of if(), valid tau_v
-    }) # end of observe
-
-
+      ## Extract semi-variance parameter: -------------------------------
+      
+      svf <- prepare_svf(vals$data0, fraction = .65)
+      vals$sigma0_min <- mean(svf$var_low95)
+      vals$sigma0_max <- mean(svf$var_upp95)
+      
+      ## Extract timescale and spatial parameters: ----------------------
+      
+      output$uploadUI_parameters <- renderUI({
+        
+        shinydashboardPlus::box(
+          title = span("Displaying parameters:", class = "ttl-box"),
+          id = ns("uploadBox_parameters"),
+          width = NULL,
+          solidHeader = FALSE,
+          
+          column(
+            align = "center", width = 12,
+            
+            renderUI({
+              if(vals$tmpid == "Simulated individual") { NULL
+              } else {
+                
+                p("These parameters have been extracted from",
+                  "individual", span(vals$tmpid, class = "cl-sea-d"),
+                  "and species",
+                  wrap_none(span(vals$tmpsp, class = "cl-sea-d"), "."),
+                  "They will only update if you change the",
+                  "individual and/or species selected, and then",
+                  "click the buttons",
+                  icon("circle-check", class = "cl-mdn"),
+                  span("Validate", class = "cl-mdn"), "and",
+                  icon("paper-plane", class = "cl-mdn"),
+                  wrap_none("Extract", css = "cl-mdn", end = "."))
+                
+              } # end of if() statement
+            }) # end of renderUI
+            
+          ), # end of column (for text)
+          
+          column(width = 12, uiOutput(ns("uploadBlock_movprocess"))),
+          
+          fluidRow(
+            column(width = 4, uiOutput(ns("uploadBlock_sigma"))),
+            column(width = 4, uiOutput(ns("uploadBlock_taup"))),
+            column(width = 4, uiOutput(ns("uploadBlock_tauv")))
+          )
+          
+        ) # end of box
+      }) # end of renderUI
+      
+      if (!vals$tour_active) {
+        
+        shinyalert::shinyalert(
+          className = "modal_success",
+          type = "success",
+          title = "Success!",
+          text = span(
+            "Proceed to the", br(),
+            icon("stopwatch", class = "cl-mdn"),
+            span('Tracking regime', class = "cl-mdn"), "tab."),
+          html = TRUE,
+          size = "xs")
+      }
+      
+    }) %>% # end of observe, then:
+      bindEvent(input$uploadButton_extract)
+    
     # BLOCKS ------------------------------------------------------------
     ## Movement process: ------------------------------------------------
 
