@@ -6,7 +6,8 @@ Authors@R:
 Description: A Shiny app to assist researchers in designing movement
     ecology studies.
 License: MIT + file LICENSE
-URL: https://github.com/ecoisilva/movedesign
+URL: https://github.com/ecoisilva/movedesign,
+    https://ecoisilva.github.io/movedesign/
 BugReports: https://github.com/ecoisilva/movedesign/issues
 Depends: 
     R (>= 3.5.0)

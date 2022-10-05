@@ -14,12 +14,13 @@ A Shiny app to assist researchers in designing movement ecology studies.
 Useful links:
 \itemize{
   \item \url{https://github.com/ecoisilva/movedesign}
+  \item \url{https://ecoisilva.github.io/movedesign/}
   \item Report bugs at \url{https://github.com/ecoisilva/movedesign/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: InÃªs Silva \email{i.simoes-silva@hzdr.de}
+\strong{Maintainer}: Inês i.simoes-silva@hzdr.de Silva
 
 }
 \keyword{internal}
