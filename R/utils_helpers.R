@@ -21,7 +21,7 @@ parBlock <- function(icon = NULL,
         class = "parblock-icon", icon(icon), br()) },
     shiny::tags$span(class = "parblock-text", header, br()),
     shiny::tags$span(class = "parblock-value", value),
-    if(is.null(subtitle)) { NULL } else {
+    if (is.null(subtitle)) { NULL } else {
       shiny::tags$span(class = "parblock-subtitle",
                        br(), subtitle) }
   )
@@ -52,18 +52,18 @@ sampleBlock <- function(number = NULL,
 
   if (!is.null(header)) {
 
-    if(as.numeric(header) <= 5) {
+    if (as.numeric(header) <= 5) {
       numberColor <- "color: var(--danger) !important;"
-      if(numberIcon) { numberIcon <- icon("angles-down")
+      if (numberIcon) { numberIcon <- icon("angles-down")
       } else { numberIcon <- HTML("&nbsp;") }
-    } else { if(as.numeric(header) >= 30) {
+    } else { if (as.numeric(header) >= 30) {
       numberColor <- "color: var(--sea) !important;"
       header <- scales::label_comma(accuracy = 1)(header)
-      if(numberIcon) { numberIcon <- icon("angle-down")
+      if (numberIcon) { numberIcon <- icon("angle-down")
       } else { numberIcon <- HTML("&nbsp;") }
     } else {
       numberColor <- "color: var(--gold) !important;"
-      if(numberIcon) { numberIcon <- icon("angle-down")
+      if (numberIcon) { numberIcon <- icon("angle-down")
       } else { numberIcon <- HTML("&nbsp;") }
     }}
   }
@@ -109,17 +109,17 @@ errorBlock <- function(icon = NULL,
   range <- paste0(min, "% — ", max, "%")
 
   if (!is.null(value)) {
-    if(value > 0) {
+    if (value > 0) {
       tmptext <- span("Overestimation", icon("angle-up"))
     } else {
       tmptext <- span("Underestimation", icon("angle-down"))
     }
 
-    if(abs(value) >= 0.8) {
+    if (abs(value) >= 0.8) {
       numberColor <- "color: var(--danger) !important;" }
-    if(abs(value) < 0.2 || abs(value) < 0.8) {
+    if (abs(value) < 0.2 || abs(value) < 0.8) {
       numberColor <- "color: var(--gold) !important;" }
-    if(abs(value) <= 0.2) {
+    if (abs(value) <= 0.2) {
       numberColor <- "color: var(--sea) !important;" }
   }
 
@@ -218,23 +218,23 @@ extract_units <- function(input) {
 #' @noRd
 extract_pars <- function(obj, par, type = "est") {
   
-  if(type == "est")  i <- 2
-  if(type == "low")  i <- 1
-  if(type == "high") i <- 3
+  if (type == "est")  i <- 2
+  if (type == "low")  i <- 1
+  if (type == "high") i <- 3
   
-  if(class(obj) == "telemetry") {
+  if (inherits(obj, "telemetry")) {
     nms.dat <- suppressWarnings(names(summary(obj)))
     
     out_unit <- extract_units(nms.dat[grep(par, nms.dat)])
     out_value <- suppressWarnings(as.numeric(
       summary(obj)[grep(par, nms.dat)]))
     
-  } else if (class(obj) == "ctmm") {
+  } else if (inherits(obj, "ctmm")) {
     sum.fit <- summary(obj)
     nms.fit <- rownames(sum.fit$CI)
     
     out_value <- sum.fit$CI[grep(par, nms.fit), i]
-    if(identical(out_value, numeric(0))) {
+    if (identical(out_value, numeric(0))) {
       out_value <- NA
       out_unit <- NA
     } else {
@@ -298,19 +298,19 @@ msg_log <- function(message, detail, style) {
   time_stamp <- stringr::str_c(
     "[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "]")
 
-  if(style == "success") {
+  if (style == "success") {
     line1 <- msg_success("\u2713")
     line2 <- crayon::bold(msg_success("Success:")) }
 
-  if(style == "warning") {
+  if (style == "warning") {
     line1 <- msg_warning("!")
     line2 <- NULL }
 
-  if(style == "danger") {
+  if (style == "danger") {
     line1 <- msg_danger("!")
     line2 <- crayon::bold(msg_danger("Warning:")) }
 
-  if(style == "error") {
+  if (style == "error") {
     line1 <- crayon::bold(msg_danger("\u2716"))
     line2 <- crayon::bold(msg_danger("Error:")) }
 
@@ -345,16 +345,16 @@ msg_header <- function(header) {
 #' @noRd
 msg_step <- function(current, total, style) {
 
-  if(style == "success") {
+  if (style == "success") {
     text_current <- msg_success(current) }
 
-  if(style == "warning") {
+  if (style == "warning") {
     text_current <- msg_warning(current) }
 
-  if(style == "danger") {
+  if (style == "danger") {
     text_current <- msg_danger(current)  }
 
-  if(style == "error") {
+  if (style == "error") {
     text_current <- crayon::bold(msg_danger(current)) }
 
   return(paste0(" (step ", text_current, " out of ", total, ")."))
@@ -371,16 +371,16 @@ reset_data_values <- function(vals) {
 
   vals$is_valid <- FALSE
 
-  if(!is.null(vals$id)) vals$id <- NULL
-  if(!is.null(vals$data_type)) vals$data_type <- NULL
-  if(!is.null(vals$data0)) vals$data0 <- NULL
-  if(!is.null(vals$dataList)) vals$dataList <- NULL
+  if (!is.null(vals$id)) vals$id <- NULL
+  if (!is.null(vals$data_type)) vals$data_type <- NULL
+  if (!is.null(vals$data0)) vals$data0 <- NULL
+  if (!is.null(vals$dataList)) vals$dataList <- NULL
   
-  if(!is.null(vals$tmpid)) vals$tmpid <- NULL
-  if(!is.null(vals$fit0)) vals$fit0 <- NULL
+  if (!is.null(vals$tmpid)) vals$tmpid <- NULL
+  if (!is.null(vals$fit0)) vals$fit0 <- NULL
   
-  if(!is.null(vals$hr)) vals$hr <- NULL
-  if(!is.null(vals$sd)) vals$sd <- NULL
+  if (!is.null(vals$hr)) vals$hr <- NULL
+  if (!is.null(vals$sd)) vals$sd <- NULL
   
 }
 
@@ -522,7 +522,7 @@ plotting_hr <- function(data, ud, levels,
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
     ud, level.UD = .95)@polygons[[3]] # upper
 
-  if("95% high CI" %in% levels) {
+  if ("95% high CI" %in% levels) {
 
     p1 <- ggiraph::geom_polygon_interactive(
       data = pol_ud_high,
@@ -533,7 +533,7 @@ plotting_hr <- function(data, ud, levels,
       alpha = .3)
   }
 
-  if("Estimate" %in% levels) {
+  if ("Estimate" %in% levels) {
     pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[2]] # estimate
 
@@ -545,7 +545,7 @@ plotting_hr <- function(data, ud, levels,
       alpha = .3)
   }
 
-  if("95% low CI" %in% levels) {
+  if ("95% low CI" %in% levels) {
     pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[1]] # low
 
@@ -578,9 +578,9 @@ plotting_hr <- function(data, ud, levels,
                           x = x, y = y),
                         color = color, size = 1.5) +
 
-    { if("95% high CI" %in% levels) p1 } +
-    { if("Estimate" %in% levels) p2 } +
-    { if("95% low CI" %in% levels) p3 } +
+    { if ("95% high CI" %in% levels) p1 } +
+    { if ("Estimate" %in% levels) p2 } +
+    { if ("95% low CI" %in% levels) p3 } +
 
     ggplot2::labs(x = "X coordinate",
                   y = "Y coordinate") +
@@ -621,7 +621,7 @@ plotting_hr_new <- function(data1, data2,
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
     ud, level.UD = .95)@polygons[[3]] # upper
 
-  if("95% high CI" %in% levels) {
+  if ("95% high CI" %in% levels) {
 
     p1 <- ggiraph::geom_polygon_interactive(
       data = pol_ud_high,
@@ -631,7 +631,7 @@ plotting_hr_new <- function(data1, data2,
       alpha = .3)
   }
 
-  if("Estimate" %in% levels) {
+  if ("Estimate" %in% levels) {
     pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[2]] # estimate
 
@@ -643,7 +643,7 @@ plotting_hr_new <- function(data1, data2,
       alpha = .6)
   }
 
-  if("95% low CI" %in% levels) {
+  if ("95% low CI" %in% levels) {
     pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[1]] # low
 
@@ -669,9 +669,9 @@ plotting_hr_new <- function(data1, data2,
       data2, mapping = ggplot2::aes(x = x, y = y),
       color = sim_color, size = 1.5) +
 
-    { if("95% high CI" %in% levels) p1 } +
-    { if("Estimate" %in% levels) p2 } +
-    { if("95% low CI" %in% levels) p3 } +
+    { if ("95% high CI" %in% levels) p1 } +
+    { if ("Estimate" %in% levels) p2 } +
+    { if ("95% low CI" %in% levels) p3 } +
 
     ggplot2::geom_point(
       data1, mapping = ggplot2::aes(x = x, y = y),
@@ -882,27 +882,27 @@ calc_limit <- function(data1, data2, data3 = NULL, scale = .1) {
   xmin <- min(
     min(data1$x) - diff(range(data1$x)) * scale,
     min(data2$x) - diff(range(data2$x)) * scale)
-  if(!is.null(data3)) {
+  if (!is.null(data3)) {
     xmin <- min(xmin, min(data3$x) - diff(range(data3$x)) * scale)
   }
   
   xmax <- max(
     max(data1$x) + diff(range(data1$x)) * scale,
     max(data2$x) + diff(range(data2$x)) * scale)
-  if(!is.null(data3)) {
+  if (!is.null(data3)) {
     xmax <- max(xmax, max(data3$x) + diff(range(data3$x)) * scale)
   }
   
   ymin <- min(
     min(data1$y) - diff(range(data1$y)) * scale,
     min(data2$y) - diff(range(data2$y)) * scale)
-  if(!is.null(data3)) {
+  if (!is.null(data3)) {
     ymin <- min(ymin, min(data3$y) - diff(range(data3$y)) * scale)
   }
   ymax <- max(
     max(data1$y) + diff(range(data1$y)) * scale,
     max(data2$y) + diff(range(data2$y)) * scale)
-  if(!is.null(data3)) {
+  if (!is.null(data3)) {
     ymax <- max(ymax, max(data3$y) + diff(range(data3$y)) * scale)
   }
   
@@ -1033,7 +1033,7 @@ create_modal <- function(var, id) {
 
       p("The", span("semi-variance", class = "cl-sea"),
         "parameter", HTML("(\u03C3)"), "is the",
-        "the average square distance observed",
+        "average square distance observed",
         "at two different times,",
         "and ultimately measures the spatial variability",
         "between any two locations."

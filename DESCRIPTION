@@ -1,10 +1,13 @@
 Package: movedesign
 Title: Study design of movement ecology studies
-Version: 0.0.9004
-Authors@R: person('Inês', 'Silva', email = 'i.simoes-silva@hzdr.de', role = c('cre', 'aut'))
-Description: A Shiny app to assist researchers in designing movement ecology studies.
+Version: 0.0.9005
+Authors@R: 
+    person("In\u00EAs", "Silva", "i.simoes-silva@hzdr.de", role = c("cre", "aut"))
+Description: A Shiny app to assist researchers in designing movement
+    ecology studies.
 License: MIT + file LICENSE
 URL: https://github.com/ecoisilva/movedesign
+BugReports: https://github.com/ecoisilva/movedesign/issues
 Depends: 
     R (>= 3.5.0)
 Imports: 
@@ -20,7 +23,6 @@ Imports:
     ggiraph,
     ggplot2,
     golem (>= 0.3.2),
-    htmltools,
     minpack.lm,
     plyr,
     reactable,
@@ -49,4 +51,3 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
-BugReports: https://github.com/ecoisilva/movedesign/issues

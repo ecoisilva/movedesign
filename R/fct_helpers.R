@@ -10,7 +10,7 @@
 #' movedesign::abbrv_unit("square kilometers")
 #' }
 #'
-#' @export
+#' @noRd
 abbrv_unit <- function(unit) {
 
   if (missing(unit)) {
@@ -138,7 +138,7 @@ fix_unit <- function(value, unit,
   }
 
   if ((x %in% units_ar) & convert) {
-    if(y >= 1e6) {
+    if (y >= 1e6) {
       x_new <- "km^2"
     } else if (1e4 > y || y < 1e6) {
       x_new <- "ha"
@@ -316,7 +316,7 @@ simulate_gps <- function(data,
   x_max <- data$freq_hrs[match(max_x, data$nu_notes)]
   x_min <- data$freq_hrs[match(min_x, data$nu_notes)]
 
-  if(simplified) {
+  if (simplified) {
 
     # k <- 8.046066
     newdata <- data %>%
@@ -358,7 +358,7 @@ simulate_gps <- function(data,
 
     newdata$n <- NA
     for(i in 1:nrow(newdata)) {
-      if(newdata$dur_mth[i] <= 0.033) {
+      if (newdata$dur_mth[i] <= 0.033) {
         newdata$n[i] <- 0
         newdata$dur_mth[i] <- 0
       } else {
@@ -405,10 +405,10 @@ estimate_time <- function(data, parallel = TRUE) {
     expt <- ((total_time/n) * nrow(data))
     expt <- ceiling(units %#% expt)
 
-    if(expt >= 15) {
+    if (expt >= 15) {
       expt_max <- round_any(expt, 5, f = ceiling)
       expt_min <- expt - 5
-    } else if(expt < 15 & expt > 5) {
+    } else if (expt < 15 & expt > 5) {
       expt_max <- round_any(expt, 1, f = ceiling)
       expt_min <- expt - 3
     } else {

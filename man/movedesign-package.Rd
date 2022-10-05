@@ -8,17 +8,18 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-A shiny app to design movement ecology studies.
+A Shiny app to assist researchers in designing movement ecology studies.
 }
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://ecoisilva.github.io/movedesign/}
+  \item \url{https://github.com/ecoisilva/movedesign}
+  \item Report bugs at \url{https://github.com/ecoisilva/movedesign/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Inês Silva \email{i.simoes-silva@hzdr.de}
+\strong{Maintainer}: InÃªs Silva \email{i.simoes-silva@hzdr.de}
 
 }
 \keyword{internal}

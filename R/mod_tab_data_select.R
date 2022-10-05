@@ -316,13 +316,13 @@ mod_tab_data_select_server <- function(id, vals) {
       utils::data(list = vals$species, package = "ctmm")
       
       df0 <- NULL
-      if(vals$species == "buffalo") df0 <- buffalo
-      if(vals$species == "pelican") df0 <- pelican
-      if(vals$species == "coati") df0 <- coati
-      if(vals$species == "jaguar") df0 <- jaguar
-      if(vals$species == "wolf") df0 <- wolf
-      if(vals$species == "gazelle") df0 <- gazelle
-      if(vals$species == "turtle") df0 <- turtle
+      if (vals$species == "buffalo") df0 <- buffalo
+      if (vals$species == "pelican") df0 <- pelican
+      if (vals$species == "coati") df0 <- coati
+      if (vals$species == "jaguar") df0 <- jaguar
+      if (vals$species == "wolf") df0 <- wolf
+      if (vals$species == "gazelle") df0 <- gazelle
+      if (vals$species == "turtle") df0 <- turtle
       
       # Check if data is anonymized:
       
@@ -383,7 +383,7 @@ mod_tab_data_select_server <- function(id, vals) {
     observe({
       req(vals$which_question, vals$data0, vals$species_binom)
       
-      if(is.null(vals$needs_fit)) {
+      if (is.null(vals$needs_fit)) {
         vals$needs_fit <- TRUE
       }
       
@@ -552,7 +552,7 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$input_t <- ifelse(!is.null(vals$data0$"timestamp"),
                              "timestamp", "t")
       
-      if(is.null(vals$is_success)) {
+      if (is.null(vals$is_success)) {
         msg_log(
           style = "success",
           message = paste0("Species and individual ",
@@ -577,7 +577,7 @@ mod_tab_data_select_server <- function(id, vals) {
         )
       )
       
-      # if(!input$select_intro$collapsed &&
+      # if (!input$select_intro$collapsed &&
       #    vals$tour_active) { NULL } else {
       #      shinydashboardPlus::updateBox("select_intro",
       #                                    action = "toggle")
@@ -593,7 +593,7 @@ mod_tab_data_select_server <- function(id, vals) {
     observe({
       shinyjs::show(id = "selectBox_regime")
       
-      if(is.null(vals$is_valid) || vals$is_valid == FALSE) {
+      if (is.null(vals$is_valid) || vals$is_valid == FALSE) {
         
         shinyalert::shinyalert(
           title = "Oops!",
@@ -645,7 +645,7 @@ mod_tab_data_select_server <- function(id, vals) {
             
             renderUI({
               req(vals$tmpid)
-              if(vals$tmpid == "Simulated individual") {
+              if (vals$tmpid == "Simulated individual") {
                 NULL
               } else {
                 req(vals$tmpid, vals$tmpsp1, vals$tmpsp2)
@@ -661,7 +661,7 @@ mod_tab_data_select_server <- function(id, vals) {
                   span("Validate", class = "cl-mdn"), "and",
                   icon("paper-plane", class = "cl-mdn"),
                   wrap_none(span("Extract", class = "cl-mdn"), "."))
-              } # end of if() statement
+              } # end of if () statement
             }) # end of renderUI
             
           ), # end of column (for text)
@@ -690,7 +690,7 @@ mod_tab_data_select_server <- function(id, vals) {
       
       # shinyjs::disable("selectButton_extract")
       
-      if(!vals$tour_active) {
+      if (!vals$tour_active) {
         
         shinyalert::shinyalert(
           className = "modal_success",
@@ -713,7 +713,7 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectBlock_process <- shiny::renderUI({
       req(vals$tmpid, vals$fit0)
       
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
           sum.fit <- summary(vals$fit0)
           
@@ -731,7 +731,7 @@ mod_tab_data_select_server <- function(id, vals) {
             ),
             value = sum.fit$name[1])
           
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
     
     ## Timescale parameters: --------------------------------------------
@@ -739,13 +739,13 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectBlock_taup <- shiny::renderUI({
       req(vals$tmpid, vals$fit0)
       
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
           
           sum.fit <- summary(vals$fit0)
           tempnames <- rownames(sum.fit$CI)
           
-          if(length(grep('\u03C4', tempnames)) == 1 ||
+          if (length(grep('\u03C4', tempnames)) == 1 ||
              length(grep('\u03C4', tempnames)) == 2) {
             
             tempunits <-
@@ -794,19 +794,19 @@ mod_tab_data_select_server <- function(id, vals) {
                     accuracy = .1)(vals$tau_p0_max)))
           }
           
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
     
     output$selectBlock_tauv <- shiny::renderUI({
       req(vals$tmpid, vals$fit0)
       
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
           
           sum.fit <- summary(vals$fit0)
           tempnames <- rownames(sum.fit$CI)
           
-          if(!length(grep('velocity', tempnames))) { NULL
+          if (!length(grep('velocity', tempnames))) { NULL
           } else {
             
             tempunits <-
@@ -854,7 +854,7 @@ mod_tab_data_select_server <- function(id, vals) {
                     accuracy = .1)(fit.tau_v_high)))
           }
           
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
     
     ## Spatial parameters: ----------------------------------------------
@@ -862,7 +862,7 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectBlock_sigma <- shiny::renderUI({
       req(vals$tmpid, vals$fit0)
       
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
           
           vals$sigma0 <- ctmm:::var.covm(vals$fit0$sigma, ave = T)
@@ -896,7 +896,7 @@ mod_tab_data_select_server <- function(id, vals) {
                 scales::label_comma(
                   accuracy = .1)(vals$sigma0_max)))
           
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
     
     ##  Tracking regime: --------------------------------------------------
@@ -1015,7 +1015,7 @@ mod_tab_data_select_server <- function(id, vals) {
       mods <- movedesign::movmods
       nm <- sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
       
-      if(is.null(match(nm, mods$name_short))) {
+      if (is.null(match(nm, mods$name_short))) {
         preselected_mod <- NULL
       } else {
         preselected_mod <- match(nm, mods$name_short)

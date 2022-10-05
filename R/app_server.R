@@ -7,11 +7,10 @@
 app_server <- function(input, output, session) {
 
   ns <- session$ns
-  vals <- reactiveValues()
-  
-  data(gps_fixrate, package = "movedesign")
-  data(sims_hrange, package = "movedesign")
-  data(sims_speed, package = "movedesign")
+  vals <- reactiveValues(reg = NULL,
+                         hr = NULL,
+                         ctsd = NULL,
+                         report = NULL)
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 
@@ -69,21 +68,21 @@ app_server <- function(input, output, session) {
           icon = shiny::icon("paw"),
           startExpanded = TRUE,
 
-          if(is.null(vals$which_data) ||
+          if (is.null(vals$which_data) ||
              vals$which_data == "Upload") {
             shinydashboard::menuSubItem(
               tabName = "data_upload",
               text = upload_title,
               icon = upload_icon) },
 
-          if(is.null(vals$which_data) ||
+          if (is.null(vals$which_data) ||
              vals$which_data == "Select") {
             shinydashboard::menuSubItem(
               tabName = "data_select",
               text = select_title,
               icon = select_icon) },
 
-          if(is.null(vals$which_data) ||
+          if (is.null(vals$which_data) ||
              vals$which_data == "Simulate") {
             shinydashboard::menuSubItem(
               tabName = "sims",
@@ -197,9 +196,9 @@ app_server <- function(input, output, session) {
 
     message("Session stopped")
 
-    # if(!is.null(gps_fixrate)) rm("gps_fixrate", envir = .GlobalEnv)
-    # if(!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
-    # if(!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
+    # if (!is.null(gps_fixrate)) rm("gps_fixrate", envir = .GlobalEnv)
+    # if (!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
+    # if (!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
     # # print(ls(envir = .GlobalEnv))
 
   }) # end of onStop

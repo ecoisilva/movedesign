@@ -50,7 +50,8 @@ mod_tab_sims_ui <- function(id) {
       
       # [right column] ----------------------------------------------------
       
-      div(class = div_column_left,
+      div(id = "sim-parameters",
+          class = div_column_left,
           
           # PARAMETERS: ---------------------------------------------------
           ## Timescale parameters -----------------------------------------
@@ -321,19 +322,20 @@ mod_tab_sims_ui <- function(id) {
                 width = 12, align = "right",
                 style = "padding-right: 0px;",
                 
-                actionButton(
-                  inputId = ns("repeat_sim"),
-                  label = "Repeat",
-                  icon = icon("rotate-right"),
-                  class = "btn-info",
-                  width = "120px"),
-                HTML("&nbsp;"),
-                actionButton(
-                  inputId = ns("simButton_save"),
-                  label = span("Add to",
-                               span("table", class = "cl-sea")),
-                  icon = icon("bookmark"),
-                  width = "120px")
+                div(id = "sims-footer",
+                    actionButton(
+                      inputId = ns("repeat_sim"),
+                      label = "Repeat",
+                      icon = icon("rotate-right"),
+                      class = "btn-info",
+                      width = "120px"),
+                    HTML("&nbsp;"),
+                    actionButton(
+                      inputId = ns("simButton_save"),
+                      label = span("Add to",
+                                   span("table", class = "cl-sea")),
+                      icon = icon("bookmark"),
+                      width = "120px"))
               ),
               
               div(
@@ -1146,47 +1148,68 @@ mod_tab_sims_server <- function(id, vals) {
           "This tab allows you to simulate a new dataset from scratch,",
           "if you do not have access to any real dataset for parameter",
           "extraction."
-        ))
-      )
+        )))
       
       element <- c(element, paste0(tabinfo, "simBox_timescales"))
       intro <- c(
         intro,
         HTML(paste(
-          "First, you need to set the",
-          span("timescale", class = "cl-sea"), "parameters,",
-          "which are the", span("position", class = "cl-sea"),
-          " and the", span("velocity autocorrelation",
-                           class = "cl-sea"),
-          paste0(span("position", class = "cl-sea"),
-                 " and ", span("velocity autocorrelation ",
-                               class = "cl-sea"),
-                 "parameters."),
-          
+          span(
+            class = "tour_action",
+            "First, you need to set the timescale parameters,",
+            "which are:",
+            "(1)", span("Position autocorrelation", class = "cl-sea"),
+            HTML(paste0("(\u03C4", tags$sub("p"), "),")),
+            "or home range crossing time, and", 
+            "(2)", span("velocity autocorrelation", class = "cl-sea"),
+            HTML(paste0("(\u03C4", tags$sub("v"), "),")),
+            "or directional persistence."),
+          p(),
           "For a more in-depth explanation on what these parameters",
-          "mean, click the", icon("circle-question"),
-          "help tips outside of the tutorial."
-          
-        ))
-      )
+          "mean, click the", fontawesome::fa("circle-question"),
+          "help tips."
+        )))
       
       element <- c(element, paste0(tabinfo, "simBox_spatialscales"))
       intro <- c(
         intro,
         HTML(paste(
-          "Secondly, you set the",
-          span("semi-variance", class = "cl-sea"),
-          "parameter.", "will show up here."
-        ))
-      )
+          span(
+            class = "tour_action",
+            "Then, you set the",
+            span("semi-variance", class = "cl-sea"), "(\u03C3)",
+            "parameter, or the average spatial variability",
+            "between any two locations."),
+          p(),
+          "For a more in-depth explanation,",
+          "click the", fontawesome::fa("circle-question"),
+          "help tip."
+        )))
+      
+      element <- c(element, "#sim-parameters")
+      intro <- c(
+        intro,
+        HTML(paste(
+          "To change the distance traveled, modify",
+          span("position autocorrelation", class = "cl-sea"),
+          HTML(paste0("(\u03C4", tags$sub("p"), ").")), br(),
+          "To change movement speed, modify",
+          span("velocity autocorrelation", class = "cl-sea"),
+          HTML(paste0("(\u03C4", tags$sub("v"), ").")), br(),
+          "To change the area covered,",
+          "modify", span("semi-variance", class = "cl-sea"),
+          "(\u03C3)."
+        )))
       
       element <- c(element, paste0(tabinfo, "simBox_submit"))
       intro <- c(
         intro,
         HTML(paste(
-          "Now you click the", icon("seedling"),
-          "'Generate seed' button before clicking the",
-          icon("bolt"), "'Run simulation' button."
+          span(
+            class = "tour_action",
+            "Now you click the", fontawesome::fa("seedling"),
+            "'Generate seed' button and then the",
+            fontawesome::fa("bolt"), "'Run simulation' button.")
         ))
       )
       
@@ -1196,30 +1219,37 @@ mod_tab_sims_server <- function(id, vals) {
         HTML(paste(
           "This tab allows you to visualize the dataset you have",
           "just simulated. The",
-          icon("paw", class = "cl-sea"),
+          fontawesome::fa("paw", fill = pal$sea),
           span("Data", class = "cl-sea"), "tab",
-          HTML("&mdash;"), "plots a single",
+          HTML("&mdash;"), "plots, in color, a single",
           span("position autocorrelation", class = "cl-sea"),
-          "cycle", # paste0("(", span("e.g.", style = txt_tour_italic),
-          "while the",
-          icon("route", class = "cl-sea"),
-          span("Animation", class = "cl-sea"), "tab",
-          "will animate a single day of data collection for data",
-          "validation."
+          "cycle, out of 10", fontawesome::fa("xmark"),
+          HTML(paste0("\u03C4", tags$sub("p"), ".")),
+          "The", fontawesome::fa("route", fill = pal$sea),
+          span("Trajectory details", class = "cl-sea"), "tab",
+          "runs through a single day of the simulated animal's",
+          "trajectory, showing time elapsed and distance covered."
         ))
       )
       
-      element <- c(element, paste0(tabinfo, "simBox_repeat"))
+      element <- c(element, "#sims-footer")
       intro <- c(
         intro,
         HTML(paste(
-          "Once you are satisfied with the current parameters,",
-          "you can save their information in a table below by",
-          "clicking the",
-          icon("bookmark", class = "cl-sea"),
-          span("Add to table", class = "cl-sea"), "button."
-        ))
-      )
+          "If needed, you can use the",
+          fontawesome::fa("rotate-right", fill = pal$sea),
+          span("Repeat", fill = pal$sea), "button to quickly",
+          "simulate a new individual.",
+          p(),
+          span(
+            class = "tour_action",
+            "Once you are satisfied with the current parameters",
+            "and simulation,",
+            "you can save all information in a table below by",
+            "clicking the",
+            fontawesome::fa("bookmark", fill = pal$sea),
+            span("Add to table", fill = pal$sea), "button.")
+        )))
       
       element <- c(element, paste0(tabinfo, "simBox_summary"))
       intro <- c(
@@ -1229,7 +1259,7 @@ mod_tab_sims_server <- function(id, vals) {
           span("Tot. distance", class = "cl-grey"),
           "(total distance traveled within 10", icon("xmark"),
           span("position autocorrelation", class = "cl-sea"),
-          "cycle),", "the", span("Avg. distance", class = "cl-grey"),
+          "cycles),", "the", span("Avg. distance", class = "cl-grey"),
           "(average distance traveled)", "and the",
           span("Avg. Speed", class = "cl-grey"),
           "(average movement speed)."

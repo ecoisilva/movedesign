@@ -364,12 +364,12 @@ mod_tab_ctsd_server <- function(id, vals) {
         "Weeks" = "weeks",
         "Months" = "months")
 
-      if(eval_dur <= (5 %#% "days")) {
+      if (eval_dur <= (5 %#% "days")) {
         group_selected <- "hours"
         group_min <- "minutes"
         group_max <- "days"
 
-      } else if(eval_dur > (5 %#% "days") &&
+      } else if (eval_dur > (5 %#% "days") &&
                 eval_dur <= (1 %#% "month")) {
         group_selected <- "days"
         group_min <- "minutes"
@@ -409,8 +409,8 @@ mod_tab_ctsd_server <- function(id, vals) {
           vals$tmpid, vals$id)
 
       # Check if data is available:
-      if(!is.null(vals$data1)) {
-        if(vals$tmpid != vals$id) {
+      if (!is.null(vals$data1)) {
+        if (vals$tmpid != vals$id) {
 
           shinyalert::shinyalert(
             title = "Oops!",
@@ -443,14 +443,14 @@ mod_tab_ctsd_server <- function(id, vals) {
           html = TRUE,
           size = "xs")
 
-      } # end of if(), checking for data
+      } # end of if (), checking for data
     }) # end of observe
 
     ## Checking if tau v available for initial dataset: -----------------
 
     observe({
       req(vals$valid_tauv, vals$active_tab == "ctsd")
-      if(vals$valid_tauv == "No") {
+      if (vals$valid_tauv == "No") {
 
         shinyalert::shinyalert(
           type = "error",
@@ -483,7 +483,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     output$ctsdVar_reveal <- renderUI({
 
-      if(is.null(vals$sd$newdata)) {
+      if (is.null(vals$sd$newdata)) {
         shinyWidgets::checkboxGroupButtons(
           inputId = ns("ctsdShow_datasets"),
           label = "Show trajectories:",
@@ -498,7 +498,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         
         opts <- c("full", "subset", "new")
         if (!is.null(input$ctsdInput_show)) {
-          if(input$ctsdInput_show == 1) {
+          if (input$ctsdInput_show == 1) {
             opts <- c("full", "subset")
           }
         }
@@ -532,7 +532,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       vals$paths_selected <- c("full", "subset", "new")
       
-      if(input$ctsdInput_show == 1) {
+      if (input$ctsdInput_show == 1) {
         shinyjs::show(id = "sdInfo_est")
         shinyjs::show(id = "sdInfo_err")
         shinyjs::hide(id = "sdInfo_est_new")
@@ -563,7 +563,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'ctsd')
       
-      if(is.null(vals$data1)) {
+      if (is.null(vals$data1)) {
         
         shinyalert::shinyalert(
           type = "error",
@@ -581,7 +581,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           size = "xs")
         
       } else {
-        if(is.null(vals$fit1)) {
+        if (is.null(vals$fit1)) {
           
           msg_log(
             style = "danger",
@@ -689,12 +689,12 @@ mod_tab_ctsd_server <- function(id, vals) {
             N2 <- summary(vals$fit1)$DOF[grep('speed', nms)][[1]]
             vals$N2 <- N2
             
-          } # end of if(), !is.null(fit1)
+          } # end of if (), !is.null(fit1)
           
           shinybusy::remove_modal_spinner()
           
-        } # end of if(vals$needs_fit)
-      } # end of if(is.null(vals$data1))
+        } # end of if (vals$needs_fit)
+      } # end of if (is.null(vals$data1))
       
     }) # %>% # end of observe,
     # bindEvent(input$run_sd)
@@ -819,7 +819,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     observe({
       req(vals$reg$dur, vals$reg$dti)
 
-      if(!is.null(vals$ctsd)) {
+      if (!is.null(vals$ctsd)) {
 
         # Sampling duration:
 
@@ -839,7 +839,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         newvalue <- tau_v0 * 1/3
         newindex <- which.min(abs(df_fixrate$nu - newvalue))
 
-        if(vals$data_type == "simulated") {
+        if (vals$data_type == "simulated") {
           tmprange <- NULL
         } else { tmprange <-
           paste(ifelse(vals$tau_v0_min == 0, "0",
@@ -976,7 +976,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     finescale_speed <- shiny::reactive({
       
-      if(vals$data_type == "simulated") {
+      if (vals$data_type == "simulated") {
         dat <- vals$data0
       } else { dat <- vals$data1 }
       
@@ -1010,7 +1010,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       req(vals$is_valid)
 
       # Check if data is available:
-      if(!is.null(vals$data1)) {
+      if (!is.null(vals$data1)) {
 
         tmplist <- list("sdBox_speed",
                         "sdBox_dist",
@@ -1022,7 +1022,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         }
 
         req(vals$fit1, vals$tmpid, vals$id)
-        if(vals$tmpid != vals$id) {
+        if (vals$tmpid != vals$id) {
 
           shinyalert::shinyalert(
             title = "Oops!",
@@ -1044,7 +1044,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           sumnames <- rownames(summary(vals$fit1)$CI)
           N <- summary(vals$fit1)$DOF
 
-          if(is.null(grep('speed', sumnames))) {
+          if (is.null(grep('speed', sumnames))) {
 
             shinyalert::shinyalert(
               type = "error",
@@ -1146,7 +1146,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                   msg_step(2, 2, style = "warning")),
                 detail = "This may take a while...")
 
-              # if(vals$data_type == "simulated") {
+              # if (vals$data_type == "simulated") {
               #   dat <- vals$data0
               #   fit <- vals$fit0
               # } else {
@@ -1288,7 +1288,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                   vals$sd$dur %#% vals$sd$dur_unit,
                   by = vals$sd$dti %#% vals$sd$dti_unit)
 
-        if(length(t0) >= vals$storage) {
+        if (length(t0) >= vals$storage) {
 
           shinyalert::shinyalert(
             type = "warning",
@@ -1390,7 +1390,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       vals$guess_new <- guess1()
       
-      if(vals$data_type == "simulated") {
+      if (vals$data_type == "simulated") {
         mod2 <- vals$ctmm_mod
       } else {
         mod2 <- prepare_mod(
@@ -1531,10 +1531,10 @@ mod_tab_ctsd_server <- function(id, vals) {
         dur2 <- vals$sd$dur
         dur2_mth <- "months" %#% vals$sd$dur %#% vals$sd$dur_unit
 
-        if(dur2 == 1) {
+        if (dur2 == 1) {
           dur2_txt <- HTML(paste0(
             "for ",  span("1 day", class = "cl-sea-d"), "."))
-        } else { if(dur2 == 365) {
+        } else { if (dur2 == 365) {
           dur2_txt <- HTML(paste0(
             "for ",  span("1 year", class = "cl-sea-d"), "."))
         } else {
@@ -1662,7 +1662,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       req(vals$ctsd, vals$ctsd_units)
 
       speed_units <- vals$ctsd_units
-      if(speed_units == "kilometers/day") {
+      if (speed_units == "kilometers/day") {
         speed_units <- "km/day" }
 
       est <- vals$ctsd[2]
@@ -1699,7 +1699,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       req(vals$ctsd_new)
 
       speed_units <- vals$ctsd_units_new
-      if(speed_units == "kilometers/day") {
+      if (speed_units == "kilometers/day") {
         speed_units <- "km/day" }
 
       est <- vals$ctsd_new[2]
@@ -1814,28 +1814,28 @@ mod_tab_ctsd_server <- function(id, vals) {
       t_origin <- "1111-11-10 23:06:32"
       dat$timestamp <- as.POSIXct(dat$t, origin = t_origin)
 
-      if(unit == "minutes") {
+      if (unit == "minutes") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "mins")
         dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
-      } else if(unit == "hours") {
+      } else if (unit == "hours") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "hours")
         dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
-      } else if(unit == "days") {
+      } else if (unit == "days") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "days")
         dat <- dat %>%
           dplyr::mutate(t_new = as.POSIXct(
             t_new, format = "%Y-%m-%d %H:%M:%OS"))
-      } else if(unit == "weeks") {
+      } else if (unit == "weeks") {
         dat <- dat %>% dplyr::mutate(
           t_new = format(timestamp, "%U"))
-      } else if(unit == "months") {
+      } else if (unit == "months") {
         dat$t_new <- round.POSIXt(as.POSIXct(dat$timestamp),
                            units = "months")
         dat <- dat %>%
@@ -1851,7 +1851,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       yline <- "day" %#% vals$ctsd[2] %#% "kilometers"
 
-      if(!is.null(vals$ctsd_new)) {
+      if (!is.null(vals$ctsd_new)) {
         req(vals$ctsd_new)
         yline_new <- "day" %#% vals$ctsd_new[2] %#% "kilometers"
       }
@@ -1871,7 +1871,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           ggplot2::geom_hline(
             yintercept = yline, size = 2, col = pal$sea) +
 
-          { if(!is.null(vals$ctsd_new))
+          { if (!is.null(vals$ctsd_new))
             ggplot2::geom_hline(
               yintercept = yline_new, size = 2, col = pal$dgr)
           } +
@@ -1902,14 +1902,14 @@ mod_tab_ctsd_server <- function(id, vals) {
         lims <- calc_limit(newdat, alldat, vals$sd$newdata)
       }
       
-      if("full" %in% datasets) {
+      if ("full" %in% datasets) {
         p1 <- ggplot2::geom_path(
           alldat, mapping = ggplot2::aes(
             x = x, y = y),
           col = "grey80", size = 1.4)
       }
 
-      if("subset" %in% datasets) {
+      if ("subset" %in% datasets) {
         p2 <- ggiraph::geom_path_interactive(
           newdat, mapping = ggplot2::aes(
             x = x, y = y),
@@ -1921,7 +1921,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           size = 2.5, col = pal$sea)
       }
 
-      if("new" %in% datasets) {
+      if ("new" %in% datasets) {
         req(vals$sd$newdata)
 
         p3 <- ggiraph::geom_path_interactive(
@@ -1937,13 +1937,13 @@ mod_tab_ctsd_server <- function(id, vals) {
 
       p <- ggplot2::ggplot() +
 
-        { if("full" %in% datasets) p1 } +
+        { if ("full" %in% datasets) p1 } +
         
-        { if("subset" %in% datasets) p2 } +
-        { if("subset" %in% datasets) p2_points } +
+        { if ("subset" %in% datasets) p2 } +
+        { if ("subset" %in% datasets) p2_points } +
 
-        { if("new" %in% datasets) p3 } +
-        { if("new" %in% datasets) p3_points } +
+        { if ("new" %in% datasets) p3 } +
+        { if ("new" %in% datasets) p3_points } +
 
         ggplot2::labs(
           x = "x coordinate",

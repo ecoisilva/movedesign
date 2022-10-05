@@ -561,7 +561,7 @@ mod_tab_device_server <- function(id, vals) {
 
     observe({ ### Reveal sample sizes box:
 
-      if(is.null(vals$is_reg_valid)) {
+      if (is.null(vals$is_reg_valid)) {
         shinyjs::hide(id = "regBox_sizes")
       } else {
         req(vals$is_reg_valid)
@@ -628,11 +628,11 @@ mod_tab_device_server <- function(id, vals) {
     observe({
       vals$which_limitations <- input$which_limitations
 
-      if("loss" %in% input$which_limitations) {
+      if ("loss" %in% input$which_limitations) {
         shinyjs::show(id = "regBox_loss")
       } else { shinyjs::hide(id = "regBox_loss") }
 
-      if("error" %in% input$which_limitations) {
+      if ("error" %in% input$which_limitations) {
         shinyjs::show(id = "regBox_error")
       } else { shinyjs::hide(id = "regBox_error") }
 
@@ -1229,8 +1229,8 @@ mod_tab_device_server <- function(id, vals) {
           vals$is_reg_valid <- TRUE
           vals$is_analyses <- FALSE
 
-        } # end of storage limit if() statement
-      } # end of selection if() statement
+        } # end of storage limit if () statement
+      } # end of selection if () statement
 
     }) %>% # end of observer,
       bindEvent(input$validate_gps)
@@ -1312,7 +1312,7 @@ mod_tab_device_server <- function(id, vals) {
     observe({
       req(vals$device_n)
 
-      if(vals$device_n > 10000) {
+      if (vals$device_n > 10000) {
         vals$confirm_n <- FALSE
         shinyalert::shinyalert(
           inputId = "alert_n_small",
@@ -1352,7 +1352,7 @@ mod_tab_device_server <- function(id, vals) {
 
       vals$gps_dur <- input$gps_dur
       vals$gps_dur_units <- input$gps_dur_units
-      if(!input$eval_tradeoffs) {
+      if (!input$eval_tradeoffs) {
         vals$gps_dti <- input$gps_dti
         vals$gps_dti_units <- input$gps_dti_units
       }
@@ -1524,7 +1524,7 @@ mod_tab_device_server <- function(id, vals) {
         simplified = is_simplified)
 
 
-      # if(!is_simplified) {
+      # if (!is_simplified) {
       # # Display only values with duration
       # # (plus three additional rows):
       #
@@ -1800,8 +1800,8 @@ mod_tab_device_server <- function(id, vals) {
 
           shinyjs::enable("regButton_save")
 
-        } # end of if(), !is.null(fit1)
-      } # end of if(), est_type
+        } # end of if (), !is.null(fit1)
+      } # end of if (), est_type
 
       if (!vals$tour_active) {
 
@@ -2019,7 +2019,7 @@ mod_tab_device_server <- function(id, vals) {
         #   preselection <- character(0)
         # }
         
-        if(vals$tour_active) { 
+        if (vals$tour_active) { 
           tempid <- match("1 fix every hour", df0$nu_notes)
           preselection <- as.character(tempid)
         } else {

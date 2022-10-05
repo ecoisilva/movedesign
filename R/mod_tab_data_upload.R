@@ -413,7 +413,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         detail = "Please select one individual from this dataset.")
 
       shinyjs::show(id = "uploadBox_species")
-      if(!input$uploadBox_file$collapsed) {
+      if (!input$uploadBox_file$collapsed) {
         shinydashboardPlus::updateBox("uploadBox_file",
                                       action = "toggle")
       } else { NULL }
@@ -421,7 +421,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$dataList <- df0
 
       # Check number of individuals within dataset:
-      if(names(vals$dataList)[[1]] == "timestamp") {
+      if (names(vals$dataList)[[1]] == "timestamp") {
         tmplist <- list()
         tmplist[[1]] <- vals$dataList
         names(tmplist) <- as_tele_list(vals$dataList) %>%
@@ -444,7 +444,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       req(vals$dataList, vals$id,
           vals$active_tab == 'data_upload')
 
-      if(names(vals$dataList)[[1]] == "timestamp") {
+      if (names(vals$dataList)[[1]] == "timestamp") {
         df_subset <- vals$dataList
       } else {
         df_subset <- vals$dataList[[vals$id]]
@@ -482,7 +482,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     observe({
       req(vals$which_question, vals$data0)
 
-      if(input$sp_uploaded == "") {
+      if (input$sp_uploaded == "") {
         # If no species name is written down:
 
         msg_log(
@@ -507,7 +507,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         vals$species_binom <- input$sp_uploaded
         vals$needs_fit <- TRUE
 
-      } # end of if()
+      } # end of if ()
       
       ### Model fitting: --------------------------------------------------
       
@@ -759,7 +759,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$input_t <- ifelse(!is.null(vals$data0$"timestamp"),
                              "timestamp", "t")
       
-      if(is.null(vals$is_success)) {
+      if (is.null(vals$is_success)) {
         msg_log(
           style = "success",
           message = paste0("Species and individual ",
@@ -784,7 +784,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         )
       )
       
-      # if(!input$select_intro$collapsed &&
+      # if (!input$select_intro$collapsed &&
       #    vals$tour_active) { NULL } else {
       #      shinydashboardPlus::updateBox("select_intro",
       #                                    action = "toggle")
@@ -800,7 +800,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     observe({
       shinyjs::show(id = "uploadBox_regime")
 
-      if(is.null(vals$is_valid) || vals$is_valid == FALSE) {
+      if (is.null(vals$is_valid) || vals$is_valid == FALSE) {
 
         shinyalert::shinyalert(
           title = "Oops!",
@@ -841,7 +841,7 @@ mod_tab_data_upload_server <- function(id, vals) {
             align = "center", width = 12,
             
             renderUI({
-              if(vals$tmpid == "Simulated individual") { NULL
+              if (vals$tmpid == "Simulated individual") { NULL
               } else {
                 
                 p("These parameters have been extracted from",
@@ -856,7 +856,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                   icon("paper-plane", class = "cl-mdn"),
                   wrap_none("Extract", css = "cl-mdn", end = "."))
                 
-              } # end of if() statement
+              } # end of if () statement
             }) # end of renderUI
             
           ), # end of column (for text)
@@ -893,7 +893,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     ## Movement process: ------------------------------------------------
 
     output$uploadBlock_movprocess <- shiny::renderUI({
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
           sum.fit <- summary(vals$fit0)
 
@@ -911,19 +911,19 @@ mod_tab_data_upload_server <- function(id, vals) {
             ),
             value = sum.fit$name[1])
 
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
 
     ## Timescale parameters: --------------------------------------------
 
     output$uploadBlock_taup <- shiny::renderUI({
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
 
           sum.fit <- summary(vals$fit0)
           tempnames <- rownames(sum.fit$CI)
 
-          if(length(grep('\u03C4', tempnames)) == 1 ||
+          if (length(grep('\u03C4', tempnames)) == 1 ||
              length(grep('\u03C4', tempnames)) == 2) {
 
             tempunits <-
@@ -971,17 +971,17 @@ mod_tab_data_upload_server <- function(id, vals) {
                     accuracy = .1)(vals$tau_p0_max)))
           }
 
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
 
     output$uploadBlock_tauv <- shiny::renderUI({
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
 
           sum.fit <- summary(vals$fit0)
           tempnames <- rownames(sum.fit$CI)
 
-          if(!length(grep('velocity', tempnames))) {
+          if (!length(grep('velocity', tempnames))) {
 
             vals$valid_tauv <- "No"
             NULL
@@ -1033,13 +1033,13 @@ mod_tab_data_upload_server <- function(id, vals) {
                     accuracy = .1)(fit.tau_v_high)))
           }
 
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
 
     ## Spatial parameters: ----------------------------------------------
 
     output$uploadBlock_sigma <- shiny::renderUI({
-      if(vals$tmpid == "Simulated individual") {
+      if (vals$tmpid == "Simulated individual") {
         NULL } else {
 
           vals$sigma0 <- ctmm:::var.covm(vals$fit0$sigma, ave = T)
@@ -1070,7 +1070,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                 scales::label_comma(
                   accuracy = .1)(vals$sigma0_max)))
 
-        } # end of if() statement
+        } # end of if () statement
     }) # end of renderUI
 
     ##  Tracking regime: --------------------------------------------------
@@ -1187,7 +1187,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     #   tmpname <-
     #     sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
     #
-    #   if(is.null(match(tmpname, movmods$name_short))) {
+    #   if (is.null(match(tmpname, movmods$name_short))) {
     #     preselected_mod <- NULL
     #   } else {
     #     preselected_mod <- match(tmpname, movmods$name_short)

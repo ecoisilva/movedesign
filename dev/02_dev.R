@@ -21,6 +21,8 @@ usethis::use_import_from("ctmm", "%#%")
 usethis::use_import_from("dplyr", "%>%")
 usethis::use_import_from("ggplot2" ,"%+replace%")
 usethis::use_import_from("rlang", ".data")
+usethis::use_import_from("stats", "median")
+usethis::use_import_from("utils", "data", "packageVersion")
 
 ## Add modules ----
 ## Create a module infrastructure in R/
@@ -32,7 +34,6 @@ golem::add_module(name = "tab_data_select") # Empirical data, select
 
 golem::add_module(name = "tab_sims") # Simulated data
 golem::add_module(name = "tab_device") # Device settings
-golem::add_module(name = "tab_caveats") # Device limitations
 golem::add_module(name = "tab_hrange") # HR estimation
 golem::add_module(name = "tab_ctsd") # CTSD estimation
 golem::add_module(name = "tab_report") # Report
@@ -41,8 +42,6 @@ golem::add_module(name = "comp_tour", with_test = TRUE) # Main tour
 golem::add_module(name = "comp_settings") # Settings
 golem::add_module(name = "comp_glossary") # Glossary
 golem::add_module(name = "comp_viz") # Data visualization
-golem::add_module(name = "comp_out") # Output visualization
-
 
 ## Add helper functions ----
 ## Creates fct_* and utils_*

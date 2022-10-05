@@ -15,19 +15,19 @@ mod_comp_settings_ui <- function(id){
       width = 12, align = "center",
       shiny::p(),
 
-      tags$div(htmltools::tagAppendAttributes(
-        actionButton(
-          inputId = "fullscreen",
-          label = "Fullscreen",
-          width = "100%",
-          icon = icon("expand")
-        ),
-        onclick = "shinyjs.toggleFullScreen();")),
-      p(),
-      p(style = "text-align: justify; color: #ffffff;",
-        "(Only works in browser)."),
-
-      tags$hr(style = "border-color: #2c3b41;"),
+      # tags$div(htmltools::tagAppendAttributes(
+      #   actionButton(
+      #     inputId = "fullscreen",
+      #     label = "Fullscreen",
+      #     width = "100%",
+      #     icon = icon("expand")
+      #   ),
+      #   onclick = "shinyjs.toggleFullScreen();")),
+      # p(),
+      # p(style = "text-align: justify; color: #ffffff;",
+      #   "(Only works in browser)."),
+      # 
+      # tags$hr(style = "border-color: #2c3b41;"),
 
       shiny::downloadButton(
         outputId = ns("download_settings"),
@@ -82,7 +82,7 @@ mod_comp_settings_server <- function(id, vals) {
     # DYNAMIC UI ELEMENTS -------------------------------------------------
 
     output$text_save <- renderUI({
-      if(is.null(vals$data0)) {
+      if (is.null(vals$data0)) {
         p(style = "text-align: justify; color: #ffffff;",
           "Return here after running any analyses to save",
           "all stored values to your local environment."

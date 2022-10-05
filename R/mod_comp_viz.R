@@ -103,10 +103,10 @@ mod_comp_viz_server <- function(id, vals) {
       req(vals$is_valid)
 
       tabselected <- NULL
-      if(vals$is_valid && vals$active_tab == 'data_upload') {
+      if (vals$is_valid && vals$active_tab == 'data_upload') {
         tabselected <- "comp_viz_uploaded-dataPanel_individual"
       }
-      if(vals$is_valid && vals$active_tab == 'data_select') {
+      if (vals$is_valid && vals$active_tab == 'data_select') {
         tabselected <- "comp_viz_selected-dataPanel_individual"
       }
 
@@ -122,7 +122,7 @@ mod_comp_viz_server <- function(id, vals) {
     observe({ # First, create data summary:
       req(vals$dataList)
 
-      if(!("timestamp" %in% names(vals$dataList[[1]]))) {
+      if (!("timestamp" %in% names(vals$dataList[[1]]))) {
 
         vals$is_anonymized <- TRUE
 
@@ -189,23 +189,23 @@ mod_comp_viz_server <- function(id, vals) {
     output$dataPlot_all <- ggiraph::renderGirafe({
       req(vals$dataList, vals$data_type != "simulated")
 
-      if(vals$data_type == "selected") {
+      if (vals$data_type == "selected") {
 
         # to address compatibility of the pelican dataset:
-        if(vals$species != "pelican") {
+        if (vals$species != "pelican") {
           newdat.all <- as_tele_df(vals$dataList)
         } else {
           data_df <- list()
           for(i in 1:length(vals$dataList)) {
             temp0 <- vals$dataList[i]
-            if(names(vals$dataList)[i] == "gps") {
+            if (names(vals$dataList)[i] == "gps") {
               temp1 <- temp0@.Data[1] %>% as.data.frame
               temp1 <- temp1 %>%
                 dplyr::select('gps.timestamp',
                               'gps.x',
                               'gps.y')
             }
-            if(names(vals$dataList)[i] == "argos") {
+            if (names(vals$dataList)[i] == "argos") {
               temp1 <- temp0@.Data[1] %>% as.data.frame
               temp1 <- temp1 %>%
                 dplyr::select('argos.timestamp',
@@ -222,10 +222,10 @@ mod_comp_viz_server <- function(id, vals) {
       yrange <- diff(range(newdat.all$y))
       xrange <- diff(range(newdat.all$x))
 
-      if(yrange < 1.5 * xrange) {
+      if (yrange < 1.5 * xrange) {
         ymin <- min(newdat.all$y) - yrange * .3
         ymax <- max(newdat.all$y) + yrange * .3
-      } else if(yrange < 2 * xrange) {
+      } else if (yrange < 2 * xrange) {
         ymin <- min(newdat.all$y) - yrange * .5
         ymax <- max(newdat.all$y) + yrange * .5
       } else {
@@ -233,7 +233,7 @@ mod_comp_viz_server <- function(id, vals) {
         ymax <- max(newdat.all$y)
       }
 
-      if(xrange < 2 * yrange) {
+      if (xrange < 2 * yrange) {
         xmin <- min(newdat.all$x) - xrange * .5
         xmax <- max(newdat.all$x) + xrange * .5
       } else {
@@ -294,10 +294,7 @@ mod_comp_viz_server <- function(id, vals) {
           vals$input_x,
           vals$input_y,
           vals$input_t)
-
-      if( class(vals$data0) == "data.frame" ) {
-        vals$data0 <- ctmm::as.telemetry(vals$data0) }
-
+      
       newdat <- as.data.frame(vals$data0[[vals$input_x]])
       names(newdat) <- "x"
       newdat$y <- vals$data0[[vals$input_y]]
@@ -309,10 +306,10 @@ mod_comp_viz_server <- function(id, vals) {
       yrange <- diff(range(newdat$y))
       xrange <- diff(range(newdat$x))
 
-      if(yrange < 1.5 * xrange) {
+      if (yrange < 1.5 * xrange) {
         ymin <- min(newdat$y) - yrange * .3
         ymax <- max(newdat$y) + yrange * .3
-      } else if(yrange < 2 * xrange) {
+      } else if (yrange < 2 * xrange) {
         ymin <- min(newdat$y) - yrange * .5
         ymax <- max(newdat$y) + yrange * .5
       } else {
@@ -320,7 +317,7 @@ mod_comp_viz_server <- function(id, vals) {
         ymax <- max(newdat$y)
       }
 
-      if(xrange < 2 * yrange) {
+      if (xrange < 2 * yrange) {
         xmin <- min(newdat$x) - xrange * .5
         xmax <- max(newdat$x) + xrange * .5
       } else {
@@ -460,7 +457,7 @@ mod_comp_viz_server <- function(id, vals) {
       tmpdat <- NULL
       tmpdat <- as_tele_dt(list(vals$data0))
       tmpdat <- tmpdat %>% dplyr::select(input$show_vars)
-      if(!is.null(tmpdat$timestamp)) {
+      if (!is.null(tmpdat$timestamp)) {
         tmpdat$timestamp <- as.character(tmpdat$timestamp)
       } else { NULL }
 

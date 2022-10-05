@@ -29,7 +29,7 @@ mod_comp_tour_server <- function(id, vals) {
     
     # Build tours: ------------------------------------------------------
 
-    add_action <- span("Action:", class = "tour-action")
+    # add_action <- span("Action:", class = "tour-action")
 
     build_mainTour <- function(ns, vals) {
       element <- intro <- character(0)
@@ -165,7 +165,7 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          "These are the data vizualization tabs. The first",
+          "These are the data visualization tabs. The first",
           "tab", fontawesome::fa("paw", fill = pal$sea),
           "covers all individuals present in the selected dataset.",
           "The second tab", fontawesome::fa("filter", fill = pal$sea),
@@ -212,7 +212,7 @@ mod_comp_tour_server <- function(id, vals) {
           p(),
           "Outside of this tutorial, you can also select an",
           "individual from the table or",
-          "the plot in the data vizualization",
+          "the plot in the data visualization",
           fontawesome::fa("paw", fill = pal$sea), " tab."
         )))
 
@@ -432,7 +432,7 @@ mod_comp_tour_server <- function(id, vals) {
           span("Variogram", class = "cl-sea-l"), "we can check if",
           "the new simulated individual is",
           wrap_none(span("range resident", class = "cl-grn"), ","),
-          "i.e. the semi-variance reaches an assymptote."
+          "i.e. the semi-variance reaches an asymptote."
         )))
       
       element <- c(element, paste0(tab4, "regBox_sizes"))
@@ -636,8 +636,7 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-
-          p(class = "ttl-tour cl-wht",
+          p(class = "ttl_tour cl-wht",
 
             "Thank you for using",
             wrap_none("move", span("design", class = "cl-sea-l"), "!"))
@@ -655,7 +654,7 @@ mod_comp_tour_server <- function(id, vals) {
 
     observe({
       req(vals$active_tab)
-      if(vals$active_tab == 'about') vals$tour_active <- FALSE
+      if (vals$active_tab == 'about') vals$tour_active <- FALSE
     })
 
     # If 'guided tour' button is clicked:

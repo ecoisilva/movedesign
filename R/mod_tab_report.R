@@ -261,7 +261,7 @@ mod_tab_report_server <- function(id, vals) {
     output$report_device <- renderUI({
       req(vals$which_limitations)
 
-      if("loss" %in% vals$which_limitations) {
+      if ("loss" %in% vals$which_limitations) {
         ui_loss <- staticBlock(paste0(vals$loss, "%"),
                                active = TRUE)
       } else if (!("loss" %in% vals$which_limitations)) {
@@ -269,7 +269,7 @@ mod_tab_report_server <- function(id, vals) {
                                active = FALSE)
       }
 
-      if("error" %in% vals$which_limitations) {
+      if ("error" %in% vals$which_limitations) {
         ui_error <- staticBlock(paste(vals$error, "meters"),
                                 active = TRUE)
       } else if (!("error" %in% vals$which_limitations)) {
@@ -277,7 +277,7 @@ mod_tab_report_server <- function(id, vals) {
                                 active = FALSE)
       }
 
-      if("limit" %in% vals$which_limitations) {
+      if ("limit" %in% vals$which_limitations) {
         ui_limit <- staticBlock(paste(vals$storage, "locations"),
                                 type = "max", active = TRUE)
       } else if (!("limit" %in% vals$which_limitations)) {
@@ -348,7 +348,7 @@ mod_tab_report_server <- function(id, vals) {
         value =
           paste(scales::label_comma(
             accuracy = .1)(vals$tau_p0), vals$tau_p0_units),
-        subtitle = if(vals$data_type != "simulated") {
+        subtitle = if (vals$data_type != "simulated") {
           paste(
             ifelse(vals$tau_p0_min == 0,
                    "0",
@@ -369,7 +369,7 @@ mod_tab_report_server <- function(id, vals) {
         value =
           paste(scales::label_comma(
             accuracy = .1)(vals$tau_v0), vals$tau_v0_units),
-        subtitle = if(vals$data_type != "simulated") {
+        subtitle = if (vals$data_type != "simulated") {
           paste(
             ifelse(vals$tau_v0_min == 0,
                    "0",
@@ -390,7 +390,7 @@ mod_tab_report_server <- function(id, vals) {
       parBlock(
         header = span(HTML("Semi-variance (\u03C3)")),
         value = span(HTML("&nbsp;", sig$value, sig$unit)),
-        subtitle = if(vals$data_type != "simulated") {
+        subtitle = if (vals$data_type != "simulated") {
           paste(
             ifelse(vals$sigma0_min == 0,
                    "0",
@@ -708,10 +708,10 @@ mod_tab_report_server <- function(id, vals) {
       yrange <- diff(range(newdat$y))
       xrange <- diff(range(newdat$x))
 
-      if(yrange < 1.5 * xrange) {
+      if (yrange < 1.5 * xrange) {
         ymin <- min(newdat$y) - yrange * .3
         ymax <- max(newdat$y) + yrange * .3
-      } else if(yrange < 2 * xrange) {
+      } else if (yrange < 2 * xrange) {
         ymin <- min(newdat$y) - yrange * .5
         ymax <- max(newdat$y) + yrange * .5
       } else {
@@ -719,7 +719,7 @@ mod_tab_report_server <- function(id, vals) {
         ymax <- max(newdat$y)
       }
 
-      if(xrange < 2 * yrange) {
+      if (xrange < 2 * yrange) {
         xmin <- min(newdat$x) - xrange * .5
         xmax <- max(newdat$x) + xrange * .5
       } else {
@@ -952,92 +952,92 @@ mod_tab_report_server <- function(id, vals) {
       }
       
       namedcolumns <- list(
-        device = if("device" %in% choices_subset) {
+        device = if ("device" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "device"]) },
-        taup = if("taup" %in% choices_subset) {
+        taup = if ("taup" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "taup"],
             style = list(fontWeight = "bold")) },
-        tauv = if("tauv" %in% choices_subset) {
+        tauv = if ("tauv" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "tauv"],
             style = list(fontWeight = "bold")) },
-        sigma = if("sigma" %in% choices_subset) {
+        sigma = if ("sigma" %in% choices_subset) {
           reactable::colDef(
             minWidth = 60, name = nms[1, "sigma"]) },
-        dur = if("dur" %in% choices_subset) {
+        dur = if ("dur" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "dur"],
             style = list(fontWeight = "bold")) },
-        dti = if("dti" %in% choices_subset) {
+        dti = if ("dti" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "dti"],
             style = list(fontWeight = "bold")) },
-        n = if("n" %in% choices_subset) {
+        n = if ("n" %in% choices_subset) {
           reactable::colDef(
             name = nms[1, "n"],
             style = list(color = format_num),
             format = reactable::colFormat(separators = TRUE,
                                           digits = 0)) },
-        N1 = if("N1" %in% choices_subset) {
+        N1 = if ("N1" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "N1"],
             style = list(color = format_num),
             format = reactable::colFormat(separators = TRUE,
                                           digits = 1)) },
-        N2 = if("N2" %in% choices_subset) {
+        N2 = if ("N2" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "N2"],
             style = list(color = format_num),
             format = reactable::colFormat(separators = TRUE,
                                           digits = 1)) },
-        area = if("area" %in% choices_subset) {
+        area = if ("area" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area"]) },
-        area_err = if("area_err" %in% choices_subset) {
+        area_err = if ("area_err" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        area_err_min = if("area_err_min" %in% choices_subset) {
+        area_err_min = if ("area_err_min" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err_min"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        area_err_max = if("area_err_max" %in% choices_subset) {
+        area_err_max = if ("area_err_max" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err_max"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        ctsd = if("ctsd" %in% choices_subset) {
+        ctsd = if ("ctsd" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "ctsd"]) },
-        ctsd_err = if("ctsd_err" %in% choices_subset) { 
+        ctsd_err = if ("ctsd_err" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 80, name = nms[1, "ctsd_err"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        ctsd_err_min = if("ctsd_err_min" %in% choices_subset) { 
+        ctsd_err_min = if ("ctsd_err_min" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 80, name = nms[1, "ctsd_err_min"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        ctsd_err_max = if("ctsd_err_max" %in% choices_subset) { 
+        ctsd_err_max = if ("ctsd_err_max" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 80, name = nms[1, "ctsd_err_max"],
             style = list(color = format_perc),
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)) },
-        dist = if("dist" %in% choices_subset) { 
+        dist = if ("dist" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 80, name = nms[1, "dist"]) },
-        dist_err = if("dist_err" %in% choices_subset) { 
+        dist_err = if ("dist_err" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 80, name = nms[1, "dist_err"],
             style = list(color = format_perc),
@@ -1109,7 +1109,7 @@ mod_tab_report_server <- function(id, vals) {
         
         scaled_if <- FALSE
         if (!is.null(input$repInput_scaled)) {
-          if(input$repInput_scaled) scaled_if <- TRUE
+          if (input$repInput_scaled) scaled_if <- TRUE
         }
           
         dat <- movedesign::sims_hrange[[1]] %>%
@@ -1132,7 +1132,7 @@ mod_tab_report_server <- function(id, vals) {
         min_x <- min(ds1$x)
         max_x <- max(ds1$x)
         
-        if(scaled_if) ds1$y <- ds1$y / max(ds1$y)
+        if (scaled_if) ds1$y <- ds1$y / max(ds1$y)
         ds1_ci <- subset(ds1, x >= vals$hrCI$CI_low &
                            x <= vals$hrCI$CI_high)
         
@@ -1155,7 +1155,7 @@ mod_tab_report_server <- function(id, vals) {
           CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
           ci2 <- bayestestR::ci(df2$error, ci = CI, method = "HDI")
           
-          if(scaled_if) ds2$y <- ds2$y / max(ds2$y)
+          if (scaled_if) ds2$y <- ds2$y / max(ds2$y)
           ds2_ci <- subset(ds2, x >= ci2$CI_low &
                              x <= ci2$CI_high)
           
@@ -1437,7 +1437,7 @@ mod_tab_report_server <- function(id, vals) {
         ds1 <- stats::density(df1$error)
         ds1 <- data.frame(x = ds1$x, y = ds1$y)
 
-        if(input$repInput_scaled) ds1$y <- ds1$y / max(ds1$y)
+        if (input$repInput_scaled) ds1$y <- ds1$y / max(ds1$y)
         ds1_ci <- subset(ds1, x >= vals$sdCI$CI_low &
                            x <= vals$sdCI$CI_high)
 
@@ -1459,7 +1459,7 @@ mod_tab_report_server <- function(id, vals) {
 
           CI <- ifelse(is.null(vals$ci), .95, vals$ci/100)
           ci2 <- bayestestR::ci(df2$error, ci = CI, method = "HDI")
-          if(input$repInput_scaled) ds2$y <- ds2$y / max(ds2$y)
+          if (input$repInput_scaled) ds2$y <- ds2$y / max(ds2$y)
           ds2_ci <- subset(ds2, x >= ci2$CI_low &
                              x <= ci2$CI_high)
 
