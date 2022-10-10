@@ -4,7 +4,7 @@ author: "In\u00EAs Silva, Jesse Alston"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Installation}
+  %\VignetteIndexEntry{Installation Issues}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

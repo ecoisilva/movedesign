@@ -2,7 +2,8 @@ Package: movedesign
 Title: Study design of movement ecology studies
 Version: 0.0.9005
 Authors@R: 
-    person("In\u00EAs", "Silva", "i.simoes-silva@hzdr.de", role = c("cre", "aut"))
+    person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"),
+           comment = c(ORCID = "0000-0003-4850-6193"))
 Description: A Shiny app to assist researchers in designing movement
     ecology studies.
 License: MIT + file LICENSE

@@ -20,7 +20,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Inês i.simoes-silva@hzdr.de Silva
+\strong{Maintainer}: InÃªs Silva \email{i.simoes-silva@hzdr.de} (\href{https://orcid.org/0000-0003-4850-6193}{ORCID})
 
 }
 \keyword{internal}
