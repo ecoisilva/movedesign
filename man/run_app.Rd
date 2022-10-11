@@ -5,7 +5,6 @@
 \title{Run the Shiny Application}
 \usage{
 run_app(
-  title = "movedesign",
   onStart = NULL,
   options = list(),
   enableBookmarking = NULL,

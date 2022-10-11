@@ -249,7 +249,7 @@ simulate_data <- function(mod0,
 
   t0 <- seq(0, dur, by = dti)
   dat <- ctmm::simulate(mod0, t = t0, seed = seed0)
-  dat <- ctmm:::pseudonymize(dat)
+  dat <- pseudonymize(dat)
   dat$index <- 1:nrow(dat)
 
   return(dat)
@@ -313,6 +313,8 @@ simulate_gps <- function(data,
                          min_x,
                          simplified = FALSE) {
 
+  nu <- nu_notes <- freq_hrs <- highlight <- NULL
+  
   x_max <- data$freq_hrs[match(max_x, data$nu_notes)]
   x_min <- data$freq_hrs[match(min_x, data$nu_notes)]
 

@@ -191,9 +191,7 @@ app_server <- function(input, output, session) {
       boxShadow = "inset 2px 0 0 0 #009da0")
   ))
 
-
   onStop(function() {
-
     message("Session stopped")
 
     # if (!is.null(gps_fixrate)) rm("gps_fixrate", envir = .GlobalEnv)

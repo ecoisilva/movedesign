@@ -1,4 +1,39 @@
 url: https://ecoisilva.github.io/movedesign/
+home:
+  title: movedesign
+authors:
+  Inês Silva:
+    href: https://github.com/ecoisilva
+  CASUS:
+    href: https://www.casus.science
+    html: <img src='https://www.casus.science/backend/wp-content/uploads/2019/05/Logo-CASUS-color.png?size=logo_header'
+      alt='CASUS' width='72' />
 template:
   bootstrap: 5
+  bslib:
+    base_font:
+      google: Roboto
+    heading_font:
+      google: Roboto Slab
+    code_font:
+      google: JetBrains Mono
+    bg: '#ffffff'
+    fg: '#393939'
+    primary: '#009da0'
+development:
+  mode: auto
+repo:
+  url:
+    home: https://github.com/ecoisilva/movedesign
+    source: https://github.com/ecoisilva/movedesign/tree/main
+    issue: https://github.com/ecoisilva/movedesign/issues/
+    user: https://github.com/ecoisilva
+articles:
+- title: Study design
+  navbar: ~
+  contents:
+  - movedesign
+  - tutorial
+- title: Installation issues
+  contents: installation
 

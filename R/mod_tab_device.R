@@ -830,8 +830,8 @@ mod_tab_device_server <- function(id, vals) {
 
       fixrate <- movedesign::gps_fixrate
       maxrate_choices <- fixrate %>%
-        dplyr::filter(choices == "Y") %>%
-        dplyr::pull(nu_notes)
+        dplyr::filter(.data$choices == "Y") %>%
+        dplyr::pull(.data$nu_notes)
 
       shinyWidgets::updatePickerInput(
         session,
@@ -847,8 +847,8 @@ mod_tab_device_server <- function(id, vals) {
                                   fixrate$nu_notes)]
 
       minrate_choices <- fixrate %>%
-        dplyr::filter(nu < dti_max) %>%
-        dplyr::pull(nu_notes)
+        dplyr::filter(.data$nu < dti_max) %>%
+        dplyr::pull(.data$nu_notes)
 
       shinyWidgets::updatePickerInput(
         session,
@@ -1048,7 +1048,7 @@ mod_tab_device_server <- function(id, vals) {
               "(based on how many times you will collect new",
               "locations)."),
 
-            # TODO
+            #TODO
             # ggiraph::girafeOutput(
             #   outputId = ns("regPlot_vhf"),
             #   width = "100%", height = "50%"),
@@ -1312,7 +1312,7 @@ mod_tab_device_server <- function(id, vals) {
     observe({
       req(vals$device_n)
 
-      if (vals$device_n > 10000) {
+      if (vals$device_n > 20000) {
         vals$confirm_n <- FALSE
         shinyalert::shinyalert(
           inputId = "alert_n_small",
@@ -1321,7 +1321,7 @@ mod_tab_device_server <- function(id, vals) {
             "You are about to simulate a dataset with over",
             scales::label_comma()(vals$device_n), "locations.",
             "This can take a considerable amount of time to run",
-            "on certain devices (> hours).",
+            "on certain devices (several hours or days).",
             "Do you wish to proceed?"),
           showCancelButton = TRUE,
           html = TRUE,
@@ -1380,7 +1380,7 @@ mod_tab_device_server <- function(id, vals) {
 
     }) %>% bindEvent(saved_vhf())
 
-    ## Device — sampling duration & interval: ---------------------------
+    ## Device, sampling duration & interval: ---------------------------
 
     observe({
       vals$reg$dur <- NULL
@@ -1445,8 +1445,8 @@ mod_tab_device_server <- function(id, vals) {
 
       } # end of if ()
     })
-
-    ## Device — sample sizes: -------------------------------------------
+    
+    ## Device, sample sizes: ----------------------------------------------
 
     observe({
       req(vals$tau_p0, vals$tau_v0,
@@ -1560,13 +1560,15 @@ mod_tab_device_server <- function(id, vals) {
       dti <- vals$reg$dti %#% vals$reg$dti_unit
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
-      ctmm::simulate(
+      data <- ctmm::simulate(
         vals$data0,
         vals$fit0,
         t = t_new,
-        seed = vals$seed0) %>%
-        ctmm:::pseudonymize()
+        seed = vals$seed0) %>% 
+        pseudonymize()
 
+      return(data)
+      
     }) %>% # end of reactive, data_sim
       bindCache(c(vals$id,
                   vals$reg$dur, vals$reg$dur_unit,
@@ -1622,12 +1624,13 @@ mod_tab_device_server <- function(id, vals) {
 
       start <- Sys.time()
       data1 <- data_sim()
-
+      
       vals$needs_fit <- TRUE
-
+      vals$is_analyses <- NULL
+      
       vals$data1 <- data1
       vals$data1_full <- data1
-
+      
       if (!is.null(input$deviceInput_loss)) {
         if (input$deviceInput_loss > 0) {
           perc_loss <- 1 - input$deviceInput_loss/100
@@ -1641,7 +1644,7 @@ mod_tab_device_server <- function(id, vals) {
           vals$loss <- input$deviceInput_loss
         }
       }
-
+      
       if (!is.null(input$deviceInput_error)) {
         if (input$deviceInput_error > 0) {
           error_x <- stats::rnorm(nrow(data1), mean = 0,
@@ -1970,13 +1973,12 @@ mod_tab_device_server <- function(id, vals) {
 
         ymax <- max(df0$dur) + diff(range(df0$dur)) * .2
 
-
         p <- ggplot2::ggplot(
-          df0, ggplot2::aes(x = x,
-                            y = dur,
-                            col = color,
-                            tooltip = nu_notes,
-                            data_id = as.numeric(id))) +
+          df0, ggplot2::aes(x = .data$x,
+                            y = .data$dur,
+                            col = .data$color,
+                            tooltip = .data$nu_notes,
+                            data_id = as.numeric(.data$id))) +
 
           p1 +
           ggplot2::geom_hline(yintercept = 0,
@@ -2049,7 +2051,7 @@ mod_tab_device_server <- function(id, vals) {
 
     output$regPlot_id <- ggiraph::renderGirafe({
       req(vals$data0, vals$data1)
-
+      
       newdat <- vals$data1
       if (vals$data_type == "simulated") {
         dat <- vals$data0[which(vals$data0$t <= max(newdat$t)), ]
@@ -2064,7 +2066,7 @@ mod_tab_device_server <- function(id, vals) {
       ymax <- max(
         max(newdat$y) + diff(range(newdat$y)) * .2,
         max(dat$y) + diff(range(dat$y)) * .2)
-
+      
       p <- ggplot2::ggplot() +
         ggplot2::geom_path(
           dat, mapping = ggplot2::aes(
@@ -2275,13 +2277,13 @@ mod_tab_device_server <- function(id, vals) {
       } else {
         taup_min <- fix_unit(vals$tau_p0_min, vals$tau_p0_units)
         taup_max <- fix_unit(vals$tau_p0_max, vals$tau_p0_units)
-        taup_range <- span(paste(taup_min[1], "—", taup_max[1]),
-                           class = "cl-mdn")
+        taup_range <- span(paste(taup_min[1], "\u2014",
+                                 taup_max[1]), class = "cl-mdn")
 
         tauv_min <- fix_unit(vals$tau_v0_min, vals$tau_v0_units)
         tauv_max <- fix_unit(vals$tau_v0_max, vals$tau_v0_units)
-        tauv_range <- span(paste(tauv_min[1], "—", tauv_max[1]),
-                           class = "cl-mdn")
+        tauv_range <- span(paste(tauv_min[1], "\u2014",
+                                 tauv_max[1]), class = "cl-mdn")
       }
 
       output$regBlock_tau_p <- renderUI({

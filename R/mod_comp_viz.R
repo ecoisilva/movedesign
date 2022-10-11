@@ -124,7 +124,7 @@ mod_comp_viz_server <- function(id, vals) {
 
       if (!("timestamp" %in% names(vals$dataList[[1]]))) {
 
-        vals$is_anonymized <- TRUE
+        vals$is_origin <- TRUE
 
         shiny::showNotification(
           duration = 5,
@@ -135,17 +135,17 @@ mod_comp_viz_server <- function(id, vals) {
 
         msg_log(
           style = "success",
-          message = "Anonymized data completed",
-          detail = "Simulated location and time added."
-        )
+          message = paste0("Data pseudonymization ",
+                           msg_success("completed"), "."),
+          detail = "Origin location and time added.")
 
-        vals$dataList <- ctmm:::pseudonymize(vals$dataList)
+        vals$dataList <- pseudonymize(vals$dataList)
 
-      } else { vals$is_anonymized <- FALSE }
-
+      } else { vals$is_origin <- FALSE }
+      
       dfList <- as_tele_list(vals$dataList)
       sumdfList <- summary(dfList)
-
+      
       for(i in 1:length(dfList)) {
         sumdfList$n[i] <- nrow(dfList[[i]])
       }

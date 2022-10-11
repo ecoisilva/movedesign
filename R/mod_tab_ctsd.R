@@ -829,7 +829,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         # Sampling interval:
 
         fixrate <- movedesign::gps_fixrate
-        df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(freq))
+        df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(.data$freq))
         dti_choices <- df_fixrate$nu_notes
 
         tau_v0 <- vals$tau_v0 %#% vals$tau_v0_units
@@ -845,7 +845,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           paste(ifelse(vals$tau_v0_min == 0, "0",
                        scales::label_comma(
                          accuracy = .1)(vals$tau_v0_min)),
-                "—", scales::label_comma(
+                "\u2014", scales::label_comma(
                   accuracy = .1)(vals$tau_v0_max))
         }
 
@@ -1296,7 +1296,7 @@ mod_tab_ctsd_server <- function(id, vals) {
             text = span(
               "Many GPS units can only store a maximum of",
               wrap_none(
-                span("32,000—64,000 locations", class = "cl-dgr"),
+                span("32,000\u201464,000 locations", class = "cl-dgr"),
                 "."), "You set a limit of", vals$storage,
               "making this tracking regime invalid.",
 
@@ -1362,7 +1362,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                 by = vals$sd$dti %#% vals$sd$dti_unit),
         seed = vals$seed0)
 
-      dat <- ctmm:::pseudonymize(dat)
+      dat <- pseudonymize(dat)
       dat$index <- 1:nrow(dat)
       vals$sd$newdata <- dat
 
@@ -1677,7 +1677,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         subtitle = paste(
           ifelse(est_min == 0,
                  "0", round(est_min, 3)),
-          "—", round(est_max, 3)))
+          "\u2014", round(est_max, 3)))
 
     }) # end of renderUI // sdInfo_est
 
@@ -1714,7 +1714,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         subtitle = span(
           ifelse(est_min == 0,
                  "0", round(est_min, 3)),
-          "—", round(est_max, 3), class = "cl-mdn"))
+          "\u2014", round(est_max, 3), class = "cl-mdn"))
 
     }) # end of renderUI // sdInfo_est
 
@@ -1749,7 +1749,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         value = paste(
           scales::label_comma()(est$value), est$unit),
         subtitle = paste(
-          scales::label_comma()(lci$value), "—", 
+          scales::label_comma()(lci$value), "\u2014", 
           scales::label_comma()(uci$value)))
 
     }) # end of renderUI // distInfo_est
@@ -1782,7 +1782,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                        "modified regime:"),
         value = span(scales::label_comma()(est$value), 
                      est$unit, class = "cl-mdn"),
-        subtitle = span(scales::label_comma()(lci$value), "—",
+        subtitle = span(scales::label_comma()(lci$value), "\u2014",
                         scales::label_comma()(uci$value),
                         class = "cl-mdn"))
 
@@ -1808,6 +1808,7 @@ mod_tab_ctsd_server <- function(id, vals) {
     observe({
       req(vals$data_speed, vals$ctsd)
 
+      t_new <- NULL
       unit <- input$ctsdVar_group_units
       dat <- vals$data_speed
 
@@ -1844,10 +1845,10 @@ mod_tab_ctsd_server <- function(id, vals) {
       }
 
       dat <- dat %>%
-        dplyr::group_by(t_new) %>%
-        dplyr::summarise(est = mean(est),
-                         low = mean(low),
-                         high = mean(high))
+        dplyr::group_by(.data$t_new) %>%
+        dplyr::summarise(est = mean(.data$est),
+                         low = mean(.data$low),
+                         high = mean(.data$high))
 
       yline <- "day" %#% vals$ctsd[2] %#% "kilometers"
 
@@ -1862,9 +1863,9 @@ mod_tab_ctsd_server <- function(id, vals) {
         p <- dat %>%
 
           ggplot2::ggplot(
-            ggplot2::aes(x = t_new, y = est, group = 1)) +
+            ggplot2::aes(x = .data$t_new, y = .data$est, group = 1)) +
           ggplot2::geom_ribbon(
-            ggplot2::aes(ymin = low, ymax = high),
+            ggplot2::aes(ymin = .data$low, ymax = .data$high),
             fill = "grey70", alpha = .6) +
           ggplot2::geom_line(color = "black") +
 

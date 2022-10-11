@@ -29,8 +29,6 @@ mod_comp_tour_server <- function(id, vals) {
     
     # Build tours: ------------------------------------------------------
 
-    # add_action <- span("Action:", class = "tour-action")
-
     build_mainTour <- function(ns, vals) {
       element <- intro <- character(0)
   
@@ -518,8 +516,8 @@ mod_comp_tour_server <- function(id, vals) {
             span("Estimate", style = "color: #bdbdbd;"),
             ", which is the home range area ",
             span("point estimate", class = "cl-sea-l"), ", ",
-          "followed by the 95% confidence intervals (low — high) ",
-          "as the point estimate is subject to uncertainty."), 
+          "followed by the 95% confidence intervals (low", HTML("&#x2014"),
+          "high) as the point estimate is subject to uncertainty."), 
           p(),
           fontawesome::fa(name = "radiation", fill = "#bdbdbd"),
           wrap_none(
@@ -527,10 +525,9 @@ mod_comp_tour_server <- function(id, vals) {
             ", which is the ", span("relative error (in %) ",
                                     class = "cl-dgr-l"),
             "of the point estimate (and of the 95% CIs; ",
-            "once again, low — high) ",
-            "in relation to ",
-            "the expected value (truth) derived ",
-            "from the distribution.")
+            "once again, low", HTML("&#x2014"),
+            "high) in relation to the expected value (truth) ",
+            "derived from the distribution.")
         )))
 
       

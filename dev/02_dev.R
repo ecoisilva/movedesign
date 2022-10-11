@@ -22,7 +22,8 @@ usethis::use_import_from("dplyr", "%>%")
 usethis::use_import_from("ggplot2" ,"%+replace%")
 usethis::use_import_from("rlang", ".data")
 usethis::use_import_from("stats", "median")
-usethis::use_import_from("utils", "data", "packageVersion")
+usethis::use_import_from("utils", "data")
+usethis::use_import_from("utils", "packageVersion")
 
 ## Add modules ----
 ## Create a module infrastructure in R/
@@ -58,11 +59,11 @@ golem::add_sass_file("custom")
 ## Add internal datasets ----
 ## If you have data in your package
 usethis::use_data_raw(name = "movmods", open = TRUE)
-usethis::use_data_raw(name = "vhf_models", open = TRUE )
-usethis::use_data_raw(name = "gps_fixrate", open = TRUE )
-usethis::use_data_raw(name = "gps_tradeoffs", open = TRUE )
-usethis::use_data_raw(name = "sims_hrange", open = TRUE )
-usethis::use_data_raw(name = "sims_speed", open = TRUE )
+usethis::use_data_raw(name = "vhf_models", open = TRUE)
+usethis::use_data_raw(name = "gps_fixrate", open = TRUE)
+usethis::use_data_raw(name = "gps_tradeoffs", open = TRUE)
+usethis::use_data_raw(name = "sims_hrange", open = TRUE)
+usethis::use_data_raw(name = "sims_speed", open = TRUE)
 
 ## Tests ----
 ## Add one line by test you want to create
@@ -72,6 +73,8 @@ usethis::use_test("app")
 
 ## Vignette ----
 usethis::use_vignette("movedesign")
+usethis::use_vignette("Installation")
+usethis::use_vignette("Tutorial")
 devtools::build_vignettes()
 
 ## Code Coverage----

@@ -398,11 +398,11 @@ mod_tab_data_upload_server <- function(id, vals) {
 
         msg_log(
           style = "success",
-          message = paste0("Data anonymization ",
+          message = paste0("Data pseudonymization ",
                            msg_success("completed"), "."),
-          detail = "Added randomized origin (location and time).")
+          detail = "Origin location and time added.")
 
-        df0 <- ctmm:::pseudonymize(df0)
+        df0 <- pseudonymize(df0)
 
       } else { vals$is_anonymized <- FALSE }
 
@@ -966,7 +966,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                          "0",
                          scales::label_comma(
                            accuracy = .1)(vals$tau_p0_min)),
-                  "—",
+                  "\u2014",
                   scales::label_comma(
                     accuracy = .1)(vals$tau_p0_max)))
           }
@@ -1028,7 +1028,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                          "0",
                          scales::label_comma(
                            accuracy = .1)(fit.tau_v_low)),
-                  "—",
+                  "\u2014",
                   scales::label_comma(
                     accuracy = .1)(fit.tau_v_high)))
           }
@@ -1042,7 +1042,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       if (vals$tmpid == "Simulated individual") {
         NULL } else {
 
-          vals$sigma0 <- ctmm:::var.covm(vals$fit0$sigma, ave = T)
+          vals$sigma0 <- var.covm(vals$fit0$sigma, ave = T)
           vals$sigma0_units <- "m^2"
           sig <- fix_unit(vals$sigma0, unit = "m^2",
                           convert = TRUE, ui = TRUE)
@@ -1066,7 +1066,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                        "0",
                        scales::label_comma(
                          accuracy = .1)(vals$sigma0_min)),
-                "—",
+                "\u2014",
                 scales::label_comma(
                   accuracy = .1)(vals$sigma0_max)))
 

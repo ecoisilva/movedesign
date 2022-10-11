@@ -186,10 +186,10 @@ mod_tab_sims_ui <- function(id) {
                 inputId = ns("sigma0_units"),
                 label = NULL,
                 choices = c(
-                  "km\u00B2" = "square kilometers",
-                  "m\u00B2" = "square meters",
-                  "ha" = "ha"),
-                selected = "km\u00B2")
+                  "Square kilometers" = "square kilometers",
+                  "Square meters" = "square meters",
+                  "Hectares" = "ha"),
+                selected = "Square kilometers")
               
             ) # end of splitLayout
             

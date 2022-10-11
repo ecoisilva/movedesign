@@ -177,7 +177,7 @@ mod_tab_about_ui <- function(id) {
             paste(
               "Center for Advanced Systems Understanding (CASUS),",
               "Helmholtz-Zentrum Dresden-Rossendorf e.V. (HZDR),",
-              "Untermarkt 20, 02826, G\u00F6rlitz — Germany")),
+              "Untermarkt 20, 02826, G\u00F6rlitz \u2014 Germany")),
           p(),
           img(src = "www/logo_casus.png", height = "70px"), p(),
           a(href = "https://www.casus.science/",

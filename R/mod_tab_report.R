@@ -317,7 +317,6 @@ mod_tab_report_server <- function(id, vals) {
       if ("Speed & distance" %in% vals$which_question) {
 
         dat <- movedesign::sims_speed[[2]]
-        dat <- sims_speed[[2]]
         out <- out_sd <- shinyWidgets::pickerInput(
           inputId = ns("highlight_dti"),
           label = span("Sampling interval:",
@@ -353,9 +352,9 @@ mod_tab_report_server <- function(id, vals) {
             ifelse(vals$tau_p0_min == 0,
                    "0",
                    scales::label_comma(accuracy = .1)(vals$tau_p0_min)),
-            "—",
+            "\u2014",
             scales::label_comma(accuracy = .1)(vals$tau_p0_max))
-          } else { ""})
+          } else { "" })
 
     }) # end of renderUI // repBlock_taup
 
@@ -374,7 +373,7 @@ mod_tab_report_server <- function(id, vals) {
             ifelse(vals$tau_v0_min == 0,
                    "0",
                    scales::label_comma(accuracy = .1)(vals$tau_v0_min)),
-            "—",
+            "\u2014",
             scales::label_comma(accuracy = .1)(vals$tau_v0_max))
           } else { "" })
 
@@ -396,7 +395,7 @@ mod_tab_report_server <- function(id, vals) {
                    "0",
                    scales::label_comma(
                      accuracy = .1)(vals$sigma0_min)),
-            "—",
+            "\u2014",
             scales::label_comma(
               accuracy = .1)(vals$sigma0_max)) } else { "" })
 
@@ -681,7 +680,7 @@ mod_tab_report_server <- function(id, vals) {
       
       out_tauv <- dat$tau_v[index_tauv]
       opts <- movedesign::sims_speed[[1]] %>%
-        dplyr::select(dti, dti_notes) %>%
+        dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       out_dti <- fix_unit(opts$dti[match(input$highlight_dti,
                                          opts$dti_notes)],
@@ -809,7 +808,7 @@ mod_tab_report_server <- function(id, vals) {
         dist = character(0),
         dist_err = numeric(0))
       
-      tmpdat <- dt_regs %>% dplyr::select(device:N2)
+      tmpdat <- dt_regs %>% dplyr::select(.data$device:.data$N2)
       tmpdat <- suppressMessages(dplyr::full_join(dat, tmpdat))
 
       tmpdat$taup <- paste(scales::label_comma(
@@ -827,12 +826,12 @@ mod_tab_report_server <- function(id, vals) {
           abbrv_unit(out$unit))
       
       if ("Home range" %in% vals$which_question) {
-        tmphr <- dt_hr %>% dplyr::select(taup:area_err_max)
+        tmphr <- dt_hr %>% dplyr::select(.data$taup:.data$area_err_max)
         tmpdat <- suppressMessages(dplyr::full_join(tmpdat, tmphr))
       }
       
       if ("Speed & distance" %in% vals$which_question) {
-        tmpsd <- dt_sd %>% dplyr::select(tauv:dist_err)
+        tmpsd <- dt_sd %>% dplyr::select(.data$tauv:.data$dist_err)
         tmpdat <- suppressMessages(dplyr::full_join(tmpdat, tmpsd))
       }
       
@@ -1171,8 +1170,8 @@ mod_tab_report_server <- function(id, vals) {
           p3 <- ggplot2::geom_segment(
             data = ci2,
             mapping = ggplot2::aes(
-              x = CI_low,
-              xend = CI_high,
+              x = .data$CI_low,
+              xend = .data$CI_high,
               y = 0, yend = 0,
               col = "est_new", linetype = "est_new"),
             size = .8)
@@ -1309,9 +1308,9 @@ mod_tab_report_server <- function(id, vals) {
           
           hr_details$est <- c(vals$hrErr,
                               median(df1$error))
-          hr_details$low <- c(vals$hrErr, # vals$hrErr_min,
+          hr_details$CI_low <- c(vals$hrErr, # vals$hrErr_min,
                               vals$hrCI$CI_low)
-          hr_details$high <- c(vals$hrErr, #vals$hrErr_max,
+          hr_details$CI_high <- c(vals$hrErr, #vals$hrErr_max,
                                vals$hrCI$CI_high)
           
           if (reveal_if) {
@@ -1332,7 +1331,7 @@ mod_tab_report_server <- function(id, vals) {
                                         "now")))
           p <- hr_details %>%
             ggplot2::ggplot(
-              ggplot2::aes(x = est, 
+              ggplot2::aes(x = .data$est, 
                            y = group,
                            group = group,
                            col = group,
@@ -1343,8 +1342,8 @@ mod_tab_report_server <- function(id, vals) {
             ggplot2::geom_point(size = 6) +
             ggplot2::geom_segment(
              ggplot2::aes(
-                x = low,
-                xend = high,
+                x = CI_low,
+                xend = CI_high,
                 y = group,
                 yend = group),
               size = .8) +
@@ -1409,13 +1408,15 @@ mod_tab_report_server <- function(id, vals) {
         if (!is.null(input$highlight_dti)) {
           if (input$highlight_dti != "") reveal_if <- TRUE
         }
+        
+        sims <- movedesign::sims_speed[[1]]
 
-        dat <- sims_speed[[1]] %>%
+        dat <- sims %>%
           dplyr::mutate(dur = round("days" %#% dur, 0)) %>%
           dplyr::mutate(tau_p = round("days" %#% tau_p, 0))
-        opts <- sims_speed[[1]] %>%
+        opts <- sims %>%
           dplyr::mutate(dur = round("days" %#% dur, 0)) %>%
-          dplyr::select(dti, dti_notes) %>%
+          dplyr::select(.data$dti, .data$dti_notes) %>%
           unique()
 
         index_tauv <- which.min(abs(dat$tau_v - input_tauv))
@@ -1645,9 +1646,9 @@ mod_tab_report_server <- function(id, vals) {
 
           p2 <- ggiraph::geom_point_interactive(
             data = newdat,
-            mapping = ggplot2::aes(
-              x = duration,
-              y = error),
+            mapping = ggplot2::aes_string(
+              x = "duration",
+              y = "error"),
             size = 3, col = pal$mdn)
         }
 
@@ -1655,43 +1656,44 @@ mod_tab_report_server <- function(id, vals) {
           
           ggplot2::geom_ribbon(
             data = dat_filtered,
-            mapping = ggplot2::aes(
-              x = duration,
-              y = error,
-              ymin = error_lci,
-              ymax = error_uci),
+            mapping = ggplot2::aes_string(
+              x = "duration",
+              y = "error",
+              ymin = "error_lci",
+              ymax = "error_uci"),
             col = NA, fill = "grey90",
             alpha = .5) +
 
           ggplot2::geom_line(
             data = dat_filtered,
-            mapping = ggplot2::aes(x = duration,
-                                   y = error,
-                                   group = tau_p),
+            mapping = ggplot2::aes_string(x = "duration",
+                                          y = "error",
+                                          group = "tau_p"),
             col = "grey20", linetype = "dotted",
             size = 0.5) +
 
           ggplot2::geom_point(
             data = dat_filtered,
-            mapping = ggplot2::aes(x = duration,
-                                   y = error,
-                                   group = tau_p),
+            mapping = ggplot2::aes_string(x = "duration",
+                                          y = "error",
+                                          group = "tau_p"),
             size = 2.5, shape = 18, col = "grey40") +
 
           ggplot2::geom_segment(
             data = dat_filtered[index_dur,],
-            ggplot2::aes(x = duration,
-                         xend = duration,
-                         y = error_lci,
-                         yend = error_uci),
+            ggplot2::aes_string(x = "duration",
+                                xend = "duration",
+                                y = "error_lci",
+                                yend = "error_uci"),
             col = pal$sea,
             linetype = "solid",
             size = 1.5, alpha = .8) +
 
           ggplot2::geom_point(
             data = dat_filtered[index_dur,],
-            mapping = ggplot2::aes(
-              x = duration, y = error, group = tau_p),
+            mapping = ggplot2::aes_string(x = "duration",
+                                          y = "error",
+                                          group = "tau_p"),
             col = pal$sea,
             position = pd, size = 5) +
 
@@ -1733,12 +1735,12 @@ mod_tab_report_server <- function(id, vals) {
           if (input$highlight_dti != "") reveal_if <- TRUE
         }
 
-        # dat <- movedesign::sims_speed[[2]]
-        dat <- sims_speed[[2]] %>%
+        sims <- movedesign::sims_speed[[2]]
+        dat <- sims %>%
           dplyr::mutate(dur = round("days" %#% dur, 0))
         dat$id <- 1:nrow(dat)
 
-        opts <- sims_speed[[2]] %>%
+        opts <- sims %>%
           dplyr::select(dti, dti_notes) %>%
           unique()
 
@@ -1776,11 +1778,11 @@ mod_tab_report_server <- function(id, vals) {
         p <- ggplot2::ggplot(
           data = dat_filtered,
           mapping = ggplot2::aes(
-            x = dur,
-            y = error,
-            group = as.factor(dti),
-            ymin = error - ci,
-            ymax = error + ci)) +
+            x = .data$dur,
+            y = .data$error,
+            group = as.factor(.data$dti),
+            ymin = .data$error - .data$ci,
+            ymax = .data$error + .data$ci)) +
 
           ggplot2::geom_hline(yintercept = 0,
                               linetype = "solid", size = .5) +
@@ -1799,20 +1801,20 @@ mod_tab_report_server <- function(id, vals) {
           { if (reveal_if)
             ggplot2::geom_ribbon(
               data = newdat,
-              ggplot2::aes(x = dur,
-                           y = error,
-                           group = as.factor(dti),
-                           ymin = error - ci,
-                           ymax = error + ci),
+              ggplot2::aes(x = .data$dur,
+                           y = .data$error,
+                           group = as.factor(.data$dti),
+                           ymin = .data$error - .data$ci,
+                           ymax = .data$error + .data$ci),
               alpha = .1, fill = pal$mdn,
               position = ggplot2::position_dodge(width = 0.3)) } +
 
           { if (reveal_if)
             ggplot2::geom_line(
               data = newdat,
-              ggplot2::aes(x = dur,
-                           y = error,
-                           group = as.factor(dti)),
+              ggplot2::aes(x = .data$dur,
+                           y = .data$error,
+                           group = as.factor(.data$dti)),
               size = .5, alpha = .8,
               linetype = "solid", col = pal$mdn,
               position = ggplot2::position_dodge(
@@ -1821,9 +1823,9 @@ mod_tab_report_server <- function(id, vals) {
           { if (reveal_if)
             ggiraph::geom_point_interactive(
               data = newdat,
-              ggplot2::aes(x = dur,
-                           y = error,
-                           group = as.factor(dti)),
+              ggplot2::aes(x = .data$dur,
+                           y = .data$error,
+                           group = as.factor(.data$dti)),
               size = 3, col = pal$mdn) } +
 
           ggplot2::scale_y_continuous(labels = scales::percent) +
@@ -1866,7 +1868,7 @@ mod_tab_report_server <- function(id, vals) {
       }
 
       if (length(vals$which_question) > 1) {
-        out <- tagList(out_hr, our_sd)
+        out <- tagList(out_hr, out_sd)
       }
 
       return(out)
@@ -1880,8 +1882,6 @@ mod_tab_report_server <- function(id, vals) {
           vals$data_type, 
           vals$is_analyses)
       
-      print("CHECKPOINT")
-
       msg_log(
         style = "warning",
         message = paste0("Building ",
@@ -2247,7 +2247,7 @@ mod_tab_report_server <- function(id, vals) {
       if ("Speed & distance" %in% vals$which_question) {
         req(input$highlight_dti)
         
-        opts <- sims_speed[[1]] %>%
+        opts <- movedesign::sims_speed[[1]] %>%
           dplyr::select(dti, dti_notes) %>%
           unique()
         

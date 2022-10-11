@@ -106,7 +106,7 @@ errorBlock <- function(icon = NULL,
                 scales::label_comma(accuracy = 1)(max * 100),
                 scales::label_comma(accuracy = .1)(max * 100))
 
-  range <- paste0(min, "% — ", max, "%")
+  range <- paste0(min, "% \u2014 ", max, "%")
 
   if (!is.null(value)) {
     if (value > 0) {
@@ -384,80 +384,6 @@ reset_data_values <- function(vals) {
   
 }
 
-#' Coerce telemetry object to list
-#'
-#' @description Coerce telemetry object to list from ctmmweb
-#' @keywords internal
-#'
-#' @noRd
-as_tele_list <- function(tele) {
-  if (class(tele) != "list") {
-    # use same name so we can return same name if no change made
-    tele_list <- list(tele)
-    names(tele_list) <- attr(tele_list[[1]],"info")$identity
-    return(tele_list)
-  } else {
-    return(tele)
-  }
-}
-
-#' Convert as.telemetry to data.frame
-#'
-#' @description Convert as.telemetry to data.frame
-#' @keywords internal
-#'
-#' @noRd
-as_tele_df <- function(data) {
-
-  data_df <- list()
-  for(i in 1:length(data)) {
-    tempdf <- data[[i]]
-    tempdf$id <- names(data)[i]
-    data_df[[i]] <- tempdf
-  }
-  data_df <- do.call(rbind.data.frame, data_df)
-
-  return(data_df)
-}
-
-#' Convert as.telemetry to data.table
-#'
-#' @description Convert as.telemetry to data.table
-#' @keywords internal
-#'
-#' @importFrom data.table data.table
-#' @importFrom data.table rbindlist
-#' @importFrom data.table setkey
-#'
-#' @noRd
-#'
-as_tele_dt <- function(data_list) {
-
-  if (class(data_list) != "list") {
-    stop("requires list")
-  }
-
-  animal_count <- length(data_list)
-  animal_data_list <- vector(mode = "list", length = animal_count)
-
-  for (i in 1:animal_count) {
-    animal_data_list[[i]] <- data.table::data.table(data.frame(data_list[[i]]))
-    animal_data_list[[i]][, `:=`(id, data_list[[i]]@info$identity)]
-    animal_data_list[[i]][, `:=`(row_name, row.names(data_list[[i]]))]
-  }
-  data_dt <- data.table::rbindlist(animal_data_list, fill = TRUE)
-  data_dt[, `:=`(id, factor(id))]
-  data_dt[, `:=`(row_no, .I)]
-  data.table::setkey(data_dt, row_no)
-  any_dup <- anyDuplicated(data_dt, by = c("id", "row_name"))
-  if (any_dup != 0) {
-    message("duplicated row name found within same individual:\n")
-    print(data_dt[any_dup, .(id, row_name)])
-  }
-  return(data_dt)
-}
-
-
 #' Add help modal
 #'
 #' @description Add help modal to inputs
@@ -482,6 +408,8 @@ help_modal <- function(input, file) {
 #' @description Custom ggplot2 theme for movedesign plot outputs.
 #' @author Inu00EAs Silva \email{i.simoes-silva@@hzdr.de}
 #' @keywords internal
+#' 
+#' @importFrom ggplot2 %+replace%
 #'
 #' @param ft_size Base font size.
 #' @noRd
@@ -518,7 +446,7 @@ theme_movedesign <- function(ft_size = 13) {
 #' @noRd
 plotting_hr <- function(data, ud, levels,
                         color, fill) {
-
+  
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
     ud, level.UD = .95)@polygons[[3]] # upper
 
@@ -526,7 +454,8 @@ plotting_hr <- function(data, ud, levels,
 
     p1 <- ggiraph::geom_polygon_interactive(
       data = pol_ud_high,
-      mapping = ggplot2::aes(x = long, y = lat,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
                              group = group),
       fill = fill, col = fill,
       linetype = "dotted",
@@ -539,7 +468,8 @@ plotting_hr <- function(data, ud, levels,
 
     p2 <- ggiraph::geom_polygon_interactive(
       data = pol_ud,
-      mapping = ggplot2::aes(x = long, y = lat,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
                              group = group),
       fill = "#2c3b41",
       alpha = .3)
@@ -551,7 +481,8 @@ plotting_hr <- function(data, ud, levels,
 
     p3 <- ggiraph::geom_polygon_interactive(
       data = pol_ud_low,
-      mapping = ggplot2::aes(x = long, y = lat,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
                              group = group),
       fill = fill,
       alpha = .3)
@@ -564,18 +495,19 @@ plotting_hr <- function(data, ud, levels,
   p <- ggplot2::ggplot() +
     ggiraph::geom_polygon_interactive(
       data = pol_ud_high,
-      mapping = ggplot2::aes(x = long, y = lat,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
                              group = group),
       fill = NA, alpha = 1) +
 
     ggplot2::geom_path(data,
-                       mapping = ggplot2::aes(
-                         x = x, y = y),
+                       mapping = ggplot2::aes(x = x,
+                                              y = y),
                        color = color, size = 0.2,
                        alpha = .4) +
     ggplot2::geom_point(data,
-                        mapping = ggplot2::aes(
-                          x = x, y = y),
+                        mapping = ggplot2::aes(x = x,
+                                               y = y),
                         color = color, size = 1.5) +
 
     { if ("95% high CI" %in% levels) p1 } +
@@ -625,8 +557,9 @@ plotting_hr_new <- function(data1, data2,
 
     p1 <- ggiraph::geom_polygon_interactive(
       data = pol_ud_high,
-      mapping = ggplot2::aes(x = long, y = lat,
-                             group = group),
+      mapping = ggplot2::aes_string(x = "long", 
+                                    y = "lat",
+                                    group = "group"),
       fill = fill,
       alpha = .3)
   }
@@ -637,8 +570,9 @@ plotting_hr_new <- function(data1, data2,
 
     p2 <- ggiraph::geom_polygon_interactive(
       data = pol_ud,
-      mapping = ggplot2::aes(x = long, y = lat,
-                             group = group),
+      mapping = ggplot2::aes_string(x = "long", 
+                                    y = "lat",
+                                    group = "group"),
       fill = "#617680", # "#2c3b41",
       alpha = .6)
   }
@@ -649,8 +583,9 @@ plotting_hr_new <- function(data1, data2,
 
     p3 <- ggiraph::geom_polygon_interactive(
       data = pol_ud_low,
-      mapping = ggplot2::aes(x = long, y = lat,
-                             group = group),
+      mapping = ggplot2::aes_string(x = "long", 
+                                    y = "lat",
+                                    group = "group"),
       fill = fill,
       alpha = .3)
   }
@@ -661,8 +596,9 @@ plotting_hr_new <- function(data1, data2,
   p <- ggplot2::ggplot() +
     ggiraph::geom_polygon_interactive(
       data = pol_ud_high,
-      mapping = ggplot2::aes(x = long, y = lat,
-                             group = group),
+      mapping = ggplot2::aes_string(x = "long", 
+                                    y = "lat",
+                                    group = "group"),
       fill = NA, alpha = 0) +
 
     ggplot2::geom_point(
@@ -700,19 +636,20 @@ plotting_svf <- function(data, fill) {
   p <- data %>%
     ggplot2::ggplot() +
     ggplot2::geom_ribbon(
-      ggplot2::aes(x = lag_days,
-                   ymin = var_low95,
-                   ymax = var_upp95),
+      ggplot2::aes_string(x = "lag_days",
+                          ymin = "var_low95",
+                          ymax = "var_upp95"),
       fill = "grey50",
       alpha = 0.25) +
     ggplot2::geom_ribbon(
-      ggplot2::aes(x = lag_days,
-                   ymin = var_low50,
-                   ymax = var_upp50),
+      ggplot2::aes_string(x = "lag_days",
+                          ymin = "var_low50",
+                          ymax = "var_upp50"),
       fill = fill,
       alpha = 0.25) +
     ggplot2::geom_line(
-      ggplot2::aes(x = lag_days, y = SVF), size = 0.5) +
+      ggplot2::aes_string(x = "lag_days",
+                          y = "SVF"), size = 0.5) +
     ggplot2::labs(
       x = "Time lag (in days)",
       y = expression("Semi-variance"~"("*km^{"2"}*")")) +
@@ -750,52 +687,6 @@ sigdigits <- function(x, d) {
 #'
 subset_timeframe <- function(var, value) {
   as.data.frame(var) %>% dplyr::top_frac(value)
-}
-
-
-#' Fall back function from ctmmweb
-#'
-#' @description General fall back function to deal with errors
-#' @keywords internal
-#'
-#' @noRd
-#'
-fall_back <- function(f1, f1_args_list, f2, f2_args_list, msg) {
-  res <- try(do.call(f1, f1_args_list))
-  if (inherits(res, "try-error")) {
-    cat(crayon::white$bgBlack(msg), "\n")
-    res <- do.call(f2, f2_args_list)
-  }
-  return(res)
-}
-
-
-#' Check if error
-#'
-#' @description WIP
-#' @keywords internal
-#'
-#' @noRd
-#'
-has_error <- function(result) {
-  if (inherits(result, "try-error")) {
-    TRUE
-  } else {
-    sapply(result, function(x) {
-      inherits(x, "try-error")
-    })
-  }
-}
-
-#' round_any from plyr
-#'
-#' @description WIP
-#' @keywords internal
-#'
-#' @noRd
-#'
-round_any <- function(x, accuracy, f = round) {
-  f(x/accuracy) * accuracy
 }
 
 #' add_spinner
@@ -1125,4 +1016,205 @@ newTabItem <- function(tabName = NULL, ...) {
     ...
   )
 }
+
+
+#' Convert as.telemetry to data.frame.
+#'
+#' @description Convert as.telemetry to data.frame
+#' @keywords internal
+#'
+#' @noRd
+as_tele_df <- function(object) {
+  
+  data_df <- list()
+  for(i in 1:length(object)) {
+    tempdf <- object[[i]]
+    tempdf$id <- names(object)[i]
+    data_df[[i]] <- tempdf
+  }
+  data_df <- do.call(rbind.data.frame, data_df)
+  
+  return(data_df)
+}
+
+
+#' round_any from plyr
+#'
+#' @description WIP
+#' @keywords internal
+#'
+#' @noRd
+#'
+round_any <- function(x, accuracy, f = round) {
+  f(x/accuracy) * accuracy
+}
+
+
+# ctmm and ctmmweb functions: ---------------------------------------------
+
+#' Give false origin, orientation, dispatch epoch from ctmm.
+#'
+#' @description Give false origin, orientation, dispatch epoch
+#' @keywords internal
+#'
+#' @noRd
+pseudonymize <- function(data, 
+                         center = c(0, 0), 
+                         datum = "WGS84", 
+                         origin = "1111-11-11 11:11.11 UTC", 
+                         tz = "GMT", proj = NULL) {
+  
+  if(is.null(data)) { stop("No data selected.") }
+  
+  DROP <- class(data)[1] == "telemetry"
+  if(class(data)[1] != "list") {
+    data <- list(data)
+    names(data) <- attr(data[[1]],'info')$identity
+  }
+  
+  if (is.null(proj)) {
+    proj <- paste0("+proj=aeqd +lon_0=", center[1], " +lat_0=", 
+                   center[2], " +datum=", datum)
+  }
+  for (i in 1:length(data)) {
+    
+    axes <- c("x", "y")
+    if (all(axes %in% names(data[[i]]))) {
+      xy <- as.matrix(data.frame(data[[i]])[, axes], dimnames = axes)
+    } else {
+      xy <- numeric(0)
+    }
+    
+    xy <- rgdal::project(xy, proj, inv = TRUE)
+    data[[i]]$longitude <- xy[, 1]
+    data[[i]]$latitude <- xy[, 2]
+    attr(data[[i]], "info")$projection <- proj
+    data[[i]]$timestamp <- as.POSIXct(data[[i]]$t, tz = tz, 
+                                      origin = origin)
+    attr(data[[i]], "info")$timezone <- tz
+  }
+  if (DROP) {
+    data <- data[[1]]
+  }
+  return(data)
+}
+
+#' Extract total variance or average variance from ctmm.
+#'
+#' @description Extract total variance or average variance
+#' @keywords internal
+#'
+#' @noRd
+#' 
+var.covm <- function(sigma, ave = FALSE) {
+ 
+  if (ncol(sigma) == 1) {
+    sigma <- return(sigma@par["major"])
+  }
+  sigma <- attr(sigma, "par")[c("major", "minor")]
+  sigma <- sort(sigma, decreasing = TRUE)
+  
+  if (ave) {
+    sigma <- mean(sigma, na.rm = TRUE)
+  } else {
+    sigma <- sum(sigma, na.rm = TRUE)
+  }
+  return(sigma)
+}
+
+
+
+
+#' Fall back function from ctmmweb
+#'
+#' @description General fall back function to deal with errors
+#' @keywords internal
+#'
+#' @noRd
+#'
+fall_back <- function(f1, f1_args_list, f2, f2_args_list, msg) {
+  res <- try(do.call(f1, f1_args_list))
+  if (inherits(res, "try-error")) {
+    cat(crayon::white$bgBlack(msg), "\n")
+    res <- do.call(f2, f2_args_list)
+  }
+  return(res)
+}
+
+
+#' Check if error function from ctmmweb
+#'
+#' @description WIP
+#' @keywords internal
+#'
+#' @noRd
+#'
+has_error <- function(result) {
+  if (inherits(result, "try-error")) {
+    TRUE
+  } else {
+    sapply(result, function(x) {
+      inherits(x, "try-error")
+    })
+  }
+}
+
+#' Coerce telemetry object to list
+#'
+#' @description Coerce telemetry object to list from ctmmweb
+#' @keywords internal
+#'
+#' @noRd
+as_tele_list <- function(object) { 
+  
+  if (!inherits(object, "list")) { 
+    tele_list <- list(object) 
+    names(tele_list) <- attr(tele_list[[1]],"info")$identity 
+    return(tele_list) 
+  } else { 
+    return(object) 
+  } 
+} 
+
+#' Convert as.telemetry to data.table
+#'
+#' @description Convert as.telemetry to data.table
+#' @keywords internal
+#'
+#' @importFrom data.table data.table
+#' @importFrom data.table rbindlist
+#' @importFrom data.table setkey
+#' @importFrom rlang :=
+#' @importFrom plyr .
+#'
+#' @noRd
+#'
+as_tele_dt <- function(object) {
+  
+  .I <- id <- row_name <- row_no <- NULL
+  
+  if (!inherits(object, "list")) {
+    stop("Requires list")
+  }
+  
+  animal_count <- length(object)
+  animal_data_list <- vector(mode = "list", length = animal_count)
+  
+  for (i in 1:animal_count) {
+    animal_data_list[[i]] <- data.table::data.table(data.frame(object[[i]]))
+    animal_data_list[[i]][, `:=`(id, object[[i]]@info$identity)]
+    animal_data_list[[i]][, `:=`(row_name, row.names(object[[i]]))]
+  }
+  data_dt <- data.table::rbindlist(animal_data_list, fill = TRUE)
+  data_dt[, `:=`(id, factor(id))]
+  data_dt[, `:=`(row_no, .I)]
+  data.table::setkey(data_dt, row_no)
+  any_dup <- anyDuplicated(data_dt, by = c("id", "row_name"))
+  if (any_dup != 0) {
+    message("duplicated row name found within same individual:\n")
+    print(data_dt[any_dup, .(id, row_name)])
+  }
+  return(data_dt)
+}
+
 

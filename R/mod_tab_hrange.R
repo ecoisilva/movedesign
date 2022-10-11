@@ -551,7 +551,7 @@ mod_tab_hrange_server <- function(id, vals) {
         # Sampling interval:
 
         fixrate <- movedesign::gps_fixrate
-        df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(freq))
+        df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(.data$freq))
         value <- vals$reg$dti %#% vals$reg$dti_unit
         index <- which.min(abs(df_fixrate$nu - value))
         dti_choices <- df_fixrate$nu_notes
@@ -562,7 +562,7 @@ mod_tab_hrange_server <- function(id, vals) {
           paste(ifelse(vals$tau_p0_min == 0, "0",
                        scales::label_comma(
                          accuracy = .1)(vals$tau_p0_min)),
-                "—", scales::label_comma(
+                "\u2014", scales::label_comma(
                   accuracy = .1)(vals$tau_p0_max))
         }
 
@@ -879,7 +879,7 @@ mod_tab_hrange_server <- function(id, vals) {
         t = seq(0, vals$hr$dur %#% vals$hr$dur_unit,
                 by = vals$hr$dti %#% vals$hr$dti_unit))
 
-      dat <- ctmm:::pseudonymize(dat)
+      dat <- pseudonymize(dat)
       dat$index <- 1:nrow(dat)
       vals$hr$newdata <- dat
 
@@ -1209,7 +1209,8 @@ mod_tab_hrange_server <- function(id, vals) {
         header = "Estimate",
         value = span(HTML("&nbsp;", est$value, hr_unit),
                      class = "cl-mdn"),
-        subtitle = span(paste(est_min$value, "—", est_max$value),
+        subtitle = span(paste(est_min$value, "\u2014",
+                              est_max$value),
                         class = "cl-mdn"))
 
 
@@ -1233,7 +1234,8 @@ mod_tab_hrange_server <- function(id, vals) {
         header = "Estimate",
         value = span(HTML("&nbsp;", est$value, hr_unit),
                      class = "cl-mdn"),
-        subtitle = span(paste(est_min$value, "—", est_max$value),
+        subtitle = span(paste(est_min$value, "\u2014",
+                              est_max$value),
                         class = "cl-mdn"))
 
     }) # end of renderUI // hrInfo_est_new
@@ -1270,9 +1272,9 @@ mod_tab_hrange_server <- function(id, vals) {
     ## Rendering home range estimate plot (xy): -------------------------
 
     output$hrPlot_initial <- ggiraph::renderGirafe({
-      req(vals$akde)
+      req(vals$is_analyses, vals$akde)
 
-      ud <- plotting_hr(dat = vals$data1,
+      ud <- plotting_hr(data = vals$data1,
                         ud = vals$akde,
                         levels = input$hrShow_levels,
                         color = pal$sea, fill = pal$dgr)
@@ -1295,7 +1297,7 @@ mod_tab_hrange_server <- function(id, vals) {
     ## Rendering simulation plot (xy): --------------------------------
 
     output$hrPlot_modified <- ggiraph::renderGirafe({
-      req(vals$hr$newdata, vals$akde_new)
+      req(vals$is_analyses, vals$hr$newdata, vals$akde_new)
 
       # Rendering home range estimate plot:
 

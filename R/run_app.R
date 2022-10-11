@@ -8,7 +8,6 @@
 #' @importFrom shiny shinyApp
 #' @importFrom golem with_golem_options
 run_app <- function(
-    title = "movedesign",
     onStart = NULL,
     options = list(),
     enableBookmarking = NULL,
@@ -28,9 +27,6 @@ run_app <- function(
       gps_fixrate = movedesign::gps_fixrate,
       sims_hrange = movedesign::sims_hrange,
       sims_speed = movedesign::sims_speed
-      # gps_fixrate = data("gps_fixrate", package = "movedesign"),
-      # sims_hrange = data("sims_hrange", package = "movedesign"),
-      # sims_speed = data('sims_speed', package = "movedesign")
     ) # end of list
   )
 }

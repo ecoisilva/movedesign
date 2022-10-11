@@ -1,10 +1,9 @@
 ---
-title: "Installation Issues"
-author: "In\u00EAs Silva, Jesse Alston"
+title: "Installation"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Installation Issues}
+  %\VignetteIndexEntry{Installation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
