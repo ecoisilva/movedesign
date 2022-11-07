@@ -1,6 +1,6 @@
 default:
   golem_name: movedesign
-  golem_version: 0.0.9006
+  golem_version: 0.0.9007
   app_prod: no
 production:
   app_prod: yes
