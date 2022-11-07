@@ -5,20 +5,18 @@
 #' @docType data
 #' 
 #' @format An object of class \code{"data.frame"},
-#' with 40 rows and seven variables: \code{nu_notes}, \code{nu},
-#' \code{highlight}, \code{choices}, \code{nu_hrs}, \code{freq}, and \code{freq_hrs}.
+#' with 40 rows and seven variables: \code{dti_notes}, \code{dti},
+#' \code{highlight}, \code{frq}, and \code{frq_hrs}.
 #'
 #' \describe{
-#'   \item{nu_notes}{Sampling interval as text (e.g., "1 fix every month")}
-#'   \item{nu}{Sampling interval in seconds}
-#'   \item{nu_hrs}{Sampling interval in hours}
-#'   \item{freq}{Sampling frequency in seconds}
-#'   \item{freq_hrs}{Sampling frequency in hours}
-#'   \item{highlight}{Highlight a group of commonly used fix rates}
-#'   \item{choice}{Choose commonly used fix rates for GPS devices}
+#'   \item{dti_notes}{Sampling interval as text (e.g., "1 fix every month")}
+#'   \item{dti}{Sampling interval in seconds}
+#'   \item{frq}{Sampling frequency in seconds}
+#'   \item{frq_hrs}{Sampling frequency in hours}
+#'   \item{highlighted}{Highlight a group of commonly-used GPS fix rates}
 #'   ...
 #' }
-"gps_fixrate"
+"fixrates"
 
 #' Table of movement processes.
 #'
