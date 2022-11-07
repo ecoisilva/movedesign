@@ -59,9 +59,7 @@ golem::add_sass_file("custom")
 ## Add internal datasets ----
 ## If you have data in your package
 usethis::use_data_raw(name = "movmods", open = TRUE)
-usethis::use_data_raw(name = "vhf_models", open = TRUE)
-usethis::use_data_raw(name = "gps_fixrate", open = TRUE)
-usethis::use_data_raw(name = "gps_tradeoffs", open = TRUE)
+usethis::use_data_raw(name = "fixrates", open = TRUE)
 usethis::use_data_raw(name = "sims_hrange", open = TRUE)
 usethis::use_data_raw(name = "sims_speed", open = TRUE)
 
