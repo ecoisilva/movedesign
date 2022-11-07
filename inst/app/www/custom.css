@@ -360,6 +360,14 @@ sub { font-size: 90%; }
   color: var(--grey-700);
   background-color: var(--grey-100);
 }
+
+/*
+.btn-default.active,
+.btn-default:active, .open > 
+.dropdown-toggle.btn-default {
+    background-color: #d0d0d0;
+} */
+
 .btn {
   font-family: var(--monosans);
   font-size: 15px;
@@ -971,7 +979,7 @@ font-size: 12px;
   font-family: var(--monosans);
 }
 
-/* STATIC BLOCKS ------------------------------------------------------- */
+/* STATIC BLOCKS & BUTTONS --------------------------------------------- */
 
 .staticblock {
   display: block;
@@ -1059,11 +1067,11 @@ font-size: 12px;
   border-bottom: 1px solid var(--midnight);
 }
 .modal-title {
-font-size: 19px;
-font-weight: 400;
+  font-size: 19px;
+  font-weight: 400;
 }
 .modal-header {
-border-bottom: 1px solid var(--grey-000);
+  border-bottom: 1px solid var(--grey-000);
 }
 .bg-light-blue, .modal-primary .modal-body {
   background-color: var(--midnight-dark) !important;
@@ -1071,8 +1079,15 @@ border-bottom: 1px solid var(--grey-000);
 
 /* MESSAGES & NOTIFICATIONS -------------------------------------------- */
 
-.toast-success {
+.toast-title {
   font-size: 16px;
+}
+
+.toast-message {
+  font-size: 14px;
+}
+
+.toast-success {
   background-color: var(--sea);
 }
 

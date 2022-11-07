@@ -10,7 +10,7 @@
  transition: all .3s ease-out;
 }
 
-.introjs-tooltip{
+.introjs-tooltip {
   border: none;
   background-color: #222d32;
   max-width: 60%;
