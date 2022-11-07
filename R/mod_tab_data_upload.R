@@ -21,7 +21,7 @@ mod_tab_data_upload_ui <- function(id) {
           shinydashboardPlus::box(
 
             title = span("Submit movement data:", class = "ttl-tab"),
-            icon = fontawesome::fa(name = "file-arrow-up",
+            icon = fontawesome::fa(name = "file-csv",
                                    height = "21px",
                                    margin_left = "14px",
                                    margin_right = "8px",
@@ -343,8 +343,7 @@ mod_tab_data_upload_server <- function(id, vals) {
 
     observe({
       req(vals$table_selection)
-      vals$id <- names(vals$dataList)[
-        vals$table_selection$selected]
+      vals$id <- names(vals$dataList)[vals$table_selection$selected]
     })
 
     observe({
@@ -378,49 +377,59 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$data_type <- "uploaded"
       inFile <- input$file_csv
       
-      df0 <- read.csv(inFile$datapath,
+      tmp <- read.csv(inFile$datapath,
                       header = input$file_header,
                       sep = input$file_sep,
                       quote = input$file_quote)
 
-      df0 <- ctmm::as.telemetry(df0)
+      tmp <- ctmm::as.telemetry(tmp)
       
-      if (!("timestamp" %in% names(df0[[1]]))) {
+      msg_log(
+        style = "success",
+        message = paste0("File ",
+                         msg_success("submitted"), "."),
+        detail = "Please select one individual from this dataset.")
+      
+      req(tmp)
+      
+      # Check if data is anonymized:
+      
+      if (!("timestamp" %in% names(tmp[[1]]))) {
 
-        vals$is_anonymized <- TRUE
+        tmp <- pseudonymize(tmp)
+        vals$is_pseudonymized <- TRUE
 
-        shiny::showNotification(
-          duration = 5,
-          ui = shiny::span(
-            "Data is anonymized,", br(),
-            "simulating location and time."),
-          closeButton = FALSE, type = "warning")
-
+        shinyFeedback::showToast(
+          type = "success",
+          title = "Data is anonymized...",
+          message = "Origin location and time added.",
+          .options = list(
+            timeOut = 2500,
+            progressBar = FALSE,
+            closeButton = TRUE,
+            preventDuplicates = TRUE,
+            positionClass = "toast-bottom-right")
+        )
+        
         msg_log(
           style = "success",
           message = paste0("Data pseudonymization ",
                            msg_success("completed"), "."),
           detail = "Origin location and time added.")
 
-        df0 <- pseudonymize(df0)
 
-      } else { vals$is_anonymized <- FALSE }
-
-      msg_log(
-        style = "success",
-        message = paste0("File ",
-                         msg_success("submitted"), "."),
-        detail = "Please select one individual from this dataset.")
-
+      } else { vals$is_pseudonymized <- FALSE }
+      
       shinyjs::show(id = "uploadBox_species")
       if (!input$uploadBox_file$collapsed) {
         shinydashboardPlus::updateBox("uploadBox_file",
                                       action = "toggle")
       } else { NULL }
-
-      vals$dataList <- df0
+      
+      vals$dataList <- tmp
 
       # Check number of individuals within dataset:
+      
       if (names(vals$dataList)[[1]] == "timestamp") {
         tmplist <- list()
         tmplist[[1]] <- vals$dataList
@@ -441,7 +450,8 @@ mod_tab_data_upload_server <- function(id, vals) {
     # 1.2. Subset data based on individual selection:
 
     observe({
-      req(vals$dataList, vals$id,
+      req(vals$dataList, 
+          vals$id,
           vals$active_tab == 'data_upload')
 
       if (names(vals$dataList)[[1]] == "timestamp") {
@@ -480,9 +490,24 @@ mod_tab_data_upload_server <- function(id, vals) {
       bindCache(c(vals$id, vals$species_binom))
     
     observe({
-      req(vals$which_question, vals$data0)
+      if (is.null(vals$which_question)) {
+        
+        shinyalert::shinyalert(
+          title = "No research goal selected",
+          text = span(
+            "Please select a research goal in the",
+            icon("house", class = "cl-blk"),
+            span("Home", class = "cl-blk"),
+            "tab before proceeding."),
+          html = TRUE,
+          size = "xs")
+      }
+      
+      req(vals$which_question,
+          vals$data0)
 
       if (input$sp_uploaded == "") {
+        
         # If no species name is written down:
 
         msg_log(
@@ -550,10 +575,10 @@ mod_tab_data_upload_server <- function(id, vals) {
           html = TRUE
         )
       } else {
-        confirm <- TRUE
+        vals$confirm_time <- TRUE
       }
       
-      req(confirm)
+      req(vals$confirm_time)
       if (expt_max == expt_min) {
         tmptxt <- paste("\u2264", expt_max, expt_units)
       } else {
@@ -587,10 +612,12 @@ mod_tab_data_upload_server <- function(id, vals) {
         ) # end of text
       ) # end of modal
       
-      guess0 <- ctmm::ctmm.guess(vals$data0, interactive = FALSE)
-      inputList <- list(list(vals$data0, guess0))
+      guess <- ctmm::ctmm.guess(vals$data0, interactive = FALSE)
+      vals$guess <- guess
+      
+      inputList <- list(list(vals$data0, guess))
       fit0 <- reactive({
-        par_ctmm.select(inputList, parallel = vals$parallel)
+        par.ctmm.select(inputList, parallel = vals$parallel)
       }) %>% bindCache(vals$species_binom,
                        vals$id)
       
@@ -627,17 +654,35 @@ mod_tab_data_upload_server <- function(id, vals) {
       ### Set up for validation: ------------------------------------------
       
       taup <- extract_pars(vals$fit0, par = "position")
-      taup_lci <- extract_pars(vals$fit0, par = "position", type = "low")
-      taup_uci <- extract_pars(vals$fit0, par = "position", type = "high")
-      
       tauv <- extract_pars(vals$fit0, par = "velocity")
-      tauv_lci <- extract_pars(vals$fit0, par = "velocity", type = "low")
-      tauv_uci <- extract_pars(vals$fit0, par = "velocity", type = "high")
       
       ### Validate based on research questions: ---------------------------
       
+      vals$is_valid <- TRUE
+      if (is.null(taup) & is.null(tauv)) {
+        
+        shinyalert::shinyalert(
+          type = "error",
+          
+          title = "Dataset invalid",
+          text = span(
+            "Data is",
+            wrap_none(span("independent", class = "cl-dgr"), ","), 
+            "and no signature of autocorrelation parameters",
+            "remains in this dataset.",
+            "Please select a different individual or dataset to",
+            "proceed with", span("home range", class = "cl-dgr"),
+            "estimation."),
+          
+          confirmButtonText = "Dismiss",
+          html = TRUE)
+        
+        vals$is_valid <- NULL
+      }
+      
+      req(vals$is_valid)
       if ("Home range" %in% vals$which_question) {
-        if (is.na(taup$value)) {
+        if (is.null(taup)) {
           
           shinyalert::shinyalert(
             type = "error",
@@ -656,45 +701,17 @@ mod_tab_data_upload_server <- function(id, vals) {
           
           msg_log(
             style = "danger",
-            message = paste0("Dataset has no remaining ",
-                             msg_danger("range residency"),
-                             " signature."),
-            detail = paste("Select a different individual",
-                           "or dataset to proceed."))
+            message = paste("No signature of",
+                            msg_danger("position autocorrelation"),
+                            "found."),
+            detail = "Select a different dataset to proceed.")
           
-          vals$is_valid <- FALSE
-          
-        } else if (taup_uci$value/taup_lci$value > 5) {
-          
-          shinyalert::shinyalert(
-            type = "error",
-            
-            title = "Dataset invalid",
-            text = span(
-              "The estimation of the",
-              span("position autocorrelation parameter", 
-                   class = "cl-dgr"),
-              "is too uncertain.",
-              "Please select a different individual or dataset to",
-              "proceed with", span("home range", class = "cl-dgr"),
-              "estimation."),
-            
-            confirmButtonText = "Dismiss",
-            html = TRUE)
-          
-          msg_log(
-            style = "danger",
-            message = paste0("Parameter has wide ",
-                             msg_danger("confidence intervals"), "."),
-            detail = paste0("Select a different individual",
-                            "or dataset to proceed."))
-          vals$is_valid <- FALSE
+          vals$is_valid <- NULL
         }
-        vals$is_valid <- TRUE
       }
       
       if ("Speed & distance" %in% vals$which_question) {
-        if (is.na(tauv$value)) {
+        if (is.null(tauv)) {
           
           shinyalert::shinyalert(
             type = "error",
@@ -713,42 +730,13 @@ mod_tab_data_upload_server <- function(id, vals) {
           
           msg_log(
             style = "danger",
-            message = paste0("Dataset has no remaining ",
-                             msg_danger("velocity"), 
-                             " signature."),
-            detail = paste0("Select a different individual",
-                            "or dataset to proceed."))
+            message = paste("No signature of",
+                            msg_danger("velocity autocorrelation"),
+                            "found."),
+            detail = "Select a different dataset to proceed.")
           
-          vals$is_valid <- FALSE
-          
-        } else if (tauv_uci$value/tauv_lci$value > 5) {
-          
-          shinyalert::shinyalert(
-            type = "error",
-            
-            title = "Dataset invalid",
-            text = span(
-              "The estimation of the",
-              span("position autocorrelation parameter", 
-                   class = "cl-dgr"),
-              "is too uncertain.",
-              "Please select a different individual or dataset to",
-              "proceed with", span("home range", class = "cl-dgr"),
-              "estimation."),
-            
-            confirmButtonText = "Dismiss",
-            html = TRUE)
-          
-          msg_log(
-            style = "danger",
-            message = paste0("Parameter has wide ",
-                             msg_danger("confidence intervals"), "."),
-            detail = paste0("Select a different individual",
-                            "or dataset to proceed."))
-          
-          vals$is_valid <- FALSE
+          vals$is_valid <- NULL
         }
-        vals$is_valid <- TRUE
       }
       
       req(vals$is_valid)
@@ -759,17 +747,14 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$input_t <- ifelse(!is.null(vals$data0$"timestamp"),
                              "timestamp", "t")
       
-      if (is.null(vals$is_success)) {
-        msg_log(
-          style = "success",
-          message = paste0("Species and individual ",
-                           msg_success("validated"), "."),
-          detail = paste0("Species selected is the ",
-                          msg_success(vals$species),
-                          ", and the individual is ",
-                          msg_success(vals$id), "."))
-      }
-      vals$is_success <- TRUE
+      msg_log(
+        style = "success",
+        message = paste0("Species and individual ",
+                         msg_success("validated"), "."),
+        detail = paste0("Species selected is the ",
+                        msg_success(vals$species),
+                        ", and the individual is ",
+                        msg_success(vals$id), "."))
       
       shinyFeedback::showToast(
         type = "success",
@@ -791,17 +776,17 @@ mod_tab_data_upload_server <- function(id, vals) {
       #    }
       
     }) %>% # end of observe,
-      bindEvent(input$validate_upload, ignoreInit = TRUE)
+      bindEvent(input$validate_upload)
 
     # PARAMETERS --------------------------------------------------------
-   
     # After clicking "Extract" button:
     
     observe({
+      req(vals$which_question)
       shinyjs::show(id = "uploadBox_regime")
 
-      if (is.null(vals$is_valid) || vals$is_valid == FALSE) {
-
+      if (is.null(vals$is_valid)) {
+        
         shinyalert::shinyalert(
           title = "Oops!",
           text = span(
@@ -814,20 +799,32 @@ mod_tab_data_upload_server <- function(id, vals) {
             'buttons.'),
           html = TRUE,
           size = "xs")
-
-      } else {
-        req(vals$data_type == "uploaded", vals$fit0,
-            vals$data0, vals$id, vals$species_binom,
-            vals$is_valid, vals$is_success)
+        
       }
-
+      
+      req(vals$data_type == "uploaded", vals$fit0,
+          vals$data0, vals$id, vals$species_binom,
+          vals$is_valid)
+      
       ## Extract semi-variance parameter: -------------------------------
       
-      svf <- prepare_svf(vals$data0, fraction = .65)
-      vals$sigma0_min <- mean(svf$var_low95)
-      vals$sigma0_max <- mean(svf$var_upp95)
+      if (is.null(vals$var_fraction)) frac <- .65
+      else frac <- vals$var_fraction
+      
+      svf <- extract_svf(vals$data0, fraction = frac)
+      vals$svf <- svf
+      vals$sigma0 <- extract_pars(obj = vals$fit0, 
+                                  par = "sigma", 
+                                  data = vals$data0,
+                                  fraction = frac)
       
       ## Extract timescale and spatial parameters: ----------------------
+      
+      taup <- extract_pars(vals$fit0, par = "position")
+      vals$tau_p0 <- taup
+      
+      tauv <- extract_pars(vals$fit0, par = "velocity")
+      vals$tau_v0 <- tauv
       
       output$uploadUI_parameters <- renderUI({
         
@@ -841,7 +838,8 @@ mod_tab_data_upload_server <- function(id, vals) {
             align = "center", width = 12,
             
             renderUI({
-              if (vals$tmpid == "Simulated individual") { NULL
+              if (vals$tmpid == "Simulated individual") { 
+                NULL
               } else {
                 
                 p("These parameters have been extracted from",
@@ -864,13 +862,28 @@ mod_tab_data_upload_server <- function(id, vals) {
           column(width = 12, uiOutput(ns("uploadBlock_movprocess"))),
           
           fluidRow(
-            column(width = 4, uiOutput(ns("uploadBlock_sigma"))),
-            column(width = 4, uiOutput(ns("uploadBlock_taup"))),
-            column(width = 4, uiOutput(ns("uploadBlock_tauv")))
+            column(width = 6, uiOutput(ns("uploadBlock_taup"))),
+            column(width = 6, uiOutput(ns("uploadBlock_tauv")))
+          ),
+          
+          fluidRow(
+            column(width = 6, uiOutput(ns("uploadBlock_sigma"))),
+            column(width = 6, uiOutput(ns("uploadBlock_speed")))
           )
           
         ) # end of box
       }) # end of renderUI
+      
+      shinyFeedback::showToast(
+        type = "success",
+        message = "Parameters extracted!",
+        .options = list(
+          timeOut = 3000,
+          extendedTimeOut = 3500,
+          progressBar = FALSE,
+          closeButton = TRUE,
+          preventDuplicates = TRUE,
+          positionClass = "toast-bottom-right"))
       
       if (!vals$tour_active) {
         
@@ -893,6 +906,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     ## Movement process: ------------------------------------------------
 
     output$uploadBlock_movprocess <- shiny::renderUI({
+
       if (vals$tmpid == "Simulated individual") {
         NULL } else {
           sum.fit <- summary(vals$fit0)
@@ -917,136 +931,87 @@ mod_tab_data_upload_server <- function(id, vals) {
     ## Timescale parameters: --------------------------------------------
 
     output$uploadBlock_taup <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0, vals$tau_p0)
+      
       if (vals$tmpid == "Simulated individual") {
         NULL } else {
 
-          sum.fit <- summary(vals$fit0)
-          tempnames <- rownames(sum.fit$CI)
+          par <- vals$tau_p0
+          tau_p0 <- fix_unit(par["est", 1], par$unit[1])
+          tau_p0_min <- scales::label_comma(.1)(par["low", 1])
+          tau_p0_max <- scales::label_comma(.1)(par["high", 1])
 
-          if (length(grep('\u03C4', tempnames)) == 1 ||
-             length(grep('\u03C4', tempnames)) == 2) {
-
-            tempunits <-
-              ( tempnames[grep('position', tempnames)] %>%
-                  extract_units() )
-
-            fit.tau_p <- sum.fit$CI[
-              grep('position', tempnames), 2] # %#% tempunits
-            fit.tau_p_low <- sum.fit$CI[
-              grep('position', tempnames), 1]
-            fit.tau_p_high <- sum.fit$CI[
-              grep('position', tempnames), 3]
-
-            vals$tau_p0 <- fit.tau_p
-            vals$tau_p0_min <- fit.tau_p_low
-            vals$tau_p0_max <- fit.tau_p_high
-            vals$tau_p0_units <- tempunits
-
-            parBlock(
-              header = shiny::fluidRow(
-                style = paste("margin-bottom: -14px;"),
-                actionButton(
-                  inputId = ns("dataHelp_taup"),
-                  icon = icon("circle-question"),
-                  label = NULL,
-                  style = paste("background-color: #fff;",
-                                "color: black;",
-                                "padding: 0;")), br(),
-                span(
-                  HTML(paste0("Position autocorrelation ",
-                              "(\u03C4", tags$sub("p"), ")")))
-              ),
-              value =
-                paste(scales::label_comma(
-                  accuracy = .1)(vals$tau_p0),
-                  vals$tau_p0_units),
-              subtitle =
-                paste(
-                  ifelse(vals$tau_p0_min == 0,
-                         "0",
-                         scales::label_comma(
-                           accuracy = .1)(vals$tau_p0_min)),
-                  "\u2014",
-                  scales::label_comma(
-                    accuracy = .1)(vals$tau_p0_max)))
-          }
+          parBlock(
+            header = shiny::fluidRow(
+              style = paste("margin-bottom: -14px;"),
+              actionButton(
+                inputId = ns("dataHelp_taup"),
+                icon = icon("circle-question"),
+                label = NULL,
+                style = paste("background-color: #fff;",
+                              "color: black;",
+                              "padding: 0;")),
+              br(),
+              wrap_none("Position autocorrelation ",
+                        "(\u03C4", tags$sub("p"), ")")
+            ),
+            value = paste(tau_p0$value, tau_p0$unit),
+            subtitle = paste(ifelse(tau_p0_min == 0,
+                                    "0", tau_p0_min),
+                             "\u2014", tau_p0_max))
 
         } # end of if () statement
     }) # end of renderUI
 
     output$uploadBlock_tauv <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0, vals$tau_v0)
+      
       if (vals$tmpid == "Simulated individual") {
         NULL } else {
+          
+          par <- vals$tau_v0
+          tau_v0 <- fix_unit(par["est", 1], par$unit[1])
+          tau_v0_min <- scales::label_comma(.1)(par["low", 1])
+          tau_v0_max <- scales::label_comma(.1)(par["high", 1])
 
-          sum.fit <- summary(vals$fit0)
-          tempnames <- rownames(sum.fit$CI)
-
-          if (!length(grep('velocity', tempnames))) {
-
-            vals$valid_tauv <- "No"
-            NULL
-
-          } else {
-
-            vals$valid_tauv <- "Yes"
-            tempunits <-
-              ( tempnames[grep('velocity', tempnames)] %>%
-                  extract_units() )
-
-            fit.tau_v <- sum.fit$CI[
-              grep('velocity', tempnames), 2]
-            fit.tau_v_low <- sum.fit$CI[
-              grep('velocity', tempnames), 1]
-            fit.tau_v_high <- sum.fit$CI[
-              grep('velocity', tempnames), 3]
-
-            vals$tau_v0 <- fit.tau_v
-            vals$tau_v0_min <- fit.tau_v_low
-            vals$tau_v0_max <- fit.tau_v_high
-            vals$tau_v0_units <- tempunits
-
-            parBlock(
-              header = shiny::fluidRow(
-                style = paste("margin-bottom: -14px;"),
-                actionButton(
-                  inputId = ns("dataHelp_tauv"),
-                  icon = icon("circle-question"),
-                  label = NULL,
-                  style = paste("background-color: #fff;",
-                                "color: black;",
-                                "padding: 0;")), br(),
-                span(
-                  HTML(paste0("Velocity autocorrelation ",
-                              "(\u03C4", tags$sub("v"), ")")))
-              ),
-              value =
-                paste(scales::label_comma(
-                  accuracy = .1)(fit.tau_v), tempunits),
-              subtitle =
-                paste(
-                  ifelse(fit.tau_v_low == 0,
-                         "0",
-                         scales::label_comma(
-                           accuracy = .1)(fit.tau_v_low)),
-                  "\u2014",
-                  scales::label_comma(
-                    accuracy = .1)(fit.tau_v_high)))
-          }
+          parBlock(
+            header = shiny::fluidRow(
+              style = paste("margin-bottom: -14px;"),
+              actionButton(
+                inputId = ns("dataHelp_tauv"),
+                icon = icon("circle-question"),
+                label = NULL,
+                style = paste("background-color: #fff;",
+                              "color: black;",
+                              "padding: 0;")), 
+              br(),
+              wrap_none("Velocity autocorrelation ",
+                        "(\u03C4", tags$sub("v"), ")")
+            ),
+            value = paste(tau_v0$value, tau_v0$unit),
+            subtitle = paste(ifelse(tau_v0_min == 0,
+                                    "0", tau_v0_min),
+                             "\u2014", tau_v0_max))
 
         } # end of if () statement
     }) # end of renderUI
-
-    ## Spatial parameters: ----------------------------------------------
+    
+    ## Other parameters: --------------------------------------------------
 
     output$uploadBlock_sigma <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0, vals$sigma0)
+      
       if (vals$tmpid == "Simulated individual") {
         NULL } else {
 
-          vals$sigma0 <- var.covm(vals$fit0$sigma, ave = T)
-          vals$sigma0_units <- "m^2"
-          sig <- fix_unit(vals$sigma0, unit = "m^2",
+          par <- vals$sigma0
+          sig <- fix_unit(par$value[2], unit = par$unit[2],
                           convert = TRUE, ui = TRUE)
-
+          sig_lci <- fix_unit(par$value[1], unit = par$unit[1],
+                              convert = TRUE, ui = TRUE)
+          sig_uci <- fix_unit(par$value[3], unit = par$unit[3],
+                              convert = TRUE, ui = TRUE)
+          
           parBlock(
             header = shiny::fluidRow(
               style = paste("margin-bottom: -14px;"),
@@ -1060,48 +1025,67 @@ mod_tab_data_upload_server <- function(id, vals) {
               span(HTML("Semi-variance (\u03C3)"))
             ),
             value = span(HTML("&nbsp;", sig$value, sig$unit)),
-            subtitle =
-              paste(
-                ifelse(vals$sigma0_min == 0,
-                       "0",
-                       scales::label_comma(
-                         accuracy = .1)(vals$sigma0_min)),
-                "\u2014",
-                scales::label_comma(
-                  accuracy = .1)(vals$sigma0_max)))
+            subtitle =  paste(ifelse(sig_lci$value == 0,
+                                     "0", sig_lci$value),
+                              "\u2014", sig_uci$value))
 
         } # end of if () statement
     }) # end of renderUI
-
+    
+    output$uploadBlock_speed <- shiny::renderUI({
+      req(vals$tmpid, vals$fit0)
+      
+      if (vals$tmpid == "Simulated individual") {
+        NULL } else {
+          
+          par <- extract_pars(vals$fit0, par = "speed")
+          speed <- fix_unit(par["est", 1], par$unit[1])
+          speed_lci <- scales::label_comma(.1)(par["low", 1])
+          speed_uci <- scales::label_comma(.1)(par["high", 1])
+          unit <- speed$unit %>% abbrv_unit()
+          
+          parBlock(
+            header = shiny::fluidRow(
+              style = paste("margin-bottom: -14px;"),
+              actionButton(
+                inputId = ns("selectHelp_speed"),
+                icon = icon("circle-question"),
+                label = NULL,
+                style = paste("background-color: #fff;",
+                              "color: black;",
+                              "padding: 0;")),
+              br(),
+              span(HTML("Velocity (\u03BD)"))
+            ),
+            value = span(HTML("&nbsp;", speed$value, unit)),
+            subtitle =  paste(ifelse(speed_lci == 0,
+                                     "0", speed_lci),
+                              "\u2014", speed_uci))
+          
+        } # end of if () statement
+    }) # end of renderUI
+    
     ##  Tracking regime: --------------------------------------------------
 
     output$uploadInfo_dur <- shiny::renderUI({
-
-      dat <- summary(vals$data0)
-      nms <- names(dat)
+      req(vals$data0)
       
-      dur <- as.numeric(dat[grep('sampling period', nms)])
-      dur_unit <- nms[grep('sampling period', nms)] %>%
-        extract_units()
+      dur <- extract_pars(vals$data0, par = "period")
+      out <- fix_unit(dur$value, dur$unit)
       
-      out <- fix_unit(dur, dur_unit)
       parBlock(header = "Sampling duration",
-               value = paste(out$value, out$unit))
+               value = paste(out[1], out[2]))
 
     }) # ender of renderUI // uploadInfo_dur
 
     output$uploadInfo_dti <- shiny::renderUI({
-
-      dat <- summary(vals$data0)
-      nms <- names(dat)
+      req(vals$data0)
       
-      dti <- as.numeric(dat[grep('sampling interval', nms)])
-      dti_unit <- nms[grep('sampling interval', nms)] %>%
-        extract_units()
+      dti <- extract_pars(vals$data0, par = "interval")
+      out <- fix_unit(dti$value, dti$unit)
       
-      out <- fix_unit(dti, dti_unit)
       parBlock(header = "Sampling interval",
-               value = paste(out$value, out$unit),
+               value = paste(out[1], out[2]),
                subtitle = "between fixes")
 
     }) # end of renderUI // uploadInfo_dti
@@ -1124,8 +1108,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     output$uploadBlock_Narea <- shiny::renderUI({
       req(vals$fit0)
 
-      nms <- names(summary(vals$fit0)$DOF)
-      N <- summary(vals$fit0)$DOF[grep('area', nms)][[1]]
+      N <- extract_dof(vals$fit0, par = "area")
       n <- nrow(vals$data0)
       vals$N1 <- N
       
@@ -1146,8 +1129,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     output$uploadBlock_Nspeed <- shiny::renderUI({
       req(vals$fit0)
 
-      nms <- names(summary(vals$fit0)$DOF)
-      N <- summary(vals$fit0)$DOF[grep('speed', nms)][[1]]
+      N <- extract_dof(vals$fit0, par = "speed")
       n <- nrow(vals$data0)
       vals$N2 <- N
 
@@ -1167,92 +1149,94 @@ mod_tab_data_upload_server <- function(id, vals) {
 
     # MODALS & HELP -----------------------------------------------------
 
-    # observe({
-    #
-    #   shiny::showModal(
-    #     shiny::modalDialog(
-    #       title = "Movement models or processes:",
-    #
-    #       reactable::reactableOutput(ns("dataTable_processes")),
-    #
-    #       footer = tagList(
-    #         modalButton("Dismiss")
-    #       ),
-    #       size = "l"))
-    #
-    # }) %>% bindEvent(input$uploadHelp_mods)
-    #
-    # output$dataTable_processes <- reactable::renderReactable({
-    #
-    #   tmpname <-
-    #     sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
-    #
-    #   if (is.null(match(tmpname, movmods$name_short))) {
-    #     preselected_mod <- NULL
-    #   } else {
-    #     preselected_mod <- match(tmpname, movmods$name_short)
-    #   }
-    #   df0 <- movmods %>%
-    #     dplyr::select(!name_short)
-    #
-    #   reactable::reactable(
-    #     df0,
-    #     searchable = TRUE,
-    #     highlight = TRUE,
-    #     selection = "single",
-    #     defaultSelected = preselected_mod,
-    #     defaultColDef =
-    #       reactable::colDef(
-    #         headerClass = "rtable_header",
-    #         align = "left"),
-    #     columns = list(
-    #       name = reactable::colDef(
-    #         name = "Movement process",
-    #         minWidth = 195),
-    #
-    #       tau_p = reactable::colDef(
-    #         name = paste0("\u03C4","\u209A"),
-    #         minWidth = 60,
-    #         cell = reactable::JS(
-    #           paste0("function(cellInfo) {
-    #             // Render as an X mark or check mark
-    #             return cellInfo.value === 'No' ? '\u274c No' : ",
-    #                  "'\u2714\ufe0f Yes'}"))),
-    #
-    #       tau_v = reactable::colDef(
-    #         name = paste0("\u03C4","\u1D65"),
-    #         minWidth = 60,
-    #         cell = reactable::JS(
-    #           paste0("function(cellInfo) {
-    #             // Render as an X mark or check mark
-    #             return cellInfo.value === 'No' ? '\u274c No' : ",
-    #                  "'\u2714\ufe0f Yes'}"))),
-    #
-    #       hrange = reactable::colDef(
-    #         minWidth = 80,
-    #         name = "Home range",
-    #         cell = reactable::JS(
-    #           paste0("function(cellInfo) {
-    #             // Render as an X mark or check mark
-    #             return cellInfo.value === 'No' ? '\u274c No' : ",
-    #                  "'\u2714\ufe0f Yes'}"))),
-    #
-    #       pars = reactable::colDef(
-    #         name = "Parameterization")
-    #     ),
-    #     theme = reactable::reactableTheme(
-    #       rowSelectedStyle = list(
-    #         backgroundColor = "#eee",
-    #         boxShadow = "inset 2px 0 0 0 #009da0")))
-    #
-    # }) # end of renderReactable // dataTable_processes
+    observe({
+
+      shiny::showModal(
+        shiny::modalDialog(
+          title = "Movement models or processes:",
+
+          reactable::reactableOutput(ns("dataTable_processes")),
+
+          footer = tagList(
+            modalButton("Dismiss")
+          ),
+          size = "l"))
+
+    }) %>% bindEvent(input$uploadHelp_mods)
+
+    output$dataTable_processes <- reactable::renderReactable({
+
+      tmpname <-
+        sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
+
+      if (is.null(match(tmpname, movmods$name_short))) {
+        preselected_mod <- NULL
+      } else {
+        preselected_mod <- match(tmpname, movmods$name_short)
+      }
+      df0 <- movmods %>%
+        dplyr::select(!name_short)
+
+      reactable::reactable(
+        df0,
+        searchable = TRUE,
+        highlight = TRUE,
+        selection = "single",
+        defaultSelected = preselected_mod,
+        defaultColDef =
+          reactable::colDef(
+            headerClass = "rtable_header",
+            align = "left"),
+        columns = list(
+          name = reactable::colDef(
+            name = "Movement process",
+            minWidth = 195),
+
+          tau_p = reactable::colDef(
+            name = paste0("\u03C4","\u209A"),
+            minWidth = 60,
+            cell = reactable::JS(
+              paste0("function(cellInfo) {
+                // Render as an X mark or check mark
+                return cellInfo.value === 'No' ? '\u274c No' : ",
+                     "'\u2714\ufe0f Yes'}"))),
+
+          tau_v = reactable::colDef(
+            name = paste0("\u03C4","\u1D65"),
+            minWidth = 60,
+            cell = reactable::JS(
+              paste0("function(cellInfo) {
+                // Render as an X mark or check mark
+                return cellInfo.value === 'No' ? '\u274c No' : ",
+                     "'\u2714\ufe0f Yes'}"))),
+
+          hrange = reactable::colDef(
+            minWidth = 80,
+            name = "Home range",
+            cell = reactable::JS(
+              paste0("function(cellInfo) {
+                // Render as an X mark or check mark
+                return cellInfo.value === 'No' ? '\u274c No' : ",
+                     "'\u2714\ufe0f Yes'}"))),
+
+          pars = reactable::colDef(
+            name = "Parameterization")
+        ),
+        theme = reactable::reactableTheme(
+          rowSelectedStyle = list(
+            backgroundColor = "#eee",
+            boxShadow = "inset 2px 0 0 0 #009da0")))
+
+    }) # end of renderReactable // dataTable_processes
 
     # Additional information: -------------------------------------------
 
     output$uploadUI_time <- renderText({
       req(vals$uploadOut_time)
+      
       paste0("Model fitting took approximately ",
              round(vals$uploadOut_time, 1), " minutes.")
+      
     }) # end of renderText // uploadOut_time
 
   }) # end of moduleServer

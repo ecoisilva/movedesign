@@ -483,7 +483,7 @@ mod_tab_hrange_server <- function(id, vals) {
           guess1 <- ctmm::ctmm.guess(vals$data1, interactive = FALSE)
 
           inputList <- list(list(vals$data1, guess1))
-          fit1 <- par_ctmm.select(inputList, parallel = vals$parallel)
+          fit1 <- par.ctmm.select(inputList, parallel = vals$parallel)
           time_fit1 <- difftime(Sys.time(), start, units = "mins")
 
           if (round(time_fit1, 1) < 1) {
@@ -538,7 +538,10 @@ mod_tab_hrange_server <- function(id, vals) {
         # Sampling duration:
 
         dur <- round("days" %#% vals$reg$dur %#% vals$reg$dur_unit, 0)
-        tau_p0 <- round("days" %#% vals$tau_p0 %#% vals$tau_p0_units, 0)
+        tau_p0 <- round("days" %#% 
+                          vals$tau_p0$value[2] %#% 
+                          vals$tau_p0$unit[2], 0)
+        
         dur_choices <- c(
           10, dur, tau_p0, tau_p0 * 10,
           tau_p0 * 50, tau_p0 * 100, tau_p0 * 200,
@@ -550,11 +553,11 @@ mod_tab_hrange_server <- function(id, vals) {
 
         # Sampling interval:
 
-        fixrate <- movedesign::gps_fixrate
-        df_fixrate <- dplyr::arrange(fixrate, dplyr::desc(.data$freq))
+        device <- movedesign::fixrates
+        device <- dplyr::arrange(device, dplyr::desc(.data$frq))
         value <- vals$reg$dti %#% vals$reg$dti_unit
-        index <- which.min(abs(df_fixrate$nu - value))
-        dti_choices <- df_fixrate$nu_notes
+        index <- which.min(abs(device$dti - value))
+        dti_choices <- device$dti_notes
 
         if(vals$data_type == "simulated") {
           tmprange <- NULL
@@ -580,8 +583,8 @@ mod_tab_hrange_server <- function(id, vals) {
                               "(\u03C4", tags$sub("p"), ")"))),
                 value =
                   paste(scales::label_comma(
-                    accuracy = .1)(vals$tau_p0),
-                    vals$tau_p0_units),
+                    accuracy = .1)(vals$tau_p0$value[2]),
+                    vals$tau_p0$unit[2]),
                 subtitle = tmprange),
 
               p("If home range estimation is your goal,",
@@ -675,9 +678,9 @@ mod_tab_hrange_server <- function(id, vals) {
     output$hrText_sampling <- renderUI({
       req(vals$data1, input$hr_dur, input$hr_dti)
 
-      fixrate <- movedesign::gps_fixrate
-      tmp <- fixrate$nu[match(input$hr_dti,
-                              fixrate$nu_notes)]
+      device <- movedesign::fixrates
+      tmp <- device$dti[match(input$hr_dti,
+                              device$dti_notes)]
 
       n_new <- length(
         seq(from = 1,
@@ -761,26 +764,31 @@ mod_tab_hrange_server <- function(id, vals) {
                                   CTMM = vals$fit1)
 
           vals$is_analyses <- TRUE
-          vals$hrEst <- summary(vals$akde)$CI[2]
-          vals$hrEst_min <- summary(vals$akde)$CI[1]
-          vals$hrEst_max <- summary(vals$akde)$CI[3]
-
-          truth <- -2 * log(0.05) * pi * (vals$sigma0 %#%
-                                            vals$sigma0_units)
+          hrEst <- summary(vals$akde)$CI[2]
+          hrEst_lci <- summary(vals$akde)$CI[1]
+          hrEst_uci <- summary(vals$akde)$CI[3]
+          vals$hrEst <- data.frame("lci" = hrEst_lci,
+                                   "est" = hrEst,
+                                   "uci" = hrEst_uci)
+          
+          truth <- -2 * log(0.05) * pi * 
+            (vals$sigma0$value[2] %#% vals$sigma0$unit[2])
 
           tempnames <- rownames(summary(vals$akde)$CI)
           units <- extract_units(
             tempnames[grep('^area', tempnames)])
           vals$hr_units <- units
-
-          err <- ((vals$hrEst %#% units) - truth) / truth
-
-          vals$hrErr <- err
-          vals$hrErr_min <- ((vals$hrEst_min %#% units) -
-                               truth) / truth
-          vals$hrErr_max <- ((vals$hrEst_max %#% units) -
-                               truth) / truth
-
+          
+          hrErr <- ((vals$hrEst[[2]] %#% units) - truth) / truth
+          hrErr_lci <- ((vals$hrEst[[1]] %#% units) -
+                          truth) / truth
+          hrErr_uci <- ((vals$hrEst[[3]] %#% units) -
+                          truth) / truth
+          
+          vals$hrErr <- data.frame("lci" = hrErr_lci,
+                                   "est" = hrErr,
+                                   "uci" = hrErr_uci)
+          
           vals$time_hr <- difftime(Sys.time(), start, units = "mins")
 
           msg_log(
@@ -845,8 +853,8 @@ mod_tab_hrange_server <- function(id, vals) {
       vals$hr$dti_unit <- sub('^.* ([[:alnum:]]+)$',
                              '\\1', input$hr_dti)
 
-      fixrate <- movedesign::gps_fixrate
-      tmp <- fixrate$nu[match(input$hr_dti, fixrate$nu_notes)]
+      device <- movedesign::fixrates
+      tmp <- device$dti[match(input$hr_dti, device$dti_notes)]
       vals$hr$dti <- vals$hr$dti_unit %#% round(tmp, 0)
       vals$hr$dur <- input$hr_dur
       vals$hr$dur_unit <- "days"
@@ -911,14 +919,14 @@ mod_tab_hrange_server <- function(id, vals) {
         mod1 <- vals$ctmm_mod
       } else {
         mod1 <- prepare_mod(
-          tau_p = vals$tau_p0, tau_p_units = vals$tau_p0_units,
-          tau_v = vals$tau_v0, tau_v_units = vals$tau_v0_units,
-          sigma = vals$sigma0, sigma_units = vals$sigma0_units)
+          tau_p = vals$tau_p0$value[2], tau_p_units = vals$tau_p0$unit[2],
+          tau_v = vals$tau_v0$value[2], tau_v_units = vals$tau_v0$unit[2],
+          sigma = vals$sigma0$value[2], sigma_units = vals$sigma0$unit[2])
       }
 
       newfit <- reactive({
         inputList <- list(list(vals$hr$newdata, mod1))
-        fit <- par_ctmm.fit(inputList, parallel = TRUE)
+        fit <- par.ctmm.fit(inputList, parallel = TRUE)
         return(fit)
       }) %>% bindCache(vals$hr$dti,
                        vals$hr$dti_unit,
@@ -980,27 +988,35 @@ mod_tab_hrange_server <- function(id, vals) {
                                CTMM = vals$hr$fit)
 
         vals$is_analyses <- TRUE
-
+        
         vals$akde_new <- akde_new
-        vals$hrEst_new <- summary(vals$akde_new)$CI[2]
-        vals$hrEst_min_new <- summary(vals$akde_new)$CI[1]
-        vals$hrEst_max_new <- summary(vals$akde_new)$CI[3]
-
-        truth <- -2 * log(0.05) * pi * (vals$sigma0 %#%
-                                          vals$sigma0_units)
-
+        hrEst_new <- summary(vals$akde_new)$CI[2]
+        hrEst_lci_new <- summary(vals$akde_new)$CI[1]
+        hrEst_uci_new <- summary(vals$akde_new)$CI[3]
+        vals$hrEst_new <- data.frame("lci" = hrEst_lci_new,
+                                     "est" = hrEst_new,
+                                     "uci" = hrEst_uci_new)
+        
+        truth <- -2 * log(0.05) * pi * 
+          (vals$sigma0$value[2] %#% vals$sigma0$unit[2])
+        
         nms <- rownames(summary(vals$akde_new)$CI)
         units <- extract_units(nms[grep('^area', nms)])
         vals$hr_units_new <- units
-
-        vals$hrErr_new <- ((vals$hrEst_new %#% units) -
-                             truth) / truth
-        vals$hrErr_min_new <- ((vals$hrEst_min_new %#% units) -
-                                 truth) / truth
-        vals$hrErr_max_new <- ((vals$hrEst_max_new %#% units) -
-                                 truth) / truth
-
+        
+        hrErr_new <- ((vals$hrEst_new[[2]] %#% units) -
+                        truth) / truth
+        hrErr_min_new <- ((vals$hrEst_new[[1]] %#% units) -
+                            truth) / truth
+        hrErr_max_new <- ((vals$hrEst_new[[3]] %#% units) -
+                            truth) / truth
+        
+        vals$hrErr_new <- data.frame("lci" = hrErr_lci_new,
+                                     "est" = hrErr_new,
+                                     "uci" = hrErr_uci_new)
+        
         # Show buttons to change panels:
+        
         output$hrInput_show_all <- renderUI({
           shinyWidgets::radioGroupButtons(
             inputId = ns("hrInput_show"),
@@ -1196,11 +1212,12 @@ mod_tab_hrange_server <- function(id, vals) {
     output$hrInfo_est <- shiny::renderUI({
       req(vals$akde, vals$hrEst)
 
-      est <- fix_unit(vals$hrEst, vals$hr_units, convert = TRUE)
-
-      est_min <- fix_unit(est$unit %#% vals$hrEst_min %#% vals$hr_units,
+      est <- fix_unit(vals$hrEst[[2]], vals$hr_units, convert = TRUE)
+      est_min <- fix_unit(est$unit %#% vals$hrEst[[1]] %#% 
+                            vals$hr_units,
                           est$unit, ui = TRUE)
-      est_max <- fix_unit(est$unit %#% vals$hrEst_max %#% vals$hr_units,
+      est_max <- fix_unit(est$unit %#% vals$hrEst[[2]] %#% 
+                            vals$hr_units,
                           est$unit, ui = TRUE)
       hr_unit <- est_max$unit
 
@@ -1219,13 +1236,14 @@ mod_tab_hrange_server <- function(id, vals) {
     output$hrInfo_est_new <- shiny::renderUI({
       req(vals$akde_new, vals$hrEst_new)
 
-      est <- fix_unit(vals$hrEst_new, vals$hr_units_new, convert = TRUE)
-
+      est <- fix_unit(vals$hrEst_new[[2]],
+                      vals$hr_units_new, convert = TRUE)
+      
       est_min <- fix_unit(est$unit %#%
-                            vals$hrEst_min_new %#% vals$hr_units_new,
+                            vals$hrEst_new[[1]] %#% vals$hr_units_new,
                           est$unit, ui = TRUE)
       est_max <- fix_unit(est$unit %#%
-                            vals$hrEst_max_new %#% vals$hr_units_new,
+                            vals$hrEst_new[[3]] %#% vals$hr_units_new,
                           est$unit, ui = TRUE)
       hr_unit <- est_max$unit
 
@@ -1248,9 +1266,9 @@ mod_tab_hrange_server <- function(id, vals) {
       errorBlock(
         icon = "radiation",
         text = "Expected error",
-        value = vals$hrErr,
-        min = vals$hrErr_min,
-        max = vals$hrErr_max,
+        value = vals$hrErr[[2]],
+        min = vals$hrErr[[1]],
+        max = vals$hrErr[[3]],
         rightBorder = FALSE)
 
     }) # end of renderUI // hrInfo_err
@@ -1261,9 +1279,9 @@ mod_tab_hrange_server <- function(id, vals) {
       errorBlock(
         icon = "radiation",
         text = "Expected error",
-        value = vals$hrErr_new,
-        min = vals$hrErr_min_new,
-        max = vals$hrErr_max_new,
+        value = vals$hrErr_new[[2]],
+        min = vals$hrErr_new[[1]],
+        max = vals$hrErr_new[[3]],
         rightBorder = FALSE)
 
     }) # end of renderUI // hrInfo_err_new
@@ -1341,13 +1359,13 @@ mod_tab_hrange_server <- function(id, vals) {
         n = nrow(vals$data1),
         N1 = vals$N1,
         area = NA,
-        area_err = vals$hrErr,
-        area_err_min = vals$hrErr_min,
-        area_err_max = vals$hrErr_max)
-
-      out$taup <- paste(scales::label_comma(
-        accuracy = .1)(vals$tau_p0),
-        abbrv_unit(vals$tau_p0_units))
+        area_err = vals$hrErr[[2]],
+        area_err_min = vals$hrErr[[1]],
+        area_err_max = vals$hrErr[[3]])
+      
+      out$taup <- paste(
+        scales::label_comma(accuracy = .1)(vals$tau_p0$value[2]),
+        abbrv_unit(vals$tau_p0$unit[2]))
 
       out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
@@ -1355,7 +1373,7 @@ mod_tab_hrange_server <- function(id, vals) {
       out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
       
-      area <- scales::label_comma(accuracy = .1)(vals$hrEst)
+      area <- scales::label_comma(accuracy = .1)(vals$hrEst[[2]])
       out$area <- paste(area, abbrv_unit(vals$hr_units))
 
       return(out)
@@ -1388,14 +1406,13 @@ mod_tab_hrange_server <- function(id, vals) {
         n = nrow(vals$hr$newdata),
         N1 = vals$N1_new,
         area = NA,
-        area_err = vals$hrErr_new,
-        area_err_min = vals$hrErr_min_new,
-        area_err_max = vals$hrErr_max_new)
-
-      out$taup <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$tau_p0),
-          abbrv_unit(vals$tau_p0_units))
+        area_err = vals$hrErr_new[[2]],
+        area_err_min = vals$hrErr_new[[1]],
+        area_err_max = vals$hrErr_new[[3]])
+      
+      out$taup <- paste(
+        scales::label_comma(accuracy = .1)(vals$tau_p0$value[2]),
+        abbrv_unit(vals$tau_p0$unit[2]))
 
       out_dur <- fix_unit(vals$hr$dur, vals$hr$dur_unit, convert = TRUE)
       out$dur <- paste(out_dur[1], abbrv_unit(out_dur[,2]))
@@ -1403,7 +1420,7 @@ mod_tab_hrange_server <- function(id, vals) {
       out_dti <- fix_unit(vals$hr$dti, vals$hr$dti_unit)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
       
-      area <- scales::label_comma(accuracy = .1)(vals$hrEst_new)
+      area <- scales::label_comma(accuracy = .1)(vals$hrEst_new[[2]])
       out$area <- paste(area, abbrv_unit(vals$hr_units_new))
 
       return(out)

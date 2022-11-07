@@ -102,14 +102,13 @@ mod_tab_about_ui <- function(id) {
 
                 ### Research question(s) ----------------------------------
 
-                # shinyWidgets::checkboxGroupButtons()
-                shinyWidgets::radioGroupButtons(
+                shinyWidgets::checkboxGroupButtons(
                   inputId = ns("which_question"),
                   label = span("Research question:",
                                style = "font-size: 16px;"),
                   choices = c("Home range",
                               "Speed & distance"),
-                  selected = NULL,
+                  selected = character(0),
                   checkIcon = list(
                     yes = tags$i(class = "fa fa-check-square",
                                  style = "color: var(--sea);"),
@@ -168,20 +167,23 @@ mod_tab_about_ui <- function(id) {
           align = "center", width = 6,
 
           h5("Project contact:"),
-          p("In\u00EAs Silva,",
+          p(style = "text-align: center;",
+            "In\u00EAs Silva,",
+            fontawesome::fa("envelope", fill = "var(--sea)"),
             span("i.simoes-silva\u0040hzdr.de", class = "cl-sea")),
           tags$hr(),
 
           h5("Institutional contact:"),
-          p(style = paste("font-size: 14px; text-align: justify;"),
-            paste(
+          p(style = "font-size: 14px; text-align: center;",
               "Center for Advanced Systems Understanding (CASUS),",
               "Helmholtz-Zentrum Dresden-Rossendorf e.V. (HZDR),",
-              "Untermarkt 20, 02826, G\u00F6rlitz \u2014 Germany")),
+              "Untermarkt 20, 02826, G\u00F6rlitz \u2014 Germany"),
           p(),
-          img(src = "www/logo_casus.png", height = "70px"), p(),
+          img(src = "www/logo_casus.png", height = "70px"),
+          p(),
           a(href = "https://www.casus.science/",
-            "https://www.casus.science/"), p()
+            "https://www.casus.science/"), 
+          p()
 
         ) # end of column (right)
       ) # end of box
@@ -202,12 +204,10 @@ mod_tab_about_server <- function(id, vals) {
     observe({
       vals$which_data <- input$which_data
       vals$which_question <- input$which_question
-
     })
 
     observe({
-      # shinyWidgets::updateCheckboxGroupButtons()
-      shinyWidgets::updateRadioGroupButtons(
+      shinyWidgets::updateCheckboxGroupButtons(
         session = session,
         inputId = "which_question",
         selected = vals$which_question)
@@ -233,12 +233,10 @@ mod_tab_about_server <- function(id, vals) {
           p("Parameters:"),
           p("Seed:", vals$restored_vals$"seed0"),
 
-
           footer = tagList(
             modalButton("Dismiss")
           ),
           size = "s"))
-
 
     }) %>% # end of observe, then:
       bindEvent(input$restore_state)

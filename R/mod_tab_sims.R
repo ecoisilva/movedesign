@@ -57,7 +57,7 @@ mod_tab_sims_ui <- function(id) {
           ## Timescale parameters -----------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Temporal parameters",
+            title = span("Characteristic timescales:",
                          class = "ttl-box_solid"),
             id = ns("simBox_timescales"),
             status = "primary",
@@ -150,7 +150,7 @@ mod_tab_sims_ui <- function(id) {
           ## Spatial parameters -------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Spatial parameters", class = "ttl-box_solid"),
+            title = span("Other parameters", class = "ttl-box_solid"),
             id = ns("simBox_spatialscales"),
             status = "primary",
             width = NULL,
@@ -191,7 +191,12 @@ mod_tab_sims_ui <- function(id) {
                   "Hectares" = "ha"),
                 selected = "Square kilometers")
               
-            ) # end of splitLayout
+            ), # end of splitLayout
+            
+            p(HTML("&nbsp;"),
+              HTML("Movement speed (\u03BD):")) %>%
+              tagAppendAttributes(class = 'label_split'),
+            verbatimTextOutput(outputId = ns("sims_speed"))
             
           ), # end of box // simBox_spatialscales
           
@@ -287,15 +292,21 @@ mod_tab_sims_ui <- function(id) {
                     
                     helpText(
                       style = "text-align: justify",
-                      "To change the distance traveled, modify",
+                      "To change the home range crossing time, modify",
                       span("position autocorrelation", class = "cl-sea"),
                       HTML(paste0("(\u03C4", tags$sub("p"), ").")),
-                      "To change movement speed, modify",
+                      "To change directional persistence, modify",
                       span("velocity autocorrelation", class = "cl-sea"),
                       HTML(paste0("(\u03C4", tags$sub("v"), ").")),
                       "To change the area covered,",
-                      "modify", span("sigma", class = "cl-sea"),
-                      "(\u03C3)."), p(style = "padding-bottom: 25px;")
+                      "modify", span("semi-variance", class = "cl-sea"),
+                      "(\u03C3).",
+                      "Increasing either",
+                      HTML(paste0("\u03C4", tags$sub("p"))), "or",
+                      HTML(paste0("\u03C4", tags$sub("v"))),
+                      "lowers", span("movement speed", class = "cl-sea"),
+                      "(\u03BD), while increasing \u03C3 raises it."
+                    ), p(style = "padding-bottom: 25px;")
                 ),
                 
                 div(id = ns("sim_details"),
@@ -310,7 +321,7 @@ mod_tab_sims_ui <- function(id) {
                       "You can add all parameters",
                       "to a table for easy comparisons.",
                       "Click the",
-                      icon("bookmark", class = "cl-mdn"),
+                      fontawesome::fa("bookmark", fill = "var(--midgnight"),
                       span("Add to table", class = "cl-mdn"),
                       "button below after each run.")
                 )
@@ -489,11 +500,8 @@ mod_tab_sims_server <- function(id, vals) {
       
       list(input$generateSeed,
            input$tau_p0,
-           input$tau_p0_units,
            input$tau_v0,
-           input$tau_v0_units,
-           input$sigma0,
-           input$sigma0_units)
+           input$sigma0)
     })
     
     ## Reset values from import or select data tabs:
@@ -505,13 +513,36 @@ mod_tab_sims_server <- function(id, vals) {
     }) %>% # end of observe,
       bindEvent(input$generateSeed)
     
+    ## Calculate deterministic speed: --------------------------------------
+    
+    output$sims_speed <- renderText({
+      
+      if(input$sigma0 == "" ||
+         input$tau_p0 == "" ||
+         input$tau_v0 == "") {
+        
+        v <- data.frame(value = "", unit = "")
+        
+      } else {
+        v <- sqrt((input$sigma0 %#% input$sigma0_units) * pi/2) / 
+          sqrt(prod((input$tau_v0 %#% input$tau_v0_units) * 
+                      (input$tau_p0 %#% input$tau_p0_units)))
+        
+        v <- fix_unit(v, "m/s", convert = TRUE)
+      }
+      
+      return(paste(v$value, v$unit))
+      
+    }) # end of renderText
+    
     ## Convert values/units: ----------------------------------------------
     
     observe({
-      req(input$tau_p0_units != vals$tau_p0_units)
+      req(input$tau_p0_units != vals$tau_p0$unit[2])
       
-      new_tau_p0 <- sigdigits(input$tau_p0_units %#%
-                                vals$tau_p0 %#% vals$tau_p0_units, 3)
+      new_tau_p0 <- sigdigits(
+        input$tau_p0_units %#%
+          vals$tau_p0$value[2] %#% vals$tau_p0$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -522,10 +553,11 @@ mod_tab_sims_server <- function(id, vals) {
     }) %>% bindEvent(input$tau_p0_units)
     
     observe({
-      req(input$tau_v0_units != vals$tau_v0_units)
+      req(input$tau_v0_units != vals$tau_v0$unit[2])
       
-      new_tau_v0 <- sigdigits(input$tau_v0_units %#%
-                                vals$tau_v0 %#% vals$tau_v0_units, 3)
+      new_tau_v0 <- sigdigits(
+        input$tau_v0_units %#%
+          vals$tau_v0$value[2] %#% vals$tau_v0$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -536,10 +568,11 @@ mod_tab_sims_server <- function(id, vals) {
     }) %>% bindEvent(input$tau_v0_units)
     
     observe({
-      req(input$sigma0_units != vals$sigma0_units)
+      req(input$sigma0_units != vals$sigma0$unit[2])
       
-      new_sigma0 <- sigdigits(input$sigma0_units %#%
-                                vals$sigma0 %#% vals$sigma0_units, 3)
+      new_sigma0 <- sigdigits(
+        input$sigma0_units %#%
+          vals$sigma0$value[2] %#% vals$sigma0$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -566,12 +599,17 @@ mod_tab_sims_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'sims')
       
-      vals$tau_p0 <- input$tau_p0
-      vals$tau_p0_units <- input$tau_p0_units
-      vals$tau_v0 <- input$tau_v0
-      vals$tau_v0_units <- input$tau_v0_units
-      vals$sigma0 <- input$sigma0
-      vals$sigma0_units <- input$sigma0_units
+      vals$tau_p0 <- data.frame(
+        value = c(NA, input$tau_p0, NA),
+        unit = rep(input$tau_p0_units, 3))
+      
+      vals$tau_v0 <- data.frame(
+        value = c(NA, input$tau_v0, NA),
+        unit = rep(input$tau_v0_units, 3))
+      
+      vals$sigma0 <- data.frame(
+        value = c(NA, input$sigma0, NA),
+        unit = rep(input$sigma0_units, 3))
       vals$is_run <- FALSE
       
     }) %>% bindEvent(saved_pars())
@@ -611,7 +649,7 @@ mod_tab_sims_server <- function(id, vals) {
       req(vals$data0, vals$ctmm_mod)
       
       inputList <- list(list(vals$data0, vals$ctmm_mod))
-      fit <- par_ctmm.fit(inputList, parallel = TRUE)
+      fit <- par.ctmm.fit(inputList, parallel = TRUE)
       
       return(fit)
       
@@ -630,12 +668,12 @@ mod_tab_sims_server <- function(id, vals) {
       if(!is.null(vals$seed0)) {
         
         validate(
-          need(vals$tau_p0 != '', "Select a value."),
-          need(vals$tau_p0_units != '', "Please choose a unit."),
-          need(vals$tau_v0 != '', "Select a value."),
-          need(vals$tau_v0_units != '', "Please choose a unit."),
-          need(vals$sigma0 != '', "Select a value."),
-          need(vals$sigma0_units != '', "Please choose a unit."))
+          need(input$tau_p0 != '', "Select a value."),
+          need(input$tau_p0_units != '', "Please choose a unit."),
+          need(input$tau_v0 != '', "Select a value."),
+          need(input$tau_v0_units != '', "Please choose a unit."),
+          need(input$sigma0 != '', "Select a value."),
+          need(input$sigma0_units != '', "Please choose a unit."))
         
         ### Simulate full dataset: ----------------------------------------
         
@@ -671,13 +709,7 @@ mod_tab_sims_server <- function(id, vals) {
         vals$data_type <- "simulated"
         vals$species_binom <- vals$species <- "Simulated"
         vals$id <- vals$tmpid <- as.character(vals$seed0)
-        
-        vals$tau_p <- vals$tau_p0
-        vals$tau_p_units <- vals$tau_p0_units
-        vals$tau_v <- vals$tau_v0
-        vals$tau_v_units <- vals$tau_v0_units
-        vals$sigma <- vals$sigma0
-        vals$sigma_units <- vals$sigma0_units
+  
         vals$is_run <- TRUE
         
         # Reset analyses from previous runs (if needed):
@@ -805,10 +837,10 @@ mod_tab_sims_server <- function(id, vals) {
             x = x, y = y),
           col = "grey90", size = 1) +
         
-        ggiraph::geom_path_interactive(
+        ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(
             x = x, y = y, color = timestamp),
-          size = 0.5, alpha = .6) +
+          linewidth = 0.5, alpha = .6) +
         ggiraph::geom_point_interactive(
           newdat, mapping = ggplot2::aes(
             x = x, y = y,
@@ -1018,20 +1050,17 @@ mod_tab_sims_server <- function(id, vals) {
         mdist = NA,
         speed = NA)
       
-      out$taup <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$tau_p0),
-          abbrv_unit(vals$tau_p0_units))
+      out$taup <- paste(
+        scales::label_comma(accuracy = .1)(vals$tau_p0$value[2]),
+        abbrv_unit(vals$tau_p0$unit[2]))
       
-      out$tauv <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$tau_v0),
-          abbrv_unit(vals$tau_v0_units))
+      out$tauv <- paste(
+        scales::label_comma(accuracy = .1)(vals$tau_v0$value[2]),
+        abbrv_unit(vals$tau_v0$unit[2]))
       
-      out$sigma <-
-        paste(scales::label_comma(
-          accuracy = .1)(vals$sigma0),
-          abbrv_unit(vals$sigma0_units))
+      sig <- fix_unit(vals$sigma0$value[2],
+                      vals$sigma0$unit[2], convert = T)
+      out$sigma <- paste(sig$value, abbrv_unit(sig$unit))
       
       out$time_elapsed <- paste(
         round("days" %#% max(vals$data0$t), 0), "days")
@@ -1297,32 +1326,32 @@ mod_tab_sims_server <- function(id, vals) {
       
       # Initial parameters:
       
-      shiny::updateNumericInput(
+      updateNumericInput(
         session = session,
         inputId = "tau_p0",
         value = vals$restored_vals$"tau_p0")
       
-      shiny::updateSelectInput(
+      updateSelectInput(
         session = session,
         inputId = "tau_p0_units",
         selected = vals$restored_vals$"tau_p0_units")
       
-      shiny::updateNumericInput(
+      updateNumericInput(
         session,
         inputId = "tau_v0",
         value = vals$restored_vals$"tau_v0")
       
-      shiny::updateSelectInput(
+      updateSelectInput(
         session = session,
         inputId = "tau_v0_units",
         selected = vals$restored_vals$"tau_v0_units")
       
-      shiny::updateNumericInput(
+      updateNumericInput(
         session,
         inputId = ns("sigma0"),
         value = vals$restored_vals$"sigma0")
       
-      shiny::updateSelectInput(
+      updateSelectInput(
         session = session,
         inputId = "sigma0_units",
         selected = vals$restored_vals$"sigma0_units")
