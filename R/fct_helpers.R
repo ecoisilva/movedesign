@@ -81,6 +81,7 @@ abbrv_unit <- function(unit) {
 #' @importFrom ctmm `%#%`
 #' @noRd
 fix_unit <- function(value, unit,
+                     digits = 2,
                      ui = FALSE,
                      convert = FALSE)  {
 
@@ -93,15 +94,18 @@ fix_unit <- function(value, unit,
                  "kilometer", "meter", "km", "m",
                  "square kilometer", "square meter", "hectare",
                  "km^2", "m^2", "ha",
-                 "kilometers/day", "kilometer/day",
-                 "meters/second", "meter/second")
+                 "kilometers/day", "kilometer/day", "km/day",
+                 "kilometers/hour", "kilometer/hour", "km/hour",
+                 "meters/second", "meter/second", "m/s")
 
   units_tm <- all_units[1:7]
   units_sp <- all_units[8:11]
   units_ar <- all_units[12:17]
-  units_vl <- all_units[18:21]
+  units_vl <- all_units[18:26]
 
-  x <- gsub("(.)s$", "\\1", unit)
+  if (!unit %in% units_vl) {
+    x <- gsub("(.)s$", "\\1", unit)
+  } else { x <- unit }
   var <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
 
   if (any(is.na(var))) {
@@ -122,7 +126,7 @@ fix_unit <- function(value, unit,
       x_new <- "hour"
     } else if (any(y < 1 %#% "month")) {
       x_new <- "day"
-    } else if (any(y < 1 %#% "year")) {
+    } else if (any(y < 1 %#% "years")) {
       x_new <- "month"
     } else {
       x_new <- "year"
@@ -160,7 +164,23 @@ fix_unit <- function(value, unit,
   }
 
   if ((x %in% units_vl) & convert) {
-   #TODO
+    if (y >= 0.25) {
+      x_new <- "km/hour"
+    } else if (0.01 > y || y < 0.25) {
+      x_new <- "km/day"
+    } else {
+      x_new <- "m/s"
+    }
+    y <- x_new %#% y
+    x <- x_new
+  }
+  
+  if ((x %in% units_vl) & convert) {
+    if (x == "kilometers/day" || x == "km/day") {
+      x_html <- "kilometers/day"
+    } else if (x == "meters/second" || x == "m/s") {
+      x_html <- "meters/second"
+    }
   }
 
   # Round value:
@@ -170,9 +190,7 @@ fix_unit <- function(value, unit,
       y %% 1 == 0 ~ scales::label_comma(accuracy = 1)(y),
       y %% 1 != 0 ~ scales::label_comma(accuracy = .1)(y))
   } else {
-    y <- dplyr::case_when(
-      y %% 1 == 0 ~ round(y, 0),
-      y %% 1 != 0 ~ round(y, 1))
+    y <- sigdigits(y, digits)
   }
 
   # Check if value is equal to 1 (e.g. 1 hour), adjust unit:
@@ -185,7 +203,7 @@ fix_unit <- function(value, unit,
   # Show units as HTML:
   x <- ifelse(ui, x_html, x)
 
-  out <- data.frame(value = y, unit = x)
+  out <- data.frame(value = as.numeric(y), unit = x)
   return(out)
 
 }
@@ -261,13 +279,92 @@ CI.upper <- Vectorize(function(k, level) {
 CI.lower <- Vectorize(function(k, level) {
   stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
 
-#' Prepare semi-variance data
+
+
+#' Extract parameters.
 #'
-#' @description Prepare semi-variance data
+#' @description Extracting parameter values and units from ctmm summaries.
+#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
-prepare_svf <- function(data, fraction = .65) {
+extract_pars <- function(obj, par, 
+                         fraction = .65, 
+                         data = NULL) {
+  
+  if (par == "sigma") { 
+    if (missing(data)) {
+      stop("`data` argument not provided.")
+    }
+
+    svf <- extract_svf(data, fraction = fraction)
+    out <- c("low" = mean(svf$var_low95) %#% "km^2",
+             "est" = var.covm(obj$sigma, ave = T),
+             "high" = mean(svf$var_upp95) %#% "km^2")
+    
+    out <- data.frame(value = out, "unit" = "m^2")
+    
+  } else if (inherits(obj, "telemetry")) {
+    nms.dat <- suppressWarnings(names(summary(obj)))
+    
+    unit <- extract_units(nms.dat[grep(par, nms.dat)])
+    value <- suppressWarnings(as.numeric(
+      summary(obj)[grep(par, nms.dat)]))
+    
+    out <- data.frame(value = value, "unit" = unit)
+    
+  } else if (inherits(obj, "ctmm")) {
+    sum.fit <- summary(obj)
+    nms.fit <- rownames(sum.fit$CI)
+    
+    out <- sum.fit$CI[grep(par, nms.fit), ]
+    
+    if (all(is.na(out))) {
+      out <- NULL
+    } else {
+      unit <- extract_units(nms.fit[grep(par, nms.fit)])
+      out <- data.frame(value = out, "unit" = unit)
+    }
+  }
+  return(out)
+}
+
+#' Extract DOF
+#'
+#' @description Extracting DOF values and units from ctmm summaries.
+#' @return The return value, if any, from executing the utility.
+#' @keywords internal
+#'
+#' @noRd
+extract_dof <- function(obj, par) {
+  
+  par_list <- c("mean", "speed", "area", "diffusion")
+  
+  if (!(par %in% par_list)) {
+    stop("`par` argument is not valid.")
+  }
+  
+  if (inherits(obj, "ctmm")) {
+    sum.fit <- summary(obj)
+    nms.fit <- names(sum.fit$DOF)
+    
+    out <- sum.fit$DOF[grep(par, nms.fit)][[1]]
+    if (is.na(out)) out <- NULL
+    
+  } else {
+    stop("`object` argument is not a `ctmm` movement model.")
+  }
+  
+  return(out)
+}
+
+#' Extract semi-variance data
+#'
+#' @description Extract semi-variance data
+#' @keywords internal
+#'
+#' @noRd
+extract_svf <- function(data, fraction = .65) {
 
   level <- 0.95
   SVF <- ctmm::variogram(data = data) # CI = "Gauss"
@@ -303,73 +400,112 @@ prepare_svf <- function(data, fraction = .65) {
 #' @param max_interval Minimum frequency.
 #' @keywords internal
 #'
+#' @importFrom ctmm `%#%`
+#' 
 #' @noRd
 simulate_gps <- function(data,
                          k,
                          yrange,
                          yunits,
                          cutoff,
-                         max_x,
-                         min_x,
+                         max_dti,
+                         weight_g,
                          simplified = FALSE) {
-
-  nu <- nu_notes <- freq_hrs <- highlight <- NULL
   
-  x_max <- data$freq_hrs[match(max_x, data$nu_notes)]
-  x_min <- data$freq_hrs[match(min_x, data$nu_notes)]
-
+  dti <- dti_notes <- frq_hrs <- highlight <- NULL
+  
+  x_min <- data$frq_hrs[match(max_dti, data$dti_notes)]
+  
   if (simplified) {
-
+    
+    newdata <- data %>%
+      dplyr::select(dti_notes, dti, frq_hrs) %>%
+      dplyr::filter(frq_hrs >= x_min)
+    
+    max_dur <- "days" %#% yrange %#% yunits
+    
+    init <- c(-16.913, max_dur)
+    d <- init[1] + 6.756 * init[2]
+    e <- 1.005511 / 
+      ( 1 + exp(1.490650 *
+                  (log(d/init[2]) - log(0.202345))) )
+    b <- 0.847 + (0.985 - 0.847) * exp(-(init[2]) / 14.297)
+    
+    x <- newdata$frq_hrs
+    y <- d / ( 1 + exp(b * (log(x)-log(e))) )
+    
+    n_tries <- 40
+    goal_dur <- "months" %#% max_dur %#% "days"
+    for (i in 1:n_tries) {
+      
+      dur <- "months" %#% max(y) %#% "days"
+      diff_dur <- diff(c(goal_dur, dur))
+      
+      if (yunits == "days") {
+        threshold <- .1
+        x <- c(10, 1)
+      } else if (yunits == "months") {
+        threshold <- .05
+        x <- c(100, 10)
+      } else if (yunits == "years") {
+        threshold <- .02
+        x <- c(120, 100)
+      }
+      
+      if (abs(diff_dur) > threshold) {
+        
+        if (!sign(diff_dur == -1)) {
+          init[1] <- init[1] + x[1]
+        } else { 
+          init[1] <- init[1] - x[1] 
+        }
+        
+        d <- init[1] + 6.756 * init[2]
+        e <- 1.005511 / 
+          ( 1 + exp(1.490650 *
+                      (log(d/init[2]) - log(0.202345))) )
+        b <- 0.847 + (0.985 - 0.847) * exp(-(init[2]) / 14.297)
+        
+        x <- newdata$frq_hrs
+        y <- d / ( 1 + exp(b * (log(x)-log(e))) )
+        
+      } else { 
+        break
+      }
+    }
+    
+    newdata$dur_sec <- y %#% "days"
+    newdata$dur_mth <- "months" %#% newdata$dur_sec
+    
+    if (max(newdata$dur_sec) > cutoff) {
+      newdata$color <- as.factor(dplyr::case_when(
+        newdata$dur_sec < cutoff ~ "red",
+        newdata$dur_sec >= cutoff ~ "blue"))
+    } else { newdata$color <- "red" }
+    
+  } else {
+    
     # k <- 8.046066
     newdata <- data %>%
-      dplyr::select(nu_notes, nu, freq_hrs) %>%
-      dplyr::filter(freq_hrs >= x_max) %>%
-      subset(freq_hrs <= x_min)
-
+      dplyr::select(dti_notes, dti, frq_hrs) %>%
+      dplyr::filter(frq_hrs >= x_min)
+    
     y0 <- yrange
-
-    x <- newdata$freq_hrs
-    y <- y0 / (1 + exp(log(x) - log(k)))
+    
+    x <- newdata$frq_hrs
+    y <- y0 / ( 1 + exp(log(x) - log(k)) )
     newdata$dur <- y %#% yunits
     newdata$dur_mth <- "months" %#% newdata$dur
-
+    
     if (max(newdata$dur) > cutoff) {
       newdata$color <- as.factor(dplyr::case_when(
         newdata$dur < cutoff ~ "red",
         newdata$dur >= cutoff ~ "blue"))
     } else { newdata$color <- "red" }
-
-    newdata$id <- 1:nrow(newdata)
-
-  } else {
-    newdata <- data %>%
-      dplyr::filter(highlight == "Y") %>%
-      dplyr::filter(freq_hrs >= x_max) %>%
-      dplyr::select(nu_notes, nu, freq_hrs)
-
-    ylow <- 0
-    y0 <- "months" %#% yrange %#% yunits
-
-    x <- newdata$freq_hrs - newdata$freq_hrs[1]
-    newdata$dur_mth <- y0 * exp(-k * x) + ylow
-    newdata$dur <- newdata$dur_mth %#% "months"
-    newdata$color <- as.factor(dplyr::case_when(
-      newdata$dur < cutoff ~ "red",
-      newdata$dur >= cutoff ~ "blue"))
-    newdata$id <- 1:nrow(newdata)
-
-    newdata$n <- NA
-    for(i in 1:nrow(newdata)) {
-      if (newdata$dur_mth[i] <= 0.033) {
-        newdata$n[i] <- 0
-        newdata$dur_mth[i] <- 0
-      } else {
-        newdata$n[i] <- length(
-          seq(1, round((newdata$dur_mth[i] %#% "months"), 0),
-              by = newdata$nu[i]))
-      }}
   }
-
+  
+  # pri <- t(paste("----- number of attempts i:", i))
+  newdata$id <- 1:nrow(newdata)
   return(newdata)
 }
 
@@ -380,33 +516,71 @@ simulate_gps <- function(data,
 #'
 #' @noRd
 #'
-estimate_time <- function(data, parallel = TRUE) {
-
-  start_test <- Sys.time()
+estimate_time <- function(data, 
+                          fit = NULL,
+                          type = "fit",
+                          trace = FALSE,
+                          parallel = TRUE) {
+  
+  if (!type %in% c("fit", "speed")) {
+    stop("type =", type, " is not supported.", call. = FALSE)
+  }
+  
+  if (missing(data)) {
+    stop("`data` argument not provided.")
+  }
+  
   units <- "minute"
-  n <- 150
-
-  dti <- data[[2,"t"]] - data[[1,"t"]]
-
-  if (nrow(data) < 150) {
-
-    expt_min <- 0
+  
+  n <- 200
+  if (nrow(data) < n) {
+    
+    # Does not need to run for smaller datasets:
+    
     expt <- expt_max <- 1
+    expt_min <- 0
     expt_units <- units
-
+    
   } else {
-
-    tmpdat <- data[1:n, ]
-    guess <- ctmm::ctmm.guess(tmpdat, interactive = FALSE)
-    inputList <- list(list(tmpdat, guess))
-    fit <- par_ctmm.select(inputList, trace = FALSE, parallel = TRUE)
-    total_time <- difftime(Sys.time(), start_test,
-                           units = "secs") %>%
-      as.numeric()
-
+    
+    if (type == "fit") {
+      
+      start_test <- Sys.time()
+      tmpdat <- data[1:n, ]
+      
+      guess <- ctmm::ctmm.guess(tmpdat, interactive = FALSE)
+      inputList <- list(list(tmpdat, guess))
+      fit <- par.ctmm.select(inputList, trace = FALSE, parallel = TRUE)
+      
+      total_time <- difftime(Sys.time(), start_test,
+                             units = "secs") %>%
+        as.numeric()
+      
+    } # end of if (type == "fit")
+    
+    if (type == "speed") {
+      
+      if (missing(fit)) {
+        stop("ctmm `fit` object argument not provided.")
+      }
+      
+      n <- 10
+      start_test <- Sys.time()
+      units <- "minute"
+      
+      tmpdat <- data[1:n, ]
+      inputList <- align_lists(list(fit), list(tmpdat))
+      speed <- par.speed(inputList, trace = trace, parallel = parallel)
+      
+      total_time <- difftime(Sys.time(), start_test,
+                             units = "secs") %>%
+        as.numeric() / 100
+      
+    } # end of if (type == "speed")
+    
     expt <- ((total_time/n) * nrow(data))
     expt <- ceiling(units %#% expt)
-
+    
     if (expt >= 15) {
       expt_max <- round_any(expt, 5, f = ceiling)
       expt_min <- expt - 5
@@ -417,13 +591,14 @@ estimate_time <- function(data, parallel = TRUE) {
       expt_max <- round_any(expt, 1, f = ceiling)
       expt_min <- expt_max
     }
-    expt_units <- ifelse(expt_max == 1, units, "minutes")
   }
-
+  
+  expt_units <- ifelse(expt_max == 1, units, "minutes")
+  
   outputs <- data.frame(expt, expt_min, expt_max, expt_units)
   names(outputs) <- c("mean", "min", "max", "units")
   return(outputs)
-
+  
 }
 
 
@@ -456,6 +631,66 @@ calc_dist <- function(data) {
 }
 
 
+# ctmmweb functions: ------------------------------------------------------
+
+#' Parallel lapply
+#'
+#' @description Parallel lapply from ctmmweb.
+#'
+#' @param input Input list, with two sub-items: telemetry object and CTMM object.
+#' @param parallel True/false. Uses a single core when FALSE.
+#' @keywords internal
+#'
+#' @noRd
+#'
+par.lapply <- function(lst,
+                       fun, 
+                       cores = NULL,
+                       parallel = TRUE,
+                       win_init = expression({
+                         requireNamespace("ctmm", quietly = TRUE)})) {
+  if (parallel) {
+    if (!is.null(cores) && cores > 0) {
+      cluster_size <- cores
+    }
+    if (!is.null(cores) && cores < 0) {
+      cluster_size <- max(parallel::detectCores(logical = FALSE) + 
+                            cores, 1)
+    }
+    sysinfo <- Sys.info()
+    tryCatch({
+      if (sysinfo["sysname"] == "Windows") {
+        if (is.null(cores)) {
+          cluster_size <- min(length(lst), parallel::detectCores(logical = FALSE) * 
+                                2)
+        }
+        cat(crayon::inverse("running parallel in SOCKET cluster of", 
+                            cluster_size, "\n"))
+        cl <- parallel::makeCluster(cluster_size, outfile = "")
+        parallel::clusterExport(cl, c("win_init"), envir = environment())
+        parallel::clusterEvalQ(cl, eval(win_init))
+        res <- parallel::parLapplyLB(cl, lst, fun)
+        parallel::stopCluster(cl)
+      }
+      else {
+        if (is.null(cores)) {
+          cluster_size <- min(length(lst), 
+                              parallel::detectCores(logical = FALSE) * 4)
+        }
+        cat(crayon::inverse("running parallel with mclapply in cluster of", 
+                            cluster_size, "\n"))
+        res <- parallel::mclapply(lst, fun, mc.cores = cluster_size)
+      }
+    }, error = function(e) {
+      cat(crayon::bgRed$white("Parallel Error, try restart R session\n"))
+      cat(e)
+    })
+  } else {
+    res <- lapply(lst, fun)
+  }
+  return(res)
+}
+
 #' Parallel model selection
 #'
 #' @description Parallel model selection, ctmm.select(), from ctmmweb.
@@ -466,7 +701,7 @@ calc_dist <- function(data) {
 #'
 #' @noRd
 #'
-par_ctmm.select <- function(input, cores = NULL,
+par.ctmm.select <- function(input, cores = NULL,
                             trace = TRUE,
                             parallel = TRUE) {
 
@@ -496,18 +731,17 @@ par_ctmm.select <- function(input, cores = NULL,
                           trace = trace))
 
   } else {
-    # Process multiple animals on multiple cores: #TODO
-
     internal_cores <- 1
-    res <- try(ctmmweb::par_lapply(input,
-                                   try_models,
-                                   cores,
-                                   parallel))
+    res <- try(par.lapply(input,
+                          try_models,
+                          cores,
+                          parallel))
   }
 
   if (any(has_error(res))) {
     cat(crayon::bgYellow$red("Error in model selection\n"))
   }
+  
   return(res)
 }
 
@@ -522,7 +756,7 @@ par_ctmm.select <- function(input, cores = NULL,
 #'
 #' @noRd
 #'
-par_ctmm.fit <- function(input,
+par.ctmm.fit <- function(input,
                          cores = NULL,
                          parallel = TRUE) {
 
@@ -541,10 +775,10 @@ par_ctmm.fit <- function(input,
   } else {
     # Process multiple animals on multiple cores: #TODO
     internal_cores <- 1
-    res <- try(ctmmweb::par_lapply(input,
-                                   try_models,
-                                   cores,
-                                   parallel))
+    res <- try(par.lapply(input,
+                          try_models,
+                          cores,
+                          parallel))
   }
 
   if (any(has_error(res))) {
@@ -561,29 +795,30 @@ par_ctmm.fit <- function(input,
 #'
 #' @noRd
 #'
-par_speed <- function(input,
+par.speed <- function(input,
                       cores = NULL,
+                      trace = TRUE,
                       parallel = TRUE) {
 
   speed_calc <- function(input) {
 
-    message("Calculating speed:")
+    if (trace) message("Calculating:")
+    
     ctmm::speed(input[[1]],
                 input[[2]],
                 cores = internal_cores,
-                trace = TRUE)
+                trace = trace)
   }
 
   if (length(input) == 1) {
-    # Process one individual on multiple cores:
-
+    
     internal_cores <- if (parallel) -1 else 1
     res <- try(speed_calc(input[[1]]))
 
   } else {
 
     internal_cores <- 1
-    res <- ctmmweb::par_lapply(input, speed_calc, cores, parallel)
+    res <- par.lapply(input, speed_calc, cores, parallel)
 
   }
 
@@ -594,3 +829,19 @@ par_speed <- function(input,
   return(res)
 }
 
+
+#' Align lists
+#'
+#' @noRd
+#'
+align_lists <- function(...) {
+  list_lst <- list(...)
+  len_vec <- sapply(list_lst, length)
+  stopifnot(length(unique(len_vec)) == 1)
+  res <- lapply(seq_along(list_lst[[1]]), function(i) {
+    lapply(list_lst, getElement, i)
+  })
+  if (length(res) == 0) 
+    res <- NULL
+  return(res)
+}

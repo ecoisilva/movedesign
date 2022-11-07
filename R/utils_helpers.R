@@ -162,6 +162,11 @@ staticBlock <- function(text,
     icon_T <- "less-than-equal"
     icon_F <- "circle-xmark"
   }
+  
+  if (type == "none") {
+    icon_T <- "square-check"
+    icon_F <- "square-check"
+  }
 
   if (active) {
     cl <- "staticblock_active"
@@ -207,46 +212,6 @@ extract_units <- function(input) {
                 Sys.time(), e))
     })
 }
-
-
-#' Extract parameters.
-#'
-#' @description Extracting parameter values and units from ctmm summaries.
-#' @return The return value, if any, from executing the utility.
-#' @keywords internal
-#'
-#' @noRd
-extract_pars <- function(obj, par, type = "est") {
-  
-  if (type == "est")  i <- 2
-  if (type == "low")  i <- 1
-  if (type == "high") i <- 3
-  
-  if (inherits(obj, "telemetry")) {
-    nms.dat <- suppressWarnings(names(summary(obj)))
-    
-    out_unit <- extract_units(nms.dat[grep(par, nms.dat)])
-    out_value <- suppressWarnings(as.numeric(
-      summary(obj)[grep(par, nms.dat)]))
-    
-  } else if (inherits(obj, "ctmm")) {
-    sum.fit <- summary(obj)
-    nms.fit <- rownames(sum.fit$CI)
-    
-    out_value <- sum.fit$CI[grep(par, nms.fit), i]
-    if (identical(out_value, numeric(0))) {
-      out_value <- NA
-      out_unit <- NA
-    } else {
-      out_unit <- extract_units(nms.fit[grep(par, nms.fit)])
-    }
-  }
-  
-  return(data.frame(par = par,
-                    value = out_value,
-                    unit = out_unit))
-}
-
 
 #' Add helper text.
 #'
@@ -314,10 +279,19 @@ msg_log <- function(message, detail, style) {
     line1 <- crayon::bold(msg_danger("\u2716"))
     line2 <- crayon::bold(msg_danger("Error:")) }
 
-  cat(msg_main(time_stamp), "\n",
-      ' ', line1,
-      line2, message, "\n",
-      ' ', msg_main(detail), "\n")
+  
+  if(missing(detail)) {
+    out <- cat(msg_main(time_stamp), "\n",
+               ' ', line1,
+               line2, message, "\n")
+  } else {
+    out <- cat(msg_main(time_stamp), "\n",
+               ' ', line1,
+               line2, message, "\n",
+               ' ', msg_main(detail), "\n")
+  }
+  
+  return(out)
 }
 
 
@@ -452,7 +426,7 @@ plotting_hr <- function(data, ud, levels,
 
   if ("95% high CI" %in% levels) {
 
-    p1 <- ggiraph::geom_polygon_interactive(
+    p1 <- ggplot2::geom_polygon(
       data = pol_ud_high,
       mapping = ggplot2::aes(x = long,
                              y = lat,
@@ -466,7 +440,7 @@ plotting_hr <- function(data, ud, levels,
     pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[2]] # estimate
 
-    p2 <- ggiraph::geom_polygon_interactive(
+    p2 <- ggplot2::geom_polygon(
       data = pol_ud,
       mapping = ggplot2::aes(x = long,
                              y = lat,
@@ -479,7 +453,7 @@ plotting_hr <- function(data, ud, levels,
     pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[1]] # low
 
-    p3 <- ggiraph::geom_polygon_interactive(
+    p3 <- ggplot2::geom_polygon(
       data = pol_ud_low,
       mapping = ggplot2::aes(x = long,
                              y = lat,
@@ -493,7 +467,7 @@ plotting_hr <- function(data, ud, levels,
 
   tmp <- ymin - diff(yrange) * .2
   p <- ggplot2::ggplot() +
-    ggiraph::geom_polygon_interactive(
+    ggplot2::geom_polygon(
       data = pol_ud_high,
       mapping = ggplot2::aes(x = long,
                              y = lat,
@@ -555,7 +529,7 @@ plotting_hr_new <- function(data1, data2,
 
   if ("95% high CI" %in% levels) {
 
-    p1 <- ggiraph::geom_polygon_interactive(
+    p1 <- ggplot2::geom_polygon(
       data = pol_ud_high,
       mapping = ggplot2::aes_string(x = "long", 
                                     y = "lat",
@@ -568,7 +542,7 @@ plotting_hr_new <- function(data1, data2,
     pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[2]] # estimate
 
-    p2 <- ggiraph::geom_polygon_interactive(
+    p2 <- ggplot2::geom_polygon(
       data = pol_ud,
       mapping = ggplot2::aes_string(x = "long", 
                                     y = "lat",
@@ -581,7 +555,7 @@ plotting_hr_new <- function(data1, data2,
     pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[1]] # low
 
-    p3 <- ggiraph::geom_polygon_interactive(
+    p3 <- ggplot2::geom_polygon(
       data = pol_ud_low,
       mapping = ggplot2::aes_string(x = "long", 
                                     y = "lat",
@@ -594,7 +568,7 @@ plotting_hr_new <- function(data1, data2,
   show_alpha <- ifelse(show, 1, 0)
 
   p <- ggplot2::ggplot() +
-    ggiraph::geom_polygon_interactive(
+    ggplot2::geom_polygon(
       data = pol_ud_high,
       mapping = ggplot2::aes_string(x = "long", 
                                     y = "lat",
@@ -669,12 +643,15 @@ plotting_svf <- function(data, fill) {
 #' @importFrom stringr str_pad
 #' @noRd
 #'
-sigdigits <- function(x, d) {
+sigdigits <- function(x, digits = 2) {
 
-  z <- format(x, digits = d)
+  z <- format(x, digits = digits)
   if (!grepl("[.]",z)) return(z)
+  
+  out <- stringr::str_pad(z, digits + 1, "right" , "0")
+  out <- as.numeric(out)
 
-  return(stringr::str_pad(z, d + 1, "right" , "0"))
+  return(out)
 }
 
 
