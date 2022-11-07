@@ -103,13 +103,14 @@ mod_comp_viz_server <- function(id, vals) {
       req(vals$is_valid)
 
       tabselected <- NULL
+      
       if (vals$is_valid && vals$active_tab == 'data_upload') {
         tabselected <- "comp_viz_uploaded-dataPanel_individual"
       }
       if (vals$is_valid && vals$active_tab == 'data_select') {
         tabselected <- "comp_viz_selected-dataPanel_individual"
       }
-
+      
       updateTabsetPanel(
         session,
         inputId = "dataTabs_viz",
@@ -121,27 +122,34 @@ mod_comp_viz_server <- function(id, vals) {
 
     observe({ # First, create data summary:
       req(vals$dataList)
-
+      
+      # Check if data is anonymized:
+      
       if (!("timestamp" %in% names(vals$dataList[[1]]))) {
 
-        vals$is_origin <- TRUE
-
-        shiny::showNotification(
-          duration = 5,
-          ui = shiny::span(
-            "Data is anonymized,", br(),
-            "simulating location and time."),
-          closeButton = FALSE, type = "warning")
-
+        vals$dataList <- pseudonymize(vals$dataList)
+        vals$is_pseudonymized <- TRUE
+        
+        shinyFeedback::showToast(
+          type = "success",
+          title = "Data is anonymized...",
+          message = "Origin location and time added.",
+          .options = list(
+            timeOut = 2500,
+            progressBar = FALSE,
+            closeButton = TRUE,
+            preventDuplicates = TRUE,
+            positionClass = "toast-bottom-right"
+          )
+        )
+        
         msg_log(
           style = "success",
           message = paste0("Data pseudonymization ",
                            msg_success("completed"), "."),
           detail = "Origin location and time added.")
 
-        vals$dataList <- pseudonymize(vals$dataList)
-
-      } else { vals$is_origin <- FALSE }
+      } else { vals$is_pseudonymized <- FALSE }
       
       dfList <- as_tele_list(vals$dataList)
       sumdfList <- summary(dfList)
@@ -154,11 +162,11 @@ mod_comp_viz_server <- function(id, vals) {
       sum_col2 <- grep("interval", names(sumdfList))
       sumdfList[,sum_col1] <- round(sumdfList[sum_col1], 1)
       sumdfList[,sum_col2] <- round(sumdfList[sum_col2], 1)
-      sumdfList <- sumdfList %>% dplyr::select(-longitude,
-                                               -latitude)
+      sumdfList <- sumdfList %>% 
+        dplyr::select(-longitude, -latitude)
 
       vals$sum <- sumdfList
-
+      
     }) # end of observe
 
     output$dataTable_showVars <- renderUI({
@@ -197,25 +205,26 @@ mod_comp_viz_server <- function(id, vals) {
         } else {
           data_df <- list()
           for(i in 1:length(vals$dataList)) {
-            temp0 <- vals$dataList[i]
+            tmp <- vals$dataList[i]
             if (names(vals$dataList)[i] == "gps") {
-              temp1 <- temp0@.Data[1] %>% as.data.frame
-              temp1 <- temp1 %>%
+              tmp <- tmp@.Data[1] %>% as.data.frame
+              tmp <- tmp %>%
                 dplyr::select('gps.timestamp',
                               'gps.x',
                               'gps.y')
             }
             if (names(vals$dataList)[i] == "argos") {
-              temp1 <- temp0@.Data[1] %>% as.data.frame
-              temp1 <- temp1 %>%
+              tmp <- tmp@.Data[1] %>% as.data.frame
+              tmp <- tmp %>%
                 dplyr::select('argos.timestamp',
                               'argos.x',
                               'argos.y')
             }
-            colnames(temp1) <- c("timestamp", "x", "y")
-            temp1$name <- rep(names(vals$dataList)[i], nrow(temp1))
-            data_df[[i]] <- temp1 } # end of forloop
-
+            colnames(tmp) <- c("timestamp", "x", "y")
+            tmp$name <- rep(names(vals$dataList)[i], nrow(tmp))
+            data_df[[i]] <- tmp
+          }
+          
           newdat.all <- do.call(rbind.data.frame, data_df) }
       } else { newdat.all <- as_tele_df(vals$dataList) }
 
@@ -324,23 +333,17 @@ mod_comp_viz_server <- function(id, vals) {
         xmin <- min(newdat$x)
         xmax <- max(newdat$x)
       }
+      
+      p <- ggplot2::ggplot(
+        data = newdat, 
+        ggplot2::aes(
+          x = x, y = y,
+          color = time,
+          tooltip = time,
+          data_id = time)) +
 
-      p <- ggplot2::ggplot() +
-
-        ggiraph::geom_path_interactive(
-          newdat, mapping = ggplot2::aes(
-            x = x, y = y,
-            color = time,
-            tooltip = time,
-            data_id = time),
-          alpha = .9) +
-        ggiraph::geom_point_interactive(
-          newdat, mapping = ggplot2::aes(
-            x = x, y = y,
-            color = time,
-            tooltip = time,
-            data_id = time),
-          size = 1.2) +
+        ggplot2::geom_path(alpha = .9) +
+        ggiraph::geom_point_interactive(size = 1.2) +
 
         ggplot2::labs(x = "x coordinate",
                       y = "y coordinate") +
@@ -370,7 +373,7 @@ mod_comp_viz_server <- function(id, vals) {
           legend.key.height = ggplot2::unit(0.3, "cm"),
           legend.key.width = ggplot2::unit(0.6, "cm")
         )
-
+      
       ggiraph::girafe(
         ggobj = p,
         # width_svg = 7.5, height_svg = 5,
@@ -421,7 +424,7 @@ mod_comp_viz_server <- function(id, vals) {
     ## Table for summary of all individuals: ----------------------------
 
     output$dataTable_all <- reactable::renderReactable({
-      req(vals$dataList, vals$sum)
+      req(vals$sum)
 
       reactable::reactable(
         vals$sum,
