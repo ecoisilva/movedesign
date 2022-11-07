@@ -24,10 +24,10 @@ app_server <- function(input, output, session) {
   output$side_menu <- shinydashboard::renderMenu({
 
     # title, icon
-    info_upload <- c("Import data", "file-arrow-up")
-    info_select <- c("Select data", "file")
+    info_upload <- c("Import data", "file-csv")
+    info_select <- c("Select data", "file-circle-plus")
     info_sims <- c("Simulate data", "file-signature")
-    info_regs <- c("Tracking regime", "stopwatch")
+    info_regs <- c("Sampling design", "stopwatch")
     info_hr <- c("Home range", "map-location-dot")
     info_ctsd <- c("Speed & distance", "gauge-high")
 
@@ -54,12 +54,12 @@ app_server <- function(input, output, session) {
 
       # Tab 1: Home
       shinydashboard::menuItem(
-        text = "Home",
+        text = " Home",
         tabName = "about",
         icon = icon("house")
       ),
 
-      # Tab 2 and 3: Upload or simulate data
+      # Tab 2 and 3: Data
       keep_expanded(
         shinydashboard::menuItem(
           id = "group_data",
@@ -105,7 +105,7 @@ app_server <- function(input, output, session) {
             icon = regs_icon)
         )),
 
-      # Tab 5 and 6: Home range or CTSD estimation
+      # Tab 5 and 6: Analyses
       keep_expanded(
         shinydashboard::menuItem(
           id = "group_design",
@@ -172,8 +172,8 @@ app_server <- function(input, output, session) {
   # Misc: -----------------------------------------------------------------
 
   # Data viz:
-  mod_comp_viz_server("comp_viz_uploaded", vals = vals) # Uploaded
-  mod_comp_viz_server("comp_viz_selected", vals = vals) # Selected
+  mod_comp_viz_server("comp_viz_uploaded", vals = vals) 
+  mod_comp_viz_server("comp_viz_selected", vals = vals)
 
   # Header and control tabs:
   mod_comp_settings_server("comp_settings_1", vals = vals)
@@ -194,7 +194,7 @@ app_server <- function(input, output, session) {
   onStop(function() {
     message("Session stopped")
 
-    # if (!is.null(gps_fixrate)) rm("gps_fixrate", envir = .GlobalEnv)
+    # if (!is.null(fixrates)) rm("fixrates", envir = .GlobalEnv)
     # if (!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
     # if (!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
     # # print(ls(envir = .GlobalEnv))

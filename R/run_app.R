@@ -24,7 +24,7 @@ run_app <- function(
       uiPattern = uiPattern
     ),
     golem_opts = list(
-      gps_fixrate = movedesign::gps_fixrate,
+      fixrates = movedesign::fixrates,
       sims_hrange = movedesign::sims_hrange,
       sims_speed = movedesign::sims_speed
     ) # end of list
