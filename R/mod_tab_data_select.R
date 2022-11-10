@@ -185,22 +185,27 @@ mod_tab_data_select_ui <- function(id) {
           # Displaying relevant metrics: ----------------------------------
           
           ## Extracted parameters:
-          uiOutput(ns("selectUI_parameters")),
+          div(class = "col-lg-6 no-padding-left",
+              uiOutput(ns("selectUI_parameters"))
+          ), # end of div
           
           ## Sample sizes:
-          shinydashboardPlus::box(
-            title = span("Displaying sample sizes:", class = "ttl-box"),
-            id = ns("selectBox_sizes"),
-            width = NULL,
-            solidHeader = FALSE,
-            
-            fluidRow(
-              column(width = 4, uiOutput(ns("selectBlock_n"))),
-              column(width = 4, uiOutput(ns("selectBlock_Narea"))),
-              column(width = 4, uiOutput(ns("selectBlock_Nspeed"))),
-            ) # end of fluidRow
-            
-          ), # end of box // selectBox_sizes
+          div(class = "col-lg-6 no-padding-right",
+              shinydashboardPlus::box(
+                title = span("Displaying sample sizes:",
+                             class = "ttl-box"),
+                id = ns("selectBox_sizes"),
+                width = NULL,
+                solidHeader = FALSE,
+                
+                fluidRow(
+                  column(width = 4, uiOutput(ns("selectBlock_n"))),
+                  column(width = 4, uiOutput(ns("selectBlock_Narea"))),
+                  column(width = 4, uiOutput(ns("selectBlock_Nspeed"))),
+                ) # end of fluidRow
+                
+              ) # end of box // selectBox_sizes
+          ), # end of div
           
           # Additional information: ---------------------------------------
           
