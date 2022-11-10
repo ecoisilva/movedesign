@@ -718,7 +718,9 @@ mod_tab_device_server <- function(id, vals) {
       dti_unit <- out_dti$unit
       
       if (dur_unit == "day" | dur_unit == "days") {
-        txt_dur <- wrap_none(dur, dur_unit, class = "cl-sea", end = ".")
+        tmp <- ifelse(dur == 1, "", dur)
+        txt_dur <- wrap_none(tmp, " ", dur_unit, 
+                             css = "cl-sea", end = ".")
         
       } else if (dur_unit == "month" | dur_unit == "months") {
         dur_day <- "days" %#% dur %#% dur_unit
@@ -727,7 +729,8 @@ mod_tab_device_server <- function(id, vals) {
         txt_dur <- span(
           span(dur, dur_unit, class = "cl-sea"),
           "(\u2248", wrap_none(
-            dur_day$value, " ", dur_day$unit, css = "cl-sea", end = ")."))
+            dur_day$value, " ", dur_day$unit,
+            css = "cl-sea", end = ")."))
        
       } else if (dur_unit == "year" | dur_unit == "years") {
         dur_mth <- "months" %#% dur %#% dur_unit
@@ -735,8 +738,8 @@ mod_tab_device_server <- function(id, vals) {
         
         txt_dur <- span(
           span(dur, dur_unit, class = "cl-sea"),
-          "(\u2248", wrap_none(
-            dur_mth$value, " ", dur_mth$unit, css = "cl-sea", end = ")."))
+          "(\u2248", wrap_none(dur_mth$value, " ", dur_mth$unit, 
+                               css = "cl-sea", end = ")."))
       }
       
       frq <- round(1/("day" %#% dti %#% dti_unit), 1)
@@ -796,8 +799,10 @@ mod_tab_device_server <- function(id, vals) {
       
       device <- movedesign::fixrates
       max_dti_choices <- device %>%
-        dplyr::filter(.data$highlighted == "Y") %>%
+        dplyr::filter(.data$common == "Y") %>%
         dplyr::pull(.data$dti_notes)
+      
+      print(max_dti_choices)
       
       shinyWidgets::updatePickerInput(
         session,
@@ -960,7 +965,11 @@ mod_tab_device_server <- function(id, vals) {
               
               ggiraph::girafeOutput(
                 outputId = ns("regPlot_gps"),
-                width = "100%", height = "50%")
+                width = "100%", height = "50%") %>%
+                shinycssloaders::withSpinner(
+                  type = getOption("spinner.type", default = 7),
+                  color = getOption("spinner.color",
+                                    default = "#f4f4f4"))
             },
             
             #### 1.3. Plotting GPS battery life decay:
