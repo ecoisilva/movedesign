@@ -310,6 +310,8 @@ pre.shiny-text-output {
   white-space: pre-wrap;
   word-break: keep-all;
   font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
 }
 
 

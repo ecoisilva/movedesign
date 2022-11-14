@@ -813,9 +813,9 @@ mod_tab_sims_server <- function(id, vals) {
       
       newdat <- vals$data0
       newdat <- newdat[which(newdat$t <= (
-        vals$tau_p0 %#% vals$tau_p0_units)), ]
+        vals$tau_p0$value[2] %#% vals$tau_p0$unit[2])), ]
 
-      out_tp <- fix_unit(vals$tau_p0, vals$tau_p0_units)
+      out_tp <- fix_unit(vals$tau_p0$value[2], vals$tau_p0$unit[2])
       out_dur <- fix_unit(vals$dur0, vals$dur0_units)
       subtitle <- paste(
         "Highlighting one \u03C4\u209A cycle",
@@ -937,7 +937,8 @@ mod_tab_sims_server <- function(id, vals) {
       # Time elapsed:
       
       dat <- data_animated()
-      maxt <- vals$tau_p0 %#% vals$tau_p0_units # 1 %#% "day"
+      maxt <- vals$tau_p0$value[2] %#% vals$tau_p0$unit[2] 
+      # maxt <- 1 %#% "day"
       datfull <- vals$data0[which(vals$data0$t <= maxt), ]
       nday <- format(max(dat$timestamp), "%d")
       
