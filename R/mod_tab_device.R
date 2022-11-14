@@ -97,10 +97,13 @@ mod_tab_device_ui <- function(id) {
                 splitLayout(
                   cellWidths = c("40%", "60%"),
                   
-                  shiny::numericInput(
+                  shinyWidgets::autonumericInput(
                     inputId = ns("gps_dur"),
                     label = NULL,
-                    value = 12),
+                    minimumValue = 0,
+                    value = 12,
+                    allowDecimalPadding = FALSE,
+                    wheelStep = 1),
                   
                   shiny::selectInput(
                     inputId = ns("gps_dur_units"),
@@ -112,11 +115,6 @@ mod_tab_device_ui <- function(id) {
                   
                 ), # end of splitLayout
 
-                # fluidRow( #TODO
-                #   column(width = 12,
-                #          verbatimTextOutput(outputId = ns("maximum_dti"))
-                #   )), p(style = "padding: 0px;"),
-                
                 shinyWidgets::pickerInput(
                   inputId = ns("gps_dti_max"),
                   label = "GPS fix rate (max):",
@@ -127,17 +125,10 @@ mod_tab_device_ui <- function(id) {
                                  "available at the duration above."),
                     placement = "bottom"),
                 
-                # div(id = ns("gps_decay"),
-                #     p(HTML("&nbsp;"), "Choose decay rate:",
-                #       class = "txt-label",
-                #       style = "margin: 8px 0 -16px -7px;"),
-                #     shinyWidgets::sliderTextInput(
-                #       inputId = ns("gps_k"),
-                #       label = NULL,
-                #       choices = seq(from = 1, to = 40),
-                #       select = 20) %>%
-                #       tagAppendAttributes(class = 'decayinput')
-                # ),
+                fluidRow(
+                  column(width = 12,
+                         verbatimTextOutput(outputId = ns("min_frq"))
+                  )), p(style = "padding: 0px;"),
                 
                 shinyWidgets::autonumericInput(
                   inputId = ns("gps_maxlocs"),
@@ -773,10 +764,29 @@ mod_tab_device_server <- function(id, vals) {
     
     ## Update GPS inputs: -------------------------------------------------
     
-    # output$maximum_dti <- renderText({
-    #   vals$gps_dti_max <- "1 fix every day"
-    #   return(vals$gps_dti_max)
-    # })
+    observe({
+      
+      if (input$gps_dti_max == "1 fix every day") {
+        shinyjs::hide(id = "min_frq")
+      } else {
+        shinyjs::show(id = "min_frq")
+      }
+    }) %>% bindEvent(input$gps_dti_max)
+    
+    output$min_frq <- renderText({
+      
+      out <- ""
+      if (input$gps_dti_max ==
+          "1 fix every 12 hours") out <- "2 fixes every day"
+      if (input$gps_dti_max ==
+          "1 fix every 8 hours")  out <- "3 fixes every day"
+      if (input$gps_dti_max ==
+          "1 fix every 6 hours")  out <- "4 fixes every day"
+      if (input$gps_dti_max ==
+          "1 fix every 4 hours")  out <- "6 fixes every day"
+      
+      return(out)
+    }) %>% bindEvent(input$gps_dti_max)
     
     ### Reveal correct inputs:
     
@@ -797,12 +807,9 @@ mod_tab_device_server <- function(id, vals) {
       req(vals$active_tab == 'regime',
           input$device_type == 1)
       
-      device <- movedesign::fixrates
-      max_dti_choices <- device %>%
+      max_dti_choices <- movedesign::fixrates %>%
         dplyr::filter(.data$common == "Y") %>%
         dplyr::pull(.data$dti_notes)
-      
-      print(max_dti_choices)
       
       shinyWidgets::updatePickerInput(
         session,
@@ -870,12 +877,32 @@ mod_tab_device_server <- function(id, vals) {
       new_dur <- sigdigits(input$gps_dur_units %#%
                              input$gps_dur %#% vals$gps_dur_units, 3)
       
-      updateNumericInput(
-        session,
-        inputId = "gps_dur",
-        label = NULL,
-        min = 1,
-        value = new_dur)
+      if (new_dur > 364 && vals$gps_dur_unit == "days") {
+        shinyWidgets::updateAutonumericInput(
+          session = session,
+          inputId = "gps_dur",
+          value = 1,
+          options = list(
+            minimumValue = 0,
+            allowDecimalPadding = FALSE))
+        shiny::updateSelectInput(
+          session = session,
+          inputId = "gps_dur_units",
+          label = NULL,
+          choices = c("Day(s)" = "days",
+                      "Month(s)" = "months",
+                      "Year(s)" = "years"),
+          selected = "years")
+        
+      } else {
+        shinyWidgets::updateAutonumericInput(
+          session = session,
+          inputId = "gps_dur",
+          value = new_dur,
+          options = list(
+            minimumValue = 0,
+            allowDecimalPadding = FALSE))
+      }
       
     }) %>% bindEvent(input$gps_dur_units)
     
@@ -960,38 +987,41 @@ mod_tab_device_server <- function(id, vals) {
                 HTML(paste0(span("tracking regime",
                                  class = "col-hgl"), "."))) },
             
+            if (input$eval_tradeoffs) {
+              
+              column(
+                width = 12,
+                style = "z-index: 1000;",
+                
+                shinyWidgets::switchInput(
+                  inputId = ns("deviceInput_log"),
+                  label = span(icon("wrench"),
+                               "Logarithmic"),
+                  labelWidth = "100px")
+                
+              ) },
+            
             #### 1.2. Plotting GPS battery life decay:
+            
             if (input$eval_tradeoffs) {
               
               ggiraph::girafeOutput(
                 outputId = ns("regPlot_gps"),
                 width = "100%", height = "50%") %>%
                 shinycssloaders::withSpinner(
-                  type = getOption("spinner.type", default = 7),
+                  type = getOption("spinner.type", default = 4),
                   color = getOption("spinner.color",
-                                    default = "#f4f4f4"))
+                                    default = "#009da0"),
+                  proxy.height = "350px",
+                  hide.ui = FALSE)
             },
             
-            #### 1.3. Plotting GPS battery life decay:
-            if (input$eval_tradeoffs) {
-              
-              div(style = paste("position: absolute;",
-                                "top: 135px;", "right: calc(15%);"),
-                  
-                  shinyWidgets::switchInput(
-                    inputId = ns("deviceInput_log"),
-                    label = span(icon("wrench"),
-                                 "Logarithmic"),
-                    labelWidth = "100px")
-              ) },
-            
-            
-            helpText(
-              span(
-                "Note: The secondary axis is showing both",
+            span(class = "help-block",
+                "Note: The secondary axis is showing the",
+                "effective sample sizes",
                 span("N[area]", css = "cl-sea"),
-                "and for", span("N[speed", css = "cl-dgr"),
-                "and corresponding colors in the plot.")),
+                "and", wrap_none(span("N[speed]", css = "cl-dgr"), 
+                                 end = ".")),
             
             uiOutput(ns("regText_gps"))
             
@@ -1328,6 +1358,11 @@ mod_tab_device_server <- function(id, vals) {
     })
     
     observe({
+      validate(need(input$gps_dur != '' && input$gps_dur > 0,
+                    "Requires a positive value."))
+      if(input$gps_dur_units == "days")
+        validate(need(input$gps_dur > 5, "Requires a value."))
+      
       vals$gps_dur <- input$gps_dur
       vals$gps_dur_units <- input$gps_dur_units
 
@@ -1493,14 +1528,8 @@ mod_tab_device_server <- function(id, vals) {
     
     gps_simulation <- shiny::reactive({
       
-      is_simplified <- TRUE
-      
-      # is_simplified <- FALSE
-      # k <- seq(0.001, 8.046066, length.out = 30)
-      # k0 <- k[input$gps_k]
-      
       if ((input$gps_dur %#% input$gps_dur_units) < 10 %#% "days") {
-        input_cutoff <- .1 %#% "days"
+        input_cutoff <- .5 %#% "days"
       } else { input_cutoff <- 2 %#% "days" }
       
       dat <- simulate_gps(
@@ -1508,11 +1537,9 @@ mod_tab_device_server <- function(id, vals) {
         yrange = input$gps_dur,
         yunits = input$gps_dur_units,
         cutoff = input_cutoff,
-        max_dti = input$gps_dti_max,
-        simplified = is_simplified)
+        max_dti = input$gps_dti_max)
       
-      # x_max <- dat$frq_hrs[match("1 fix every second", dat$dti_notes)]
-      # dat <- dat %>% dplyr::filter(frq_hrs <= x_min)
+      if (all(dat$dur_sec == 0)) return(NULL)
       
       # Display only values with duration
       # (plus three additional rows):
@@ -1523,27 +1550,17 @@ mod_tab_device_server <- function(id, vals) {
           dplyr::filter(color == "red") %>%
           dplyr::pull(id)
 
-        if (length(tmpids) >= 1) {
-          dat <- dat %>% dplyr::filter(id <= (min(tmpids))) # + 1))
-        } else {
-          dat <- dat
+        if (length(tmpids) > 3) {
+          dat <- dat %>% dplyr::filter(id <= (min(tmpids) + 3))
         }
-
-        # tmpdf <- dat %>%
-        #   dplyr::filter(frq_hrs >= 0) %>%
-        #   dplyr::filter(frq_hrs < max_freq)
-        # 
-        # if (nrow(tmpdf) + 3 <= nrow(dat) - 3) {
-        #   dat <- dat[1:(nrow(tmpdf) + 3),]
-        # } else { dat <- dat[1:nrow(tmpdf),] }
       }
       
       return(dat)
       
     }) %>% # end of reactive, gps_simulation()
-      bindCache(input$gps_dur,
-                input$gps_dur_units,
-                input$gps_dti_max)
+      bindCache(list(input$gps_dur,
+                     input$gps_dur_units,
+                     input$gps_dti_max))
     
     ## Simulating new conditional data: ---------------------------------
     
@@ -1956,6 +1973,34 @@ mod_tab_device_server <- function(id, vals) {
           input$gps_dur_units, 
           input$gps_dti_max) 
       
+      validate(need(input$gps_dur > 0, "Requires a non-zero value."))
+      if ((input$gps_dur_units == "days" && input$gps_dur <= 2)) {
+        
+        if (vals$keep_alert)
+          shinyalert::shinyalert(
+            type = "warning",
+            title = "Invalid battery life",
+            text = tagList(
+              "Maximum duration needs to be greater than",
+              span("2 days", class = "cl-dgr"), "for the",
+              "simulation to succeed. In these conditions,",
+              "the plot will not update.", p(),
+              "Please choose a different",
+              wrap_none("GPS battery life", css = "cl-blk",
+                        end = ".")),
+            callbackR = function(x) {
+              vals$keep_alert <- x
+            },
+            html = TRUE,
+            showCancelButton = TRUE,
+            cancelButtonText = "Dismiss forever",
+            confirmButtonText = "OK",
+            confirmButtonCol = pal$mdn,
+            size = "s")
+        
+        req(input$gps_dur > 2)
+      }
+      
       add_n <- FALSE
       add_N1 <- FALSE
       add_N2 <- FALSE
@@ -1963,6 +2008,7 @@ mod_tab_device_server <- function(id, vals) {
       device <- movedesign::fixrates
       
       gps_sim <- gps_simulation()
+      req(gps_sim)
       vals$df_gps <- gps_sim
       
       if (!("blue" %in% gps_sim$color)) {
@@ -1988,7 +2034,7 @@ mod_tab_device_server <- function(id, vals) {
       add_n <- TRUE
       
       if (!is.null(vals$which_question)) {
-
+        req(vals$which_question)
         req(vals$is_valid, vals$tau_p0, vals$tau_v0)
 
         tauv <- vals$tau_v0$value[2] %#% vals$tau_v0$unit[2]
@@ -2004,7 +2050,7 @@ mod_tab_device_server <- function(id, vals) {
           a1 <- b1 * (ylim.prim[1] - ylim.sec[1])
 
           add_N1 <- TRUE
-        }
+        } # end of N1
 
         if ("Speed & distance" %in% vals$which_question) {
 
@@ -2014,7 +2060,7 @@ mod_tab_device_server <- function(id, vals) {
             dti <- gps_sim$dti[i]
             r <- dti / tauv
 
-            n <- gps_sim$n
+            n <- gps_sim$n[i]
             n_loss <- ifelse(is.null(vals$n_lost), 0, vals$n_lost)
 
             N2 <- ifelse(
@@ -2033,7 +2079,16 @@ mod_tab_device_server <- function(id, vals) {
           a2 <- b2 * (ylim.prim[1] - ylim.sec[1])
 
           add_N2 <- TRUE
-        }
+        } # end of N2
+        
+        if (length(vals$which_question) > 1) {
+
+          ylim.prim <- c(0, max(gps_sim$dur))
+          ylim.sec <- c(0, max(gps_sim$N_speed))
+          b1 <- diff(ylim.prim)/diff(ylim.sec)
+          a1 <- b1 * (ylim.prim[1] - ylim.sec[1])
+
+        } # end of both N1 and N2
 
       } # end of !is.null(vals$which_question)
       
@@ -2106,26 +2161,31 @@ mod_tab_device_server <- function(id, vals) {
           { if (add_N1) p2 } +
           { if (add_N2) p3 } +
 
-          { if (add_N1)
+          { if (add_N1 & !add_N2) {
             ggplot2::scale_y_continuous(
               sec.axis = ggplot2::sec_axis(
                 ~ (. - a1)/b1,
                 name = expression(N[area])),
-              labels = scales::comma)
-          } +
-          
-          { if (add_N2)
+              labels = scales::comma,
+              limits = c(0, ymax))
+          } else if (add_N2 & !add_N1) {
             ggplot2::scale_y_continuous(
               sec.axis = ggplot2::sec_axis(
                 ~ (. - a2)/b2,
                 name = expression(N[speed])),
-              labels = scales::comma)
-          } +
-          
-          { if (!add_N1 && !add_N2)
+              labels = scales::comma,
+              limits = c(0, ymax))
+          } else if (!add_N1 && !add_N2) {
             ggplot2::scale_y_continuous(
               labels = scales::comma,
               limits = c(0, ymax))
+          } else if (add_N1 && add_N2) {
+            ggplot2::scale_y_continuous(
+              sec.axis = ggplot2::sec_axis(
+                ~ (. - a2)/b2,
+                name = expression(N)),
+              labels = scales::comma,
+              limits = c(0, ymax)) }
           } +
           
           ggiraph::geom_point_interactive(size = 1.5) +
@@ -2163,8 +2223,8 @@ mod_tab_device_server <- function(id, vals) {
               selected = preselected,
               type = "single",
               css = paste("r: 4pt;",
-                          "fill: #009da0;",
-                          "stroke: #009da0;")),
+                          "fill: #2c3b41;",
+                          "stroke: #2c3b41;")),
             ggiraph::opts_toolbar(saveaspng = FALSE)))
         
       }) # end of renderGirafe // regPlot_gps
@@ -2172,8 +2232,7 @@ mod_tab_device_server <- function(id, vals) {
     }) %>% # end of observe,
       bindEvent(list(input$gps_dur,
                      input$gps_dur_units,
-                     input$gps_dti_max,
-                     vals$which_question))
+                     input$gps_dti_max))
     
     ## Render new simulated data plot (xy): -------------------------------
 

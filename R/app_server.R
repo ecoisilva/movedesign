@@ -10,7 +10,8 @@ app_server <- function(input, output, session) {
   vals <- reactiveValues(reg = NULL,
                          hr = NULL,
                          ctsd = NULL,
-                         report = NULL)
+                         report = NULL,
+                         keep_alert = TRUE)
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 

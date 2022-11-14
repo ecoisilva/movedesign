@@ -1121,9 +1121,6 @@ fall_back <- function(f1, f1_args_list, f2, f2_args_list, msg) {
 
 #' Check if error function from ctmmweb
 #'
-#' @description WIP
-#' @keywords internal
-#'
 #' @noRd
 #'
 has_error <- function(result) {
