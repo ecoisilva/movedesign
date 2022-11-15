@@ -409,7 +409,7 @@ simulate_gps <- function(data,
                          max_dti,
                          trace = FALSE) {
   
-  trace <- TRUE
+  trace <- FALSE
   dti <- dti_notes <- frq_hrs <- highlight <- NULL
   
   if(trace == TRUE) message(paste(yrange, yunits))
