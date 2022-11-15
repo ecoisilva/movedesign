@@ -877,32 +877,14 @@ mod_tab_device_server <- function(id, vals) {
       new_dur <- sigdigits(input$gps_dur_units %#%
                              input$gps_dur %#% vals$gps_dur_units, 3)
       
-      if (new_dur > 364 && vals$gps_dur_unit == "days") {
-        shinyWidgets::updateAutonumericInput(
-          session = session,
-          inputId = "gps_dur",
-          value = 1,
-          options = list(
-            minimumValue = 0,
-            allowDecimalPadding = FALSE))
-        shiny::updateSelectInput(
-          session = session,
-          inputId = "gps_dur_units",
-          label = NULL,
-          choices = c("Day(s)" = "days",
-                      "Month(s)" = "months",
-                      "Year(s)" = "years"),
-          selected = "years")
-        
-      } else {
-        shinyWidgets::updateAutonumericInput(
-          session = session,
-          inputId = "gps_dur",
-          value = new_dur,
-          options = list(
-            minimumValue = 0,
-            allowDecimalPadding = FALSE))
-      }
+      shinyWidgets::updateAutonumericInput(
+        session = session,
+        inputId = "gps_dur",
+        value = new_dur,
+        options = list(
+          minimumValue = 0,
+          allowDecimalPadding = FALSE))
+      
       
     }) %>% bindEvent(input$gps_dur_units)
     
@@ -1012,17 +994,10 @@ mod_tab_device_server <- function(id, vals) {
                   type = getOption("spinner.type", default = 4),
                   color = getOption("spinner.color",
                                     default = "#009da0"),
-                  proxy.height = "350px",
-                  hide.ui = FALSE)
+                  proxy.height = "300px")
             },
             
-            span(class = "help-block",
-                "Note: The secondary axis is showing the",
-                "effective sample sizes",
-                span("N[area]", css = "cl-sea"),
-                "and", wrap_none(span("N[speed]", css = "cl-dgr"), 
-                                 end = ".")),
-            
+            uiOutput(ns("regPlotSubtitle")),
             uiOutput(ns("regText_gps"))
             
           ) # end of column (UI)
@@ -1121,6 +1096,50 @@ mod_tab_device_server <- function(id, vals) {
       bindEvent(input$device_type, ignoreInit = TRUE)
     
     ## Change sample size text: -----------------------------------------
+    
+    observe({
+      req(vals$which_question)
+      # vals$tau_p0, vals$tau_v0
+      
+      if (length(vals$which_question) > 1) {
+        ui <- span(class = "help-block",
+                   "Note: The secondary axis is showing the",
+                   "effective sample sizes",
+                   span("N[area]", class = "cl-sea"),
+                   "and", span("N[speed]", class = "cl-dgr"),
+                   "for each sampling design.")
+      } else {
+        
+        switch(vals$which_question,
+               "Home range" = { 
+                 ui <- span(class = "help-block",
+                            "Note: The secondary axis is showing",
+                            "the effective sample size",
+                            span("N[area]", class = "cl-sea"),
+                            "for each sampling design.")
+               },
+               "Speed & distance" = {
+                 ui <- span(class = "help-block",
+                            "Note: The secondary axis is showing",
+                            "the effective sample size",
+                            span("N[speed]", class = "cl-dgr"),
+                            "for each sampling design.")
+               },
+               stop(paste0("No handler for ", 
+                           vals$which_question, "."))
+        )
+      }
+      
+      ui <- span(
+        ui, span(class = "help-block",
+                 "Switch to logarithmic scale to show these",
+                 "values more clearly at higher intervals."))
+      
+      output$regPlotSubtitle <- renderUI({ ui })
+      
+    }) %>% # end of observe
+      bindEvent(vals$which_question)
+    
     
     observe({
       if (input$est_type == 1) {
@@ -1361,7 +1380,7 @@ mod_tab_device_server <- function(id, vals) {
       validate(need(input$gps_dur != '' && input$gps_dur > 0,
                     "Requires a positive value."))
       if(input$gps_dur_units == "days")
-        validate(need(input$gps_dur > 5, "Requires a value."))
+        validate(need(input$gps_dur > 2, "Requires a value."))
       
       vals$gps_dur <- input$gps_dur
       vals$gps_dur_units <- input$gps_dur_units
@@ -1557,10 +1576,10 @@ mod_tab_device_server <- function(id, vals) {
       
       return(dat)
       
-    }) %>% # end of reactive, gps_simulation()
-      bindCache(list(input$gps_dur,
-                     input$gps_dur_units,
-                     input$gps_dti_max))
+    }) # %>% # end of reactive, gps_simulation()
+      # bindCache(list(input$gps_dur,
+      #                input$gps_dur_units,
+      #                input$gps_dti_max)) # revert change!
     
     ## Simulating new conditional data: ---------------------------------
     
@@ -1973,17 +1992,23 @@ mod_tab_device_server <- function(id, vals) {
           input$gps_dur_units, 
           input$gps_dti_max) 
       
+      proceed <- TRUE
+      
       validate(need(input$gps_dur > 0, "Requires a non-zero value."))
-      if ((input$gps_dur_units == "days" && input$gps_dur <= 2)) {
+      if ((input$gps_dur %#% input$gps_dur_units <= 2 %#% "days") ||
+          (input$gps_dur %#% input$gps_dur_units > 10 %#% "years")) {
+        
+        proceed <- NULL
         
         if (vals$keep_alert)
           shinyalert::shinyalert(
             type = "warning",
             title = "Invalid battery life",
             text = tagList(
-              "Maximum duration needs to be greater than",
-              span("2 days", class = "cl-dgr"), "for the",
-              "simulation to succeed. In these conditions,",
+              "Maximum duration cannot be shorter than",
+              span("2 days", class = "cl-dgr"),
+              "or greater than", span("10 years", class = "cl-dgr"),
+              "for the simulation to succeed. In these conditions,",
               "the plot will not update.", p(),
               "Please choose a different",
               wrap_none("GPS battery life", css = "cl-blk",
@@ -1998,7 +2023,7 @@ mod_tab_device_server <- function(id, vals) {
             confirmButtonCol = pal$mdn,
             size = "s")
         
-        req(input$gps_dur > 2)
+        req(proceed)
       }
       
       add_n <- FALSE
@@ -2232,7 +2257,10 @@ mod_tab_device_server <- function(id, vals) {
     }) %>% # end of observe,
       bindEvent(list(input$gps_dur,
                      input$gps_dur_units,
-                     input$gps_dti_max))
+                     input$gps_dti_max,
+                     vals$which_question,
+                     vals$active_tab == 'regime', 
+                     input$device_type == 1))
     
     ## Render new simulated data plot (xy): -------------------------------
 
