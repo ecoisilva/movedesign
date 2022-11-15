@@ -409,9 +409,6 @@ simulate_gps <- function(data,
                          max_dti,
                          trace = FALSE) {
 
-
-  message("...Simulate GPS...")
-
   stopifnot("Error: data required." = !is.null(data))
 
   stopifnot(is.numeric(yrange) || is.null(yrange))
