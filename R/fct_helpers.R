@@ -408,78 +408,97 @@ simulate_gps <- function(data,
                          cutoff,
                          max_dti,
                          trace = FALSE) {
-  
-  trace <- FALSE
+
+
+  message("...Simulate GPS...")
+
+  stopifnot("Error: data required." = !is.null(data))
+
+  stopifnot(is.numeric(yrange) || is.null(yrange))
+  stopifnot(is.numeric(cutoff) || is.null(cutoff))
+
+  stopifnot(is.character(yunits) || is.null(yunits))
+  stopifnot(is.character(max_dti) || is.null(max_dti))
+
+
+  trace <- TRUE
   dti <- dti_notes <- frq_hrs <- highlight <- NULL
-  
+
   if(trace == TRUE) message(paste(yrange, yunits))
   if(yrange == 0) stop("Duration cannot be 0.", call. = FALSE)
-  
+
   unit <- "days"
   params <- data.frame(
     id = ifelse(max_dti == "1 fix every day", "main", "other"),
-    y0 = round(unit %#% (yrange %#% yunits), 0),
+    y0 = round(unit %#% (yrange %#% yunits), 1),
     x0 = data$frq_hrs[match(max_dti, data$dti_notes)],
     yrange = yrange,
     shift = NA)
-  
+
   params[["shift"]] <- dplyr::case_when(
     params[["y0"]] < 31 ~ "very low", # 1 month
-    params[["y0"]] < unit %#% 1 %#% "year" ~ "low",
-    params[["y0"]] < unit %#% 3 %#% "years" ~ "medium",
-    params[["y0"]] < unit %#% 10 %#% "years" ~ "high",
+    params[["y0"]] < unit %#% 1/2 %#% "years" ~ "low",
+    params[["y0"]] < unit %#% 1 %#% "year" ~ "medium",
+    params[["y0"]] < unit %#% 3 %#% "years" ~ "high",
+    params[["y0"]] < unit %#% 5 %#% "years" ~ "very high",
     TRUE ~ "extremely high"
   )
-  
+
   newdata <- data %>%
     dplyr::select(dti_notes, dti, frq_hrs) %>%
     dplyr::filter(frq_hrs >= params[["x0"]])
-  
+
   init <- init0 <- c(-16.913, params[["y0"]])
-  threshold <- ifelse(params[["shift"]] == "very low", .05, .25)
-  
+
   threshold <- dplyr::case_when(
     params[["shift"]] == "very low" ~ 0.05,
-    params[["shift"]] == "low" ~ 0.25,
+    params[["shift"]] == "low" ~ 0.1,
+    params[["shift"]] == "medium" ~ 0.25,
+    params[["shift"]] == "high" ~ 0.3,
     TRUE ~ 1
   )
-  
+
   y <- calculate_pars(newdata$frq_hrs, init)
-  
-  x <- c(2, NA, 1, 1)
+
+  x <- c(NA, NA, 1, 1)
   x[1] <- dplyr::case_when(
-    params[["shift"]] == "very low" ~ 2,
-    params[["shift"]] == "low" ~ 10,
-    TRUE ~ 20
-  )
-  x[3] <- dplyr::case_when(
     params[["shift"]] == "very low" ~ 1,
-    params[["shift"]] == "low" ~ 1,
-    params[["shift"]] == "medium" ~ 5,
-    params[["shift"]] == "high" ~ 10,
-    TRUE ~ 15
+    params[["shift"]] == "low" ~ 3,
+    params[["shift"]] == "medium" ~ 10,
+    params[["shift"]] == "high" ~ 20,
+    TRUE ~ 30
   )
-  
+
+  x[3] <- dplyr::case_when(
+    params[["shift"]] == "very low" ~ yunits %#% 1 %#% "day",
+    params[["shift"]] == "low" ~ yunits %#% 5 %#% "days",
+    params[["shift"]] == "medium" ~ yunits %#% 1 %#% "months",
+    params[["shift"]] == "high" ~ yunits %#% 1 %#% "months",
+    params[["shift"]] == "very high" ~ yunits %#% 1.4 %#% "months",
+    TRUE ~ yunits %#% 6 %#% "months"
+  )
+
+  i <- 0
   n_attempts <- m_attempts <- 40
   for (n in 1:n_attempts) {
-    
-    if (all(y == 0)) { 
+
+    if (all(y == 0)) {
       init <- init0
       break
     }
-    
+
     if (n > 1 && all(init == init0)) break
-    
+
     # Match maximum duration with yrange:
     for(m in 1:m_attempts) {
-      
+
       out <- c("expected" = params[["y0"]],
                "current" = max(y),
                "diff" = diff(c(params[["y0"]], max(y))))
-      
-      if(trace) print(paste0("dur: ", out[["current"]],
+
+      if(trace) print(paste0("[m] dur: ", out[["current"]],
                              ", goal dur: ", out[["expected"]]))
-      if(trace) print(paste("diff dur:", round(out[["diff"]], 3),
+      if(trace) print(paste("[m] diff dur:", round(out[["diff"]], 3),
                             "compared to", threshold))
 
       x[2] <- dplyr::case_when(
@@ -488,70 +507,63 @@ simulate_gps <- function(data,
         abs(out[["diff"]]) <= 10 ~ 10,
         abs(out[["diff"]]) <= 20 ~ 20,
         TRUE ~ 30)
-      if (params[["id"]] == "other" &&
-          params[["shift"]] == "very low")
-        x[2] <- dplyr::case_when(
-          abs(out[["diff"]]) <= 0.2 ~ 2,
-          abs(out[["diff"]]) <= 0.4 ~ 4,
-          TRUE ~ 5)
-      
+
       if (abs(out[["diff"]]) > threshold) {
-        
+
         if (sign(out[["diff"]]) == 1) {
           init[1] <- init[1] + x[1] * x[2]
         } else {
           init[1] <- init[1] - x[1] * x[2]
         }
-        
+
         y <- calculate_pars(newdata$frq_hrs, init)
+        i <- i + 1
         if(all(y == 0)) { init <- init0; break }
-        
+
       } else break
     }
-    
+
     y <- calculate_pars(newdata$frq_hrs, init)
 
     # Adjust initial parameters:
-    
+
     out[["current"]] <- max(y)
     out[["diff"]] <- diff(c(out[["expected"]], out[["current"]]))
-    
+
     if(trace) print(paste0("dur: ", out[["current"]],
                            ", goal dur: ", out[["expected"]]))
     if(trace) print(paste("diff dur:", round(out[["diff"]], 3),
                           "compared to", threshold))
-    
+
     if (abs(out[["diff"]]) <= threshold) break
 
-    if (params[["id"]] == "other") {
-      if (params[["shift"]] == "very low") x[3] <- 2
-      if (params[["shift"]] == "low") x[3] <- 50
-    }
+    x[4] <- dplyr::case_when(
+      abs(out[["diff"]]) <= 1 ~ 1,
+      abs(out[["diff"]]) <= 5 ~ 2,
+      TRUE ~ 3)
 
-    x[4] <- ifelse(out[["diff"]] >= 20, 100, x[4])
-    
-    yrange <- yrange + x[3] * x[4]
     if (out[["diff"]] > threshold) {
       yrange <- yrange - x[3] * x[4]
+    } else {
+      yrange <- yrange + x[3] * x[4]
     }
-    
+
     init[2] <- unit %#% yrange %#% yunits
     y <- calculate_pars(newdata$frq_hrs, init)
-    
+    i <- i + 1
   }
-  
+
   newdata$dur_sec <- y %#% unit
   newdata$dur_mth <- "months" %#% newdata$dur_sec
-  
+
   if (max(newdata$dur_sec) > cutoff) {
     newdata$color <- as.factor(dplyr::case_when(
       newdata$dur_sec < cutoff ~ "red",
       newdata$dur_sec >= cutoff ~ "blue"))
   } else { newdata$color <- "red" }
-  
-  if (trace) print(paste("-- number of attempts n:", n))
-  if (trace) print(paste("-- number of attempts m:", m))
-  
+
+  if (trace) print(paste("-- number of attempts:", i))
+
   newdata$id <- 1:nrow(newdata)
   return(newdata)
 }
