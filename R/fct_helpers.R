@@ -419,9 +419,8 @@ simulate_gps <- function(data,
 
   stopifnot(is.character(yunits) || is.null(yunits))
   stopifnot(is.character(max_dti) || is.null(max_dti))
-
-
-  trace <- TRUE
+  
+  trace <- FALSE
   dti <- dti_notes <- frq_hrs <- highlight <- NULL
 
   if(trace == TRUE) message(paste(yrange, yunits))
@@ -448,8 +447,6 @@ simulate_gps <- function(data,
     dplyr::select(dti_notes, dti, frq_hrs) %>%
     dplyr::filter(frq_hrs >= params[["x0"]])
 
-  init <- init0 <- c(-16.913, params[["y0"]])
-
   threshold <- dplyr::case_when(
     params[["shift"]] == "very low" ~ 0.05,
     params[["shift"]] == "low" ~ 0.1,
@@ -458,6 +455,7 @@ simulate_gps <- function(data,
     TRUE ~ 1
   )
 
+  init <- init0 <- c(-16.913, params[["y0"]])
   y <- calculate_pars(newdata$frq_hrs, init)
 
   x <- c(NA, NA, 1, 1)
