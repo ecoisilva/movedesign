@@ -11,16 +11,14 @@
 #' }
 #'
 #' @noRd
-abbrv_unit <- function(unit) {
+abbrv_unit <- function(unit, ui_only = TRUE) {
 
-  if (missing(unit)) {
+  if (missing(unit))
     stop("`unit` argument not provided.")
-  }
 
-  if (!is.character(unit)) {
+  if (!is.character(unit))
     stop("`unit` argument must be a character string.")
-  }
-
+  
   all_units <- c("year", "month", "week",
                  "day", "hour", "minute", "second",
                  "kilometer", "meter", "km", "m",
@@ -34,31 +32,32 @@ abbrv_unit <- function(unit) {
   x <- gsub("(.)s$", "\\1", unit)
   var <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
 
-  if (any(is.na(var))) {
+  if (any(is.na(var)))
     stop("Invalid unit: ", paste(x[is.na(var)], collapse = ", "),
          call. = FALSE)
-  }
-
+  
   out <- x
-  if (x == "year" ) out <- "yr"
-  if (x == "month" ) out <- "mth"
-  if (x == "week" ) out <- "wk"
-  if (x == "day" ) out <- "d"
-  if (x == "hour" ) out <- "hr"
-  if (x == "minute" ) out <- "min"
-  if (x == "second" ) out <- "sec"
+  if (x == "year") out <- "yr"
+  if (x == "month") out <- "mth"
+  if (x == "week") out <- "wk"
+  if (x == "day") out <- "d"
+  if (x == "hour") out <- "hr"
+  if (x == "minute") out <- "min"
+  if (x == "second") out <- "sec"
 
   if (x == "kilometer") out <- "km"
   if (x == "meter") out <- "m"
 
-  if (x == "square kilometer") out <- "km\u00B2"
-  if (x == "square meter") out <- "m\u00B2"
+  if (x == "square kilometer" || x == "km^2") 
+    out <- ifelse(ui_only, "km\u00B2", "km^2")
+  if (x == "square meter" || x == "m^2") 
+    out <- ifelse(ui_only, "m\u00B2", "m^2")
   if (x == "hectare") out <- "ha"
 
-  if (x == "kilometers/hour" ) out <- "km/h"
-  if (x == "meters/second" ) out <- "m/s"
-  if (x == "kilometers/day" ) out <- "km/day"
-  if (x == "meters/day" ) out <- "m/day"
+  if (x == "kilometers/hour") out <- "km/h"
+  if (x == "meters/second") out <- "m/s"
+  if (x == "kilometers/day") out <- "km/day"
+  if (x == "meters/day") out <- "m/day"
 
   return(out)
 
@@ -644,13 +643,18 @@ estimate_time <- function(data,
       start_test <- Sys.time()
       units <- "minute"
       
+      dti <- data[[2,"t"]] - data[[1,"t"]]
+      tauv <- extract_pars(fit, par = "velocity")
+      m <- ifelse(dti > 4 * (tauv$value[2] %#% tauv$unit[2]),
+                  50, 90)
+      
       tmpdat <- data[1:n, ]
       inputList <- align_lists(list(fit), list(tmpdat))
       speed <- par.speed(inputList, trace = trace, parallel = parallel)
       
       total_time <- difftime(Sys.time(), start_test,
                              units = "secs") %>%
-        as.numeric() / 100
+        as.numeric() / m
       
     } # end of if (type == "speed")
     
