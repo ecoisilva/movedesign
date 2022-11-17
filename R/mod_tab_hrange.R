@@ -547,7 +547,7 @@ mod_tab_hrange_server <- function(id, vals) {
           tau_p0 * 50, tau_p0 * 100, tau_p0 * 200,
           tau_p0 * 400, tau_p0 * 600, tau_p0 * 800,
           tau_p0 * 1000, tau_p0 * 2000
-        ) %>% plyr::round_any(5, f = round) %>%
+        ) %>% round_any(5, f = round) %>%
           unique() %>% sort()
         dur_choices <- dur_choices[dur_choices != 0]
 
@@ -617,13 +617,13 @@ mod_tab_hrange_server <- function(id, vals) {
                 width = "100%",
                 choices = dur_choices,
                 selected = tau_p0 * 10 %>%
-                  plyr::round_any(5, f = round),
+                  round_any(5, f = round),
                 from_min = ifelse(dur > tau_p0 * 10,
                                   dur, tau_p0 * 10) %>%
-                  plyr::round_any(5, f = round),
+                  round_any(5, f = round),
                 from_max = ifelse(dur > tau_p0 * 800,
                                   dur, tau_p0 * 2000) %>%
-                  plyr::round_any(5, f = round)
+                  round_any(5, f = round)
               ),
 
               shinyWidgets::sliderTextInput(
@@ -1011,6 +1011,7 @@ mod_tab_hrange_server <- function(id, vals) {
         hrErr_max_new <- ((vals$hrEst_new[[3]] %#% units) -
                             truth) / truth
         
+        hrErr_lci_new <- hrErr_uci_new <- NULL
         vals$hrErr_new <- data.frame("lci" = hrErr_lci_new,
                                      "est" = hrErr_new,
                                      "uci" = hrErr_uci_new)
