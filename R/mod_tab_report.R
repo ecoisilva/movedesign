@@ -887,7 +887,7 @@ mod_tab_report_server <- function(id, vals) {
             stats::na.omit()
           
           ds2_hr <- stats::density(ds2_hr$error)
-          ds2_hr <- dt_hra.frame(x = ds2_hr$x, y = ds2_hr$y)
+          ds2_hr <- data.frame(x = ds2_hr$x, y = ds2_hr$y)
           
           hrCI_new <- bayestestR::ci(ds2_hr$x, ci = input_ci, method = "HDI")
           
@@ -1125,9 +1125,11 @@ mod_tab_report_server <- function(id, vals) {
             stats::na.omit()
 
           ds2_sd <- stats::density(ds2_sd$error)
-          ds2_sd <- dt_hra.frame(x = ds2_sd$x, y = ds2_sd$y)
+          ds2_sd <- data.frame(x = ds2_sd$x, y = ds2_sd$y)
 
-          sdCI_new <- bayestestR::ci(ds2_sd$x, ci = input_ci, method = "HDI")
+          sdCI_new <- bayestestR::ci(ds2_sd$x, 
+                                     ci = input_ci,
+                                     method = "HDI")
 
           if (is_log) ds2_sd$y <- ds2_sd$y / max(ds2_sd$y)
 
@@ -1865,8 +1867,8 @@ mod_tab_report_server <- function(id, vals) {
             round(dur$value / (dur$unit %#% tau_p), 0),
             icon(name = "xmark"), wrap_none("\u03C4", tags$sub("p")),
             "\u2248", wrap_none(dur$value, " ", dur$unit, ","),
-            "resulting in an",
-            "effective sample size of", N1, "locations.")
+            "resulting in an effective sample size equivalent to",
+            N1, "independent locations.")
         
       } # end of "Home range"
       
@@ -1891,9 +1893,8 @@ mod_tab_report_server <- function(id, vals) {
             dti_text,
             "\u2248", wrap_none(dti$value, " ", dti$unit,
                                 color = vals$ctsd_col[1], end = ","),
-            "resulting in an",
-            "effective sample size of",
-            span(N2, style = vals$ctsd_col[1]), "locations.")
+            "resulting in an effective sample size equivalent to",
+            N2, "independent locations.")
         
       } # end of "Speed & distance"
       
@@ -2061,7 +2062,15 @@ mod_tab_report_server <- function(id, vals) {
                "estimation, but insufficient",
                "for", span("speed & distance", class = "cl-dgr"),
                "estimation.")
-
+        
+        if (vals$device_N2 == 0)
+          out <-
+            span("Your current tracking regime",
+                 "is likely sufficient",
+                 "for", span("home range", class = "cl-grn"),
+                 "estimation, and is inappropriate for",
+                 span("speed & distance", class = "cl-dgr"),
+                 "estimation.")
       }
 
       if (!is_hr & is_ctsd) {
@@ -2094,7 +2103,7 @@ mod_tab_report_server <- function(id, vals) {
                "and", span("speed & distance", class = "cl-dgr"),
                "estimation.")
         
-        if (vals$device_N2 == 0) {
+        if (vals$device_N2 == 0)
           out <-
             span("Your current tracking regime",
                  "may be insufficient for",
@@ -2102,7 +2111,7 @@ mod_tab_report_server <- function(id, vals) {
                  "estimation, and is inappropriate for",
                  span("speed & distance", class = "cl-dgr"),
                  "estimation.")
-        }
+        
       }
       
       out_analyses <- p(
@@ -2113,6 +2122,7 @@ mod_tab_report_server <- function(id, vals) {
         wrap_none("[", round(vals$hrErr[[1]] * 100, 1),
                   ", ", round(vals$hrErr[[3]] * 100, 1),
                   "%]", css = "cl-blk", end = "."),
+        
         if(vals$device_N2 > 0) {
           span("For speed estimation, your error estimate",
                "based on a single simulation was",
