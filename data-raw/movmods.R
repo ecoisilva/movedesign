@@ -60,7 +60,7 @@ movmods <- movmods %>%
     pars = paste("\u03C4", "=",
                  paste0("{",
                         "\u03C4","\u209A", ", ",
-                        "\u03C4","\u1D65"), "}")
+                        "\u03C4","\u1D65", "}"))
   )
 
 # View(movmods)
