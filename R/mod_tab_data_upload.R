@@ -1163,25 +1163,25 @@ mod_tab_data_upload_server <- function(id, vals) {
           size = "l"))
 
     }) %>% bindEvent(input$uploadHelp_mods)
-
+    
     output$dataTable_processes <- reactable::renderReactable({
 
-      tmpname <-
-        sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
+      mods <- movedesign::movmods
+      nm <- sub('(^\\w+)\\s.+','\\1',
+                summary(vals$fit0)$name[1])
 
-      if (is.null(match(tmpname, movmods$name_short))) {
+      if (is.null(match(nm, mods$name_short))) {
         preselected_mod <- NULL
       } else {
-        preselected_mod <- match(tmpname, movmods$name_short)
+        preselected_mod <- match(nm, mods$name_short)
       }
-      df0 <- movmods %>%
-        dplyr::select(!name_short)
+      
+      out <- mods %>% dplyr::select(!.data$name_short)
 
       reactable::reactable(
-        df0,
+        out,
         searchable = TRUE,
         highlight = TRUE,
-        selection = "single",
         defaultSelected = preselected_mod,
         defaultColDef =
           reactable::colDef(
@@ -1191,25 +1191,25 @@ mod_tab_data_upload_server <- function(id, vals) {
           name = reactable::colDef(
             name = "Movement process",
             minWidth = 195),
-
+          
           tau_p = reactable::colDef(
+            minWidth = 60,
             name = paste0("\u03C4","\u209A"),
-            minWidth = 60,
             cell = reactable::JS(
               paste0("function(cellInfo) {
                 // Render as an X mark or check mark
                 return cellInfo.value === 'No' ? '\u274c No' : ",
                      "'\u2714\ufe0f Yes'}"))),
-
+          
           tau_v = reactable::colDef(
-            name = paste0("\u03C4","\u1D65"),
             minWidth = 60,
+            name = paste0("\u03C4","\u1D65"),
             cell = reactable::JS(
               paste0("function(cellInfo) {
                 // Render as an X mark or check mark
                 return cellInfo.value === 'No' ? '\u274c No' : ",
                      "'\u2714\ufe0f Yes'}"))),
-
+          
           hrange = reactable::colDef(
             minWidth = 80,
             name = "Home range",
@@ -1218,7 +1218,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                 // Render as an X mark or check mark
                 return cellInfo.value === 'No' ? '\u274c No' : ",
                      "'\u2714\ufe0f Yes'}"))),
-
+          
           pars = reactable::colDef(
             name = "Parameterization")
         ),

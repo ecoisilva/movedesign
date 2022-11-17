@@ -967,24 +967,25 @@ mod_tab_data_select_server <- function(id, vals) {
           size = "l"))
 
     }) %>% bindEvent(input$selectHelp_mods)
-
+    
     output$dataTable_processes <- reactable::renderReactable({
 
       mods <- movedesign::movmods
-      nm <- sub('(^\\w+)\\s.+','\\1', summary(vals$fit0)$name[1])
+      nm <- sub('(^\\w+)\\s.+','\\1', 
+                summary(vals$fit0)$name[1])
 
       if (is.null(match(nm, mods$name_short))) {
         preselected_mod <- NULL
       } else {
         preselected_mod <- match(nm, mods$name_short)
       }
-      df0 <- mods %>% dplyr::select(!.data$name_short)
+      
+      out <- mods %>% dplyr::select(!.data$name_short)
 
       reactable::reactable(
-        df0,
+        out,
         searchable = TRUE,
         highlight = TRUE,
-        # selection = "single",
         defaultSelected = preselected_mod,
         defaultColDef =
           reactable::colDef(
