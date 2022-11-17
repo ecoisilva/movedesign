@@ -50,8 +50,8 @@ mod_tab_device_ui <- function(id) {
                 inputId = ns("device_type"),
                 width = "260px",
                 label = NULL,
-                choices = c("GPS/Satellite logger" = 1,
-                            "VHF transmitter" = 2),
+                choices = c("GPS/Satellite logger" = "GPS",
+                            "VHF transmitter" = "VHF"),
                 options = list(
                   placeholder = "Select an option here",
                   onInitialize = I('function() { this.setValue(""); }')))),
@@ -572,18 +572,18 @@ mod_tab_device_server <- function(id, vals) {
       shinyjs::show(id = "regBox_sampling")
       shinyjs::show(id = "which_limitations")
       
-      vals$device_type <- NULL
-      if (input$device_type == 1) {
-        vals$device_type <- "GPS"
-        shinyjs::show(id = "regBox_gps_device")
-        shinyjs::hide(id = "regBox_vhf_device")
-      }
-      
-      if (input$device_type == 2) {
-        vals$device_type <- "VHF"
-        shinyjs::show(id = "regBox_vhf_device")
-        shinyjs::hide(id = "regBox_gps_device")
-      }
+      switch(input$device_type,
+             GPS = {    
+               shinyjs::show(id = "regBox_gps_device")
+               shinyjs::hide(id = "regBox_vhf_device") 
+             },
+             VHF = { 
+               shinyjs::show(id = "regBox_vhf_device")
+               shinyjs::hide(id = "regBox_gps_device")  
+             },
+             stop(paste0("No handler for ", input$device_type, "."))
+      )
+      vals$device_type <- input$device_type
       
     }) %>% # end of observe,
       bindEvent(input$device_type)
@@ -591,22 +591,26 @@ mod_tab_device_server <- function(id, vals) {
     ## Update device limitation UI elements: ------------------------------
     
     observe({
+      req(input$device_type)
       
-      options_limit <- NULL
-      if (input$device_type == 1) {
-        options_limit <- c("Storage limit" = "limit",
-                           "Fail rate" = "loss",
-                           "Location error" = "error")
-      }
-      if (input$device_type == 2) {
-        options_limit <- c("Data loss" = "loss",
-                           "Location error" = "error")
-      }
+      opt_limits <- NULL
+      switch(input$device_type,
+             GPS = {    
+               opt_limits <- c("Storage limit" = "limit",
+                               "Fail rate" = "loss",
+                               "Location error" = "error")
+             },
+             VHF = { 
+               opt_limits <- c("Data loss" = "loss",
+                               "Location error" = "error")
+             },
+             stop(paste0("No handler for ", input$device_type, "."))
+      )
       
       shinyWidgets::updateCheckboxGroupButtons(
         session = session,
         inputId = "which_limitations",
-        choices = options_limit,
+        choices = opt_limits,
         checkIcon = list(yes = icon("ok", lib = "glyphicon"),
                          no = icon("remove", lib = "glyphicon")))
       
@@ -688,19 +692,21 @@ mod_tab_device_server <- function(id, vals) {
     observe({
       req(input$device_type)
       
-      if (input$device_type == 1) {
-        req(vals$reg$dur, vals$reg$dti)
-        
-        out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
-        out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
-      }
-      
-      if (input$device_type == 2) {
-        req(input$vhf_dur, input$vhf_dti)
-        
-        out_dur <- fix_unit(input$vhf_dur, input$vhf_dur_units)
-        out_dti <- fix_unit(input$vhf_dti, input$vhf_dti_units)
-      }
+      switch(input$device_type,
+             GPS = {    
+               req(vals$reg$dur, vals$reg$dti)
+               
+               out_dur <- fix_unit(vals$reg$dur, vals$reg$dur_unit)
+               out_dti <- fix_unit(vals$reg$dti, vals$reg$dti_unit)
+             },
+             VHF = { 
+               req(input$vhf_dur, input$vhf_dti)
+               
+               out_dur <- fix_unit(input$vhf_dur, input$vhf_dur_units)
+               out_dti <- fix_unit(input$vhf_dti, input$vhf_dti_units)
+             },
+             stop(paste0("No handler for ", input$device_type, "."))
+      )
       
       dur <- out_dur$value
       dur_unit <- out_dur$unit
@@ -709,8 +715,8 @@ mod_tab_device_server <- function(id, vals) {
       dti_unit <- out_dti$unit
       
       if (dur_unit == "day" | dur_unit == "days") {
-        tmp <- ifelse(dur == 1, "", dur)
-        txt_dur <- wrap_none(tmp, " ", dur_unit, 
+        tmp <- ifelse(dur == 1, "", paste0(dur, " "))
+        txt_dur <- wrap_none(tmp, dur_unit, 
                              css = "cl-sea", end = ".")
         
       } else if (dur_unit == "month" | dur_unit == "months") {
@@ -805,7 +811,7 @@ mod_tab_device_server <- function(id, vals) {
     
     observe({
       req(vals$active_tab == 'regime',
-          input$device_type == 1)
+          input$device_type == "GPS")
       
       max_dti_choices <- movedesign::fixrates %>%
         dplyr::filter(.data$common == "Y") %>%
@@ -943,96 +949,100 @@ mod_tab_device_server <- function(id, vals) {
       vals$is_reg_valid <- FALSE
       
       output$regUI_sampling <- renderUI({
-        if (input$device_type == 1) {
+        switch(
+          input$device_type,
           
           ### 1. GPS & Satellite logger:
-          
-          column(
-            align = "center", width = 12,
+          GPS = {
             
-            #### 1.1. Select tracking regime:
-            
-            p("What", span("sampling interval", class = "col-hgl"),
-              "will you evaluate?") %>%
-              tagAppendAttributes(class = 'subheader'),
-            
-            if (!input$eval_tradeoffs) {
-              uiOutput(ns("gpsSelect_fix")) },
-            
-            if (input$eval_tradeoffs) {
-              p(style = "padding-bottom: 15px;",
-                
-                "Please select a",
-                span("GPS fix rate", class = "col-hgl"),
-                "from the", span("plot", class = "col-key"),
-                "below to further evaluate that",
-                HTML(paste0(span("tracking regime",
-                                 class = "col-hgl"), "."))) },
-            
-            if (input$eval_tradeoffs) {
+            column(
+              align = "center", width = 12,
               
-              column(
-                width = 12,
-                style = "z-index: 1000;",
-                
-                shinyWidgets::switchInput(
-                  inputId = ns("deviceInput_log"),
-                  label = span(icon("wrench"),
-                               "Logarithmic"),
-                  labelWidth = "100px")
-                
-              ) },
-            
-            #### 1.2. Plotting GPS battery life decay:
-            
-            if (input$eval_tradeoffs) {
+              #### 1.1. Select tracking regime:
               
-              ggiraph::girafeOutput(
-                outputId = ns("regPlot_gps"),
-                width = "100%", height = "50%") %>%
-                shinycssloaders::withSpinner(
-                  type = getOption("spinner.type", default = 4),
-                  color = getOption("spinner.color",
-                                    default = "#009da0"),
-                  proxy.height = "300px")
-            },
+              p("What", span("sampling interval", class = "col-hgl"),
+                "will you evaluate?") %>%
+                tagAppendAttributes(class = 'subheader'),
+              
+              if (!input$eval_tradeoffs) {
+                uiOutput(ns("gpsSelect_fix")) },
+              
+              if (input$eval_tradeoffs) {
+                p(style = "padding-bottom: 15px;",
+                  
+                  "Please select a",
+                  span("GPS fix rate", class = "col-hgl"),
+                  "from the", span("plot", class = "col-key"),
+                  "below to further evaluate that",
+                  HTML(paste0(span("tracking regime",
+                                   class = "col-hgl"), "."))) },
+              
+              if (input$eval_tradeoffs) {
+                
+                column(
+                  width = 12,
+                  style = "z-index: 1000;",
+                  
+                  shinyWidgets::switchInput(
+                    inputId = ns("deviceInput_log"),
+                    label = span(icon("wrench"),
+                                 "Logarithmic"),
+                    labelWidth = "100px")
+                  
+                ) },
+              
+              #### 1.2. Plotting GPS battery life decay:
+              
+              if (input$eval_tradeoffs) {
+                
+                ggiraph::girafeOutput(
+                  outputId = ns("regPlot_gps"),
+                  width = "100%", height = "50%") %>%
+                  shinycssloaders::withSpinner(
+                    type = getOption("spinner.type", default = 4),
+                    color = getOption("spinner.color",
+                                      default = "#009da0"),
+                    hide.ui	= TRUE)
+              },
+              
+              uiOutput(ns("regPlotSubtitle")),
+              uiOutput(ns("regText_gps"))
+              
+            ) # end of column (UI)
             
-            uiOutput(ns("regPlotSubtitle")),
-            uiOutput(ns("regText_gps"))
-            
-          ) # end of column (UI)
-          
-        } else {
+          },
           
           ### 2. VHF transmitter:
-          
-          column(
-            align = "center", width = 12,
-            
-            # p("Here, you can vizualize the impact of different",
-            #   "tracking regimes on",
-            #   span("sample sizes", class = "cl-sea"),
-            #   "by selecting the",
-            #   span("study duration", class = "cl-dgr"),
-            #   "(based on VHF battery life), and",
-            #   span("sampling frequency", class = "cl-dgr"),
-            #   "(based on how many times you will collect new",
-            #   "locations)."),
-            
-            #TODO
-            # ggiraph::girafeOutput(
-            #   outputId = ns("regPlot_vhf"),
-            #   width = "100%", height = "50%"),
-            
-            p("What", span("sampling interval", class = "col-hgl"),
-              "will you evaluate?") %>%
-              tagAppendAttributes(class = 'subheader'),
-            
-            uiOutput(ns("vhfSelect_fix")),
-            uiOutput(ns("regText_vhf"))
-            
-          ) # end of column (UI)
-        } # end of if (), VHF device
+          VHF = { 
+            column(
+              align = "center", width = 12,
+              
+              # p("Here, you can vizualize the impact of different",
+              #   "tracking regimes on",
+              #   span("sample sizes", class = "cl-sea"),
+              #   "by selecting the",
+              #   span("study duration", class = "cl-dgr"),
+              #   "(based on VHF battery life), and",
+              #   span("sampling frequency", class = "cl-dgr"),
+              #   "(based on how many times you will collect new",
+              #   "locations)."),
+              
+              #TODO
+              # ggiraph::girafeOutput(
+              #   outputId = ns("regPlot_vhf"),
+              #   width = "100%", height = "50%"),
+              
+              p("What", span("sampling interval", class = "col-hgl"),
+                "will you evaluate?") %>%
+                tagAppendAttributes(class = 'subheader'),
+              
+              uiOutput(ns("vhfSelect_fix")),
+              uiOutput(ns("regText_vhf"))
+              
+            ) # end of column (UI)
+          }, # end of VHF device
+          stop(paste0("No handler for ", input$device_type, "."))
+        ) # end of switch
         
       }) # end of renderUI // regUI_sampling
       
@@ -1042,54 +1052,55 @@ mod_tab_device_server <- function(id, vals) {
     observe({ # Add footer to sampling box:
       
       output$regUI_sampling_footer <- renderUI({
-        if (input$device_type == 1) {
           
-          ### GPS & Satellite logger:
-          
-          tagList(column(
-            width = 12, align = "right",
-            style = "padding-right: 5px;",
-            
-            uiOutput(ns("regButton_gps"), inline = TRUE),
-            HTML("&nbsp;"),
-            shiny::actionButton(
-              inputId = ns("run_sim_new"),
-              icon =  icon("bolt"),
-              label = "Run",
-              width = "120px",
-              class = "btn-primary")
-            
-          )) # end of tagList (footer)
-          
-        } else {
-          
-          ### VHF transmitter:
-          
-          tagList(
-            column(
-              width = 12, align = "right",
-              style = "padding-right: 5px;",
-              
-              uiOutput(ns("regButton_vhf"), inline = TRUE),
-              HTML("&nbsp;"),
-              shiny::actionButton(
-                inputId = ns("run_sim_new"),
-                icon =  icon("bolt"),
-                label = "Run",
-                width = "120px",
-                class = "btn-primary")
-            )
-            # , shiny::actionButton(
-            #   inputId = ns("regHelp_vhf"),
-            #   label = NULL,
-            #   width = "39px",
-            #   icon = icon("circle-question"),
-            #   class = "btn-warning",
-            #   style = "position: absolute; left: 15px;")
-            
-          ) # end of tagList (footer)
-          
-        } # end of if (), VHF device
+        switch(input$device_type,
+               
+               ### GPS & Satellite logger:
+               GPS = {    
+                 tagList(column(
+                   width = 12, align = "right",
+                   style = "padding-right: 5px;",
+                   
+                   uiOutput(ns("regButton_gps"), inline = TRUE),
+                   HTML("&nbsp;"),
+                   shiny::actionButton(
+                     inputId = ns("run_sim_new"),
+                     icon =  icon("bolt"),
+                     label = "Run",
+                     width = "120px",
+                     class = "btn-primary")
+                   
+                 )) # end of tagList (footer)
+               },
+               
+               ### VHF transmitter:
+               VHF = { 
+                 tagList(
+                   column(
+                     width = 12, align = "right",
+                     style = "padding-right: 5px;",
+                     
+                     uiOutput(ns("regButton_vhf"), inline = TRUE),
+                     HTML("&nbsp;"),
+                     shiny::actionButton(
+                       inputId = ns("run_sim_new"),
+                       icon =  icon("bolt"),
+                       label = "Run",
+                       width = "120px",
+                       class = "btn-primary")
+                   )
+                   # , shiny::actionButton(
+                   #   inputId = ns("regHelp_vhf"),
+                   #   label = NULL,
+                   #   width = "39px",
+                   #   icon = icon("circle-question"),
+                   #   class = "btn-warning",
+                   #   style = "position: absolute; left: 15px;")
+                   
+                 ) # end of tagList (footer)
+               },
+               stop(paste0("No handler for ", input$device_type, "."))
+        ) # end of switch
       }) # end of renderUI // regUI_sampling_footer
       
     }) %>% # end of observe
@@ -1102,38 +1113,39 @@ mod_tab_device_server <- function(id, vals) {
       # vals$tau_p0, vals$tau_v0
       
       if (length(vals$which_question) > 1) {
-        ui <- span(class = "help-block",
-                   "Note: The secondary axis is showing the",
-                   "effective sample sizes",
-                   span("N[area]", class = "cl-sea"),
-                   "and", span("N[speed]", class = "cl-dgr"),
-                   "for each sampling design.")
+        ui <- tagList(
+          "Note: The secondary axis is showing an approximation of",
+          "the effective sample sizes",
+          span("N[area]", class = "cl-sea"),
+          "and", span("N[speed]", class = "cl-dgr"),
+          "for each sampling design;",
+          "true N values may be slighty different.")
       } else {
         
         switch(vals$which_question,
                "Home range" = { 
-                 ui <- span(class = "help-block",
-                            "Note: The secondary axis is showing",
-                            "the effective sample size",
-                            span("N[area]", class = "cl-sea"),
-                            "for each sampling design.")
+                 ui <- tagList(
+                   "Note: The secondary axis is showing",
+                   "the effective sample size",
+                   span("N[area]", class = "cl-sea"),
+                   "for each sampling design.")
                },
                "Speed & distance" = {
-                 ui <- span(class = "help-block",
-                            "Note: The secondary axis is showing",
-                            "the effective sample size",
-                            span("N[speed]", class = "cl-dgr"),
-                            "for each sampling design.")
+                 ui <- tagList(
+                   "Note: The secondary axis is showing",
+                   "the effective sample size",
+                   span("N[speed]", class = "cl-dgr"),
+                   "for each sampling design.")
                },
                stop(paste0("No handler for ", 
                            vals$which_question, "."))
         )
       }
       
-      ui <- span(
-        ui, span(class = "help-block",
+      ui <- span(class = "help-block",
+                 ui, 
                  "Switch to logarithmic scale to show these",
-                 "values more clearly at higher intervals."))
+                 "values more clearly at higher intervals.")
       
       output$regPlotSubtitle <- renderUI({ ui })
       
@@ -1425,7 +1437,7 @@ mod_tab_device_server <- function(id, vals) {
       vals$reg$dti <- NULL
       
       # GPS:
-      if (input$device_type == 1) {
+      if (input$device_type == "GPS") {
         
         if (input$eval_tradeoffs &&
             !is.null(input$regPlot_gps_selected)) {
@@ -1458,7 +1470,7 @@ mod_tab_device_server <- function(id, vals) {
           vals$reg$dti_unit <- input$gps_dti_units
         }
         
-      } else if (input$device_type == 2) {
+      } else if (input$device_type == "VHF") {
         
         if (!is.null(input$regPlot_vhf_selected)) {
           req(vals$df_vhf)
@@ -1566,7 +1578,7 @@ mod_tab_device_server <- function(id, vals) {
       if ("red" %in% dat$color) {
         
         tmpids <- dat %>%
-          dplyr::filter(color == "red") %>%
+          dplyr::filter(.data$color == "red") %>%
           dplyr::pull(id)
 
         if (length(tmpids) > 3) {
@@ -1576,14 +1588,14 @@ mod_tab_device_server <- function(id, vals) {
       
       return(dat)
       
-    }) # %>% # end of reactive, gps_simulation()
-      # bindCache(list(input$gps_dur,
-      #                input$gps_dur_units,
-      #                input$gps_dti_max)) # revert change!
+    }) %>% # end of reactive, gps_simulation()
+      bindCache(list(input$gps_dur,
+                     input$gps_dur_units,
+                     input$gps_dti_max))
     
     ## Simulating new conditional data: ---------------------------------
     
-    ### Prepare parameters and reactives:
+    ### Prepare parameters and reactive() functions:
     
     data_sim <- shiny::reactive({
       
@@ -1601,7 +1613,7 @@ mod_tab_device_server <- function(id, vals) {
       return(data)
       
     }) %>% # end of reactive, data_sim
-      bindCache(c(vals$id,
+      bindCache(c(vals$species, vals$id,
                   vals$reg$dur, vals$reg$dur_unit,
                   vals$reg$dti, vals$reg$dti_unit))
     
@@ -1624,7 +1636,8 @@ mod_tab_device_server <- function(id, vals) {
       return(out)
       
     }) %>% # end of reactive, data_sim
-      bindCache(c(vals$reg$dur, vals$reg$dur_unit,
+      bindCache(c(vals$tau_p0, vals$tau_v0,
+                  vals$reg$dur, vals$reg$dur_unit,
                   vals$reg$dti, vals$reg$dti_unit))
     
     model_fit <- shiny::reactive({
@@ -1649,9 +1662,10 @@ mod_tab_device_server <- function(id, vals) {
           vals$fit0,
           vals$reg$dur,
           vals$reg$dti,
-          input$est_type,
           vals$is_reg_valid,
           vals$confirm_n)
+      
+      message("...Running simulation...")
       
       shinyFeedback::showToast(
         type = "info",
@@ -1748,18 +1762,18 @@ mod_tab_device_server <- function(id, vals) {
           detail = "Please wait for model selection to finish:")
         
         expt <- runtime()
-        
         vals$expt_max <- expt$max
         vals$expt_min <- expt$min
         vals$expt_units <- expt$units
         
+        vals$reg$confirm_time <- NULL
         if ((as.numeric(expt$max) %#% expt$units) > 900) {
           
           shinyalert::shinyalert(
             className = "modal_warning",
             title = "Do you wish to proceed?",
             callbackR = function(x) {
-              vals$confirm_time <- x
+              vals$reg$confirm_time <- x
             },
             text = span(
               "Expected run time for the next phase", br(),
@@ -1776,21 +1790,14 @@ mod_tab_device_server <- function(id, vals) {
             confirmButtonText = "Proceed",
             html = TRUE
           )
-        } else { vals$confirm_time <- TRUE }
+        } else { vals$reg$confirm_time <- TRUE }
       }
       
     }) %>% # end of observe,
       bindEvent(input$run_sim_new)
       
     observe({
-      req(vals$data0,
-          vals$fit0,
-          vals$reg$dur,
-          vals$reg$dti,
-          input$est_type,
-          vals$is_reg_valid,
-          vals$confirm_n)
-      req(vals$confirm_time)
+      req(vals$reg$confirm_time)
       
       shinyjs::show(id = "regBox_sims")
       
@@ -1881,11 +1888,6 @@ mod_tab_device_server <- function(id, vals) {
         
       }
       
-      # if (!input$regBox_sampling$collapsed &&
-      #    vals$tour_active) { NULL } else {
-      #      shinydashboardPlus::updateBox(
-      #        "regBox_sampling", action = "toggle") }
-      
       shinyFeedback::showToast(
         type = "success",
         message = "Simulation completed!",
@@ -1902,7 +1904,7 @@ mod_tab_device_server <- function(id, vals) {
       shinybusy::remove_modal_spinner()
       
     }) %>% # end of observe,
-      bindEvent(vals$confirm_time)
+      bindEvent(vals$reg$confirm_time)
     
     # PLOTS ---------------------------------------------------------------
     ## Plotting VHF: ------------------------------------------------------
@@ -1981,13 +1983,13 @@ mod_tab_device_server <- function(id, vals) {
     ## Plotting GPS battery life: -----------------------------------------
     
     reg_selected <- reactive({
-      if (input$device_type == 1) return(input$regPlot_gps_selected)
-      if (input$device_type == 2) return(input$regPlot_vhf_selected)
+      if (input$device_type == "GPS") return(input$regPlot_gps_selected)
+      if (input$device_type == "VHF") return(input$regPlot_vhf_selected)
     })
     
     observe({
       req(vals$active_tab == 'regime', 
-          input$device_type == 1,
+          input$device_type == "GPS",
           input$gps_dur, 
           input$gps_dur_units, 
           input$gps_dti_max) 
@@ -2260,7 +2262,7 @@ mod_tab_device_server <- function(id, vals) {
                      input$gps_dti_max,
                      vals$which_question,
                      vals$active_tab == 'regime', 
-                     input$device_type == 1))
+                     input$device_type == "GPS"))
     
     ## Render new simulated data plot (xy): -------------------------------
 
