@@ -12,6 +12,7 @@
  --sea-dark: #006669;
 
  --tree: #77b131;
+ --tree-dark: #508016;
 
  --danger: #dd4b39;
  --danger-light: #ff6856;
@@ -45,6 +46,7 @@
 .cl-sea-d { color: var(--sea-dark) !important; }
 
 .cl-grn { color: var(--tree) !important; }
+.cl-grn-d { color: var(--tree-dark) !important; }
 .cl-dgr { color: var(--danger) !important; }
 .cl-dgr-l { color: var(--danger-light) !important; }
 
@@ -214,7 +216,7 @@ p {
   line-height: 1.5;
   letter-spacing: 0.3px;
   text-align: justify;
-  color: var(--grey-700);
+  color: var(--grey-800);
 
   display: block;
 }
@@ -1061,7 +1063,9 @@ font-size: 12px;
 }
 .modal-content {
   border-radius: 8px;
+  font-size: 18px;
 }
+
 .modal-lg {
   width: 730px;
 }
