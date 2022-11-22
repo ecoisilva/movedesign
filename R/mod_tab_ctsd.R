@@ -125,25 +125,32 @@ mod_tab_ctsd_ui <- function(id) {
             footer = column(
               width = 12, align = "center",
 
-              splitLayout(
-                cellWidths = c("29%", "1%", "70%"),
-                cellArgs = list(style = "align: center;"),
-
-                shiny::actionButton(
-                  inputId = ns("sdHelp_regime"),
-                  label = NULL,
-                  width = "100%",
-                  icon = icon("circle-question"),
-                  class = "btn-warning"),
-                br(),
-                shiny::actionButton(
-                  inputId = ns("ctsd_adjRegime"),
-                  label = "Modify",
-                  icon = icon("wrench"),
-                  class = "btn-info",
-                  width = "100%")
-
-              ) # end of splitLayout
+              shiny::actionButton(
+                inputId = ns("ctsd_adjRegime"),
+                label = "Modify",
+                icon = icon("wrench"),
+                class = "btn-info",
+                width = "100%")
+              
+              # splitLayout(
+              #   cellWidths = c("29%", "1%", "70%"),
+              #   cellArgs = list(style = "align: center;"),
+              # 
+              #   shiny::actionButton(
+              #     inputId = ns("sdHelp_regime"),
+              #     label = NULL,
+              #     width = "100%",
+              #     icon = icon("circle-question"),
+              #     class = "btn-warning"),
+              #   br(),
+              #   shiny::actionButton(
+              #     inputId = ns("ctsd_adjRegime"),
+              #     label = "Modify",
+              #     icon = icon("wrench"),
+              #     class = "btn-info",
+              #     width = "100%")
+              # 
+              # ) # end of splitLayout
 
             ) # end of column (footer)
           ), # end of box // sdBox_regime
@@ -328,7 +335,7 @@ mod_tab_ctsd_server <- function(id, vals) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    vals$sd <- reactiveValues()
+    vals$sd <- reactiveValues(completed = FALSE)
     pal <- load_pal()
 
     # DYNAMIC UI ELEMENTS -------------------------------------------------
@@ -498,8 +505,8 @@ mod_tab_ctsd_server <- function(id, vals) {
           inputId = ns("ctsdShow_datasets"),
           label = "Show trajectories:",
           choices =
-            c("Fine-scale" = "full",
-              "Initial tracking regime" = "subset"),
+            c("Fine-scale/truth" = "full",
+              "Current trajectory" = "subset"),
           selected = c("full", "subset"),
           checkIcon = list(yes = icon("circle-check")),
           justified = TRUE)
@@ -581,7 +588,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           text = span(
             "Please go to the",
             icon("stopwatch", class = "cl-mdn"),
-            span("Tracking regime", class = "cl-mdn"), "tab",
+            span("Sampling design", class = "cl-mdn"), "tab",
             "and make sure to both (1) set a tracking regime, and",
             "(2) run a new simulation by pressing the",
             icon("bolt", class = "cl-dgr"),
@@ -599,7 +606,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                              msg_danger("not found"), "."),
             detail = "Please wait for model selection to finish.")
           
-          expt <- estimate_time(vals$data1, parallel = vals$parallel)
+          expt <- guesstimate_time(vals$data1, parallel = vals$parallel)
           expt_max <- expt$max
           expt_min <- expt$min
           expt_unit <- expt$units
@@ -971,7 +978,23 @@ mod_tab_ctsd_server <- function(id, vals) {
     }) # end of renderUI // ctsdText_sampling
 
     # CTSD ESTIMATION -----------------------------------------------------
-
+    
+    current_trajectory <- shiny::reactive({
+      
+      inputList <- align_lists(list(vals$data1),
+                               list(vals$fit1))
+      
+      ctsd <- par.speed(inputList,
+                        parallel = vals$parallel)
+      
+      return(ctsd)
+      
+    }) %>% # end of reactive, data_sim
+      bindCache(c(vals$id,
+                  vals$reg$dur, vals$reg$dur_unit,
+                  vals$reg$dti, vals$reg$dti_unit))
+    
+    
     true_trajectory <- shiny::reactive({
       
       if (vals$data_type == "simulated") {
@@ -1008,6 +1031,12 @@ mod_tab_ctsd_server <- function(id, vals) {
     
     runtime <- shiny::reactive({
       
+      msg_log(
+        style = "warning",
+        message = paste0(
+          "Estimating ",
+          msg_warning("speed & distance"), ":"))
+      
       shinybusy::show_modal_spinner(
         spin = "fading-circle",
         color = "var(--sea)",
@@ -1019,7 +1048,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         )
       )
       
-      out <- estimate_time(vals$data0, vals$fit0, 
+      out <- guesstimate_time(vals$data0, vals$fit0, 
                            type = "speed",
                            trace = TRUE,
                            parallel = vals$parallel)
@@ -1075,6 +1104,8 @@ mod_tab_ctsd_server <- function(id, vals) {
                 "and set a shorter",
                 span("sampling interval", class = "cl-sea-d"),
                 "(reducing the time between locations).")
+              vals$sd$completed <- FALSE
+              
             } else {
               alert_type <- "info"
               txt <- span(
@@ -1091,6 +1122,8 @@ mod_tab_ctsd_server <- function(id, vals) {
                 span("sampling interval", class = "cl-sea-d"),
                 "(reducing the time between locations),",
                 "before re-running both estimators.")
+              vals$sd$completed <- TRUE
+              
             }
             
             shinyalert::shinyalert(
@@ -1157,10 +1190,10 @@ mod_tab_ctsd_server <- function(id, vals) {
           title = "No regime set",
           text = span(
             "Please select a",
-            span("tracking regime", class = "cl-sea-d"),
+            span("sampling design", class = "cl-sea-d"),
             "(sampling duration and interval) from the",
             icon("stopwatch", class = "cl-mdn"),
-            span("Tracking regime", class = "cl-mdn"), "tab."),
+            span("Sampling design", class = "cl-mdn"), "tab."),
           html = TRUE,
           size = "xs")
         
@@ -1175,14 +1208,6 @@ mod_tab_ctsd_server <- function(id, vals) {
       req(vals$fit1, vals$data1)
       
       start <- Sys.time()
-      
-      msg_log(
-        style = "warning",
-        message = paste0(
-          "Estimating ",
-          msg_warning("speed & distance"), "..."),
-        detail = "This may take a while...")
-      
       req(vals$sd$confirm_time)
       
       if (vals$sd$expt_max == vals$sd$expt_min) {
@@ -1228,14 +1253,9 @@ mod_tab_ctsd_server <- function(id, vals) {
       #   dat <- vals$data1
       #   dat <- dat[which(dat$t <= (10 %#% "day")), ]
       # } else { dat <- vals$data1 }
-      
-      dat <- vals$data1
-      inputList <- align_lists(list(vals$fit1),
-                               list(dat))
-      
-      vals$ctsd <- par.speed(inputList,
-                             parallel = vals$parallel)
-      
+
+      vals$ctsd <- current_trajectory()
+
       if ("CI" %in% names(vals$ctsd)) {
         vals$ctsd <- vals$ctsd$CI
       }
@@ -1333,9 +1353,9 @@ mod_tab_ctsd_server <- function(id, vals) {
           progressBar = FALSE,
           closeButton = TRUE,
           preventDuplicates = TRUE,
-          positionClass = "toast-bottom-right"
-        )
-      )
+          positionClass = "toast-bottom-right"))
+      
+      vals$sd$completed <- TRUE
       shinybusy::remove_modal_spinner()
       
     }) %>% # end of observe,
@@ -1943,13 +1963,15 @@ mod_tab_ctsd_server <- function(id, vals) {
                          high = mean(.data$high))
 
       yline <- "day" %#% vals$ctsd[2] %#% "kilometers"
+      yline_truth <- "day" %#% vals$ctsd_truth[2] %#% "kilometers"
 
       if (!is.null(vals$ctsd_new)) {
         req(vals$ctsd_new)
         yline_new <- "day" %#% vals$ctsd_new[2] %#% "kilometers"
       }
 
-      label_x <- paste0("Time lag (in ", unit, ")")
+      # label_x <- paste0("Time lag (in ", unit, ")")
+      label_x <- "Time lag"
       output$sdPlot_main <- ggiraph::renderGirafe({
 
         p <- dat %>%
@@ -1958,15 +1980,23 @@ mod_tab_ctsd_server <- function(id, vals) {
             ggplot2::aes(x = .data$t_new, y = .data$est, group = 1)) +
           ggplot2::geom_ribbon(
             ggplot2::aes(ymin = .data$low, ymax = .data$high),
-            fill = "grey70", alpha = .6) +
-          ggplot2::geom_line(color = "black") +
+            fill = pal$sea, alpha = .3) +
+          ggplot2::geom_line(color = pal$sea_m) +
 
           ggplot2::geom_hline(
-            yintercept = yline, size = 2, col = pal$sea) +
+            yintercept = yline_truth, 
+            linewidth = 1.5, linetype = "dashed") +
 
+          ggplot2::geom_hline(
+            yintercept = yline, 
+            linewidth = 1.5, linetype = "dashed",
+            col = pal$sea) +
+          
           { if (!is.null(vals$ctsd_new))
             ggplot2::geom_hline(
-              yintercept = yline_new, size = 2, col = pal$dgr)
+              yintercept = yline_new,
+              linewidth = 1.5, linetype = "dashed",
+              col = pal$dgr)
           } +
 
           ggplot2::labs(
@@ -2307,11 +2337,11 @@ mod_tab_ctsd_server <- function(id, vals) {
       vals$report_sd_yn <- FALSE
 
       if (is.null(vals$speedErr_new)) {
-        req(vals$distErr)
+        req(vals$speedErr)
         vals$report_sd_yn <- TRUE
         vals$dt_sd <- sdRow()
       } else {
-        req(vals$distErr_new)
+        req(vals$speedErr_new)
         vals$report_sd_yn <- TRUE
         vals$dt_sd <- sdRow_new()
       }

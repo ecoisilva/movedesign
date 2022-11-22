@@ -34,7 +34,7 @@ golem::set_golem_options()
 
 ## Create Common Files ----
 ## See ?usethis for more information
-usethis::use_mit_license("In\u00EAs Silva") # You can set another license here
+usethis::use_gpl3_license() # You can set another license here
 usethis::use_readme_rmd(open = TRUE)
 # Note that `contact` is required since usethis version 2.1.5
 # If your {usethis} version is older, you can remove that param

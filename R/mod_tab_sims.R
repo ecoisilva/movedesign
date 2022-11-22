@@ -133,7 +133,7 @@ mod_tab_sims_ui <- function(id) {
               numericInput(
                 inputId = ns("tau_v0"),
                 label = NULL,
-                min = 1, max = 500, value = 5),
+                min = 1, max = 500, value = 1),
               
               selectInput(
                 inputId = ns("tau_v0_units"),
@@ -631,10 +631,10 @@ mod_tab_sims_server <- function(id, vals) {
       vals$dti0_units <- "minutes"
       
       simulate_data(
-        mod0 = vals$ctmm_mod,
-        dur0 = vals$dur0, dur0_units = vals$dur0_units,
-        dti0 = vals$dti0, dti0_units = vals$dti0_units,
-        seed0 = vals$seed0)
+        mod = vals$ctmm_mod,
+        dur = vals$dur0, dur_units = vals$dur0_units,
+        dti = vals$dti0, dti_units = vals$dti0_units,
+        seed = vals$seed0)
       
     }) %>%
       bindCache(input$tau_p0,
@@ -1072,10 +1072,10 @@ mod_tab_sims_server <- function(id, vals) {
       
       if(tdist > 1000) {
         out$tdist <- paste(scales::label_comma(
-          accuracy = 1)("km" %#% mdist), "km")
+          accuracy = 1)("km" %#% tdist), "km")
       } else {
         out$tdist <- paste(scales::label_comma(
-          accuracy = 1)(mdist), "m")
+          accuracy = 1)(tdist), "m")
       }
       
       out$mdist <- paste(scales::label_comma(
@@ -1157,8 +1157,6 @@ mod_tab_sims_server <- function(id, vals) {
       
     }) # end of renderDataTable // simTable
     
-    
-    
     observe({
       vals$dt_sims <- NULL
     }) %>% # end of observe,
@@ -1184,16 +1182,14 @@ mod_tab_sims_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action",
-            "First, you need to set the timescale parameters,",
-            "which are:",
-            "(1)", span("Position autocorrelation", class = "cl-sea"),
-            HTML(paste0("(\u03C4", tags$sub("p"), "),")),
-            "or home range crossing time, and", 
-            "(2)", span("velocity autocorrelation", class = "cl-sea"),
-            HTML(paste0("(\u03C4", tags$sub("v"), "),")),
-            "or directional persistence."),
+          "First, you need to set the timescale parameters,",
+          "which are:",
+          "(1)", span("Position autocorrelation", class = "cl-sea"),
+          wrap_none("(\u03C4", tags$sub("p"), "),"),
+          "or home range crossing time, and", 
+          "(2)", span("velocity autocorrelation", class = "cl-sea"),
+          wrap_none("(\u03C4", tags$sub("v"), "),"),
+          "or directional persistence.",
           p(),
           "For a more in-depth explanation on what these parameters",
           "mean, click the", fontawesome::fa("circle-question"),
@@ -1204,30 +1200,42 @@ mod_tab_sims_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action",
-            "Then, you set the",
-            span("semi-variance", class = "cl-sea"), "(\u03C3)",
-            "parameter, or the average spatial variability",
-            "between any two locations."),
+          "Then, you set the",
+          span("semi-variance", class = "cl-sea"), "(\u03C3)",
+          "parameter, or the average spatial variability",
+          "between any two locations.",
           p(),
-          "For a more in-depth explanation,",
+          "These three variables",
+          wrap_none("(\u03C4", tags$sub("p"), ", ",
+                    "\u03C4", tags$sub("v"), ", and ",
+                    "\u03C3)"),
+          "determine the next relevant parameter:",
+          span("velocity", class = "cl-sea"), "(\u03BD),",
+          "or the directional speed of the simulated animal.",
+          p(),
+          "For an in-depth explanation of each parameter,",
           "click the", fontawesome::fa("circle-question"),
-          "help tip."
+          "help tips."
         )))
       
       element <- c(element, "#sim-parameters")
       intro <- c(
         intro,
         HTML(paste(
-          "To change the distance traveled, modify",
-          span("position autocorrelation", class = "cl-sea"),
-          HTML(paste0("(\u03C4", tags$sub("p"), ").")), br(),
-          "To change movement speed, modify",
-          span("velocity autocorrelation", class = "cl-sea"),
-          HTML(paste0("(\u03C4", tags$sub("v"), ").")), br(),
-          "To change the area covered,",
-          "modify", span("semi-variance", class = "cl-sea"),
+          "Some guidelines:", br(),
+          "To quickly modify the distance",
+          "traveled within the same time period, you can change the",
+          span(HTML(paste0("(\u03C4", tags$sub("p"))),
+               class = "cl-sea"),
+          "parameter.",
+          "To quickly change directional persistence",
+          "(and create a simulation that generally travels",
+          "more linearly), you can increase the",
+          span(HTML(paste0("(\u03C4", tags$sub("v"))),
+               class = "cl-sea"),
+          "parameter.",
+          "To increase the overall area covered during travel,",
+          "increase", span("semi-variance", class = "cl-sea"),
           "(\u03C3)."
         )))
       
@@ -1251,10 +1259,17 @@ mod_tab_sims_server <- function(id, vals) {
           "just simulated. The",
           fontawesome::fa("paw", fill = pal$sea),
           span("Data", class = "cl-sea"), "tab",
-          HTML("&mdash;"), "plots, in color, a single",
+          "plots, in color, a single",
           span("position autocorrelation", class = "cl-sea"),
           "cycle, out of 10", fontawesome::fa("xmark"),
-          HTML(paste0("\u03C4", tags$sub("p"), ".")),
+          HTML(paste0("\u03C4", tags$sub("p"), "."))
+        ))
+      )
+      
+      element <- c(element, paste0(tabinfo, "simPlot_route"))
+      intro <- c(
+        intro,
+        HTML(paste(
           "The", fontawesome::fa("route", fill = pal$sea),
           span("Trajectory details", class = "cl-sea"), "tab",
           "runs through a single day of the simulated animal's",
@@ -1287,9 +1302,12 @@ mod_tab_sims_server <- function(id, vals) {
         HTML(paste(
           "You will be able to see other parameters such as",
           span("Tot. distance", class = "cl-grey"),
-          "(total distance traveled within 10", icon("xmark"),
-          span("position autocorrelation", class = "cl-sea"),
-          "cycles),", "the", span("Avg. distance", class = "cl-grey"),
+          "(total distance traveled within 10",
+          fontawesome::fa("xmark"),
+          span(HTML(paste0("(\u03C4", tags$sub("p"))),
+               class = "cl-sea"),
+          "cycles),", "the", span("Avg. distance", 
+                                  class = "cl-grey"),
           "(average distance traveled)", "and the",
           span("Avg. Speed", class = "cl-grey"),
           "(average movement speed)."
@@ -1358,11 +1376,8 @@ mod_tab_sims_server <- function(id, vals) {
         selected = vals$restored_vals$"sigma0_units")
       
       vals$tau_p0 <- vals$restored_vals$"tau_p0"
-      vals$tau_p0_units <- vals$restored_vals$"tau_p0_units"
       vals$tau_v0 <- vals$restored_vals$"tau_v0"
-      vals$tau_v0_units <- vals$restored_vals$"tau_v0_units"
       vals$sigma0 <- vals$restored_vals$"sigma0"
-      vals$sigma0_units <- vals$restored_vals$"sigma0_units"
       
       vals$seed0 <- vals$restored_vals$"seed0"
       

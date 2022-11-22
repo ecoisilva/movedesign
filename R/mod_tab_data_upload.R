@@ -481,7 +481,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         )
       )
       
-      out <- estimate_time(vals$data0, parallel = vals$parallel)
+      out <- guesstimate_time(vals$data0, parallel = vals$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out)

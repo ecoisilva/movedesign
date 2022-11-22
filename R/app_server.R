@@ -11,6 +11,8 @@ app_server <- function(input, output, session) {
                          hr = NULL,
                          ctsd = NULL,
                          report = NULL,
+                         
+                         tour_active = FALSE,
                          keep_alert = TRUE)
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------

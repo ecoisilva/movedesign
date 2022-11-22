@@ -81,7 +81,7 @@ mod_tab_hrange_ui <- function(id) {
           ## Tracking regime: ---------------------------------------------
 
           shinydashboardPlus::box(
-            title = span("Tracking regime", class = "ttl-box_solid"),
+            title = span("Sampling design", class = "ttl-box_solid"),
             id = ns("hrBox_regime"),
             status = "info",
             width = NULL,
@@ -116,26 +116,33 @@ mod_tab_hrange_ui <- function(id) {
 
             footer = column(
               width = 12, align = "center",
-
-              splitLayout(
-                cellWidths = c("29%", "1%", "70%"),
-                cellArgs = list(style = "align: center;"),
-
-                shiny::actionButton(
-                  inputId = ns("hrHelp_regime"),
-                  label = NULL,
-                  width = "100%",
-                  icon = icon("circle-question"),
-                  class = "btn-warning"),
-                br(),
+              
                 shiny::actionButton(
                   inputId = ns("hr_adjRegime"),
                   label = "Modify",
                   icon = icon("rotate-right"),
                   class = "btn-info",
                   width = "100%")
-
-              ) # end of splitLayout
+              
+              # splitLayout(
+              #   cellWidths = c("29%", "1%", "70%"),
+              #   cellArgs = list(style = "align: center;"),
+              # 
+              #   shiny::actionButton(
+              #     inputId = ns("hrHelp_regime"),
+              #     label = NULL,
+              #     width = "100%",
+              #     icon = icon("circle-question"),
+              #     class = "btn-warning"),
+              #   br(),
+              #   shiny::actionButton(
+              #     inputId = ns("hr_adjRegime"),
+              #     label = "Modify",
+              #     icon = icon("rotate-right"),
+              #     class = "btn-info",
+              #     width = "100%")
+              # 
+              # ) # end of splitLayout
 
             ) # end of column (footer)
           ), # end of box // hrBox_regime
@@ -339,7 +346,7 @@ mod_tab_hrange_server <- function(id, vals) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    vals$hr <- reactiveValues()
+    vals$hr <- reactiveValues(completed = FALSE)
     pal <- load_pal()
 
     # DYNAMIC UI ELEMENTS -------------------------------------------------
@@ -394,7 +401,7 @@ mod_tab_hrange_server <- function(id, vals) {
           text = span(
             "Please go to the",
             icon("stopwatch", class = "cl-mdn"),
-            span("Tracking regime", class = "cl-mdn"), "tab",
+            span("Sampling design", class = "cl-mdn"), "tab",
             "and make sure to both (1) set a tracking regime, and",
             "(2) run a new simulation by pressing the",
             icon("bolt", class = "cl-dgr"),
@@ -412,7 +419,7 @@ mod_tab_hrange_server <- function(id, vals) {
                              msg_danger("not found"), "."),
             detail = "Please wait for model selection to finish.")
 
-          expt <- estimate_time(vals$data1, parallel = vals$parallel)
+          expt <- guesstimate_time(vals$data1, parallel = vals$parallel)
           vals$expt_max <- expt$max
           vals$expt_min <- expt$min
           vals$expt_units <- expt$units
@@ -486,7 +493,7 @@ mod_tab_hrange_server <- function(id, vals) {
           fit1 <- par.ctmm.select(inputList, parallel = vals$parallel)
           time_fit1 <- difftime(Sys.time(), start, units = "mins")
 
-          if (round(time_fit1, 1) < 1) {
+          if (round(time_fit1, 1) <= 1) {
             tmpdetail <- paste("This step took less than one minute.")
           } else {
             tmpdetail <- paste("This step took approximately",
@@ -529,7 +536,7 @@ mod_tab_hrange_server <- function(id, vals) {
 
     # ADJUSTING TRACKING REGIME -------------------------------------------
     # Adjust sampling parameters necessary for simulation:
-
+    
     observe({
       req(vals$reg$dur, vals$reg$dti)
 
@@ -538,10 +545,10 @@ mod_tab_hrange_server <- function(id, vals) {
         # Sampling duration:
 
         dur <- round("days" %#% vals$reg$dur %#% vals$reg$dur_unit, 0)
-        tau_p0 <- round("days" %#% 
-                          vals$tau_p0$value[2] %#% 
+        tau_p0 <- round("days" %#%
+                          vals$tau_p0$value[2] %#%
                           vals$tau_p0$unit[2], 0)
-        
+
         dur_choices <- c(
           10, dur, tau_p0, tau_p0 * 10,
           tau_p0 * 50, tau_p0 * 100, tau_p0 * 200,
@@ -562,11 +569,11 @@ mod_tab_hrange_server <- function(id, vals) {
         if(vals$data_type == "simulated") {
           tmprange <- NULL
         } else { tmprange <-
-          paste(ifelse(vals$tau_p0_min == 0, "0",
+          paste(ifelse(vals$tau_p0$value[1] == 0, "0",
                        scales::label_comma(
-                         accuracy = .1)(vals$tau_p0_min)),
+                         accuracy = .1)(vals$tau_p0$value[1])),
                 "\u2014", scales::label_comma(
-                  accuracy = .1)(vals$tau_p0_max))
+                  accuracy = .1)(vals$tau_p0$value[3]))
         }
 
         shiny::showModal(
@@ -747,8 +754,7 @@ mod_tab_hrange_server <- function(id, vals) {
             style = "warning",
             message = paste0(
               "Estimating ",
-              msg_warning("home range"), "..."),
-            detail = "This may take a while...")
+              msg_warning("home range"), ":"))
 
           shinybusy::show_modal_spinner(
             spin = "fading-circle",
@@ -791,17 +797,21 @@ mod_tab_hrange_server <- function(id, vals) {
           
           vals$time_hr <- difftime(Sys.time(), start, units = "mins")
 
+          if (round(vals$time_hr, 1) <= 1) {
+            detail <- paste("This step took less than one minute.")
+          } else {
+            detail <- paste("This step took approximately",
+                               round(difftime(Sys.time(), start,
+                                              units = 'min'), 0),
+                               "minutes.")
+          }
           msg_log(
             style = "success",
             message = 
               paste0("Estimation ",
                      msg_success("completed"), "."),
-            detail = paste(
-              "This step took approximately",
-              round(difftime(Sys.time(), start,
-                             units = 'mins'), 1),
-              "minutes."))
-
+            detail = detail)
+          vals$hr$completed <- TRUE
 
           shinybusy::remove_modal_spinner()
 
@@ -814,7 +824,7 @@ mod_tab_hrange_server <- function(id, vals) {
           text = span(
             "Please go to the",
             icon("stopwatch", class = "cl-mdn"),
-            span("Tracking regime", class = "cl-mdn"), "tab",
+            span("Sampling design", class = "cl-mdn"), "tab",
             "and make sure to both (1) set a tracking regime, and",
             "(2) run a new simulation by pressing the",
             icon("bolt", class = "cl-dgr"),
@@ -923,7 +933,7 @@ mod_tab_hrange_server <- function(id, vals) {
           tau_v = vals$tau_v0$value[2], tau_v_units = vals$tau_v0$unit[2],
           sigma = vals$sigma0$value[2], sigma_units = vals$sigma0$unit[2])
       }
-
+      
       newfit <- reactive({
         inputList <- list(list(vals$hr$newdata, mod1))
         fit <- par.ctmm.fit(inputList, parallel = TRUE)
@@ -1012,9 +1022,9 @@ mod_tab_hrange_server <- function(id, vals) {
                             truth) / truth
         
         hrErr_lci_new <- hrErr_uci_new <- NULL
-        vals$hrErr_new <- data.frame("lci" = hrErr_lci_new,
+        vals$hrErr_new <- data.frame("lci" = hrErr_min_new,
                                      "est" = hrErr_new,
-                                     "uci" = hrErr_uci_new)
+                                     "uci" = hrErr_max_new)
         
         # Show buttons to change panels:
         
@@ -1044,7 +1054,7 @@ mod_tab_hrange_server <- function(id, vals) {
 
     }) %>% # end of observe,
       shiny::bindEvent(input$run_hr_new)
-
+    
     # BLOCKS --------------------------------------------------------------
     ## Tracking regime: ---------------------------------------------------
 
@@ -1536,13 +1546,13 @@ mod_tab_hrange_server <- function(id, vals) {
           "to adjust the tracking regime."))
       )
       
-      element <- c(element, "#hr_intro")
-      
-      intro <- c(
-        intro,
-        HTML(paste(
-          "hr_intro."))
-      )
+      # element <- c(element, "#hr_intro")
+      # 
+      # intro <- c(
+      #   intro,
+      #   HTML(paste(
+      #     "hr_intro."))
+      # )
       
       tour <- data.frame(element = element,
                          intro = intro,
@@ -1637,8 +1647,6 @@ mod_tab_hrange_server <- function(id, vals) {
       return(out)
 
     }) # end of renderText // time_hr
-
-
 
     observe({
       # Save information for report if table is not requested:

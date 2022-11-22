@@ -905,7 +905,7 @@ font-size: 12px;
   line-height: 1;
 }
 .parblock > .parblock-icon {
-  color: var(--grey-000);
+  color: var(--grey-800);
   font-size: 25px;
 }
 .parblock > .parblock-header {
@@ -938,7 +938,7 @@ font-size: 12px;
   line-height: 1;
 }
 .errorblock > .errorblock-icon {
-  color: var(--grey-000);
+  color: var(--grey-800);
   font-size: 25px;
 }
 .errorblock > .errorblock-text {

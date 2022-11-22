@@ -190,7 +190,6 @@ mod_tab_device_ui <- function(id) {
                   
                 ) #, # end of splitLayout
                 
-                #TODO
                 # shinyWidgets::sliderTextInput(
                 #   inputId = ns("vhf_ppm"),
                 #   label = "Pulses per minute (ppm):",
@@ -201,7 +200,6 @@ mod_tab_device_ui <- function(id) {
               ) # end of fluidRow
             ) #, # end of column
             
-            #TODO
             # footer = shiny::actionButton(
             #     inputId = ns("add_vhf_point"),
             #     label = span("Add to",
@@ -974,14 +972,14 @@ mod_tab_device_server <- function(id, vals) {
                   span("GPS fix rate", class = "col-hgl"),
                   "from the", span("plot", class = "col-key"),
                   "below to further evaluate that",
-                  HTML(paste0(span("tracking regime",
+                  HTML(paste0(span("sampling design",
                                    class = "col-hgl"), "."))) },
               
               if (input$eval_tradeoffs) {
                 
                 column(
                   width = 12,
-                  style = "z-index: 1000;",
+                  style = "z-index: 9999;",
                   
                   shinyWidgets::switchInput(
                     inputId = ns("deviceInput_log"),
@@ -1027,7 +1025,6 @@ mod_tab_device_server <- function(id, vals) {
               #   "(based on how many times you will collect new",
               #   "locations)."),
               
-              #TODO
               # ggiraph::girafeOutput(
               #   outputId = ns("regPlot_vhf"),
               #   width = "100%", height = "50%"),
@@ -1117,9 +1114,9 @@ mod_tab_device_server <- function(id, vals) {
           "Note: The secondary axis is showing an approximation of",
           "the effective sample sizes",
           span("N[area]", class = "cl-sea"),
-          "and", span("N[speed]", class = "cl-dgr"),
+          "and", span("N[speed]", class = "cl-grn-d"),
           "for each sampling design;",
-          "true N values may be slighty different.")
+          "true N values may differ.")
       } else {
         
         switch(vals$which_question,
@@ -1145,7 +1142,7 @@ mod_tab_device_server <- function(id, vals) {
       ui <- span(class = "help-block",
                  ui, 
                  "Switch to logarithmic scale to show these",
-                 "values more clearly at higher intervals.")
+                 "values more clearly.")
       
       output$regPlotSubtitle <- renderUI({ ui })
       
@@ -1178,7 +1175,7 @@ mod_tab_device_server <- function(id, vals) {
           "update automatically.", br(), "Click the",
           icon("bolt", class = "cl-mdn"),
           HTML(paste0(span("Run", class = "cl-mdn"))),
-          "button to refresh.")
+          "button to recalculate them.")
       }
       
       output$regText_sizes <- renderUI({ out_text })
@@ -1205,7 +1202,7 @@ mod_tab_device_server <- function(id, vals) {
           title = "No regime selected",
           text = span(
             "Please select a fix rate to set a",
-            HTML(paste0(span("tracking regime", class = "cl-sea-d"),
+            HTML(paste0(span("sampling design", class = "cl-sea-d"),
                         ",")), "then click the",
             icon("bolt", class = "cl-sea"),
             span("Validate", class = "cl-sea"),
@@ -1296,7 +1293,7 @@ mod_tab_device_server <- function(id, vals) {
           text = span(
             "Please select a fix rate",
             "to set a",
-            HTML(paste0(span("tracking regime", class = "cl-sea-d"),
+            HTML(paste0(span("sampling design", class = "cl-sea-d"),
                         ",")), 'then click the',
             icon("bolt", class = "cl-mdn"),
             span('Validate', class = "cl-sea"),
@@ -1595,6 +1592,11 @@ mod_tab_device_server <- function(id, vals) {
     
     ## Simulating new conditional data: ---------------------------------
     
+    observe({
+      if (vals$data_type != "simulated")
+        vals$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
+    }) %>% bindEvent(input$run_sim_new)
+    
     ### Prepare parameters and reactive() functions:
     
     data_sim <- shiny::reactive({
@@ -1603,11 +1605,12 @@ mod_tab_device_server <- function(id, vals) {
       dti <- vals$reg$dti %#% vals$reg$dti_unit
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
+      seed <- ifelse(vals$tour_active, 100, vals$seed0)
       data <- ctmm::simulate(
         vals$data0,
         vals$fit0,
         t = t_new,
-        seed = vals$seed0)
+        seed = seed)
       data <- pseudonymize(data)
       
       return(data)
@@ -1630,7 +1633,7 @@ mod_tab_device_server <- function(id, vals) {
         )
       )
       
-      out <- estimate_time(vals$data1, parallel = vals$parallel)
+      out <- guesstimate_time(vals$data1, parallel = vals$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out)
@@ -1664,8 +1667,6 @@ mod_tab_device_server <- function(id, vals) {
           vals$reg$dti,
           vals$is_reg_valid,
           vals$confirm_n)
-      
-      message("...Running simulation...")
       
       shinyFeedback::showToast(
         type = "info",
@@ -1727,7 +1728,7 @@ mod_tab_device_server <- function(id, vals) {
       
       tmptime <- difftime(Sys.time(), start, units = 'min')
       
-      if (round(tmptime, 0) < 1) {
+      if (round(tmptime, 0) <= 1) {
         tmpdetail <- paste("This step took less than one minute.")
       } else {
         tmpdetail <- paste("This step took approximately",
@@ -1842,7 +1843,7 @@ mod_tab_device_server <- function(id, vals) {
         fit1 <- model_fit()
         time_fit1 <- difftime(Sys.time(), start, units = "mins")
         
-        if (round(time_fit1, 1) < 1) {
+        if (round(time_fit1, 1) <= 1) {
           tmpdetail <- paste("This step took less than one minute.")
         } else {
           tmpdetail <- paste("This step took approximately",
@@ -1928,7 +1929,6 @@ mod_tab_device_server <- function(id, vals) {
     # # }) %>% # end of observe,
     # #   bindEvent(input$vhfDat_clear)
     # 
-    # #TODO
     # # output$regPlot_vhf <- ggiraph::renderGirafe({
     # #   req(vals$df_vhf) # req(nrow(vals$df_vhf) > 1)
     # # 
@@ -2164,7 +2164,7 @@ mod_tab_device_server <- function(id, vals) {
               x = .data$x,
               y = a2 + .data$N_speed * b2,
               group = 1),
-            color = pal$dgr,
+            color = pal$grn,
             size = 3, alpha = .2)
         }
         
@@ -2174,8 +2174,6 @@ mod_tab_device_server <- function(id, vals) {
             y = .data$dur,
             color = .data$color,
             tooltip = .data$dti_notes,
-            # tooltip = paste(.data$dti_notes,
-            #                 ",", .data$N_area),
             data_id = as.numeric(.data$id))) +
           
           p_x +
@@ -2232,7 +2230,7 @@ mod_tab_device_server <- function(id, vals) {
           ggplot2::theme(legend.position = c(0.85, 0.85))
         
         if (vals$tour_active) {
-          tmpid <- match("1 fix every hour", device$dti_notes)
+          tmpid <- match("1 fix every 2 hours", gps_sim$dti_notes)
           preselected <- as.character(tmpid)
         } else {
           preselected <- character(0)

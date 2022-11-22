@@ -893,8 +893,8 @@ mod_tab_data_select_server <- function(id, vals) {
                subtitle = "between fixes")
 
     }) # end of renderUI // selectInfo_dti
-
-    ## Sample sizes: ----------------------------------------------------
+    
+    ## Sample sizes: ------------------------------------------------------
 
     output$selectBlock_n <- shiny::renderUI({
       req(vals$data0)
