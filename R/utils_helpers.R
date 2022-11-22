@@ -18,11 +18,11 @@ parBlock <- function(icon = NULL,
 
     if (!is.null(icon)) {
       shiny::tags$span(
-        class = "parblock-icon", icon(icon), br()) },
-    shiny::tags$span(class = "parblock-text", header, br()),
-    shiny::tags$span(class = "parblock-value", value),
+        class = paste0(cl, "-icon"), icon(icon), br()) },
+    shiny::tags$span(class = paste0(cl, "-text"), header, br()),
+    shiny::tags$span(class = paste0(cl, "-value"), value),
     if (is.null(subtitle)) { NULL } else {
-      shiny::tags$span(class = "parblock-subtitle",
+      shiny::tags$span(class = paste0(cl, "-subtitle"),
                        br(), subtitle) }
   )
 }
@@ -794,6 +794,7 @@ load_pal <- function() {
               sea_m = "#007d80",
               sea_d = "#006669",
               grn = "#77b131",
+              grn_d = "#508016",
               dgr = "#dd4b39",
               gld = "#ffbf00")
 

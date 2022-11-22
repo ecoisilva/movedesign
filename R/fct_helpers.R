@@ -73,11 +73,12 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
 #'
 #' @examples
 #' \dontrun{
-#' movedesign::fix_unit(1, "hours")
+#' movedesign:::fix_unit(1, "hours")
 #' }
 #' @keywords internal
 #'
 #' @importFrom dplyr case_when
+#' @importFrom dplyr add_row
 #' @importFrom ctmm `%#%`
 #' @noRd
 fix_unit <- function(value, unit,
@@ -116,25 +117,20 @@ fix_unit <- function(value, unit,
   # Convert value:
 
   y <- ifelse(convert, value %#% x, value)
-
+  
   if ((x %in% units_tm) & convert) {
-    if (any(y < 60)) {
-      x_new <- "second"
-    } else if (any(y < 3600)) {
-      x_new <- "minute"
-    } else if (any(y < 86400)) {
-      x_new <- "hour"
-    } else if (any(y < 1 %#% "month")) {
-      x_new <- "day"
-    } else if (any(y < 1 %#% "years")) {
-      x_new <- "month"
-    } else {
-      x_new <- "year"
-    }
+    x_new <- dplyr::case_when(
+      y < 60 ~ "second",
+      y < 3600 ~ "minute",
+      y < 86400 ~ "hour",
+      y < (1 %#% "month") ~ "day",
+      y < (1 %#% "year") ~ "month",
+      TRUE ~ "year")
+    
     y <- x_new %#% y
     x <- x_new
   }
-
+  
   if ((x %in% units_sp) & convert) {
     x_new <- ifelse(y >= 1000, "km", "m")
     y <- x_new %#% y
@@ -142,35 +138,28 @@ fix_unit <- function(value, unit,
   }
 
   if ((x %in% units_ar) & convert) {
-    if (y >= 1e6) {
-      x_new <- "km^2"
-    } else if (1e4 > y || y < 1e6) {
-      x_new <- "ha"
-    } else if (y <= 1e4) {
-      x_new <- "m^2"
-    }
+    x_new <- dplyr::case_when(
+      y < 1e4 ~ "m^2",
+      y < 1e6 ~ "ha",
+      TRUE ~ "km^2")
+    
     y <- x_new %#% y
     x <- x_new
   }
 
   if (x %in% units_ar) {
-    if (x == "square kilometer" || x == "km^2") {
-      x_html <- HTML(paste0("km", tags$sup(2)))
-    } else if (x == "square meter" || x == "m^2") {
-      x_html <- HTML(paste0("m", tags$sup(2)))
-    } else if (x == "hectare" || x == "ha") {
-      x_html <- "ha"
-    }
+    x_html <- dplyr::case_when(
+      (x == "square kilometer" | x == "km^2") ~ "km\u00B2",
+      (x == "square meter" | x == "m^2") ~ "m\u00B2",
+      (x == "hectare" | x == "ha") ~ "ha")
   }
 
   if ((x %in% units_vl) & convert) {
-    if (y >= 0.25) {
-      x_new <- "km/hour"
-    } else if (0.01 > y || y < 0.25) {
-      x_new <- "km/day"
-    } else {
-      x_new <- "m/s"
-    }
+    x_new <- dplyr::case_when(
+      y < 0.01 ~ "m/s",
+      y < 0.25 ~ "km/day",
+      TRUE ~ "km/hour")
+    
     y <- x_new %#% y
     x <- x_new
   }
@@ -199,10 +188,10 @@ fix_unit <- function(value, unit,
 
   # Show units as HTML:
   x <- ifelse(ui, x_html, x)
-
-  out <- data.frame(value = as.numeric(y), unit = x)
+  
+  out <- data.frame(value = numeric(0), unit = character(0))
+  out <- out %>% dplyr::add_row(value = as.numeric(y), unit = x)
   return(out)
-
 }
 
 #' Prepare movement model
@@ -252,23 +241,24 @@ prepare_mod <- function(tau_p,
 #' @param seed0 random seed value for simulation.
 #'
 #' @noRd
-simulate_data <- function(mod0,
-                          dur0,
-                          dur0_units,
-                          dti0,
-                          dti0_units,
-                          seed0) {
+simulate_data <- function(mod,
+                          dur,
+                          dur_units,
+                          dti,
+                          dti_units,
+                          seed) {
 
-  dur <- dur0 %#% dur0_units # duration
-  dti <- round(dti0 %#% dti0_units, 0) # sampling interval
+  dur <- dur %#% dur_units # duration
+  dti <- round(dti %#% dti_units, 0) # sampling interval
 
   t0 <- seq(0, dur, by = dti)
-  dat <- ctmm::simulate(mod0, t = t0, seed = seed0)
+  dat <- ctmm::simulate(mod, t = t0, seed = seed)
   dat <- pseudonymize(dat)
   dat$index <- 1:nrow(dat)
 
   return(dat)
 }
+
 
 CI.upper <- Vectorize(function(k, level) {
   stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
@@ -276,6 +266,15 @@ CI.upper <- Vectorize(function(k, level) {
 CI.lower <- Vectorize(function(k, level) {
   stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
 
+calculate_ci <- function(variable, level) {
+  
+  out <- data.frame(
+    CI = level,
+    CI_low = CI.lower(variable, level),
+    CI_high = CI.upper(variable, level))
+  
+  return(out)
+}
 
 
 #' Extract parameters.
@@ -591,7 +590,7 @@ calculate_pars <- function(x, init) {
 #'
 #' @noRd
 #'
-estimate_time <- function(data, 
+guesstimate_time <- function(data, 
                           fit = NULL,
                           type = "fit",
                           trace = FALSE,
@@ -607,7 +606,7 @@ estimate_time <- function(data,
   
   units <- "minute"
   
-  n <- 200
+  n <- 500
   if (nrow(data) < n) {
     
     # Does not need to run for smaller datasets:
@@ -645,8 +644,8 @@ estimate_time <- function(data,
       
       dti <- data[[2,"t"]] - data[[1,"t"]]
       tauv <- extract_pars(fit, par = "velocity")
-      m <- ifelse(dti > 4 * (tauv$value[2] %#% tauv$unit[2]),
-                  50, 90)
+      m <- ifelse(dti >= 4 * (tauv$value[2] %#% tauv$unit[2]),
+                  1, 90)
       
       tmpdat <- data[1:n, ]
       inputList <- align_lists(list(fit), list(tmpdat))
@@ -853,7 +852,7 @@ par.ctmm.fit <- function(input,
     res <- try(try_models(input[[1]]))
 
   } else {
-    # Process multiple animals on multiple cores: #TODO
+    # Process multiple animals on multiple cores:
     internal_cores <- 1
     res <- try(par.lapply(input,
                           try_models,
