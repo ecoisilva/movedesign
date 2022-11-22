@@ -44,6 +44,6 @@ test_that("Fix unit function", {
                           digits = 2,
                           ui = TRUE,
                           convert = TRUE),
-    data.frame(value = 3.4, unit = "km<sup>2</sup>"))
+    data.frame(value = 3.4, unit = "km\u00B2"))
   
 })
