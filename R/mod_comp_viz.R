@@ -10,26 +10,28 @@
 mod_comp_viz_ui <- function(id) {
   ns <- NS(id)
   tagList(
+
     tabsetPanel(
       id = ns("dataTabs_viz"),
+
       tabPanel(
         value = ns("dataPanel_all"),
         title = tagList(
           icon("paw", class = "cl-sea"),
           span("Data", class = "ttl-panel")
         ),
+
         p(),
-        div(
-          class = "col-xs-12 col-sm-12 col-md-12 col-lg-7",
-          reactable::reactableOutput(ns("dataTable_all"))
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-7",
+            reactable::reactableOutput(ns("dataTable_all"))
         ),
-        div(
-          class = "col-xs-12 col-sm-12 col-md-12 col-lg-5",
-          ggiraph::girafeOutput(
-            outputId = ns("dataPlot_all"),
-            width = "100%", height = "100%"
-          )
+
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-5",
+            ggiraph::girafeOutput(
+              outputId = ns("dataPlot_all"),
+              width = "100%", height = "100%")
         )
+
       ), # end of panels (1 out of 3)
 
       tabPanel(
@@ -38,25 +40,23 @@ mod_comp_viz_ui <- function(id) {
           icon("filter", class = "cl-sea"),
           span("Selected individual", class = "ttl-panel")
         ),
+
         p(),
-        div(
-          class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
-          ggiraph::girafeOutput(
-            outputId = ns("dataPlot_id"),
-            width = "100%", height = "100%"
-          ) %>%
-            shinycssloaders::withSpinner(
-              type = getOption("spinner.type", default = 7),
-              color = getOption("spinner.color",
-                default = "#f4f4f4"
-              )
-            )
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
+            ggiraph::girafeOutput(
+              outputId = ns("dataPlot_id"),
+              width = "100%", height = "100%") %>%
+              shinycssloaders::withSpinner(
+                type = getOption("spinner.type", default = 7),
+                color = getOption("spinner.color",
+                                  default = "#f4f4f4"))
         ),
-        div(
-          class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
-          reactable::reactableOutput(ns("dataTable_id")),
-          uiOutput(ns("dataTable_showVars"))
+
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
+            reactable::reactableOutput(ns("dataTable_id")),
+            uiOutput(ns("dataTable_showVars"))
         )
+
       ), # end of panels (2 out of 3)
 
       tabPanel(
@@ -65,32 +65,28 @@ mod_comp_viz_ui <- function(id) {
           icon("chart-line", class = "cl-sea"),
           span("Variogram", class = "ttl-panel")
         ),
+
         br(),
-        div(
-          class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
-          ggiraph::girafeOutput(
-            outputId = ns("dataPlot_svf"),
-            width = "100%", height = "100%"
-          )
-        ),
-        div(
-          class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
-          column(
-            width = 12, align = "center",
-            p(),
-            shiny::sliderInput(
-              ns("dataVar_timeframe"),
-              label = span(paste(
-                "Proportion of the",
-                "variogram plotted (in %):"
-              )),
-              min = 0, max = 100, value = 50, step = 10,
-              width = "90%"
-            )
-          )
-        )
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
+            ggiraph::girafeOutput(
+              outputId = ns("dataPlot_svf"),
+              width = "100%", height = "100%")),
+
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
+            column(
+              width = 12, align = "center",
+              p(),
+              shiny::sliderInput(
+                ns("dataVar_timeframe"),
+                label = span(paste("Proportion of the",
+                                   "variogram plotted (in %):")),
+                min = 0, max = 100, value = 65, step = 5,
+                width = "90%")
+            ))
+
       ) # end of panels (1 out of 3)
     ) # end of tabs
+
   )
 }
 
@@ -98,41 +94,42 @@ mod_comp_viz_ui <- function(id) {
 #'
 #' @noRd
 mod_comp_viz_server <- function(id, vals) {
-  moduleServer(id, function(input, output, session) {
+  moduleServer( id, function(input, output, session) {
     ns <- session$ns
-
+    
     pal <- load_pal()
 
     observe({
       req(vals$is_valid)
 
       tabselected <- NULL
-
-      if (vals$is_valid && vals$active_tab == "data_upload") {
+      
+      if (vals$is_valid && vals$active_tab == 'data_upload') {
         tabselected <- "comp_viz_uploaded-dataPanel_individual"
       }
-      if (vals$is_valid && vals$active_tab == "data_select") {
+      if (vals$is_valid && vals$active_tab == 'data_select') {
         tabselected <- "comp_viz_selected-dataPanel_individual"
       }
-
+      
       updateTabsetPanel(
         session,
         inputId = "dataTabs_viz",
-        selected = tabselected
-      )
+        selected = tabselected)
+
     }) %>% bindEvent(vals$is_valid)
 
     # SUMMARIZE DATA ----------------------------------------------------
 
     observe({ # First, create data summary:
       req(vals$dataList)
-
+      
       # Check if data is anonymized:
-
+      
       if (!("timestamp" %in% names(vals$dataList[[1]]))) {
+
         vals$dataList <- pseudonymize(vals$dataList)
         vals$is_pseudonymized <- TRUE
-
+        
         shinyFeedback::showToast(
           type = "success",
           title = "Data is anonymized...",
@@ -145,61 +142,53 @@ mod_comp_viz_server <- function(id, vals) {
             positionClass = "toast-bottom-right"
           )
         )
-
+        
         msg_log(
           style = "success",
-          message = paste0(
-            "Data pseudonymization ",
-            msg_success("completed"), "."
-          ),
-          detail = "Origin location and time added."
-        )
-      } else {
-        vals$is_pseudonymized <- FALSE
-      }
+          message = paste0("Data pseudonymization ",
+                           msg_success("completed"), "."),
+          detail = "Origin location and time added.")
 
+      } else { vals$is_pseudonymized <- FALSE }
+      
       dfList <- as_tele_list(vals$dataList)
       sumdfList <- summary(dfList)
-
-      for (i in 1:length(dfList)) {
+      
+      for(i in 1:length(dfList)) {
         sumdfList$n[i] <- nrow(dfList[[i]])
       }
 
       sum_col1 <- grep("period", names(sumdfList))
       sum_col2 <- grep("interval", names(sumdfList))
-      sumdfList[, sum_col1] <- round(sumdfList[sum_col1], 1)
-      sumdfList[, sum_col2] <- round(sumdfList[sum_col2], 1)
-      sumdfList <- sumdfList %>%
+      sumdfList[,sum_col1] <- round(sumdfList[sum_col1], 1)
+      sumdfList[,sum_col2] <- round(sumdfList[sum_col2], 1)
+      sumdfList <- sumdfList %>% 
         dplyr::select(-longitude, -latitude)
 
       vals$sum <- sumdfList
+      
     }) # end of observe
 
     output$dataTable_showVars <- renderUI({
-      req(
-        vals$input_x,
-        vals$input_y,
-        vals$input_t
-      )
+      req(vals$input_x,
+          vals$input_y,
+          vals$input_t)
 
       shinyWidgets::pickerInput(
         inputId = ns("show_vars"),
         width = "100%",
         label = span("Columns to show above:",
-          class = "txt-label"
-        ),
+                     class = "txt-label"),
         choices = names(vals$data0),
-        selected = c(
-          vals$input_x,
-          vals$input_y,
-          vals$input_t
-        ),
+        selected = c(vals$input_x,
+                     vals$input_y,
+                     vals$input_t),
         options = list(
           `actions-box` = TRUE,
           size = 10,
           `selected-text-format` = "count > 3"
-        ), multiple = TRUE
-      )
+        ), multiple = TRUE)
+
     }) # end of renderUI // dataTable_showVars
 
     # PLOTS -------------------------------------------------------------
@@ -209,41 +198,35 @@ mod_comp_viz_server <- function(id, vals) {
       req(vals$dataList, vals$data_type != "simulated")
 
       if (vals$data_type == "selected") {
+
         # to address compatibility of the pelican dataset:
         if (vals$species != "pelican") {
           newdat.all <- as_tele_df(vals$dataList)
         } else {
           data_df <- list()
-          for (i in 1:length(vals$dataList)) {
+          for(i in 1:length(vals$dataList)) {
             tmp <- vals$dataList[i]
             if (names(vals$dataList)[i] == "gps") {
-              tmp <- tmp@.Data[1] %>% as.data.frame()
+              tmp <- tmp@.Data[1] %>% as.data.frame
               tmp <- tmp %>%
-                dplyr::select(
-                  "gps.timestamp",
-                  "gps.x",
-                  "gps.y"
-                )
+                dplyr::select('gps.timestamp',
+                              'gps.x',
+                              'gps.y')
             }
             if (names(vals$dataList)[i] == "argos") {
-              tmp <- tmp@.Data[1] %>% as.data.frame()
+              tmp <- tmp@.Data[1] %>% as.data.frame
               tmp <- tmp %>%
-                dplyr::select(
-                  "argos.timestamp",
-                  "argos.x",
-                  "argos.y"
-                )
+                dplyr::select('argos.timestamp',
+                              'argos.x',
+                              'argos.y')
             }
             colnames(tmp) <- c("timestamp", "x", "y")
             tmp$name <- rep(names(vals$dataList)[i], nrow(tmp))
             data_df[[i]] <- tmp
           }
-
-          newdat.all <- do.call(rbind.data.frame, data_df)
-        }
-      } else {
-        newdat.all <- as_tele_df(vals$dataList)
-      }
+          
+          newdat.all <- do.call(rbind.data.frame, data_df) }
+      } else { newdat.all <- as_tele_df(vals$dataList) }
 
       yrange <- diff(range(newdat.all$y))
       xrange <- diff(range(newdat.all$x))
@@ -271,27 +254,22 @@ mod_comp_viz_server <- function(id, vals) {
         ggiraph::geom_point_interactive(
           data = newdat.all,
           ggplot2::aes(x, y,
-            color = id,
-            tooltip = id,
-            data_id = id
-          ),
-          size = 1.2
-        ) +
-        ggplot2::labs(
-          x = "x coordinate",
-          y = "y coordinate"
-        ) +
+                       color = id,
+                       tooltip = id,
+                       data_id = id),
+          size = 1.2) +
+        ggplot2::labs(x = "x coordinate",
+                      y = "y coordinate") +
         # ggplot2::coord_fixed() +
 
         ggplot2::scale_x_continuous(
           labels = scales::comma,
-          limits = c(xmin, xmax)
-        ) +
+          limits = c(xmin, xmax)) +
         ggplot2::scale_y_continuous(
           labels = scales::comma,
-          limits = c(ymin, ymax)
-        ) +
+          limits = c(ymin, ymax)) +
         ggplot2::scale_color_grey() +
+
         theme_movedesign() +
         ggplot2::theme(legend.position = "none")
 
@@ -302,21 +280,15 @@ mod_comp_viz_server <- function(id, vals) {
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_zoom(max = 5),
           ggiraph::opts_hover(
-            css = paste(
-              "fill:#ffbf00;",
-              "stroke:#ffbf00;"
-            )
-          ),
+            css = paste("fill:#ffbf00;",
+                        "stroke:#ffbf00;")),
           ggiraph::opts_selection(
             selected = vals$id,
             type = "single",
-            css = paste(
-              "fill:#dd4b39;",
-              "stroke:#eb5644;"
-            )
-          )
-        )
+            css = paste("fill:#dd4b39;",
+                        "stroke:#eb5644;")))
       )
+
     }) # end of renderGirafe
 
     observe({
@@ -327,22 +299,18 @@ mod_comp_viz_server <- function(id, vals) {
     ## Rendering individual data (xy): ----------------------------------
 
     output$dataPlot_id <- ggiraph::renderGirafe({
-      req(
-        vals$data0,
-        vals$input_x,
-        vals$input_y,
-        vals$input_t
-      )
-
+      req(vals$data0,
+          vals$input_x,
+          vals$input_y,
+          vals$input_t)
+      
       newdat <- as.data.frame(vals$data0[[vals$input_x]])
       names(newdat) <- "x"
       newdat$y <- vals$data0[[vals$input_y]]
       newdat$time <- vals$data0[[vals$input_t]]
 
       newdat$time <- as.POSIXct(
-        newdat$time,
-        format = "%Y-%m-%d %H:%M:%S"
-      )
+        newdat$time, format = "%Y-%m-%d %H:%M:%S")
 
       yrange <- diff(range(newdat$y))
       xrange <- diff(range(newdat$x))
@@ -365,45 +333,39 @@ mod_comp_viz_server <- function(id, vals) {
         xmin <- min(newdat$x)
         xmax <- max(newdat$x)
       }
-
+      
       p <- ggplot2::ggplot(
-        data = newdat,
+        data = newdat, 
         ggplot2::aes(
           x = x, y = y,
           color = time,
           tooltip = time,
-          data_id = time
-        )
-      ) +
+          data_id = time)) +
+
         ggplot2::geom_path(alpha = .9) +
         ggiraph::geom_point_interactive(size = 1.2) +
-        ggplot2::labs(
-          x = "x coordinate",
-          y = "y coordinate"
-        ) +
+
+        ggplot2::labs(x = "x coordinate",
+                      y = "y coordinate") +
+
         ggplot2::scale_x_continuous(
           labels = scales::comma,
-          limits = c(xmin, xmax)
-        ) +
+          limits = c(xmin, xmax)) +
         ggplot2::scale_y_continuous(
           labels = scales::comma,
-          limits = c(ymin, ymax)
-        ) +
+          limits = c(ymin, ymax)) +
+
         viridis::scale_color_viridis(
           name = "Tracking time:",
           option = "D", trans = "time",
-          breaks = c(
-            min(newdat$time),
-            max(newdat$time)
-          ),
-          labels = c("Start", "End")
-        ) +
+          breaks = c(min(newdat$time),
+                     max(newdat$time)),
+          labels = c("Start", "End")) +
+
         theme_movedesign() +
         ggplot2::guides(
           color = ggplot2::guide_colorbar(
-            title.vjust = 1.02
-          )
-        ) +
+            title.vjust = 1.02)) +
         ggplot2::theme(
           legend.position = c(0.76, 0.08),
           legend.direction = "horizontal",
@@ -411,7 +373,7 @@ mod_comp_viz_server <- function(id, vals) {
           legend.key.height = ggplot2::unit(0.3, "cm"),
           legend.key.width = ggplot2::unit(0.6, "cm")
         )
-
+      
       ggiraph::girafe(
         ggobj = p,
         # width_svg = 7.5, height_svg = 5,
@@ -430,17 +392,12 @@ mod_comp_viz_server <- function(id, vals) {
             #             "color:white;padding:2px;",
             #             "border-radius:2px;"),
             opacity = 1,
-            use_fill = TRUE
-          ),
+            use_fill = TRUE),
           ggiraph::opts_hover(
-            css = paste(
-              "fill:#1279BF;",
-              "stroke:#1279BF;",
-              "cursor:pointer;"
-            )
-          )
-        )
-      )
+            css = paste("fill:#1279BF;",
+                        "stroke:#1279BF;",
+                        "cursor:pointer;"))))
+
     }) # end of renderGirafe // dataPlot_id
 
     ## Rendering variogram (svf): ---------------------------------------
@@ -457,12 +414,10 @@ mod_comp_viz_server <- function(id, vals) {
         ggobj = p,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
-          ggiraph::opts_hover(css = paste(
-            "fill:#ffbf00;",
-            "stroke:#ffbf00;"
-          ))
-        )
-      )
+          ggiraph::opts_hover(css = paste("fill:#ffbf00;",
+                                          "stroke:#ffbf00;"))
+        ))
+
     }) # end of renderGirafe // dataPlot_svf
 
     # TABLES ------------------------------------------------------------
@@ -479,21 +434,17 @@ mod_comp_viz_server <- function(id, vals) {
         highlight = TRUE,
         compact = FALSE,
         striped = TRUE,
+
         defaultSelected = match(vals$id, names(vals$dataList)),
         defaultColDef =
           reactable::colDef(
-            headerClass = "rtable_header", align = "left"
-          ),
+            headerClass = "rtable_header", align = "left"),
         columns = list(
           n = reactable::colDef(name = "n"),
           longitude = reactable::colDef(
-            format = reactable::colFormat(digits = 3)
-          ),
+            format = reactable::colFormat(digits = 3)),
           latitude = reactable::colDef(
-            format = reactable::colFormat(digits = 3)
-          )
-        )
-      )
+            format = reactable::colFormat(digits = 3))))
     })
 
     observe({
@@ -511,9 +462,7 @@ mod_comp_viz_server <- function(id, vals) {
       tmpdat <- tmpdat %>% dplyr::select(input$show_vars)
       if (!is.null(tmpdat$timestamp)) {
         tmpdat$timestamp <- as.character(tmpdat$timestamp)
-      } else {
-        NULL
-      }
+      } else { NULL }
 
       reactable::reactable(
         tmpdat,
@@ -526,46 +475,35 @@ mod_comp_viz_server <- function(id, vals) {
         pageSizeOptions = c(5, 10, 20),
         showPageInfo = FALSE,
         minRows = 5,
+
         defaultColDef =
           reactable::colDef(
-            headerClass = "rtable_header", align = "right"
-          ),
+            headerClass = "rtable_header", align = "right"),
+
         columns = list(
           timestamp = reactable::colDef(
             minWidth = 150,
-            format = reactable::colFormat(datetime = TRUE)
-          ),
+            format = reactable::colFormat(datetime = TRUE)),
           x = reactable::colDef(
             minWidth = 90,
-            format = reactable::colFormat(
-              separators = TRUE,
-              digits = 3
-            )
-          ),
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)),
           y = reactable::colDef(
             minWidth = 90,
-            format = reactable::colFormat(
-              separators = TRUE,
-              digits = 3
-            )
-          ),
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)),
           longitude = reactable::colDef(
             minWidth = 90,
-            format = reactable::colFormat(
-              separators = TRUE,
-              digits = 3
-            )
-          ),
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)),
           latitude = reactable::colDef(
             minWidth = 90,
-            format = reactable::colFormat(
-              separators = TRUE,
-              digits = 3
-            )
-          )
-        )
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 3)))
       )
+
     }) # end of renderDataTable // dataTable_id
+
   }) # moduleServer
 }
 

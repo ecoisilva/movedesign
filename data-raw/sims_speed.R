@@ -5,17 +5,13 @@ library(ctmm)
 
 out <- read.csv(
   system.file("extdata", "sims_speed.csv",
-    package = "movedesign"
-  )
-)
+              package = "movedesign"))
 
 dat <- out %>%
-  Rmisc::summarySE(
-    measurevar = "error",
-    groupvar = c("tau_v", "dur", "dti"),
-    conf.interval = .95,
-    na.rm = TRUE
-  )
+  Rmisc::summarySE(measurevar = "error",
+                   groupvar = c("tau_v", "dur", "dti"),
+                   conf.interval = .95,
+                   na.rm = TRUE)
 
 # dat_lci <- out %>%
 #   Rmisc::summarySE(measurevar = "error_lci",
@@ -52,14 +48,13 @@ txt_dti <- data.frame(
   c(dti[10], "1 fix every 2.8 minutes"),
   c(dti[11], "1 fix every 1.4 minutes"),
   c(dti[12], "1 fix every 42 seconds"),
-  c(20, "1 fix every 20 seconds")
-)
+  c(20, "1 fix every 20 seconds"))
 txt_dti <- t(txt_dti)
 rownames(txt_dti) <- 1:13
 colnames(txt_dti) <- c("dti", "dti_notes")
 
 txt_dti <- txt_dti %>%
-  as.data.frame() %>%
+  as.data.frame %>%
   dplyr::mutate(dti = round(as.numeric(dti), 0))
 
 out <- left_join(out, txt_dti, by = "dti")

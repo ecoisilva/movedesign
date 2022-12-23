@@ -3,8 +3,7 @@
 \docType{data}
 \name{fixrates}
 \alias{fixrates}
-\title{Fix rates of animal tracking devices.
-Dataset with a list of fix rates typically available for animal tracking devices.}
+\title{Fix rates of animal tracking devices.}
 \format{
 An object of class \code{"data.frame"},
 with 40 rows and seven variables: \code{dti_notes}, \code{dti},
@@ -23,7 +22,6 @@ with 40 rows and seven variables: \code{dti_notes}, \code{dti},
 fixrates
 }
 \description{
-Fix rates of animal tracking devices.
 Dataset with a list of fix rates typically available for animal tracking devices.
 }
 \keyword{datasets}

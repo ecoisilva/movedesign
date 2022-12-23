@@ -2,16 +2,19 @@
 "_PACKAGE"
 
 utils::globalVariables(
-  c(
-    ".data", "group",
+  c(".data", "group",
+    
     "x", "y",
     "long", "lat",
     "longitude", "latitude",
     "time", "timestamp", "lag",
+    
     "duration", "dur",
     "interval", "dti", "dti_notes",
+    
     "error", "error_lci", "error_uci",
     "CI_low", "CI_high",
+
     "buffalo",
     "coati",
     "pelican",
@@ -19,8 +22,7 @@ utils::globalVariables(
     "wolf",
     "gazelle",
     "turtle"
-  )
-)
+    ))
 
 ## usethis namespace: start
 #' @importFrom ctmm %#%
