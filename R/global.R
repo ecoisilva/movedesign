@@ -33,7 +33,8 @@ ctmm_species <- c(
   "Jaguar" = "jaguar",
   "Maned Wolf" = "wolf",
   "Mongolian Gazelle" = "gazelle",
-  "Wood turtle" = "turtle")
+  "Wood turtle" = "turtle"
+)
 
 ctmm_species_binom <- c(
   "Syncerus caffer" = "buffalo",
@@ -42,4 +43,5 @@ ctmm_species_binom <- c(
   "Panthera onca" = "jaguar",
   "Chrysocyon brachyurus" = "wolf",
   "Procapra gutturosa" = "gazelle",
-  "Glyptemys insculpta" = "turtle")
+  "Glyptemys insculpta" = "turtle"
+)

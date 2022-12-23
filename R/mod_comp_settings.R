@@ -7,10 +7,9 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_comp_settings_ui <- function(id){
+mod_comp_settings_ui <- function(id) {
   ns <- NS(id)
   tagList(
-
     column(
       width = 12, align = "center",
       shiny::p(),
@@ -26,14 +25,15 @@ mod_comp_settings_ui <- function(id){
       # p(),
       # p(style = "text-align: justify; color: #ffffff;",
       #   "(Only works in browser)."),
-      # 
+      #
       # tags$hr(style = "border-color: #2c3b41;"),
 
       shiny::downloadButton(
         outputId = ns("download_settings"),
         label = "Save settings",
         icon = shiny::icon("download"),
-        style = "width: 100%"),
+        style = "width: 100%"
+      ),
       p(),
       uiOutput(ns("text_save")),
 
@@ -52,13 +52,15 @@ mod_comp_settings_ui <- function(id){
       shinyWidgets::prettyCheckbox(
         inputId = ns("parallel"),
         label = span("Parallel mode",
-                     style = paste0(
-                       "color: #ffffff;",
-                       "font-size: 15px;",
-                       "letter-spacing: 0.5px;")),
-        value = TRUE),
+          style = paste0(
+            "color: #ffffff;",
+            "font-size: 15px;",
+            "letter-spacing: 0.5px;"
+          )
+        ),
+        value = TRUE
+      ),
       br()
-
     ) # end of column
   ) # end of tagList
 }
@@ -83,12 +85,14 @@ mod_comp_settings_server <- function(id, vals) {
 
     output$text_save <- renderUI({
       if (is.null(vals$data0)) {
-        p(style = "text-align: justify; color: #ffffff;",
+        p(
+          style = "text-align: justify; color: #ffffff;",
           "Return here after running any analyses to save",
           "all stored values to your local environment."
         )
       } else {
-        p(style = "text-align: justify",
+        p(
+          style = "text-align: justify",
           "Save all stored values",
           "to your local environment."
         )
@@ -104,17 +108,14 @@ mod_comp_settings_server <- function(id, vals) {
       },
       content = function(file) {
         if (is.null(vals$data0)) {
-
           shiny::showNotification("No data to save",
-                                  type = "error", duration = 8)
-
+            type = "error", duration = 8
+          )
         } else {
           saveRDS(reactiveValuesToList(vals), file = file)
         }
       }
-
     ) # end of output$downloadHandler
-
   }) # end of moduleServer
 }
 

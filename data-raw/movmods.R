@@ -2,12 +2,14 @@
 
 library(dplyr)
 
-movmods <- data.frame(name = character(0),
-                      name_short = character(0),
-                      tau_p = character(0),
-                      tau_v = character(0),
-                      hrange = character(0),
-                      pars = character(0))
+movmods <- data.frame(
+  name = character(0),
+  name_short = character(0),
+  tau_p = character(0),
+  tau_v = character(0),
+  hrange = character(0),
+  pars = character(0)
+)
 
 movmods <- movmods %>%
   dplyr::add_row(
@@ -36,7 +38,7 @@ movmods <- movmods %>%
     tau_p = "Yes",
     tau_v = "No",
     hrange = "Yes",
-    pars = paste("\u03C4", "=", paste0("\u03C4","\u209A"))
+    pars = paste("\u03C4", "=", paste0("\u03C4", "\u209A"))
   )
 
 movmods <- movmods %>%
@@ -46,8 +48,10 @@ movmods <- movmods %>%
     tau_p = "Yes",
     tau_v = "Yes",
     hrange = "No",
-    pars = paste("\u03C4", "=",
-                 paste0("{", "\u221E, ", "\u03C4","\u1D65", "}"))
+    pars = paste(
+      "\u03C4", "=",
+      paste0("{", "\u221E, ", "\u03C4", "\u1D65", "}")
+    )
   )
 
 movmods <- movmods %>%
@@ -57,10 +61,14 @@ movmods <- movmods %>%
     tau_p = "Yes",
     tau_v = "Yes",
     hrange = "Yes",
-    pars = paste("\u03C4", "=",
-                 paste0("{",
-                        "\u03C4","\u209A", ", ",
-                        "\u03C4","\u1D65", "}"))
+    pars = paste(
+      "\u03C4", "=",
+      paste0(
+        "{",
+        "\u03C4", "\u209A", ", ",
+        "\u03C4", "\u1D65", "}"
+      )
+    )
   )
 
 # View(movmods)

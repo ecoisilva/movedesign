@@ -1,9 +1,8 @@
 #' Fix rates of animal tracking devices.
-#'
 #' Dataset with a list of fix rates typically available for animal tracking devices.
-#' 
+#'
 #' @docType data
-#' 
+#'
 #' @format An object of class \code{"data.frame"},
 #' with 40 rows and seven variables: \code{dti_notes}, \code{dti},
 #' \code{highlight}, \code{frq}, and \code{frq_hrs}.
@@ -47,7 +46,7 @@
 #' Home range error simulations.
 #'
 #' Expanded simulations from Silva et al. (2021).
-#' 
+#'
 #' @docType data
 #'
 #' @format An object of class \code{"data.frame"}.
@@ -59,14 +58,14 @@
 
 
 #' Speed & distance error simulations.
-#' 
+#'
 #' Expanded simulations from Noonan et al. (2019) and Silva et al. (in prep).
-#' 
+#'
 #' @docType data
 #'
 #' @format An object of class \code{"data.frame"}.
 #'
 #' @references Noonan et al. (2019).  Movement Ecology, 7(1), 1-15.
-#' (\href{https://movementecologyjournal.biomedcentral.com/articles/10.1186/s40462-019-0177-19}{ME})
+#' (\href{https://movementecologyjournal.biomedcentral.com/articles/10.1186/s40462-019-0177-1}{ME})
 #'
 "sims_speed"
