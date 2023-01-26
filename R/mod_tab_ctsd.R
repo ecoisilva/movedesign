@@ -127,7 +127,7 @@ mod_tab_ctsd_ui <- function(id) {
 
               shiny::actionButton(
                 inputId = ns("ctsd_adjRegime"),
-                label = "Modify",
+                label = "Compare",
                 icon = icon("wrench"),
                 class = "btn-info",
                 width = "100%")
@@ -1985,7 +1985,7 @@ mod_tab_ctsd_server <- function(id, vals) {
 
           ggplot2::geom_hline(
             yintercept = yline_truth, 
-            linewidth = 1.5, linetype = "dashed") +
+            linewidth = 1, linetype = "solid") +
 
           ggplot2::geom_hline(
             yintercept = yline, 
@@ -2029,19 +2029,19 @@ mod_tab_ctsd_server <- function(id, vals) {
         p1 <- ggplot2::geom_path(
           alldat, mapping = ggplot2::aes(
             x = x, y = y),
-          col = "grey80", size = 1.4)
+          col = "grey70", size = 1.8)
       }
 
       if ("subset" %in% datasets) {
         p2 <- ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(
             x = x, y = y),
-          linewidth = 0.8, col = pal$sea)
+          linewidth = 0.4, col = pal$sea)
         p2_points <- ggiraph::geom_point_interactive(
           newdat, mapping = ggplot2::aes(
             x = x, y = y,
             tooltip = timestamp),
-          size = 2.5, col = pal$sea)
+          size = 0.8, col = pal$sea)
       }
 
       if ("new" %in% datasets) {
@@ -2050,12 +2050,12 @@ mod_tab_ctsd_server <- function(id, vals) {
         p3 <- ggplot2::geom_path(
           vals$sd$newdata, mapping = ggplot2::aes(
             x = x, y = y),
-          linewidth = 0.8, col = pal$dgr)
+          linewidth = 0.4, col = pal$dgr)
         p3_points <- ggiraph::geom_point_interactive(
           vals$sd$newdata, mapping = ggplot2::aes(
             x = x, y = y,
             tooltip = timestamp),
-          size = 2.5, col = pal$dgr)
+          size = 0.8, col = pal$dgr)
       }
 
       p <- ggplot2::ggplot() +
@@ -2069,8 +2069,8 @@ mod_tab_ctsd_server <- function(id, vals) {
         { if ("new" %in% datasets) p3_points } +
 
         ggplot2::labs(
-          x = "x coordinate",
-          y = "y coordinate") +
+          x = "X coordinate",
+          y = "Y coordinate") +
 
         ggplot2::scale_x_continuous(
           labels = scales::comma,

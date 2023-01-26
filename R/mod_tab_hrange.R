@@ -119,7 +119,7 @@ mod_tab_hrange_ui <- function(id) {
               
                 shiny::actionButton(
                   inputId = ns("hr_adjRegime"),
-                  label = "Modify",
+                  label = "Compare",
                   icon = icon("rotate-right"),
                   class = "btn-info",
                   width = "100%")
@@ -219,10 +219,21 @@ mod_tab_hrange_ui <- function(id) {
                       selected = "Estimate",
                       checkIcon = list(yes = icon("circle-check")),
                       justified = TRUE),
-
+                    p(),
+                    
+                    column(
+                      width = 12, align = "center",
+                      style = "display: contents;",
+                      shinyWidgets::awesomeCheckbox(
+                        inputId = ns("show_truehr"),
+                        label = span("Show", span("true", class = "cl-sea"), 
+                                     "home range"),
+                        value = TRUE)), p(),
+                    
                     ggiraph::girafeOutput(
                       outputId = ns("hrPlot_initial"),
-                      width = "100%", height = "100%")),
+                      width = "100%", height = "100%")
+                ),
 
                 div(id = "content_hr-areas",
                     class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
@@ -1301,9 +1312,16 @@ mod_tab_hrange_server <- function(id, vals) {
     ## Rendering home range estimate plot (xy): -------------------------
 
     output$hrPlot_initial <- ggiraph::renderGirafe({
-      req(vals$is_analyses, vals$akde)
+      req(vals$is_analyses, vals$akde, vals$sigma0)
+      
+      if (!is.null(input$show_truehr)) {
+        show_truth <- ifelse(input$show_truehr, TRUE, FALSE)
+      } else { show_truth <- FALSE }
 
+      sig <- vals$sigma0$value[2] %#% vals$sigma0$unit[2]
       ud <- plotting_hr(data = vals$data1,
+                        sigma = sig,
+                        show_truth = show_truth,
                         ud = vals$akde,
                         levels = input$hrShow_levels,
                         color = pal$sea, fill = pal$dgr)
@@ -1327,16 +1345,23 @@ mod_tab_hrange_server <- function(id, vals) {
 
     output$hrPlot_modified <- ggiraph::renderGirafe({
       req(vals$is_analyses, vals$hr$newdata, vals$akde_new)
-
+      
+      if (!is.null(input$show_truehr)) {
+        show_truth <- ifelse(input$show_truehr, TRUE, FALSE)
+      } else { show_truth <- FALSE }
+      
       # Rendering home range estimate plot:
 
+      sig <- vals$sigma0$value[2] %#% vals$sigma0$unit[2]
       ud_sim <- plotting_hr_new(
         data1 = vals$data1,
         data2 = vals$hr$newdata,
+        sigma = sig,
         ud = vals$akde_new,
 
         levels = input$hrhrShow_levels_sim,
-        show = input$hrShow_datasets,
+        show_data = input$hrShow_datasets,
+        show_truth = show_truth,
 
         color = pal$sea,
         sim_color = pal$mdn,
