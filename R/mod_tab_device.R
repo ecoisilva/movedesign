@@ -1595,6 +1595,9 @@ mod_tab_device_server <- function(id, vals) {
     observe({
       if (vals$data_type != "simulated")
         vals$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
+      
+      if (vals$overwrite_seed) vals$seed0 <- 100
+      
     }) %>% bindEvent(input$run_sim_new)
     
     ### Prepare parameters and reactive() functions:
@@ -2066,7 +2069,7 @@ mod_tab_device_server <- function(id, vals) {
 
         tauv <- vals$tau_v0$value[2] %#% vals$tau_v0$unit[2]
         taup <- vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
-
+        
         if ("Home range" %in% vals$which_question) {
 
           gps_sim$N_area <- gps_sim$dur_sec / taup
@@ -2121,22 +2124,42 @@ mod_tab_device_server <- function(id, vals) {
       
       output$regPlot_gps <- ggiraph::renderGirafe({
         
-        gps_sim$x <- log(gps_sim$frq_hrs)
-        x_label <- "Log of frequency (fixes per hour)"
+        dti_scale <- dti_yn <- NULL
         
-        p_x <- ggplot2::geom_vline(xintercept = 0, alpha = 0)
+        gps_sim$x <- log(gps_sim$dti)
+        x_label <- "Log of sampling interval (time between fixes)"
+        
+        p_x <- ggplot2::geom_vline(
+          xintercept = min(gps_sim$x), 
+          alpha = 0)
         
         if (!is.null(input$deviceInput_log)) {
           if (!input$deviceInput_log) {
             
-            gps_sim$x <- gps_sim$frq_hrs
-            x_label <- "Frequency (fixes per hour)"
+            gps_sim$x <- gps_sim$dti
+            x_label <- "Sampling interval (time between fixes)"
             
-            p_x <- ggplot2::geom_vline(xintercept = 0,
-                                      color = "grey80",
-                                      size = 0.2)
+            p_x <- ggplot2::geom_vline(
+              xintercept = min(log(gps_sim$x)),
+              color = "grey80",
+              size = 0.2)
           }
         }
+        
+        x_scale <- data.frame(
+          brks = gps_sim %>% 
+            dplyr::filter(dti_yn == "Y") %>% 
+            dplyr::pull(x),
+          lbls = gps_sim %>% 
+            dplyr::filter(dti_yn == "Y") %>% 
+            dplyr::pull(dti_scale))
+        
+        p_x_scale <- ggplot2::scale_x_continuous(
+          breaks = x_scale$brks, 
+          labels = x_scale$lbls,
+          guide = ggplot2::guide_axis(check.overlap = TRUE,
+                                      n.dodge = 2))
+        
         if (add_n) {
           p1 <- ggplot2::geom_line(
             data = gps_sim,
@@ -2181,8 +2204,6 @@ mod_tab_device_server <- function(id, vals) {
           ggplot2::geom_hline(yintercept = 0,
                               color = "grey80",
                               size = 0.2) +
-          
-          # { if (add_n)  p1 } +
           { if (add_N1) p2 } +
           { if (add_N2) p3 } +
 
@@ -2208,13 +2229,33 @@ mod_tab_device_server <- function(id, vals) {
             ggplot2::scale_y_continuous(
               sec.axis = ggplot2::sec_axis(
                 ~ (. - a2)/b2,
-                name = expression(N)),
+                name = "Effective sample sizes (N)"),
               labels = scales::comma,
               limits = c(0, ymax)) }
           } +
           
+          # { if (("1 day" %in% x_scale)) {
+          #   
+          #   ggplot2::geom_vline(
+          #     xintercept = log(86400))
+          # }} +
+          # 
+          # { if (("1 hr" %in% x_scale)) {
+          #   
+          #   ggplot2::geom_vline(
+          #     xintercept = log(3600))
+          # }} +
+          # 
+          # { if (("1 min" %in% x_scale)) {
+          #   
+          #   ggplot2::geom_vline(
+          #     xintercept = log(60))
+          # }} +
+          
           ggiraph::geom_point_interactive(size = 1.5) +
           ggplot2::scale_color_manual(values = pal_values) +
+          
+          p_x_scale +
           
           # ggplot2::scale_fill_manual(
           #   name = "",
