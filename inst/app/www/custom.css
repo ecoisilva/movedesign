@@ -629,7 +629,11 @@ sub { font-size: 90%; }
 }
 .pretty .p-switch .p-fill input:checked ~ .state label:after {
   background-color: var(--sea) !important;
+}
 
+.checkbox-primary input[type="checkbox"]:checked+label::after {
+  background-color: var(--sea);
+  border-color: var(--sea);
 }
 
 .irs--shiny .irs {
