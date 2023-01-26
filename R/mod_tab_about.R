@@ -58,7 +58,15 @@ mod_tab_about_ui <- function(id) {
           h2("How does this",
              span("application", class = "cl-sea"), "work?"),
           p(),
-          mod_comp_tour_ui("tour_1"), p()
+          mod_comp_tour_ui("tour_1"), p(),
+          
+          shinyWidgets::awesomeCheckbox(
+            inputId = ns("overwrite_seed"),
+            label = span("Set", span("seed", class = "cl-sea"), 
+                         "for case study"),
+            # status = "info",
+            value = FALSE),
+          p()
 
         ) # end of column (text)
       ), # end of box // tour
@@ -204,6 +212,7 @@ mod_tab_about_server <- function(id, vals) {
     observe({
       vals$which_data <- input$which_data
       vals$which_question <- input$which_question
+      vals$overwrite_seed <- input$overwrite_seed
     })
 
     observe({

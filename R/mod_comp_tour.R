@@ -98,9 +98,11 @@ mod_comp_tour_server <- function(id, vals) {
             fontawesome::fa("square-check", fill = "white"),
             "'Select' as your Data source, to choose",
             "from a list of available species, ",
-            "and", fontawesome::fa("square-check", fill = "white"),
-            "both 'Home range' and 'Speed & distance'",
-            "as your research questions.")
+            "and both ",
+            fontawesome::fa("square-check", fill = "white"),
+            "'Home range' and ",
+            fontawesome::fa("square-check", fill = "white"),
+            "'Speed & distance' as your research questions.")
         )))
 
       element <- c(element, ".sidebar")
@@ -266,9 +268,9 @@ mod_comp_tour_server <- function(id, vals) {
           wrap_none(HTML("&#x2014"), ","),
           "the extracted characteristic timescales",
           paste0("(", span("position", class = "cl-sea-l"),
-                 " & ", span("velocity autocorrelation",
+                 " and ", span("velocity autocorrelation",
                                class = "cl-sea-l"),
-                 ")"), "and associated parameters",
+                 ")"), "and associated measures",
           paste0("(", span("semi-variance", class = "cl-sea-l"),
                  " and ", span("velocity", class = "cl-sea-l"),
                  ")."),
@@ -322,8 +324,8 @@ mod_comp_tour_server <- function(id, vals) {
           "With these loggers",
           "sampling is", span("automated", class = "cl-sea-l"),
           "and conducted by satellite systems. Therefore,",
-          span("sampling frequency", class = "cl-grn"),
-          "and", span("sampling duration", class = "cl-grn"),
+          span("sampling duration", class = "cl-grn"),
+          "and", span("sampling interval", class = "cl-grn"),
           "are both inherently linked with",
           HTML(paste0(span("GPS battery life",
                            class = "cl-sea-l"), ".")),
@@ -337,7 +339,7 @@ mod_comp_tour_server <- function(id, vals) {
         HTML(paste(
           "Here, we can set the maximum",
           span("GPS battery life", class = "cl-sea-l"),
-          "(how long the GPS is expected to last),", "at the",
+          "(how long the GPS is expected to last),", "and the",
           span("maximum GPS fix rate", class = "cl-sea-l"),
           "(the longest time interval between fixes available",
           "for the duration above).",
@@ -359,17 +361,18 @@ mod_comp_tour_server <- function(id, vals) {
         HTML(paste(
           "Here, we plot the",
           span("sampling duration", class = "cl-grn"),
-          em("versus"), span("sampling frequency", class = "cl-grn"),
-          "(number of fixes per hour).",
-          "As frequency increases (more fixes per hour), the battery",
-          "life of the device will decrease until it approaches",
+          em("versus"), span("sampling interval", class = "cl-grn"),
+          "(time between when new fixes or locations are collected).",
+          "As sampling interval decreases (shorter time between",
+          "new fixes), the battery",
+          "life of the device decreases until it approaches",
           wrap_none(span("zero", class = "cl-dgr-l"), "."),
           p(),
           "For the tutorial, the sampling interval of",
           span("2 hours", class = "cl-sea-l"),
           "(corresponding to the frequency of",
           wrap_none(
-            span("0.5 fixes per hour", class = "cl-sea-l"), ")"),
+            span("12 fixes per day", class = "cl-sea-l"), ")"),
           "has already been selected. Change to logarithmic scale",
           "for a clearer view of the curve."
         )))
@@ -409,7 +412,7 @@ mod_comp_tour_server <- function(id, vals) {
           "a realized duration of",
           wrap_none(span("1.7 months", class = "cl-sea-l"), ","),
           "we will have", HTML("N<sub>area</sub>"),
-          "< 5 and", HTML("N<sub>speed</sub>"),"\u2248 164."
+          "< 5 and", HTML("N<sub>speed</sub>"),"\u2248 165."
         )))
       
       element <- c(element, paste0(tab4, "regBox_sims"))
