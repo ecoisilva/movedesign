@@ -123,7 +123,7 @@ errorBlock <- function(icon = NULL,
       numberColor <- "color: var(--sea) !important;" }
   }
 
-  value <- sigdigits(value * 100, 3)
+  value <- sigdigits(value * 100, 2)
 
   shiny::tags$div(
     class = "errorblock",
@@ -418,9 +418,161 @@ theme_movedesign <- function(ft_size = 13) {
 #' @keywords internal
 #'
 #' @noRd
-plotting_hr <- function(data, ud, levels,
+plotting_hr <- function(data, 
+                        sigma,
+                        show_truth,
+                        ud, levels,
                         color, fill) {
   
+  id <- NULL
+  radius_x <- radius_y <- sqrt(-2 * log(0.05) * sigma)
+  truth <- data.frame(
+    id = rep(1, each = 100),
+    angle = seq(0, 2 * pi,length.out = 100))
+  
+  truth$long <- unlist(lapply(
+    mean(data$x), 
+    function(x) x + radius_x * cos(truth$angle)))
+  truth$lat <- unlist(lapply(
+    mean(data$y), 
+    function(x) x + radius_y * sin(truth$angle)))
+  
+  pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
+    ud, level.UD = .95)@polygons[[3]] # upper
+  
+  if ("95% high CI" %in% levels) {
+    
+    p1 <- ggplot2::geom_polygon(
+      data = pol_ud_high,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
+                             group = group),
+      fill = color, col = color,
+      linetype = "dotted",
+      alpha = .2)
+  }
+  
+  if ("Estimate" %in% levels) {
+    pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
+      ud, level.UD = .95)@polygons[[2]] # estimate
+    
+    p2 <- ggplot2::geom_polygon(
+      data = pol_ud,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
+                             group = group),
+      fill = "#007d80", color = color,  
+      alpha = .2)
+  }
+  
+  if ("95% low CI" %in% levels) {
+    pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
+      ud, level.UD = .95)@polygons[[1]] # low
+    
+    p3 <- ggplot2::geom_polygon(
+      data = pol_ud_low,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
+                             group = group),
+      col = color, fill = color,
+      linetype = "dotted",
+      alpha = .2)
+  }
+  
+  ymin <- min(pol_ud_high@Polygons[[1]]@coords[,2])
+  yrange <- range(pol_ud_high@Polygons[[1]]@coords[,2])
+  
+  tmp <- ymin - diff(yrange) * .2
+  p <- ggplot2::ggplot() +
+    
+    ggplot2::geom_polygon(
+      data = pol_ud_high,
+      mapping = ggplot2::aes(x = long,
+                             y = lat,
+                             group = group),
+      fill = NA, alpha = 1) +
+    
+    { if (show_truth)
+      ggplot2::geom_polygon(
+        data = truth,
+        mapping = ggplot2::aes(x = long,
+                               y = lat,
+                               group = id),
+        fill = "#353c42",
+        alpha = .2)
+    } +
+    
+    ggplot2::geom_path(data,
+                       mapping = ggplot2::aes(x = x,
+                                              y = y),
+                       color = "black", size = 0.4,
+                       alpha = .4) +
+    ggplot2::geom_point(data,
+                        mapping = ggplot2::aes(x = x,
+                                               y = y),
+                        color = "black", size = 1) +
+    
+    { if ("95% high CI" %in% levels) p1 } +
+    { if ("Estimate" %in% levels) p2 } +
+    { if ("95% low CI" %in% levels) p3 } +
+    
+    ggplot2::labs(x = "X coordinate",
+                  y = "Y coordinate") +
+    
+    ggplot2::scale_x_continuous(
+      labels = scales::comma) +
+    ggplot2::scale_y_continuous(
+      labels = scales::comma,
+      limits = c(tmp, NA)) +
+    
+    ggplot2::coord_fixed() +
+    
+    theme_movedesign() +
+    ggplot2::guides(
+      color = ggplot2::guide_colorbar(
+        title.vjust = 1.02)) +
+    ggplot2::theme(
+      text = ggplot2::element_text(
+        family = "Roboto Condensed"),
+      
+      legend.position = c(0.76, 0.08),
+      legend.direction = "horizontal",
+      legend.title = ggplot2::element_text(
+        size = 11, face = "bold.italic"),
+      legend.key.height = ggplot2::unit(0.3, "cm"),
+      legend.key.width = ggplot2::unit(0.6, "cm"))
+}
+
+
+
+
+#' Plot home range with simulated data
+#'
+#' @description Plotting home range output from ctmm with simulation.
+#' @keywords internal
+#'
+#' @noRd
+plotting_hr_new <- function(data1, data2,
+                            sigma,
+                            ud, levels,
+                            show_data,
+                            show_truth,
+                            # bbox,
+                            color, sim_color, fill) {
+
+  id <- NULL
+  radius_x <- radius_y <- sqrt(-2 * log(0.05) * sigma)
+  truth <- data.frame(
+    id = rep(1, each = 100),
+    angle = seq(0, 2 * pi,length.out = 100))
+
+  truth$long <- unlist(lapply(
+    mean(data2$x),
+    function(x) x + radius_x * cos(truth$angle)))
+  truth$lat <- unlist(lapply(
+    mean(data2$y),
+    function(x) x + radius_y * sin(truth$angle)))
+
   pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
     ud, level.UD = .95)@polygons[[3]] # upper
 
@@ -433,40 +585,45 @@ plotting_hr <- function(data, ud, levels,
                              group = group),
       fill = fill, col = fill,
       linetype = "dotted",
-      alpha = .3)
+      alpha = .2)
   }
 
   if ("Estimate" %in% levels) {
     pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[2]] # estimate
-
+    
     p2 <- ggplot2::geom_polygon(
       data = pol_ud,
       mapping = ggplot2::aes(x = long,
                              y = lat,
                              group = group),
-      fill = "#2c3b41",
-      alpha = .3)
+      fill = fill, color = fill,  
+      alpha = .2)
   }
 
   if ("95% low CI" %in% levels) {
     pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
       ud, level.UD = .95)@polygons[[1]] # low
-
+    
     p3 <- ggplot2::geom_polygon(
       data = pol_ud_low,
       mapping = ggplot2::aes(x = long,
                              y = lat,
                              group = group),
-      fill = fill,
-      alpha = .3)
+      col = fill, fill = fill,
+      linetype = "dotted",
+      alpha = .2)
   }
+  
+  show_col <- ifelse(show_data, "black", "white")
+  show_alpha <- ifelse(show_data, 1, 0)
 
   ymin <- min(pol_ud_high@Polygons[[1]]@coords[,2])
   yrange <- range(pol_ud_high@Polygons[[1]]@coords[,2])
-
+  
   tmp <- ymin - diff(yrange) * .2
   p <- ggplot2::ggplot() +
+    
     ggplot2::geom_polygon(
       data = pol_ud_high,
       mapping = ggplot2::aes(x = long,
@@ -474,110 +631,25 @@ plotting_hr <- function(data, ud, levels,
                              group = group),
       fill = NA, alpha = 1) +
 
-    ggplot2::geom_path(data,
+    { if (show_truth)
+      ggplot2::geom_polygon(
+        data = truth,
+        mapping = ggplot2::aes(x = long,
+                               y = lat,
+                               group = id),
+        fill = "#353c42",
+        alpha = .2)
+    } +
+    
+    ggplot2::geom_path(data2,
                        mapping = ggplot2::aes(x = x,
                                               y = y),
-                       color = color, size = 0.2,
+                       color = fill, size = 0.4,
                        alpha = .4) +
-    ggplot2::geom_point(data,
+    ggplot2::geom_point(data2,
                         mapping = ggplot2::aes(x = x,
                                                y = y),
-                        color = color, size = 1.5) +
-
-    { if ("95% high CI" %in% levels) p1 } +
-    { if ("Estimate" %in% levels) p2 } +
-    { if ("95% low CI" %in% levels) p3 } +
-
-    ggplot2::labs(x = "X coordinate",
-                  y = "Y coordinate") +
-
-    ggplot2::scale_x_continuous(
-      labels = scales::comma) +
-    ggplot2::scale_y_continuous(
-      labels = scales::comma,
-      limits = c(tmp, NA)) +
-
-    theme_movedesign() +
-    ggplot2::guides(
-      color = ggplot2::guide_colorbar(
-        title.vjust = 1.02)) +
-    ggplot2::theme(
-      text = ggplot2::element_text(
-        family = "Roboto Condensed"),
-
-      legend.position = c(0.76, 0.08),
-      legend.direction = "horizontal",
-      legend.title = ggplot2::element_text(
-        size = 11, face = "bold.italic"),
-      legend.key.height = ggplot2::unit(0.3, "cm"),
-      legend.key.width = ggplot2::unit(0.6, "cm"))
-}
-
-
-#' Plot home range with simulated data
-#'
-#' @description Plotting home range output from ctmm with simulation.
-#' @keywords internal
-#'
-#' @noRd
-plotting_hr_new <- function(data1, data2,
-                            ud, levels, show,
-                            bbox, color, sim_color, fill) {
-
-  pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
-    ud, level.UD = .95)@polygons[[3]] # upper
-
-  if ("95% high CI" %in% levels) {
-
-    p1 <- ggplot2::geom_polygon(
-      data = pol_ud_high,
-      mapping = ggplot2::aes_string(x = "long", 
-                                    y = "lat",
-                                    group = "group"),
-      fill = fill,
-      alpha = .3)
-  }
-
-  if ("Estimate" %in% levels) {
-    pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
-      ud, level.UD = .95)@polygons[[2]] # estimate
-
-    p2 <- ggplot2::geom_polygon(
-      data = pol_ud,
-      mapping = ggplot2::aes_string(x = "long", 
-                                    y = "lat",
-                                    group = "group"),
-      fill = "#617680", # "#2c3b41",
-      alpha = .6)
-  }
-
-  if ("95% low CI" %in% levels) {
-    pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
-      ud, level.UD = .95)@polygons[[1]] # low
-
-    p3 <- ggplot2::geom_polygon(
-      data = pol_ud_low,
-      mapping = ggplot2::aes_string(x = "long", 
-                                    y = "lat",
-                                    group = "group"),
-      fill = fill,
-      alpha = .3)
-  }
-
-  show_col <- ifelse(show, color, "white")
-  show_alpha <- ifelse(show, 1, 0)
-
-  p <- ggplot2::ggplot() +
-    ggplot2::geom_polygon(
-      data = pol_ud_high,
-      mapping = ggplot2::aes_string(x = "long", 
-                                    y = "lat",
-                                    group = "group"),
-      fill = NA, alpha = 0) +
-
-    ggplot2::geom_point(
-      data2, mapping = ggplot2::aes(x = x, y = y),
-      color = sim_color, size = 1.5) +
+                        color = fill, size = 1) +
 
     { if ("95% high CI" %in% levels) p1 } +
     { if ("Estimate" %in% levels) p2 } +
@@ -593,8 +665,11 @@ plotting_hr_new <- function(data1, data2,
     ggplot2::scale_x_continuous(
       labels = scales::comma) +
     ggplot2::scale_y_continuous(
-      labels = scales::comma) +
+      labels = scales::comma,
+      limits = c(tmp, NA)) +
 
+    ggplot2::coord_fixed() +
+    
     theme_movedesign() +
     ggplot2::theme(legend.position = "none")
 }
@@ -1193,3 +1268,218 @@ as_tele_dt <- function(object) {
 }
 
 
+
+# ctmmweb functions: ------------------------------------------------------
+
+#' Parallel lapply
+#'
+#' @description Parallel lapply from ctmmweb.
+#'
+#' @param input Input list, with two sub-items: telemetry object and CTMM object.
+#' @param parallel True/false. Uses a single core when FALSE.
+#' @keywords internal
+#'
+#' @noRd
+#'
+par.lapply <- function(lst,
+                       fun, 
+                       cores = NULL,
+                       parallel = TRUE,
+                       win_init = expression({
+                         requireNamespace("ctmm", quietly = TRUE)})) {
+  if (parallel) {
+    if (!is.null(cores) && cores > 0) {
+      cluster_size <- cores
+    }
+    if (!is.null(cores) && cores < 0) {
+      cluster_size <- max(parallel::detectCores(logical = FALSE) + 
+                            cores, 1)
+    }
+    sysinfo <- Sys.info()
+    tryCatch({
+      if (sysinfo["sysname"] == "Windows") {
+        if (is.null(cores)) {
+          cluster_size <- min(length(lst), parallel::detectCores(logical = FALSE) * 
+                                2)
+        }
+        cat(crayon::inverse("running parallel in SOCKET cluster of", 
+                            cluster_size, "\n"))
+        cl <- parallel::makeCluster(cluster_size, outfile = "")
+        parallel::clusterExport(cl, c("win_init"), envir = environment())
+        parallel::clusterEvalQ(cl, eval(win_init))
+        res <- parallel::parLapplyLB(cl, lst, fun)
+        parallel::stopCluster(cl)
+      }
+      else {
+        if (is.null(cores)) {
+          cluster_size <- min(length(lst), 
+                              parallel::detectCores(logical = FALSE) * 4)
+        }
+        cat(crayon::inverse("running parallel with mclapply in cluster of", 
+                            cluster_size, "\n"))
+        res <- parallel::mclapply(lst, fun, mc.cores = cluster_size)
+      }
+    }, error = function(e) {
+      cat(crayon::bgRed$white("Parallel Error, try restart R session\n"))
+      cat(e)
+    })
+  } else {
+    res <- lapply(lst, fun)
+  }
+  return(res)
+}
+
+#' Parallel model selection
+#'
+#' @description Parallel model selection, ctmm.select(), from ctmmweb.
+#'
+#' @param input Input list, with two sub-items: telemetry object and CTMM object.
+#' @param parallel True/false. Uses a single core when FALSE.
+#' @keywords internal
+#'
+#' @noRd
+#'
+par.ctmm.select <- function(input, cores = NULL,
+                            trace = TRUE,
+                            parallel = TRUE) {
+  
+  try_models <- function(input, trace) {
+    fall_back(ctmm::ctmm.select,
+              list(input[[1]],
+                   CTMM = input[[2]],
+                   control = list(method = "pNewton",
+                                  cores = internal_cores),
+                   trace = trace),
+              ctmm::ctmm.select,
+              list(input[[1]],
+                   CTMM = input[[2]],
+                   control = list(cores = internal_cores),
+                   trace = trace),
+              paste0("ctmm.select() failed with pNewton,",
+                     "switching to Nelder-Mead."))
+  }
+  
+  if (length(input) == 1) {
+    # Process one individual on multiple cores:
+    
+    # message("No. of cores: ", parallel::detectCores(logical = FALSE))
+    
+    internal_cores <- if (parallel) -1 else 1
+    res <- try(try_models(input[[1]],
+                          trace = trace))
+    
+  } else {
+    internal_cores <- 1
+    res <- try(par.lapply(input,
+                          try_models,
+                          cores,
+                          parallel))
+  }
+  
+  if (any(has_error(res))) {
+    cat(crayon::bgYellow$red("Error in model selection\n"))
+  }
+  
+  return(res)
+}
+
+
+#' Parallel model fit
+#'
+#' @description Parallel model selection, ctmm.fit().
+#'
+#' @param input Input list, with two sub-items: telemetry object and CTMM object.
+#' @param parallel True/false. Uses a single core when FALSE.
+#' @keywords internal
+#'
+#' @noRd
+#'
+par.ctmm.fit <- function(input,
+                         cores = NULL,
+                         parallel = TRUE) {
+  
+  try_models <- function(input) {
+    ctmm::ctmm.fit(input[[1]],
+                   CTMM = input[[2]],
+                   method = "pHREML",
+                   control = list(cores = internal_cores))
+  }
+  
+  if (length(input) == 1) {
+    # Process one individual on multiple cores:
+    internal_cores <- if (parallel) -1 else 1
+    res <- try(try_models(input[[1]]))
+    
+  } else {
+    # Process multiple animals on multiple cores:
+    internal_cores <- 1
+    res <- try(par.lapply(input,
+                          try_models,
+                          cores,
+                          parallel))
+  }
+  
+  if (any(has_error(res))) {
+    cat(crayon::bgYellow$red("Error in model fit\n"))
+  }
+  return(res)
+}
+
+
+#' Calculate speed in parallel
+#'
+#' @param input Telemetry and model list.
+#' @inheritParams par_lapply
+#'
+#' @noRd
+#'
+par.speed <- function(input,
+                      cores = NULL,
+                      trace = TRUE,
+                      parallel = TRUE) {
+  
+  speed_calc <- function(input) {
+    
+    if (trace) message("Calculating:")
+    
+    ctmm::speed(input[[1]],
+                input[[2]],
+                cores = internal_cores,
+                trace = trace)
+  }
+  
+  if (length(input) == 1) {
+    
+    internal_cores <- if (parallel) -1 else 1
+    res <- try(speed_calc(input[[1]]))
+    
+  } else {
+    
+    internal_cores <- 1
+    res <- par.lapply(input, speed_calc, cores, parallel)
+    
+  }
+  
+  if (any(has_error(res))) {
+    cat(crayon::bgYellow$red("Error in speed calculation\n"))
+  }
+  
+  return(res)
+}
+
+
+#' Align lists
+#'
+#' @noRd
+#'
+align_lists <- function(...) {
+  list_lst <- list(...)
+  len_vec <- sapply(list_lst, length)
+  stopifnot(length(unique(len_vec)) == 1)
+  res <- lapply(seq_along(list_lst[[1]]), function(i) {
+    lapply(list_lst, getElement, i)
+  })
+  if (length(res) == 0) 
+    res <- NULL
+  return(res)
+}
