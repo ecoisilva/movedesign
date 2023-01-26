@@ -622,13 +622,30 @@ mod_tab_sims_server <- function(id, vals) {
         sigma = input$sigma0, sigma_units = input$sigma0_units)
       
       tmp_taup <- "days" %#% input$tau_p0 %#% input$tau_p0_units
-      vals$dur0 <- ifelse(tmp_taup > 1, tmp_taup * 10, 10)
-      vals$dur0_units <- "days"
-      
       tmp_tauv <- input$tau_v0 %#% input$tau_v0_units
-      vals$dti0 <- ifelse(tmp_tauv <= 120, 1, round(
-        "minutes" %#% (input$tau_v0 %#% input$tau_v0_units)/4, 0))
-      vals$dti0_units <- "minutes"
+      
+      vals$dur0 <- dplyr::case_when(
+        tmp_taup >= ("days" %#% tmp_tauv) ~ 
+          ifelse(tmp_taup > 1, 
+                 round(tmp_taup * 10, 1), 10),
+        TRUE ~ 
+          ifelse(("days" %#% tmp_tauv) > 1,
+                 "days" %#% tmp_tauv * 10, 10)
+      )
+      vals$dur0_units <- "days"
+
+      vals$dti0 <- dplyr::case_when(
+        tmp_tauv <= 120 ~ 1,
+        tmp_tauv <= 3600 ~ round("minutes" %#% tmp_tauv/4, 0),
+        tmp_tauv <= 86400 ~ 1,
+        tmp_tauv <= 10 %#% "days" ~ 2,
+        TRUE ~ 12)
+      vals$dti0_units <- dplyr::case_when(
+        tmp_tauv <= 3600 ~ "minutes",
+        TRUE ~ "hours")
+      
+      # print(paste(vals$dur0, vals$dur0_units))
+      # print(paste(vals$dti0, vals$dti0_units))
       
       simulate_data(
         mod = vals$ctmm_mod,
@@ -811,15 +828,26 @@ mod_tab_sims_server <- function(id, vals) {
     output$simPlot_id <- ggiraph::renderGirafe({
       req(vals$data0, vals$is_run, vals$data_type == "simulated")
       
+      tmp_taup <- input$tau_p0 %#% input$tau_p0_units
+      tmp_tauv <- input$tau_v0 %#% input$tau_v0_units
+      
+      if (tmp_taup > tmp_tauv) { 
+        tau <- vals$tau_p0 
+        tau_html <- "\u03C4\u209A"
+      } else { 
+        tau <- vals$tau_v0 
+        tau_html <- "\u03C4\u1D65"
+      }
+      
       newdat <- vals$data0
       newdat <- newdat[which(newdat$t <= (
-        vals$tau_p0$value[2] %#% vals$tau_p0$unit[2])), ]
-
-      out_tp <- fix_unit(vals$tau_p0$value[2], vals$tau_p0$unit[2])
+        tau$value[2] %#% tau$unit[2])), ]
+      
+      out_tau <- fix_unit(tau$value[2], tau$unit[2])
       out_dur <- fix_unit(vals$dur0, vals$dur0_units)
       subtitle <- paste(
-        "Highlighting one \u03C4\u209A cycle",
-        paste0("(\u2248 ", out_tp[1], " ", out_tp[2], ")"),
+        "Highlighting one", tau_html, "cycle",
+        paste0("(\u2248 ", out_tau[1], " ", out_tau[2], ")"),
         "out of ", out_dur[1], out_dur[2])
       
       # newdat <- newdat[which(newdat$t <= (1 %#% "day")), ]
@@ -919,11 +947,13 @@ mod_tab_sims_server <- function(id, vals) {
         sliderInput(
           inputId = ns("timeline"),
           label = p("Rendering one full day,",
-                    paste0(vals$dti0, "-min steps:")),
+                    paste0(vals$dti0, "-", 
+                           abbrv_unit(vals$dti0_units), 
+                           " steps:")),
           
           value = 1 %#% "day",
-          step = 15 %#% "minutes", # vals$dti0 %#% vals$dti0_units,
-          min = 15 %#% "minutes", # vals$dti0 %#% vals$dti0_units,
+          step = 15 %#% "minutes",
+          min = 15 %#% "minutes",
           max = 1 %#% "day",
           # animate = animationOptions(interval = 500),
           ticks = FALSE,
@@ -937,8 +967,8 @@ mod_tab_sims_server <- function(id, vals) {
       # Time elapsed:
       
       dat <- data_animated()
-      maxt <- vals$tau_p0$value[2] %#% vals$tau_p0$unit[2] 
-      # maxt <- 1 %#% "day"
+      maxt <- 1 %#% "day"
+      
       datfull <- vals$data0[which(vals$data0$t <= maxt), ]
       nday <- format(max(dat$timestamp), "%d")
       
@@ -946,8 +976,7 @@ mod_tab_sims_server <- function(id, vals) {
                         format(max(dat$timestamp), "%H:%M:%S"))
       
       thrs_elapsed <- paste("hours" %#% max(dat$t), "hours")
-      tmin_elapsed <- paste(vals$dti0_units %#% max(dat$t),
-                            vals$dti0_units)
+      tmin_elapsed <- paste("minutes" %#% max(dat$t), "minutes")
       
       # Distance traveled:
       dat$dist <- calc_dist(dat)
@@ -1084,6 +1113,7 @@ mod_tab_sims_server <- function(id, vals) {
       tmpnames <- rownames(summary(vals$fit0)$CI)
       speed <- summary(vals$fit0)$CI[
         grep("speed", tmpnames), 2]
+      
       speedunits <- tmpnames[grep("speed", tmpnames)] %>%
         extract_units() %>% abbrv_unit()
       
