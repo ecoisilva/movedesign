@@ -805,8 +805,11 @@ mod_tab_report_server <- function(id, vals) {
       input_dur <- "days" %#% vals$reg$dur %#% vals$reg$dur_unit
       
       is_both <- FALSE
-      if (length(vals$which_question) > 1)
+      vals$ft_size <- 13
+      if (length(vals$which_question) > 1) {
         is_both <- TRUE
+        vals$ft_size <- 16
+      }
       
       tooltip_css <- paste(
         "font-family: 'Roboto Condensed', sans-serif;",
@@ -1005,7 +1008,7 @@ mod_tab_report_server <- function(id, vals) {
         ggplot2::labs(x = "Estimate error (%)",
                       y = y_lab) +
         
-        theme_movedesign() +
+        theme_movedesign(ft_size = vals$ft_size) +
         ggplot2::theme(
           legend.position = "none",
           axis.title.x = ggplot2::element_blank())
@@ -1040,9 +1043,13 @@ mod_tab_report_server <- function(id, vals) {
           vals$ci, vals$which_question)
       
       is_both <- FALSE
-      if (!is.null(vals$which_question))
-        if (length(vals$which_question) > 1)
+      vals$ft_size <- 13
+      if (!is.null(vals$which_question)) {
+        if (length(vals$which_question) > 1) {
           is_both <- TRUE
+          vals$ft_size <- 16
+        }
+      }
       
       req("Speed & distance" %in% vals$which_question)
       input_ci <- ifelse(is.null(vals$ci), .95, vals$ci/100)
@@ -1270,7 +1277,7 @@ mod_tab_report_server <- function(id, vals) {
           ggplot2::labs(x = "Estimate error (%)",
                         y = y_lab) +
           
-          theme_movedesign() +
+          theme_movedesign(ft_size = 16) +
           ggplot2::theme(
             legend.position = "none",
             axis.title.x = ggplot2::element_blank())
@@ -1694,7 +1701,7 @@ mod_tab_report_server <- function(id, vals) {
         { if (input$highlight_dur > 0) p1 } +
         { if (input$highlight_dur > 0) p2 } +
         
-        theme_movedesign() +
+        theme_movedesign(ft_size = vals$ft_size) +
         ggplot2::theme(legend.position = "none")
       
       ggiraph::girafe(
@@ -2040,7 +2047,7 @@ mod_tab_report_server <- function(id, vals) {
             "\u2248", wrap_none(dti$value, " ", dti$unit,
                                 color = vals$ctsd_col[1], end = ","),
             "resulting in an effective sample size equivalent to",
-            N2, "independent locations.")
+            N2, "independently sampled velocities.")
         
       } # end of "Speed & distance"
       
@@ -2227,7 +2234,7 @@ mod_tab_report_server <- function(id, vals) {
       if (!is_hr & is_ctsd) {
         out <-
           span("Your current tracking regime",
-               "is likely insufficient",
+               "may be insufficient",
                "for", span("home range", class = "cl-dgr"),
                "estimation, but sufficient",
                "for", span("speed & distance", class = "cl-grn"),
