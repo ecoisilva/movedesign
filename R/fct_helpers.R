@@ -206,6 +206,7 @@ fix_unit <- function(value, unit,
 #' @param sigma0 numeric, integer. semi-variance or sigma.
 #' @param tau_p0_units character vector of sigma units.
 #'
+#' @importFrom ctmm `%#%`
 #' @noRd
 prepare_mod <- function(tau_p,
                         tau_p_units,
@@ -415,8 +416,8 @@ simulate_gps <- function(data,
   stopifnot(is.character(yunits) || is.null(yunits))
   stopifnot(is.character(max_dti) || is.null(max_dti))
   
+  dti <- dti_notes <- dti_scale <- dti_yn <- frq_hrs <- NULL
   trace <- FALSE
-  dti <- dti_notes <- frq_hrs <- highlight <- NULL
 
   if(trace == TRUE) message(paste(yrange, yunits))
   if(yrange == 0) stop("Duration cannot be 0.", call. = FALSE)
@@ -558,6 +559,10 @@ simulate_gps <- function(data,
   if (trace) print(paste("-- number of attempts:", i))
 
   newdata$id <- 1:nrow(newdata)
+  newdata <- dplyr::left_join(
+    newdata,
+    data %>% dplyr::select(dti, dti_scale, dti_yn),
+    by = "dti")
   return(newdata)
 }
 
@@ -709,218 +714,3 @@ calc_dist <- function(data) {
 
 }
 
-
-# ctmmweb functions: ------------------------------------------------------
-
-#' Parallel lapply
-#'
-#' @description Parallel lapply from ctmmweb.
-#'
-#' @param input Input list, with two sub-items: telemetry object and CTMM object.
-#' @param parallel True/false. Uses a single core when FALSE.
-#' @keywords internal
-#'
-#' @noRd
-#'
-par.lapply <- function(lst,
-                       fun, 
-                       cores = NULL,
-                       parallel = TRUE,
-                       win_init = expression({
-                         requireNamespace("ctmm", quietly = TRUE)})) {
-  if (parallel) {
-    if (!is.null(cores) && cores > 0) {
-      cluster_size <- cores
-    }
-    if (!is.null(cores) && cores < 0) {
-      cluster_size <- max(parallel::detectCores(logical = FALSE) + 
-                            cores, 1)
-    }
-    sysinfo <- Sys.info()
-    tryCatch({
-      if (sysinfo["sysname"] == "Windows") {
-        if (is.null(cores)) {
-          cluster_size <- min(length(lst), parallel::detectCores(logical = FALSE) * 
-                                2)
-        }
-        cat(crayon::inverse("running parallel in SOCKET cluster of", 
-                            cluster_size, "\n"))
-        cl <- parallel::makeCluster(cluster_size, outfile = "")
-        parallel::clusterExport(cl, c("win_init"), envir = environment())
-        parallel::clusterEvalQ(cl, eval(win_init))
-        res <- parallel::parLapplyLB(cl, lst, fun)
-        parallel::stopCluster(cl)
-      }
-      else {
-        if (is.null(cores)) {
-          cluster_size <- min(length(lst), 
-                              parallel::detectCores(logical = FALSE) * 4)
-        }
-        cat(crayon::inverse("running parallel with mclapply in cluster of", 
-                            cluster_size, "\n"))
-        res <- parallel::mclapply(lst, fun, mc.cores = cluster_size)
-      }
-    }, error = function(e) {
-      cat(crayon::bgRed$white("Parallel Error, try restart R session\n"))
-      cat(e)
-    })
-  } else {
-    res <- lapply(lst, fun)
-  }
-  return(res)
-}
-
-#' Parallel model selection
-#'
-#' @description Parallel model selection, ctmm.select(), from ctmmweb.
-#'
-#' @param input Input list, with two sub-items: telemetry object and CTMM object.
-#' @param parallel True/false. Uses a single core when FALSE.
-#' @keywords internal
-#'
-#' @noRd
-#'
-par.ctmm.select <- function(input, cores = NULL,
-                            trace = TRUE,
-                            parallel = TRUE) {
-
-  try_models <- function(input, trace) {
-    fall_back(ctmm::ctmm.select,
-              list(input[[1]],
-                   CTMM = input[[2]],
-                   control = list(method = "pNewton",
-                                  cores = internal_cores),
-                   trace = trace),
-              ctmm::ctmm.select,
-              list(input[[1]],
-                   CTMM = input[[2]],
-                   control = list(cores = internal_cores),
-                   trace = trace),
-              paste0("ctmm.select() failed with pNewton,",
-                     "switching to Nelder-Mead."))
-  }
-
-  if (length(input) == 1) {
-    # Process one individual on multiple cores:
-
-    # message("No. of cores: ", parallel::detectCores(logical = FALSE))
-
-    internal_cores <- if (parallel) -1 else 1
-    res <- try(try_models(input[[1]],
-                          trace = trace))
-
-  } else {
-    internal_cores <- 1
-    res <- try(par.lapply(input,
-                          try_models,
-                          cores,
-                          parallel))
-  }
-
-  if (any(has_error(res))) {
-    cat(crayon::bgYellow$red("Error in model selection\n"))
-  }
-  
-  return(res)
-}
-
-
-#' Parallel model fit
-#'
-#' @description Parallel model selection, ctmm.fit().
-#'
-#' @param input Input list, with two sub-items: telemetry object and CTMM object.
-#' @param parallel True/false. Uses a single core when FALSE.
-#' @keywords internal
-#'
-#' @noRd
-#'
-par.ctmm.fit <- function(input,
-                         cores = NULL,
-                         parallel = TRUE) {
-
-  try_models <- function(input) {
-    ctmm::ctmm.fit(input[[1]],
-                   CTMM = input[[2]],
-                   method = "pHREML",
-                   control = list(cores = internal_cores))
-  }
-
-  if (length(input) == 1) {
-    # Process one individual on multiple cores:
-    internal_cores <- if (parallel) -1 else 1
-    res <- try(try_models(input[[1]]))
-
-  } else {
-    # Process multiple animals on multiple cores:
-    internal_cores <- 1
-    res <- try(par.lapply(input,
-                          try_models,
-                          cores,
-                          parallel))
-  }
-
-  if (any(has_error(res))) {
-    cat(crayon::bgYellow$red("Error in model fit\n"))
-  }
-  return(res)
-}
-
-
-#' Calculate speed in parallel
-#'
-#' @param input Telemetry and model list.
-#' @inheritParams par_lapply
-#'
-#' @noRd
-#'
-par.speed <- function(input,
-                      cores = NULL,
-                      trace = TRUE,
-                      parallel = TRUE) {
-
-  speed_calc <- function(input) {
-
-    if (trace) message("Calculating:")
-    
-    ctmm::speed(input[[1]],
-                input[[2]],
-                cores = internal_cores,
-                trace = trace)
-  }
-
-  if (length(input) == 1) {
-    
-    internal_cores <- if (parallel) -1 else 1
-    res <- try(speed_calc(input[[1]]))
-
-  } else {
-
-    internal_cores <- 1
-    res <- par.lapply(input, speed_calc, cores, parallel)
-
-  }
-
-  if (any(has_error(res))) {
-    cat(crayon::bgYellow$red("Error in speed calculation\n"))
-  }
-
-  return(res)
-}
-
-
-#' Align lists
-#'
-#' @noRd
-#'
-align_lists <- function(...) {
-  list_lst <- list(...)
-  len_vec <- sapply(list_lst, length)
-  stopifnot(length(unique(len_vec)) == 1)
-  res <- lapply(seq_along(list_lst[[1]]), function(i) {
-    lapply(list_lst, getElement, i)
-  })
-  if (length(res) == 0) 
-    res <- NULL
-  return(res)
-}
