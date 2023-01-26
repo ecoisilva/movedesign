@@ -1,4 +1,4 @@
-test_that("Unit abbreviation function", {
+test_that("{abbrv_unit}, Unit abbreviation function", {
   
   ini <- c("year", "month", "week",
            "day", "hour", "minute", "second",
@@ -23,7 +23,7 @@ test_that("Unit abbreviation function", {
   }
 })
 
-test_that("Fix unit function", {
+test_that("{fix_unit} Fix unit function", {
   
   expect_equal(
     movedesign:::fix_unit(1.005, "years", 
@@ -47,3 +47,5 @@ test_that("Fix unit function", {
     data.frame(value = 3.4, unit = "km\u00B2"))
   
 })
+
+

@@ -16,3 +16,4 @@ $run_dev.*
 ^app\.R$
 ^rsconnect$
 ^codecov\.yml$
+movedesign.git
