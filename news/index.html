@@ -64,13 +64,20 @@
 <li>Report now covers scenario where both questions are requested.</li>
 <li>
 <code>guesstimate_time()</code> now works for <code><a href="https://rdrr.io/pkg/ctmm/man/speed.html" class="external-link">ctmm::speed()</a></code> as well.</li>
+<li>Scatterplot in home range tab now also plots the true 95% area.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="minor-improvements-and-bug-fixes-0-1-0">Minor improvements and bug fixes<a class="anchor" aria-label="anchor" href="#minor-improvements-and-bug-fixes-0-1-0"></a></h3>
+<h3 id="minor-improvements-0-1-0">Minor improvements<a class="anchor" aria-label="anchor" href="#minor-improvements-0-1-0"></a></h3>
+<ul><li>Changed log-scaling of plot within “Device” tab to <code>scale_x_log10()</code>.</li>
+<li>Tests have been added for <code>abbrv_unit()</code> and <code>fix_unit()</code>.</li>
+<li>Tests have been added with the <code>shinytest2</code> framework.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-1-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-0"></a></h3>
 <ul><li>
 <code>simulate_gps()</code> now works properly within the defined limits.</li>
+<li>Fixed a bug with extreme timescale parameters in the sims tab.</li>
 <li>Fixed a bug in table outputs in the sims tab.</li>
-<li>Tests have been added for <code>abbrv_unit()</code> and <code>fix_unit()</code>.</li>
 </ul></div>
 </div>
     <div class="section level2">

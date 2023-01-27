@@ -91,16 +91,16 @@
 
 <p>The goal of <code>movedesign</code> is to assist researchers in designing movement ecology studies related to two main research questions: the estimation of home range and of speed and distance traveled.</p>
 <p>Movement ecology studies frequently make use of data collected from animal tracking projects. Planning a successful animal tracking project requires careful consideration and clear objectives. It is crucial to plan ahead and understand how much data is required to accurately answer your chosen research questions, and choose the optimal tracking regime or schedule.</p>
-<p>To facilitate study design, we refer to the <a href="https://ctmm-initiative.github.io/ctmm/" class="external-link">ctmm</a> <code>R</code> package. Animal movement is inherently autocorrelated (locations are similar as a function of space and distance and the <code>ctmm</code> package allows us to model these data as continuous-time stochastic processes and to deal with other known biases (such as small sample sizes, or irregular sampling schedules).</p>
+<p>To facilitate study design, we refer to the <a href="https://ctmm-initiative.github.io/ctmm/" class="external-link">ctmm</a> <code>R</code> package. Animal movement is inherently autocorrelated (locations are similar as a function of space and time) and the <code>ctmm</code> package allows us to model these data as continuous-time stochastic processes, while dealing with other known biases (such as small sample sizes, or irregular sampling schedules).</p>
 <p>The app was built using the <code>golem</code> framework.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <p>You can install the development version of <code>movedesign</code> like so:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"ecoisilva/movedesign"</span><span class="op">)</span></span></code></pre></div>
-<p>If you run with any problems, try the solutions listed in the <a href="https://ecoisilva.github.io/movedesign/articles/movedesign_installation.html">instalation issues</a> vignette.</p>
+<p>If you run with any problems, try the solutions listed in the <a href="https://ecoisilva.github.io/movedesign/articles/movedesign_installation.html">instalation issues</a> vignette, and run the tutorial in the “Home” tab (see the <a href="https://ecoisilva.github.io/movedesign/articles/tutorial.html">tutorial</a> vignette for how to begin the tour).</p>
 </div>
 <div class="section level2">
 <h2 id="run-the-app">Run the app<a class="anchor" aria-label="anchor" href="#run-the-app"></a>
@@ -154,6 +154,7 @@
 <ul class="list-unstyled">
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#stable" class="external-link"><img src="https://img.shields.io/badge/lifecycle-stable-brightgreen.svg" alt="Lifecycle: experimental"></a></li>
 <li><a href="https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://app.codecov.io/gh/ecoisilva/movedesign?branch=main" class="external-link"><img src="https://codecov.io/gh/ecoisilva/movedesign/branch/main/graph/badge.svg" alt="Codecov test coverage"></a></li>
 </ul>
 </div>
 
