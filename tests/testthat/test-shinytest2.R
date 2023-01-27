@@ -17,6 +17,7 @@ test_that("{shinytest2} recording: app runs", {
 })
 
 test_that("{shinytest2} recording: gps simulation works", {
+  skip_on_os(os = "linux") # issue with wait_for_idle()
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "gps")
