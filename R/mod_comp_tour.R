@@ -46,7 +46,7 @@ mod_comp_tour_server <- function(id, vals) {
           "specific action, which will be",
           span(
             class = "tour_action",
-            wrap_none(fontawesome::fa("forward-step"),
+            wrap_none(fontawesome::fa("bell"),
                       " highlighted", ".")),
           "Please take care to follow these instructions,",
           "since later parts of the tour require that all",
@@ -93,7 +93,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
 
-            fontawesome::fa("forward-step"),
+            fontawesome::fa("bell"),
             "Please choose",
             fontawesome::fa("square-check", fill = "white"),
             "'Select' as your Data source, to choose",
@@ -132,7 +132,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"),
+            fontawesome::fa("bell"),
             "Proceed to the next tutorial box",
             "as it will automatically move you to the",
             fontawesome::fa("file-circle-plus", fill = "white"),
@@ -163,7 +163,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
 
-            fontawesome::fa("forward-step"),
+            fontawesome::fa("bell"),
             "First, make sure the species currently selected",
             "from the list is the African Buffalo",
             wrap_none("(", em("Syncerus caffer"), ")."),
@@ -209,7 +209,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
 
-            fontawesome::fa("forward-step"),
+            fontawesome::fa("bell"),
             "Now, pick individual 'Cilla' from the dropdown menu",
             "and click the", fontawesome::fa("wand-magic-sparkles"),
             "'Validate' button before proceeding."),
@@ -242,7 +242,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
 
-            fontawesome::fa("forward-step"),
+            fontawesome::fa("bell"),
             "proceed by clicking the",
             fontawesome::fa("paper-plane"), "'Extract' button.")
         )))
@@ -311,7 +311,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"),
+            fontawesome::fa("bell"),
             "Choose GPS/Satellite logger as",
             "your tracking device.")
         )))
@@ -350,8 +350,12 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"),
-            "Keep the current inputs as shown,",
+            fontawesome::fa("bell"),
+            "If you are following along the case study,",
+            "set the 'GPS battery life' to 2 years",
+            "and the 'maximum GPS fix rate' to 1 fix every 6 hours.",
+            p(),
+            "Otherwise, keep the current inputs as shown,",
             "and proceed to the next tutorial box.")
         )))
       
@@ -384,7 +388,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"), 
+            fontawesome::fa("bell"), 
             "Click the", fontawesome::fa("wand-magic-sparkles"),
             "'Validate' button until it reads 'Validated!',",
             "then click the", fontawesome::fa("bolt"), 
@@ -439,7 +443,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"), 
+            fontawesome::fa("bell"), 
             "Click on the", fontawesome::fa("bookmark"), "'Add to table'", 
             "button to save all current parameters to",
             "a table for ease of comparison."
@@ -475,7 +479,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"), 
+            fontawesome::fa("bell"), 
             "Click on the", fontawesome::fa("paper-plane"), 
             "'Run estimation' button to estimate home range area.",
             p()),
@@ -561,7 +565,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"), 
+            fontawesome::fa("bell"), 
             "by clicking on the", fontawesome::fa("bookmark")
             , "'Add to table'", "button."
           )
@@ -595,7 +599,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"), 
+            fontawesome::fa("bell"), 
             "Click on the", fontawesome::fa("paper-plane"), 
             "'Run estimation' button to estimate speed & distance.",
             p()),
@@ -663,7 +667,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"), 
+            fontawesome::fa("bell"), 
             "by clicking on the", fontawesome::fa("bookmark")
             , "'Add to table'", "button."
           )
@@ -689,7 +693,7 @@ mod_comp_tour_server <- function(id, vals) {
           span(
             class = "tour_action",
             
-            fontawesome::fa("forward-step"), 
+            fontawesome::fa("bell"), 
             "Click the", fontawesome::fa("bookmark"),
             "'Built report' button to see a detailed",
             "answer to how likely your current sampling design",

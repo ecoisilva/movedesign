@@ -1,4 +1,3 @@
-library(shinytest2)
 
 test_that("{shinytest2} recording: app runs", {
   
@@ -47,4 +46,3 @@ test_that("{shinytest2} recording: gps simulation works", {
   
   app$stop()
 })
-
