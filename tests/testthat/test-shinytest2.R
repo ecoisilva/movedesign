@@ -16,11 +16,24 @@ test_that("{shinytest2} recording: app runs", {
     out$input$`tab_about_1-which_question`,
     "Home range")
   
+  app$set_inputs(`tab_about_1-which_question` = 
+                   c("Home range", "Speed & distance"))
+  
+  app$expect_values(input = "tab_about_1-which_question", 
+                    screenshot_args = FALSE)
+  out <- app$get_values()
+  expect_identical(
+    out$input$`tab_about_1-which_question`,
+    c("Home range", "Speed & distance"))
+  
   app$stop()
 })
 
 test_that("{shinytest2} recording: gps simulation works", {
   # skip_on_cran() # potential issue with CRAN build servers
+  
+  skip_on_os(os = c("mac", "linux")) 
+  # issues with wait_for_idle(), wait_for_value()
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "gps")
@@ -40,13 +53,14 @@ test_that("{shinytest2} recording: gps simulation works", {
 })
 
 
-test_that("{shinytest2} recording: gps plot selection", {
+test_that("{shinytest2} recording: gps plot selection works", {
   # skip_on_cran() # potential issue with CRAN build servers
+  
   skip_on_os(os = c("mac", "linux")) 
   # issues with wait_for_idle(), wait_for_value()
   
   shiny_app <- movedesign::run_app()
-  app <- AppDriver$new(shiny_app, name = "gps")
+  app <- AppDriver$new(shiny_app, name = "plot")
   # app$view()
   
   app$set_inputs(tabs = "regime")
@@ -79,4 +93,3 @@ test_that("{shinytest2} recording: gps plot selection", {
   
   app$stop()
 })
-
