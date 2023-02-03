@@ -4,6 +4,7 @@ test_that("{shinytest2} recording: app runs", {
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "workflow")
+  # app$view()
   
   app$set_inputs(`tab_about_1-which_data` = "Select")
   app$set_inputs(`tab_about_1-which_question` = "Home range")
@@ -29,6 +30,7 @@ test_that("{shinytest2} recording: app runs", {
   app$stop()
 })
 
+
 test_that("{shinytest2} recording: gps simulation works", {
   # skip_on_cran() # potential issue with CRAN build servers
   
@@ -37,6 +39,7 @@ test_that("{shinytest2} recording: gps simulation works", {
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "gps")
+  # app$view()
   
   app$set_inputs(tabs = "regime")
   app$set_inputs(`tab_device_1-device_type` = "GPS")
@@ -59,6 +62,8 @@ test_that("{shinytest2} recording: gps plot selection works", {
   skip_on_os(os = c("mac", "linux")) 
   # issues with wait_for_idle(), wait_for_value()
   
+  set_timeout <- 180 * 1000 # 3 mins
+  
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "plot")
   # app$view()
@@ -66,9 +71,9 @@ test_that("{shinytest2} recording: gps plot selection works", {
   app$set_inputs(tabs = "regime")
   app$set_inputs(`tab_device_1-device_type` = "GPS")
   
-  # app$wait_for_idle(1000)
   app$wait_for_value(output = "tab_device_1-regPlot_gps",
-                     ignore = list(NULL))
+                     ignore = list(NULL),
+                     timeout = set_timeout)
   
   app$set_inputs(`tab_device_1-gps_dur` = 2)
   app$set_inputs(`tab_device_1-gps_dur_units` = "years")
@@ -77,9 +82,9 @@ test_that("{shinytest2} recording: gps plot selection works", {
   app$set_inputs(`tab_device_1-regPlot_gps_selected` = "8", 
                  allow_no_input_binding_ = TRUE)
   
-  # app$wait_for_idle(1000)
   app$wait_for_value(output = "tab_device_1-regPlot_gps",
-                     ignore = list(NULL))
+                     ignore = list(NULL),
+                     timeout = set_timeout)
   
   app$click("tab_device_1-validate_gps")
   
