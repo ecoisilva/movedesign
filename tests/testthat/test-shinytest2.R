@@ -63,6 +63,7 @@ test_that("{shinytest2} recording: gps plot selection works", {
   # issues with wait_for_idle(), wait_for_value()
   
   set_timeout <- 180 * 1000 # 3 mins
+  skip_on_ci() # this test requires many long timeouts
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "plot")
@@ -75,8 +76,6 @@ test_that("{shinytest2} recording: gps plot selection works", {
                      ignore = list(NULL),
                      timeout = set_timeout)
   
-  app$set_inputs(`tab_device_1-gps_dur` = 2)
-  app$set_inputs(`tab_device_1-gps_dur_units` = "years")
   app$set_inputs(`tab_device_1-deviceInput_log` = TRUE)
   
   app$set_inputs(`tab_device_1-regPlot_gps_selected` = "8", 
@@ -98,3 +97,5 @@ test_that("{shinytest2} recording: gps plot selection works", {
   
   app$stop()
 })
+
+
