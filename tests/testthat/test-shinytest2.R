@@ -1,6 +1,11 @@
+library(shinytest2)
 
 test_that("{shinytest2} recording: app runs", {
-  # skip_on_cran() # potential issue with CRAN build servers
+  skip_on_cran() # potential issue with CRAN build servers
+  skip_on_ci() # interactive() fails in CI
+  
+  skip_on_os(os = c("mac", "linux")) 
+  # issue with wait_for_idle(), wait_for_value()
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "workflow")
@@ -32,10 +37,11 @@ test_that("{shinytest2} recording: app runs", {
 
 
 test_that("{shinytest2} recording: gps simulation works", {
-  # skip_on_cran() # potential issue with CRAN build servers
+  skip_on_cran() # potential issue with CRAN build servers
+  skip_on_ci() # interactive() fails in CI
   
   skip_on_os(os = c("mac", "linux")) 
-  # issues with wait_for_idle(), wait_for_value()
+  # issue with wait_for_idle(), wait_for_value()
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "gps")
@@ -57,13 +63,13 @@ test_that("{shinytest2} recording: gps simulation works", {
 
 
 test_that("{shinytest2} recording: gps plot selection works", {
-  # skip_on_cran() # potential issue with CRAN build servers
+  skip_on_cran() # potential issue with CRAN build servers
+  skip_on_ci() # interactive() fails in CI
   
   skip_on_os(os = c("mac", "linux")) 
-  # issues with wait_for_idle(), wait_for_value()
+  # issue with wait_for_idle(), wait_for_value()
   
-  set_timeout <- 180 * 1000 # 3 mins
-  skip_on_ci() # this test requires many long timeouts
+  set_timeout <- 3 * 60 * 1000 # 3 mins
   
   shiny_app <- movedesign::run_app()
   app <- AppDriver$new(shiny_app, name = "plot")
@@ -97,5 +103,3 @@ test_that("{shinytest2} recording: gps plot selection works", {
   
   app$stop()
 })
-
-
