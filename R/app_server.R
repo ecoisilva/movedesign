@@ -8,12 +8,14 @@ app_server <- function(input, output, session) {
 
   ns <- session$ns
   vals <- reactiveValues(reg = NULL,
+                         pars = NULL,
+                         
                          hr = NULL,
                          ctsd = NULL,
                          report = NULL,
                          
                          tour_active = FALSE,
-                         keep_alert = TRUE)
+                         alert_active = TRUE)
 
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 

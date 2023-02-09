@@ -2695,6 +2695,12 @@ mod_tab_device_server <- function(id, vals) {
     
     ## Additional information: --------------------------------------------
     
+    # Export values for tests:
+    
+    shiny::exportTestValues(
+      data1 = data_sim()
+    )
+    
     # Save information for report if table is not requested:
     
     observe({

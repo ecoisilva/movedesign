@@ -1434,6 +1434,12 @@ mod_tab_sims_server <- function(id, vals) {
     
     ## Additional information: --------------------------------------------
     
+    # Export values for tests:
+    
+    shiny::exportTestValues(
+      data0 = vals$data0
+    )
+    
     # Save information for report if table is not requested:
     
     observe({
