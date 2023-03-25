@@ -7,16 +7,40 @@
 app_server <- function(input, output, session) {
 
   ns <- session$ns
-  vals <- reactiveValues(reg = NULL,
-                         pars = NULL,
-                         
-                         hr = NULL,
-                         ctsd = NULL,
-                         report = NULL,
-                         
-                         tour_active = FALSE,
-                         alert_active = TRUE)
-
+  
+  species <- c(
+    "buffalo" = "African Buffalo",
+    "pelican" = "Brown Pelican",
+    "coati" = "Coati",
+    "jaguar" = "Jaguar",
+    "wolf" = "Maned Wolf",
+    "gazelle" = "Mongolian Gazelle",
+    "turtle" = "Wood turtle")
+  
+  species_binom <- c(
+    "buffalo" = "Syncerus caffer",
+    "pelican" = "Pelecanus occidentalis",
+    "coati" = "Nasua narica",
+    "jaguar" = "Panthera onca",
+    "wolf" = "Chrysocyon brachyurus",
+    "gazelle" = "Procapra gutturosa",
+    "turtle" = "Glyptemys insculpta")
+  
+  vals <- reactiveValues(
+    ctmm = data.frame(cbind(species,
+                            species_binom)),
+    dev = NULL,
+    pars = NULL,
+    hr = NULL,
+    ctsd = NULL,
+    report = NULL,
+    
+    time = c(0,0),
+    tour_active = FALSE,
+    alert_active = TRUE,
+    overwrite_seed = FALSE,
+    crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+  
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 
   keep_expanded <- function(x) {
@@ -98,14 +122,14 @@ app_server <- function(input, output, session) {
       # Tab 4: Device
       keep_expanded(
         shinydashboard::menuItem(
-          id = "group_device",
-          tabname = "device",
+          id = "group_design",
+          tabname = "design",
           text = "Device",
           icon = shiny::icon("location-dot"),
           startExpanded = TRUE,
 
           shinydashboard::menuSubItem(
-            tabName = "regime",
+            tabName = "device",
             text = regs_title,
             icon = regs_icon)
         )),
@@ -113,8 +137,8 @@ app_server <- function(input, output, session) {
       # Tab 5 and 6: Analyses
       keep_expanded(
         shinydashboard::menuItem(
-          id = "group_design",
-          tabname = "design",
+          id = "group_analyses",
+          tabname = "analyses",
           text = "Analyses",
           icon = shiny::icon("compass-drafting"),
           startExpanded = TRUE,
@@ -153,7 +177,7 @@ app_server <- function(input, output, session) {
   observe({
     vals$active_tab <- input$tabs
   }) %>% bindEvent(input$tabs)
-
+  
   # Tabs: -----------------------------------------------------------------
 
   # About this app:
@@ -165,19 +189,19 @@ app_server <- function(input, output, session) {
   mod_tab_sims_server("tab_sims_1", vals = vals)
 
   # Device tab:
-  mod_tab_device_server("tab_device_1", vals = vals)
-
+  mod_tab_design_server("tab_design_1", vals = vals)
+  
   # Analyses tabs:
   mod_tab_hrange_server("tab_hrange_1", vals = vals)
   mod_tab_ctsd_server("tab_ctsd_1", vals = vals)
 
   # Report tab:
   mod_tab_report_server("tab_report_1", vals = vals)
-
+  
   # Misc: -----------------------------------------------------------------
 
   # Data viz:
-  mod_comp_viz_server("comp_viz_uploaded", vals = vals) 
+  mod_comp_viz_server("comp_viz_uploaded", vals = vals)
   mod_comp_viz_server("comp_viz_selected", vals = vals)
 
   # Header and control tabs:
@@ -196,14 +220,14 @@ app_server <- function(input, output, session) {
       boxShadow = "inset 2px 0 0 0 #009da0")
   ))
 
-  onStop(function() {
-    message("Session stopped")
-
-    # if (!is.null(fixrates)) rm("fixrates", envir = .GlobalEnv)
-    # if (!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
-    # if (!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
-    # # print(ls(envir = .GlobalEnv))
-
-  }) # end of onStop
+  # onStop(function() {
+  #   message("Session stopped")
+  # 
+  #   # if (!is.null(fixrates)) rm("fixrates", envir = .GlobalEnv)
+  #   # if (!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
+  #   # if (!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
+  #   # # print(ls(envir = .GlobalEnv))
+  # 
+  # }) # end of onStop
 
 }

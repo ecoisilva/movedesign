@@ -11,8 +11,7 @@ app_ui <- function(request) {
     golem_add_external_resources(),
 
     # UI ELEMENTS ---------------------------------------------------------
-
-    tags$html(lang = "en"),
+    
     shinydashboardPlus::dashboardPage(
 
       options = list(sidebarExpandOnHover = TRUE),
@@ -26,13 +25,13 @@ app_ui <- function(request) {
         title = tagList(
           tags$span(
             class = "logo-mini",
-            tags$img(title = "title",
+            tags$img(title = "movedesign app",
                      src = "www/favicon.ico",
                      height = "30px")),
 
           tags$span(
             class = "logo-lg",
-            tags$img(title = "title",
+            tags$img(title = "movedesign app",
                      src = "www/logo.png",
                      height = "50px"))
         ),
@@ -135,9 +134,9 @@ app_ui <- function(request) {
 
           # Tab 4 'Device'
           newTabItem(
-            tabName = "regime",
-            mod_tab_device_ui("tab_device_1")),
-
+            tabName = "device",
+            mod_tab_design_ui("tab_design_1")),
+          
           # Tab 5 'Home range estimation'
           newTabItem(
             tabName = "hr",
