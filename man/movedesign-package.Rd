@@ -6,9 +6,8 @@
 \alias{movedesign-package}
 \title{movedesign: Study design of movement ecology studies}
 \description{
-\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
-
-A Shiny app to assist researchers in designing movement ecology studies.
+The `movedesign` package contains an R shiny application that can be used
+to assist researchers in designing movement ecology studies.
 }
 \seealso{
 Useful links:

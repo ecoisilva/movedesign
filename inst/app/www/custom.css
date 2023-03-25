@@ -15,7 +15,6 @@
  --tree-dark: #508016;
 
  --danger: #dd4b39;
- --danger-light: #ff6856;
  --danger-dark: #cc1b34;
 
  --gold: #ffbf00;
@@ -48,7 +47,7 @@
 .cl-grn { color: var(--tree) !important; }
 .cl-grn-d { color: var(--tree-dark) !important; }
 .cl-dgr { color: var(--danger) !important; }
-.cl-dgr-l { color: var(--danger-light) !important; }
+.cl-dgr-d { color: var(--danger-dark) !important; }
 
 .cl-blk { color: var(--black) !important; }
 .cl-wht { color: var(--white) !important; }
@@ -140,6 +139,16 @@ body {
 
 .no-bottom {
   margin-bottom: 0px;
+}
+
+.text_binom pre.shiny-text-output {
+  font-family: var(--monosans);
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: .5px;
+  color: var(--grey-600);
+  margin: -10px 0 9px 0;
+  line-height: .8;
 }
 
 /* SIDEBAR ------------------------------------------------------------- */
@@ -527,8 +536,10 @@ sub { font-size: 90%; }
   outline: none;
   border: 0;
   border-radius: 0;
-  background-color: var(--grey-000)!important;
-
+  background-color: var(--grey-000) !important;
+}
+.selectize-input > input {
+  letter-spacing: 0.5px !important;
 }
 .selectize-input.focus {
   border: 0;
@@ -589,34 +600,29 @@ sub { font-size: 90%; }
   border-color: var(--midnight);
 }
 
-.bootstrap-switch {
-  font-family: var(--monosans);
-  font-size: 16px;
-  line-height: 1;
+/* shinyWidgets::prettyToggle() */
 
-  border-radius: 0;
-  border: 1px solid var(--grey-200);
-  box-shadow: none;
+.pretty input:checked,
+.pretty .state label:before {
+    border-color: #bdc3c7;
+    margin-top: 3px;
 }
-.bootstrap-switch-label {
-  letter-spacing: 0.5px;
+
+.pretty.p-default input:checked ~ .state label::after,
+.pretty.p-default:not(.p-fill) input:checked ~ 
+.state.p-primary-o label::after {
+  background-color: var(--sea) !important;
+  margin-top: 3px;
 }
-.bootstrap-switch .bootstrap-switch-label {
-  line-height: 1;
+
+.pretty input:checked ~ .state.p-success label:after, 
+.pretty.p-toggle .state.p-success label:after {
+    background-color: var(--sea) !important;
+    margin-top: 3px;
 }
-.bootstrap-switch-handle-on {
-  color: var(--white) !important;
-  background-color: var(--midnight) !important;
-}
-.bootstrap-switch-handle-off {
-  background: var(--grey-000) !important;
-}
-.bootstrap-switch-container {
-  height: 28px;
-}
-.bootstrap-switch.bootstrap-switch-focused {
-    border-color: var(--grey-100);
-    box-shadow: none;
+.pretty.p-toggle .state.p-danger label::after {
+  background-color: var(--danger) !important;
+  margin-top: 3px;
 }
 
 .pretty .p-switch. p-fill input:checked ~ .state.p-primary::before {
@@ -845,9 +851,9 @@ font-size: 12px;
 
 #tab_sims_1-simBox_submit  .box-header,
 #tab_sims_1-simBox_repeat  .box-header,
-#tab_device_1-regBox_type  .box-header,
-#tab_device_1-regBox_loss  .box-header,
-#tab_device_1-regBox_error .box-header {
+#tab_design_1-devBox_type  .box-header,
+#tab_design_1-devBox_loss  .box-header,
+#tab_design_1-devBox_error .box-header {
   display: none
 }
 
@@ -1260,8 +1266,9 @@ font-size: 12px;
   border: 1px var(--midnight) solid !important;
 }
 
-.ReactTable {
+.Reactable {
   font-family: var(--monosans);
+  font-size: 15px;
 }
 
 .rt-table {
@@ -1275,7 +1282,7 @@ font-size: 12px;
   font-weight: 100;
   letter-spacing: 0.5px;
   color: var(--grey-600) !important;
-  border-bottom: 1px solid var(--grey-000)!important;
+  border-bottom: 1px solid var(--grey-000) !important;
 }
 .header:hover {
   background-color: var(--grey-000);
@@ -1321,6 +1328,7 @@ table.dataTable.display tbody td {
 #tab_data_select_1-dataTable_processes .rt-table {
   line-height: 1;
   color: var(--grey-300);
+  font-size: 15px;
 }
 
 #tab_data_select_1-dataTable_processes .rt-tr-selected {
@@ -1378,7 +1386,7 @@ table.dataTable.display tbody td {
 .modal_warning.sweet-alert .sa-icon.sa-warning {
     border-color: var(--danger) !important;
 }
-.modal_warning.sweet-alert .sa-icon.sa-warning.pulseWarning,
+
 .modal_warning.sweet-alert .sa-icon.sa-warning.pulseWarning .sa-body,
 .modal_warning.sweet-alert .sa-icon.sa-warning.pulseWarning .sa-dot {
     background-color: var(--danger) !important;

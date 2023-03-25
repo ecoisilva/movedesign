@@ -1,6 +1,6 @@
 Package: movedesign
 Title: Study design of movement ecology studies
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"),
            comment = c(ORCID = "0000-0003-4850-6193"))
@@ -24,6 +24,7 @@ Imports:
     ggiraph,
     ggplot2,
     golem (>= 0.3.2),
+    grid,
     parallel,
     plyr,
     reactable,
@@ -45,10 +46,10 @@ Imports:
     utils,
     viridis
 Suggests: 
-    covr,
     knitr,
     rmarkdown,
-    shinytest2
+    shinytest2,
+    testthat
 VignetteBuilder: 
     knitr
 Config/testthat/edition: 3

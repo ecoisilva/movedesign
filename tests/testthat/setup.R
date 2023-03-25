@@ -1,4 +1,3 @@
-
 library(shinytest2)
 
 # Load application support files into testing environment

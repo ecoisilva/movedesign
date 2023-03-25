@@ -2,6 +2,7 @@
 
 export(run_app)
 import(shiny)
+importFrom(crayon,make_style)
 importFrom(ctmm,"%#%")
 importFrom(ctmm,`%#%`)
 importFrom(data.table,data.table)
