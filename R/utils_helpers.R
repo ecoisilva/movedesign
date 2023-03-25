@@ -257,38 +257,58 @@ help_tip <- function(input, text, placement = "bottom") {
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
+#' @importFrom crayon make_style
+#' 
 #' @noRd
-msg_log <- function(message, detail, style) {
-
-  time_stamp <- stringr::str_c(
-    "[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "]")
-
-  if (style == "success") {
-    line1 <- msg_success("\u2713")
-    line2 <- crayon::bold(msg_success("Success:")) }
-
-  if (style == "warning") {
-    line1 <- msg_warning("!")
-    line2 <- NULL }
-
-  if (style == "danger") {
-    line1 <- msg_danger("!")
-    line2 <- crayon::bold(msg_danger("Warning:")) }
-
-  if (style == "error") {
-    line1 <- crayon::bold(msg_danger("\u2716"))
-    line2 <- crayon::bold(msg_danger("Error:")) }
-
+msg_log <- function(..., detail, 
+                    with_time = NULL,
+                    style = NULL) {
   
-  if(missing(detail)) {
-    out <- cat(msg_main(time_stamp), "\n",
-               ' ', line1,
-               line2, message, "\n")
+  if (!is.null(with_time)) {
+    total_time <- fix_unit(with_time[[1]], 
+                           "seconds", convert = TRUE)
+    
+    if (round(with_time, 0) <= 1 %#% "minute") {
+      detail <- "This step took less than one minute."
+    } else {
+      detail <- paste0("This step took approximately ",
+                       round(total_time$value, 1), " ",
+                       total_time$unit, ".")
+    }
+  } # end of with_time
+  
+  if (is.null(style)) {
+    out <- cat(' ', HTML(...), "\n")
   } else {
-    out <- cat(msg_main(time_stamp), "\n",
-               ' ', line1,
-               line2, message, "\n",
-               ' ', msg_main(detail), "\n")
+    
+    time_stamp <- stringr::str_c(
+      "[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "]")
+    
+    switch(
+      style,
+      "success" = { 
+        line1 <- msg_success("\u2713")
+        line2 <- crayon::bold(msg_success("Success:")) },
+      "warning" = { 
+        line1 <- msg_warning("!")
+        line2 <- NULL },
+      "danger" = { 
+        line1 <- msg_danger("!")
+        line2 <- crayon::bold(msg_danger("Warning:")) },
+      "error" = { 
+        line1 <- crayon::bold(msg_danger("\u2716"))
+        line2 <- crayon::bold(msg_danger("Error:")) }
+    )
+    
+    if (missing(detail)) {
+      out <- cat(msg_main(time_stamp), "\n",
+                 ' ', line1,
+                 line2, ..., "\n")
+    } else {
+      out <- cat(msg_main(time_stamp), "\n",
+                 ' ', line1,
+                 line2, ..., "\n",
+                 ' ', msg_main(detail), "\n")  }
   }
   
   return(out)
@@ -303,7 +323,7 @@ msg_log <- function(message, detail, style) {
 #'
 #' @noRd
 msg_header <- function(header) {
-
+  
   time_stamp <- stringr::str_c(
     "[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "]")
 
@@ -318,7 +338,7 @@ msg_header <- function(header) {
 #'
 #' @noRd
 msg_step <- function(current, total, style) {
-
+  
   if (style == "success") {
     text_current <- msg_success(current) }
 
@@ -341,7 +361,7 @@ msg_step <- function(current, total, style) {
 #' @keywords internal
 #'
 #' @noRd
-reset_data_values <- function(vals) {
+reset_reactiveValues <- function(vals) {
 
   vals$is_valid <- FALSE
 
@@ -412,267 +432,125 @@ theme_movedesign <- function(ft_size = 13) {
         family = font, angle = 90, vjust = 2))
 }
 
+
 #' Plot home range
 #'
 #' @description Plotting home range output from ctmm
 #' @keywords internal
 #'
 #' @noRd
-plotting_hr <- function(data, 
-                        sigma,
+plotting_hr <- function(input1,
+                        input2 = NULL,
+                        show_both = FALSE,
+                        truth,
                         show_truth,
-                        ud, levels,
-                        color, fill) {
+                        contours,
+                        color,
+                        extent) {
   
   id <- NULL
-  radius_x <- radius_y <- sqrt(-2 * log(0.05) * sigma)
-  truth <- data.frame(
-    id = rep(1, each = 100),
-    angle = seq(0, 2 * pi,length.out = 100))
   
-  truth$long <- unlist(lapply(
-    mean(data$x), 
-    function(x) x + radius_x * cos(truth$angle)))
-  truth$lat <- unlist(lapply(
-    mean(data$y), 
-    function(x) x + radius_y * sin(truth$angle)))
+  if (!is.list(input1)) stop("Input is not a list.")
+  data <- data1 <- input1[["data"]]
+  to_plot <- "initial"
   
-  pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
-    ud, level.UD = .95)@polygons[[3]] # upper
+  if (!is.null(input2)) {
+    if (!is.list(input2)) stop("Input is not a list.")
+    data <- data2 <- input2[["data"]]
+    to_plot <- "modified"
+  }
   
-  if ("95% high CI" %in% levels) {
-    
+  if (to_plot == "initial") {
+    ud <- input1[["ud"]]
+    pal <- c("#007d80", "#00484a")
+  } else if (to_plot == "modified") {
+    ud <- input2[["ud"]]
+    pal <- c(color, color)
+  }
+  
+  show_col <- ifelse(show_both, "#00484a", "white")
+  show_alpha <- ifelse(show_both, 1, 0)
+  
+  extent[1,1] <- min(extent[1,1], min(truth$x), min(data$x))
+  extent[2,1] <- max(extent[2,1], max(truth$x), max(data$x))
+  extent[1,2] <- min(extent[1,2], min(truth$y), min(data$y))
+  extent[2,2] <- max(extent[2,2], max(truth$y), max(data$y))
+  
+  extent[,1] <- extent[,1] + diff(range(extent[,1])) * c(-.03, .03)
+  extent[,2] <- extent[,2] + diff(range(extent[,2])) * c(-.03, .03)
+  
+  ud_lci <- ctmm::SpatialPolygonsDataFrame.UD(
+    ud, level.UD = .95)@polygons[[1]]
+  ud_est <- ctmm::SpatialPolygonsDataFrame.UD(
+    ud, level.UD = .95)@polygons[[2]]
+  ud_uci <- ctmm::SpatialPolygonsDataFrame.UD(
+    ud, level.UD = .95)@polygons[[3]]
+  pol_ud <- list(lci = ud_lci, est = ud_est, uci = ud_uci)
+  
+  if ("uci" %in% contours) {
     p1 <- ggplot2::geom_polygon(
-      data = pol_ud_high,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      fill = color, col = color,
-      linetype = "dotted",
-      alpha = .2)
+      data = pol_ud[["uci"]],
+      mapping = ggplot2::aes(x = long, y = lat, group = group),
+      fill = color, color = color, linetype = "dotted", alpha = .2)
   }
   
-  if ("Estimate" %in% levels) {
-    pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
-      ud, level.UD = .95)@polygons[[2]] # estimate
-    
+  if ("est" %in% contours) {
     p2 <- ggplot2::geom_polygon(
-      data = pol_ud,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      fill = "#007d80", color = color,  
-      alpha = .2)
+      data = pol_ud[["est"]],
+      mapping = ggplot2::aes(x = long, y = lat, group = group),
+      fill = pal[1], color = color, alpha = .2)
   }
   
-  if ("95% low CI" %in% levels) {
-    pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
-      ud, level.UD = .95)@polygons[[1]] # low
-    
+  if ("lci" %in% contours) {
     p3 <- ggplot2::geom_polygon(
-      data = pol_ud_low,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      col = color, fill = color,
-      linetype = "dotted",
-      alpha = .2)
+      data = pol_ud[["lci"]],
+      mapping = ggplot2::aes(x = long, y = lat, group = group),
+      fill = color, color = color, linetype = "dotted", alpha = .2)
   }
   
-  ymin <- min(pol_ud_high@Polygons[[1]]@coords[,2])
-  yrange <- range(pol_ud_high@Polygons[[1]]@coords[,2])
-  
-  tmp <- ymin - diff(yrange) * .2
   p <- ggplot2::ggplot() +
-    
-    ggplot2::geom_polygon(
-      data = pol_ud_high,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      fill = NA, alpha = 1) +
     
     { if (show_truth)
       ggplot2::geom_polygon(
         data = truth,
-        mapping = ggplot2::aes(x = long,
-                               y = lat,
-                               group = id),
-        fill = "#353c42",
-        alpha = .2)
+        mapping = ggplot2::aes(x = x, y = y, group = id),
+        fill = "#353c42", alpha = .2)
     } +
     
-    ggplot2::geom_path(data,
-                       mapping = ggplot2::aes(x = x,
-                                              y = y),
-                       color = "black", size = 0.4,
-                       alpha = .4) +
-    ggplot2::geom_point(data,
-                        mapping = ggplot2::aes(x = x,
-                                               y = y),
-                        color = "black", size = 1) +
+    ggplot2::geom_path(
+      data = data,
+      mapping = ggplot2::aes(x = x, y = y),
+      color = pal[2], size = 0.4, alpha = .4) +
     
-    { if ("95% high CI" %in% levels) p1 } +
-    { if ("Estimate" %in% levels) p2 } +
-    { if ("95% low CI" %in% levels) p3 } +
-    
-    ggplot2::labs(x = "X coordinate",
-                  y = "Y coordinate") +
-    
-    ggplot2::scale_x_continuous(
-      labels = scales::comma) +
-    ggplot2::scale_y_continuous(
-      labels = scales::comma,
-      limits = c(tmp, NA)) +
-    
-    ggplot2::coord_fixed() +
-    
-    theme_movedesign() +
-    ggplot2::guides(
-      color = ggplot2::guide_colorbar(
-        title.vjust = 1.02)) +
-    ggplot2::theme(
-      text = ggplot2::element_text(
-        family = "Roboto Condensed"),
-      
-      legend.position = c(0.76, 0.08),
-      legend.direction = "horizontal",
-      legend.title = ggplot2::element_text(
-        size = 11, face = "bold.italic"),
-      legend.key.height = ggplot2::unit(0.3, "cm"),
-      legend.key.width = ggplot2::unit(0.6, "cm"))
-}
-
-
-
-
-#' Plot home range with simulated data
-#'
-#' @description Plotting home range output from ctmm with simulation.
-#' @keywords internal
-#'
-#' @noRd
-plotting_hr_new <- function(data1, data2,
-                            sigma,
-                            ud, levels,
-                            show_data,
-                            show_truth,
-                            # bbox,
-                            color, sim_color, fill) {
-
-  id <- NULL
-  radius_x <- radius_y <- sqrt(-2 * log(0.05) * sigma)
-  truth <- data.frame(
-    id = rep(1, each = 100),
-    angle = seq(0, 2 * pi,length.out = 100))
-
-  truth$long <- unlist(lapply(
-    mean(data2$x),
-    function(x) x + radius_x * cos(truth$angle)))
-  truth$lat <- unlist(lapply(
-    mean(data2$y),
-    function(x) x + radius_y * sin(truth$angle)))
-
-  pol_ud_high <- ctmm::SpatialPolygonsDataFrame.UD(
-    ud, level.UD = .95)@polygons[[3]] # upper
-
-  if ("95% high CI" %in% levels) {
-
-    p1 <- ggplot2::geom_polygon(
-      data = pol_ud_high,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      fill = fill, col = fill,
-      linetype = "dotted",
-      alpha = .2)
-  }
-
-  if ("Estimate" %in% levels) {
-    pol_ud <- ctmm::SpatialPolygonsDataFrame.UD(
-      ud, level.UD = .95)@polygons[[2]] # estimate
-    
-    p2 <- ggplot2::geom_polygon(
-      data = pol_ud,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      fill = fill, color = fill,  
-      alpha = .2)
-  }
-
-  if ("95% low CI" %in% levels) {
-    pol_ud_low <- ctmm::SpatialPolygonsDataFrame.UD(
-      ud, level.UD = .95)@polygons[[1]] # low
-    
-    p3 <- ggplot2::geom_polygon(
-      data = pol_ud_low,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      col = fill, fill = fill,
-      linetype = "dotted",
-      alpha = .2)
-  }
-  
-  show_col <- ifelse(show_data, "black", "white")
-  show_alpha <- ifelse(show_data, 1, 0)
-
-  ymin <- min(pol_ud_high@Polygons[[1]]@coords[,2])
-  yrange <- range(pol_ud_high@Polygons[[1]]@coords[,2])
-  
-  tmp <- ymin - diff(yrange) * .2
-  p <- ggplot2::ggplot() +
-    
-    ggplot2::geom_polygon(
-      data = pol_ud_high,
-      mapping = ggplot2::aes(x = long,
-                             y = lat,
-                             group = group),
-      fill = NA, alpha = 1) +
-
-    { if (show_truth)
-      ggplot2::geom_polygon(
-        data = truth,
-        mapping = ggplot2::aes(x = long,
-                               y = lat,
-                               group = id),
-        fill = "#353c42",
-        alpha = .2)
-    } +
-    
-    ggplot2::geom_path(data2,
-                       mapping = ggplot2::aes(x = x,
-                                              y = y),
-                       color = fill, size = 0.4,
-                       alpha = .4) +
-    ggplot2::geom_point(data2,
-                        mapping = ggplot2::aes(x = x,
-                                               y = y),
-                        color = fill, size = 1) +
-
-    { if ("95% high CI" %in% levels) p1 } +
-    { if ("Estimate" %in% levels) p2 } +
-    { if ("95% low CI" %in% levels) p3 } +
-
     ggplot2::geom_point(
-      data1, mapping = ggplot2::aes(x = x, y = y),
-      color = show_col, alpha = show_alpha, size = 2) +
-
-    ggplot2::labs(x = "X coordinate",
-                  y = "Y coordinate") +
-
-    ggplot2::scale_x_continuous(
-      labels = scales::comma) +
-    ggplot2::scale_y_continuous(
-      labels = scales::comma,
-      limits = c(tmp, NA)) +
-
-    ggplot2::coord_fixed() +
+      data = data,
+      mapping = ggplot2::aes(x = x, y = y),
+      color = pal[2], size = 1) +
     
+    { if ("uci" %in% contours) p1 } +
+    { if ("est" %in% contours) p2 } +
+    { if ("lci" %in% contours) p3 } +
+
+    { if (show_both)
+      ggplot2::geom_point(
+        data = data1,
+        mapping = ggplot2::aes(x = x, y = y),
+        color = show_col, alpha = show_alpha, size = 1)
+    } +
+    
+    ggplot2::scale_x_continuous( 
+      labels = scales::comma,
+      limits = c(extent[1,1], extent[2,1])) +
+    ggplot2::scale_y_continuous(
+      labels = scales::comma, 
+      limits = c(extent[1,2], extent[2,2])) +
+    
+    ggplot2::labs(x = "X coordinate", y = "Y coordinate") +
+    ggplot2::coord_fixed() +
     theme_movedesign() +
     ggplot2::theme(legend.position = "none")
 }
+
 
 #' Plot variogram
 #'
@@ -718,15 +596,15 @@ plotting_svf <- function(data, fill) {
 #' @importFrom stringr str_pad
 #' @noRd
 #'
-sigdigits <- function(x, digits = 2) {
-
-  z <- format(x, digits = digits)
-  if (!grepl("[.]",z)) return(z)
+sigdigits <- function(x, digits) {
   
-  out <- stringr::str_pad(z, digits + 1, "right" , "0")
-  out <- as.numeric(out)
-
-  return(out)
+  new_x <- format(x, digits = digits)
+  out <- ifelse(
+    grepl("[.]", new_x),
+    stringr::str_pad(new_x, digits + 1, "right", "0"),
+    new_x)
+  
+  return(as.numeric(out))
 }
 
 
@@ -758,6 +636,48 @@ add_spinner <- function(ui, type = 4, height = "300px") {
 }
 
 
+loading_modal <- function(x, runtime = NULL, for_time = FALSE) {
+  
+  x <- stringr::str_split(x, " ")[[1]]
+  n_words <- length(x)
+  
+  if (n_words > 2) {
+    x[2] <- paste(x[2:n_words], collapse = " ")
+  }
+  
+  if (!for_time) {
+  out_txt <- tagList(
+    span(x[1], style = "color: #797979;"),
+    HTML(paste0(span(x[2], class = "cl-sea"),
+                span("...", style = "color: #797979;"))))
+  } else {
+    out_txt <- tagList(
+      span(x[1], style = "color: #797979;"),
+      HTML(paste0(span(x[2], class = "cl-sea"),
+                  span(".", style = "color: #797979;"))),
+      p(),
+      p("Expected run time:",
+        style = paste("background-color: #eaeaea;",
+                      "color: #797979;",
+                      "font-size: 16px;",
+                      "text-align: center;")), br(),
+      p(runtime,
+        style = paste("background-color: #eaeaea;",
+                      "color: #009da0;",
+                      "font-size: 16px;",
+                      "text-align: center;",
+                      "margin-top: -40px;")),
+      p())
+  }
+  
+  shinybusy::show_modal_spinner(
+    spin = "fading-circle",
+    color = "var(--sea)",
+    text = out_txt
+  ) # end of modal
+  
+}
+
 
 #' wrap_none
 #'
@@ -774,19 +694,21 @@ wrap_none <- function(text, ...,
   out <- shiny::HTML(paste0(text, ...))
 
   if (!is.null(css)) {
-    out <- shiny::HTML(paste0(shiny::span(
-      paste0(text, ...), class = css), end))
+    out <- shiny::HTML(
+      paste0(
+        shiny::span(
+          paste0(text, ...), class = css), end))
   }
-
+  
   if (!is.null(color)) {
-
+    
     out <- shiny::HTML(paste0(
       shiny::span(
-        paste0(text, ...),
+        shiny::HTML(paste0(text, ...)),
         style = paste0("color:", color, "!important;")),
       end))
   }
-
+  
   return(out)
 
 }
@@ -820,7 +742,7 @@ format_perc <- function(value) {
 #' Calculate limits for plots.
 #'
 #' @noRd
-calc_limit <- function(data1, data2, data3 = NULL, scale = .1) {
+extract_limits <- function(data1, data2, data3 = NULL, scale = .1) {
   
   xmin <- min(
     min(data1$x) - diff(range(data1$x)) * scale,
@@ -1102,7 +1024,6 @@ round_any <- function(x, accuracy, f = round) {
   f(x/accuracy) * accuracy
 }
 
-
 # ctmm and ctmmweb functions: ---------------------------------------------
 
 #' Give false origin, orientation, dispatch epoch from ctmm.
@@ -1117,10 +1038,10 @@ pseudonymize <- function(data,
                          origin = "1111-11-11 11:11.11 UTC", 
                          tz = "GMT", proj = NULL) {
   
-  if(is.null(data)) { stop("No data selected.") }
+  if (is.null(data)) { stop("No data selected.") }
   
   DROP <- class(data)[1] == "telemetry"
-  if(class(data)[1] != "list") {
+  if (class(data)[1] != "list") {
     data <- list(data)
     names(data) <- attr(data[[1]],'info')$identity
   }
@@ -1138,7 +1059,8 @@ pseudonymize <- function(data,
       xy <- numeric(0)
     }
     
-    xy <- rgdal::project(xy, proj, inv = TRUE)
+    xy <- suppressWarnings(
+      rgdal::project(xy, proj, inv = TRUE))
     data[[i]]$longitude <- xy[, 1]
     data[[i]]$latitude <- xy[, 2]
     attr(data[[i]], "info")$projection <- proj
@@ -1438,9 +1360,7 @@ par.speed <- function(input,
                       trace = TRUE,
                       parallel = TRUE) {
   
-  speed_calc <- function(input) {
-    
-    if (trace) message("Calculating:")
+  ctmm.speed <- function(input) {
     
     ctmm::speed(input[[1]],
                 input[[2]],
@@ -1449,22 +1369,22 @@ par.speed <- function(input,
   }
   
   if (length(input) == 1) {
-    
     internal_cores <- if (parallel) -1 else 1
-    res <- try(speed_calc(input[[1]]))
+    out_speed <- try(ctmm.speed(input[[1]]))
     
   } else {
-    
     internal_cores <- 1
-    res <- par.lapply(input, speed_calc, cores, parallel)
-    
+    out_speed <- par.lapply(input, ctmm.speed, cores, parallel)
   }
   
-  if (any(has_error(res))) {
-    cat(crayon::bgYellow$red("Error in speed calculation\n"))
+  if (any(has_error(out_speed))) {
+    msg_log(
+        style = "danger",
+        message = paste0("Speed estimation", msg_danger("failed"), "."),
+        detail = "May be due to low sample size.")
   }
   
-  return(res)
+  return(out_speed)
 }
 
 
@@ -1473,13 +1393,14 @@ par.speed <- function(input,
 #' @noRd
 #'
 align_lists <- function(...) {
-  list_lst <- list(...)
-  len_vec <- sapply(list_lst, length)
-  stopifnot(length(unique(len_vec)) == 1)
-  res <- lapply(seq_along(list_lst[[1]]), function(i) {
-    lapply(list_lst, getElement, i)
-  })
-  if (length(res) == 0) 
-    res <- NULL
-  return(res)
+  list_of_lists <- list(...)
+  if (dplyr::n_distinct(lengths(list_of_lists)) != 1) 
+    stop("Input lists must be of the same length.")
+  
+  out_lists <- lapply(
+    seq_along(list_of_lists[[1]]), function(i) 
+      lapply(list_of_lists, "[[", i))
+  
+  if (length(out_lists) == 0) out_lists <- NULL
+  return(out_lists)
 }

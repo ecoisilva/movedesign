@@ -81,118 +81,147 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
 #' @importFrom dplyr add_row
 #' @importFrom ctmm `%#%`
 #' @noRd
-fix_unit <- function(value, unit,
-                     digits = 2,
+fix_unit <- function(input,
+                     unit,
+                     digits = 3,
                      ui = FALSE,
+                     match_all = TRUE,
                      convert = FALSE)  {
-
+  
+  if (missing(unit)) {
+    if (!("value" %in% names(input)) || !("unit" %in% names(input)))
+      stop("input must contain named columns 'value' and 'unit'.")
+    
+    value <- input$value
+    unit <- x_html <- input$unit
+  } else { 
+    value <- input
+    x_html <- unit
+  }
+  
   if (!is.character(unit)) {
     stop("`unit` argument must be a character string.")
   }
-
-  all_units <- c("year", "month", "week",
-                 "day", "hour", "minute", "second",
-                 "kilometer", "meter", "km", "m",
-                 "square kilometer", "square meter", "hectare",
-                 "km^2", "m^2", "ha",
-                 "kilometers/day", "kilometer/day", "km/day",
-                 "kilometers/hour", "kilometer/hour", "km/hour",
-                 "meters/second", "meter/second", "m/s")
-
-  units_tm <- all_units[1:7]
-  units_sp <- all_units[8:11]
-  units_ar <- all_units[12:17]
-  units_vl <- all_units[18:26]
-
-  if (!unit %in% units_vl) {
-    x <- gsub("(.)s$", "\\1", unit)
-  } else { x <- unit }
   
-  var <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
-  if (any(is.na(var))) {
-    stop("Invalid unit: ", paste(x[is.na(var)], collapse = ", "),
-         call. = FALSE)
-  }
-
-  # Convert value:
-
-  y <- ifelse(convert, value %#% x, value)
+  units_tm <- c("year", "month", "week",
+                "day", "hour", "minute", "second")
+  units_sp <- c("kilometer", "meter", "km", "m")
+  units_ar <- c("square kilometer", "square meter", "hectare",
+                "km^2", "m^2", "ha")
+  units_vl <- c("kilometers/day", "kilometer/day", "km/day",
+                "kilometers/hour", "kilometer/hour", "km/h",
+                "meters/second", "meter/second", "m/s")
   
-  if ((x %in% units_tm) & convert) {
-    x_new <- dplyr::case_when(
-      y < 60 ~ "second",
-      y < 3600 ~ "minute",
-      y < 86400 ~ "hour",
-      y < (1 %#% "month") ~ "day",
-      y < (1 %#% "year") ~ "month",
-      TRUE ~ "year")
+  all_units <- c(units_tm, 
+                 units_sp,
+                 units_ar, 
+                 units_vl)
+  
+  # Create empty vectors to store results
+  x <- y <- x_html <- NULL
+  
+  for (i in seq_along(value)) {
     
-    y <- x_new %#% y
-    x <- x_new
-  }
-  
-  if ((x %in% units_sp) & convert) {
-    x_new <- ifelse(y >= 1000, "km", "m")
-    y <- x_new %#% y
-    x <- x_new
-  }
-
-  if ((x %in% units_ar) & convert) {
-    x_new <- dplyr::case_when(
-      y < 1e4 ~ "m^2",
-      y < 1e6 ~ "ha",
-      TRUE ~ "km^2")
-    
-    y <- x_new %#% y
-    x <- x_new
-  }
-
-  if (x %in% units_ar) {
-    x_html <- dplyr::case_when(
-      (x == "square kilometer" | x == "km^2") ~ "km\u00B2",
-      (x == "square meter" | x == "m^2") ~ "m\u00B2",
-      (x == "hectare" | x == "ha") ~ "ha")
-  }
-
-  if ((x %in% units_vl) & convert) {
-    x_new <- dplyr::case_when(
-      y < 0.01 ~ "m/s",
-      y < 0.25 ~ "km/day",
-      TRUE ~ "km/hour")
-    
-    y <- x_new %#% y
-    x <- x_new
-  }
-  
-  if (x %in% units_vl) {
-    if (x == "kilometers/hour" || x == "km/h") {
-      x <- "km/h"
-      x_html <- "kilometers/day"
-    } else if (x == "kilometers/day" || x == "km/day") {
-      x <- "km/day"
-      x_html <- "kilometers/day"
-    } else if (x == "meters/second" || x == "m/s") {
-      x <- "m/s"
-      x_html <- "meters/second"
+    if (!unit[i] %in% units_vl) {
+      x <- c(x, gsub("(.)s$", "\\1", unit[i]))
+    } else { 
+      unit[i] <- case_when(
+        (unit[i] == "kilometers/hour" | unit[i] == "km/h") ~ "km/h",
+        (unit[i] == "kilometers/day" | unit[i] == "km/day") ~ "km/day",
+        (unit[i] == "meters/second" | unit[i] == "m/s") ~ "m/s",
+        TRUE ~ unit[i])
+      x <- c(x, unit[i]) 
     }
-  }
+    
+    var <- all_units[pmatch(x[i], all_units, duplicates.ok = TRUE)]
+    if (any(is.na(var))) {
+      stop("Invalid unit: ", paste(x[i][is.na(var)], collapse = ", "),
+           call. = FALSE)
+    }
+    
+    # Convert value to standard format:
+    y[i] <- ifelse(convert, value[i] %#% x[i], value[i])
+    
+    # Convert time units:
+    if ((x[i] %in% units_tm) & convert) {
+      x_new <- dplyr::case_when(
+        y[i] < 60 ~ "second",
+        y[i] < 3600 ~ "minute",
+        y[i] < 86400 ~ "hour",
+        y[i] < (1 %#% "month") ~ "day",
+        y[i] < (1 %#% "year") ~ "month",
+        TRUE ~ "year")
+      if (ui) x_html[i] <- x_new
+    }
+    
+    # Convert spatial units:
+    if ((x[i] %in% units_sp) & convert) {
+      x_new <- ifelse(y[i] >= 1000, "km", "m")
+      if (ui) x_html[i] <- x_new
+    }
+    
+    # Convert area units:
+    if ((x[i] %in% units_ar) & convert) {
+      x_new <- dplyr::case_when(
+        y[i] < 1e4 ~ "m^2",
+        y[i] < 1e6 ~ "ha",
+        TRUE ~ "km^2")
+      
+      if (ui) x_html[i] <- dplyr::case_when(
+        (x_new == "square kilometer" | x_new == "km^2") ~ "km\u00B2",
+        (x_new == "square meter" | x_new == "m^2") ~ "m\u00B2",
+        (x_new == "hectare" | x_new == "ha") ~ "ha")
+    }
+    
+    # Convert speed units:
+    if ((x[i] %in% units_vl) & convert) {
+      x_new <- dplyr::case_when(
+        y[i] < 0.01 ~ "m/s",
+        y[i] < 0.25 ~ "km/day",
+        TRUE ~ "km/h")
+      
+      if (ui) x_html[i] <- case_when(
+        (x_new == "km/h") ~ "kilometers/hour",
+        (x_new == "km/day") ~ "kilometers/day",
+        (x_new == "m/s") ~ "meters/second")
+    }
+    
+    if (convert) {
+      y[i] <- x_new %#% y[i]
+      x[i] <- x_new
+    }   
 
-  # Round value:
-  y <- sigdigits(y, digits)
+    # Round value:
+    y[i] <- ifelse((y[i] %% 1) * 10 == 0, 
+                   round(y[i], 0),
+                   round(y[i], 1))
+    
+    # Check if value is equal to 1 (e.g. 1 hour), adjust unit:
+    if (x[i] %in% units_tm) 
+      x[i] <- dplyr::case_when(
+        y[i] < 1 || y[i] > 1 ~ paste0(x[i], "s"),
+        y[i] == 1 ~ x[i])
+    
+  } # end of loop
   
-  # Check if value is equal to 1 (e.g. 1 hour), adjust unit:
-  if (x %in% units_tm) {
-    x <- dplyr::case_when(y < 1 || y > 1 ~ paste0(x, "s"),
-                          y == 1 ~ x)
-  }
-
   # Show units as HTML:
-  x <- ifelse(ui, x_html, x)
+  if (ui) x <- x_html
   
-  out <- data.frame(value = numeric(0), unit = character(0))
-  out <- out %>% dplyr::add_row(value = as.numeric(y), unit = x)
+  # Create data.frame with outputs:
+  out <- data.frame(value = y, unit = x)
+  
+  # Match all units to estimate unit (if length > 1):
+  if (match_all & length(value) > 1) {
+    out_unit <- out[2,2]
+    for (i in nrow(out)) {
+      out[i,1] <- out_unit %#% out[i,1] %#% out[i,2] 
+    }
+    out[,2] <- rep(out_unit, nrow(out))
+  }
+  
   return(out)
 }
+
 
 #' Prepare movement model
 #'
@@ -249,8 +278,8 @@ simulate_data <- function(mod,
                           dti_units,
                           seed) {
 
-  dur <- dur %#% dur_units # duration
-  dti <- round(dti %#% dti_units, 0) # sampling interval
+  dur <- round(dur %#% dur_units, 0) # duration
+  dti <- round(dti %#% dti_units, 0) # interval
 
   t0 <- seq(0, dur, by = dti)
   dat <- ctmm::simulate(mod, t = t0, seed = seed)
@@ -285,46 +314,67 @@ calculate_ci <- function(variable, level) {
 #' @keywords internal
 #'
 #' @noRd
-extract_pars <- function(obj, par, 
+extract_pars <- function(obj, name, 
                          fraction = .65, 
                          data = NULL) {
   
-  if (par == "sigma") { 
-    if (missing(data)) {
-      stop("`data` argument not provided.")
-    }
-
+  out <- unit <- NULL
+  if (name == "sigma") { 
+    if (missing(data)) stop("`data` argument not provided.")
+    
     svf <- extract_svf(data, fraction = fraction)
     out <- c("low" = mean(svf$var_low95) %#% "km^2",
              "est" = var.covm(obj$sigma, ave = T),
              "high" = mean(svf$var_upp95) %#% "km^2")
     
     out <- data.frame(value = out, "unit" = "m^2")
-    
-  } else if (inherits(obj, "telemetry")) {
+    return(out)
+  }
+  
+  if (inherits(obj, "telemetry")) {
     nms.dat <- suppressWarnings(names(summary(obj)))
     
-    unit <- extract_units(nms.dat[grep(par, nms.dat)])
+    unit <- extract_units(nms.dat[grep(name, nms.dat)])
     value <- suppressWarnings(as.numeric(
-      summary(obj)[grep(par, nms.dat)]))
+      summary(obj)[grep(name, nms.dat)]))
     
     out <- data.frame(value = value, "unit" = unit)
-    
-  } else if (inherits(obj, "ctmm")) {
+    return(out)
+  }
+  
+  if (inherits(obj, "ctmm")) {
     sum.fit <- summary(obj)
     nms.fit <- rownames(sum.fit$CI)
     
-    out <- sum.fit$CI[grep(par, nms.fit), ]
-    
-    if (all(is.na(out))) {
-      out <- NULL
-    } else {
-      unit <- extract_units(nms.fit[grep(par, nms.fit)])
+    # Special cases of movement processes:
+    if (length(obj$tau) == 2 && (obj$tau[1] == obj$tau[2])) {
+      # OUf:
+      name <- "\u03C4"
+      out <- sum.fit$CI[grep(name, nms.fit), ]
+      unit <- extract_units(nms.fit[grep(name, nms.fit)])
+      
+      if (length(grep("decay", nms.fit)) != 0) {
+        # OUΩ:
+        out <- out[grep("decay", rownames(out)), ]
+        unit <- extract_units(nms.fit[grep("decay", nms.fit)])
+      }
+      
       out <- data.frame(value = out, "unit" = unit)
+      return(out)
+    }
+    
+    # All other cases:
+    if (length(grep(name, nms.fit)) != 0) {
+      unit <- extract_units(nms.fit[grep(name, nms.fit)])
+      out <- sum.fit$CI[grep(name, nms.fit), ]
+      out <- data.frame(value = out, "unit" = unit)
+      return(out)
     }
   }
+  
   return(out)
 }
+
 
 #' Extract DOF
 #'
@@ -380,7 +430,7 @@ extract_svf <- function(data, fraction = .65) {
     ( vardat$SVF * CI.lower(vardat$DOF, .5) )
   vardat$var_upp50 <- "square kilometers" %#%
     ( vardat$SVF * CI.upper(vardat$DOF, .5) )
-  vardat$SVF <-"square kilometers" %#% vardat$SVF
+  vardat$SVF <- "square kilometers" %#% vardat$SVF
 
   return(vardat)
 }
@@ -390,11 +440,10 @@ extract_svf <- function(data, fraction = .65) {
 #' @description Simulate GPS battery life decay
 #'
 #' @param data data.frame. A dataset with frequencies.
-#' @param yrange Numeric. Value for the range of duration (y).
-#' @param yunits Character. Unit for the range of duration (y).
+#' @param b_max Numeric. Value for the range of duration (y).
+#' @param b_unit Character. Unit for the range of duration (y).
 #' @param cutoff Character. Cut-off for for minimum duration required.
-#' @param max_dti Maximum sampling interval (or minimum) frequency for the maximum duration.
-#' @param trace Logical. Display messages as function runs.
+#' @param dti_max Maximum sampling interval (or minimum) frequency for the maximum duration.
 #' @keywords internal
 #'
 #' @importFrom ctmm `%#%`
@@ -402,167 +451,145 @@ extract_svf <- function(data, fraction = .65) {
 #' 
 #' @noRd
 simulate_gps <- function(data,
-                         yrange,
-                         yunits,
+                         b_max,
+                         b_unit,
                          cutoff,
-                         max_dti,
-                         trace = FALSE) {
-
-  stopifnot("Error: data required." = !is.null(data))
-
-  stopifnot(is.numeric(yrange) || is.null(yrange))
-  stopifnot(is.numeric(cutoff) || is.null(cutoff))
-
-  stopifnot(is.character(yunits) || is.null(yunits))
-  stopifnot(is.character(max_dti) || is.null(max_dti))
+                         dti_max) {
   
-  dti <- dti_notes <- dti_scale <- dti_yn <- frq_hrs <- NULL
+  stopifnot(!is.null(data))
+  stopifnot(is.numeric(b_max) || is.null(b_max))
+  stopifnot(is.numeric(cutoff) || is.null(cutoff))
+  stopifnot(is.character(b_unit) || is.null(b_unit))
+  stopifnot(is.character(dti_max) || is.null(dti_max))
+  if (b_max == 0) stop("Duration (b_max) cannot be 0.")
+  
   trace <- FALSE
-
-  if(trace == TRUE) message(paste(yrange, yunits))
-  if(yrange == 0) stop("Duration cannot be 0.", call. = FALSE)
-
+  dti <- dti_notes <- dti_scale <- dti_yn <- frq_hrs <- NULL
+  add_noise <- function(max) stats::runif(1, min = 0, max = max)
+  
+  # Initialize parameters:
+  
   unit <- "days"
   params <- data.frame(
-    id = ifelse(max_dti == "1 fix every day", "main", "other"),
-    y0 = round(unit %#% (yrange %#% yunits), 1),
-    x0 = data$frq_hrs[match(max_dti, data$dti_notes)],
-    yrange = yrange,
-    shift = NA)
-
-  params[["shift"]] <- dplyr::case_when(
-    params[["y0"]] < 31 ~ "very low", # 1 month
-    params[["y0"]] < unit %#% 1/2 %#% "years" ~ "low",
-    params[["y0"]] < unit %#% 1 %#% "year" ~ "medium",
-    params[["y0"]] < unit %#% 3 %#% "years" ~ "high",
-    params[["y0"]] < unit %#% 5 %#% "years" ~ "very high",
-    TRUE ~ "extremely high"
-  )
-
+    id = ifelse(dti_max == "1 fix every day", TRUE, FALSE),
+    b_max = round(unit %#% (b_max %#% b_unit), 1),
+    x_min = data$frq_hrs[match(dti_max, data$dti_notes)],
+    scale = 0)
+  
+  params[["scale"]] <- dplyr::case_when(
+    params[["b_max"]] < 31 ~ 1,
+    params[["b_max"]] < 365 ~ params[["b_max"]] * 0.01,
+    TRUE ~ params[["b_max"]] * 0.02)
+  
   newdata <- data %>%
     dplyr::select(dti_notes, dti, frq_hrs) %>%
-    dplyr::filter(frq_hrs >= params[["x0"]])
-
-  threshold <- dplyr::case_when(
-    params[["shift"]] == "very low" ~ 0.05,
-    params[["shift"]] == "low" ~ 0.1,
-    params[["shift"]] == "medium" ~ 0.25,
-    params[["shift"]] == "high" ~ 0.3,
-    TRUE ~ 1
-  )
-
-  init <- init0 <- c(-16.913, params[["y0"]])
-  y <- calculate_pars(newdata$frq_hrs, init)
-
-  x <- c(NA, NA, 1, 1)
-  x[1] <- dplyr::case_when(
-    params[["shift"]] == "very low" ~ 1,
-    params[["shift"]] == "low" ~ 3,
-    params[["shift"]] == "medium" ~ 10,
-    params[["shift"]] == "high" ~ 20,
-    TRUE ~ 30
-  )
-
-  x[3] <- dplyr::case_when(
-    params[["shift"]] == "very low" ~ yunits %#% 1 %#% "day",
-    params[["shift"]] == "low" ~ yunits %#% 5 %#% "days",
-    params[["shift"]] == "medium" ~ yunits %#% 1 %#% "months",
-    params[["shift"]] == "high" ~ yunits %#% 1 %#% "months",
-    params[["shift"]] == "very high" ~ yunits %#% 1.4 %#% "months",
-    TRUE ~ yunits %#% 6 %#% "months"
-  )
-
+    dplyr::filter(frq_hrs >= params[["x_min"]])
+  
+  # Initialize log-logistic function:
+  
+  init <- init0 <- c(-16.913, params[["b_max"]])
+  f <- update_f(x = newdata$frq_hrs, init)
+  y <- f$y
+  
+  err <- 100 - (max(y) * 100) / params[["b_max"]]
+  
+  # Iterate until the maximum value is equal to b_max:
+  
   i <- 0
-  n_attempts <- m_attempts <- 40
-  for (n in 1:n_attempts) {
+  max_attempts <- 150
+  start_time <- Sys.time()
+  threshold <- ifelse(params[["b_max"]] > 31, 0.01, 1)
+  while (abs(err) > threshold && i < max_attempts) {
 
-    if (all(y == 0)) {
-      init <- init0
-      break
-    }
-
-    if (n > 1 && all(init == init0)) break
-
-    # Match maximum duration with yrange:
-    for(m in 1:m_attempts) {
-
-      out <- c("expected" = params[["y0"]],
-               "current" = max(y),
-               "diff" = diff(c(params[["y0"]], max(y))))
-
-      if(trace) print(paste0("[m] dur: ", out[["current"]],
-                             ", goal dur: ", out[["expected"]]))
-      if(trace) print(paste("[m] diff dur:", round(out[["diff"]], 3),
-                            "compared to", threshold))
-
-      x[2] <- dplyr::case_when(
-        abs(out[["diff"]]) <= 0.5 ~ 2,
-        abs(out[["diff"]]) <= 5 ~ 5,
-        abs(out[["diff"]]) <= 10 ~ 10,
-        abs(out[["diff"]]) <= 20 ~ 20,
-        TRUE ~ 30)
-
-      if (abs(out[["diff"]]) > threshold) {
-
-        if (sign(out[["diff"]]) == 1) {
-          init[1] <- init[1] + x[1] * x[2]
-        } else {
-          init[1] <- init[1] - x[1] * x[2]
-        }
-
-        y <- calculate_pars(newdata$frq_hrs, init)
-        i <- i + 1
-        if(all(y == 0)) { init <- init0; break }
-
-      } else break
-    }
-
-    y <- calculate_pars(newdata$frq_hrs, init)
-
-    # Adjust initial parameters:
-
-    out[["current"]] <- max(y)
-    out[["diff"]] <- diff(c(out[["expected"]], out[["current"]]))
-
-    if(trace) print(paste0("dur: ", out[["current"]],
-                           ", goal dur: ", out[["expected"]]))
-    if(trace) print(paste("diff dur:", round(out[["diff"]], 3),
-                          "compared to", threshold))
-
-    if (abs(out[["diff"]]) <= threshold) break
-
-    x[4] <- dplyr::case_when(
-      abs(out[["diff"]]) <= 1 ~ 1,
-      abs(out[["diff"]]) <= 5 ~ 2,
-      TRUE ~ 3)
-
-    if (out[["diff"]] > threshold) {
-      yrange <- yrange - x[3] * x[4]
-    } else {
-      yrange <- yrange + x[3] * x[4]
-    }
-
-    init[2] <- unit %#% yrange %#% yunits
-    y <- calculate_pars(newdata$frq_hrs, init)
+    # Update the log-logistic function:
     i <- i + 1
+    f <- update_f(x = newdata$frq_hrs, init)
+    y <- f$y
+    
+    # Check error against threshold:
+    
+    err <- 100 - (max(y) * 100) / params[["b_max"]]
+    if (trace) print(paste0(i, ", Error: ", round(err, 2), "%"))
+    if (abs(err) <= threshold) break
+    
+    # prev_val <- ifelse(i == 1, 0, curr_val)
+    # curr_val <- f$pars[["b_max"]]
+    
+    # Adjust initial parameters:
+    
+    if (params[["id"]] && # Adjust for small values when 1/day
+        params[["b_max"]] <= 24 && i == 1) init[2] <- init[2] + 1
+    
+    if (abs(err) > 5) mult <- 0.2
+    else if (abs(err) >= 0.1) mult <- 0.1
+    else mult <- 0.01
+    
+    init[1] <- ifelse(
+      sign(err) == 1,
+      init[1] - max(y) * mult + add_noise(0.01),
+      init[1] + max(y) * mult + add_noise(0.01)
+    )
+    
+    # Update the log-logistic function:
+    
+    i <- i + 1
+    f <- update_f(x = newdata$frq_hrs, init)
+    y <- f$y
+    
+    err <- 100 - (max(y) * 100) / params[["b_max"]]
+    if (trace) print(paste0(i, ", Error: ", round(err, 2), "%"))
+    
+    if (abs(err) <= threshold) break
+    
+    if (!params[["id"]]) {
+      
+      mult <- dplyr::case_when(
+        abs(err) <= .5 ~ abs(err) * .5,
+        abs(err) <= 1 ~ abs(err),
+        TRUE ~ abs(err))
+      mult <- mult + add_noise(abs(err) * .1)
+      if (params[["b_max"]] < 31) mult <- mult * .1
+      
+      init[2] <- ifelse(err > threshold,
+                        init[2] + params[["scale"]] * mult,
+                        init[2] - params[["scale"]] * mult)
+      
+      f <- update_f(newdata$frq_hrs, init)
+      y <- f$y
+      
+    } # !params[["id"]]
+  } # end of while
+  
+  if (trace) {
+    message("number of attempts: ", i)
+    cat("max(b):", round(max(y), 1),
+        "\n", "b_max:", round(params[["b_max"]], 1))
+    cat(", error:", round(abs(err), 2), "%", "\n")
+    
+    message("Elapsed time since start:")
+    print(Sys.time() - start_time)
   }
-
+  
+  if (abs(err) >= threshold) 
+    msg_log(
+      style = "error", 
+      message = "Something went wrong!")
+  
   newdata$dur_sec <- y %#% unit
   newdata$dur_mth <- "months" %#% newdata$dur_sec
-
+  
   if (max(newdata$dur_sec) > cutoff) {
-    newdata$color <- as.factor(dplyr::case_when(
-      newdata$dur_sec < cutoff ~ "red",
-      newdata$dur_sec >= cutoff ~ "blue"))
-  } else { newdata$color <- "red" }
-
-  if (trace) print(paste("-- number of attempts:", i))
-
+    newdata$cutoff <- as.factor(dplyr::case_when(
+      newdata$dur_sec < cutoff ~ "Y",
+      newdata$dur_sec >= cutoff ~ "N"))
+  } else { newdata$cutoff <- "Y" }
+  
   newdata$id <- 1:nrow(newdata)
   newdata <- dplyr::left_join(
     newdata,
     data %>% dplyr::select(dti, dti_scale, dti_yn),
     by = "dti")
+  
   return(newdata)
 }
 
@@ -574,21 +601,28 @@ simulate_gps <- function(data,
 #'
 #' @noRd
 #'
-calculate_pars <- function(x, init) {
+update_f <- function(x, init) {
   
   d <- init[1] + 6.756 * init[2]
-  if (!sign(d/init[2]) == 1) return(rep(0, length(x)))
+  if (!sign(d/init[2]) == 1) {
+    return(list(y = rep(0, length(x)), pars = c("b_max" = 0,
+                                                "b_50" = 0,
+                                                "beta" = 0)))
+  }
   
   e <- 1.005511 / 
     ( 1 + exp(1.490650 *
                 (log(d/init[2]) - log(0.202345))) )
   b <- 0.847 + (0.985 - 0.847) * exp(-(init[2]) / 14.297)
-  y <- d / ( 1 + exp(b * (log(x)-log(e))) )
-  return(y)
+  y <- d / ( 1 + exp(b * (log(x) - log(e))) )
+  
+  return(list(y = y, pars = c("b_max" = d,
+                              "b_50" = e,
+                              "beta" = b)))
 }
 
 
-#' Estimate computation time
+#' Rough estimation of computation time
 #'
 #' @description Calculate computation time of ctmm functions.
 #' @keywords internal
@@ -596,94 +630,111 @@ calculate_pars <- function(x, init) {
 #' @noRd
 #'
 guesstimate_time <- function(data, 
-                          fit = NULL,
-                          type = "fit",
-                          trace = FALSE,
-                          parallel = TRUE) {
+                             seed,
+                             type = "fit",
+                             fit = NULL,
+                             with_truth = FALSE,
+                             trace = FALSE,
+                             parallel = TRUE) {
   
-  if (!type %in% c("fit", "speed")) {
+  if (!type %in% c("fit", "speed"))
     stop("type =", type, " is not supported.", call. = FALSE)
-  }
   
-  if (missing(data)) {
-    stop("`data` argument not provided.")
-  }
+  if (missing(data)) stop("`data` not provided.")
+  expt_unit <- "minute"
   
-  units <- "minute"
+  expt <- expt_max <- expt_min <- expt_rng <- 0
+  outputs <- data.frame(expt, expt_min, expt_max, expt_unit, expt_rng)
+  names(outputs) <- c("mean", "min", "max", "unit", "range")
   
-  n <- 500
-  if (nrow(data) < n) {
-    
-    # Does not need to run for smaller datasets:
-    
-    expt <- expt_max <- 1
-    expt_min <- 0
-    expt_units <- units
-    
-  } else {
-    
-    if (type == "fit") {
-      
-      start_test <- Sys.time()
-      tmpdat <- data[1:n, ]
-      
-      guess <- ctmm::ctmm.guess(tmpdat, interactive = FALSE)
-      inputList <- list(list(tmpdat, guess))
-      fit <- par.ctmm.select(inputList, trace = FALSE, parallel = TRUE)
-      
-      total_time <- difftime(Sys.time(), start_test,
-                             units = "secs") %>%
-        as.numeric()
-      
-    } # end of if (type == "fit")
-    
-    if (type == "speed") {
-      
-      if (missing(fit)) {
-        stop("ctmm `fit` object argument not provided.")
-      }
-      
-      n <- 10
-      start_test <- Sys.time()
-      units <- "minute"
-      
-      dti <- data[[2,"t"]] - data[[1,"t"]]
-      tauv <- extract_pars(fit, par = "velocity")
-      m <- ifelse(dti >= 4 * (tauv$value[2] %#% tauv$unit[2]),
-                  1, 90)
-      
-      tmpdat <- data[1:n, ]
-      inputList <- align_lists(list(fit), list(tmpdat))
-      speed <- par.speed(inputList, trace = trace, parallel = parallel)
-      
-      total_time <- difftime(Sys.time(), start_test,
-                             units = "secs") %>%
-        as.numeric() / m
-      
-    } # end of if (type == "speed")
-    
-    expt <- ((total_time/n) * nrow(data))
-    expt <- ceiling(units %#% expt)
-    
-    if (expt >= 15) {
-      expt_max <- round_any(expt, 5, f = ceiling)
-      expt_min <- expt - 5
-    } else if (expt < 15 & expt > 5) {
-      expt_max <- round_any(expt, 1, f = ceiling)
-      expt_min <- expt - 3
-    } else {
-      expt_max <- round_any(expt, 1, f = ceiling)
-      expt_min <- expt_max
+  if (type == "fit") {
+    n <- 4000
+    if (nrow(data) < n) {
+      outputs$range <- paste(
+        "\u2264", ifelse(nrow(data) < 2000, 2, 5), "minutes")
+      outputs$mean <- outputs$max <- 5
+      return(outputs)
     }
+    
+    start <- Sys.time()
+    guess <- ctmm::ctmm.guess(data[1:n, ], interactive = FALSE)
+    fit <- par.ctmm.select(list(list(data[1:n, ], guess)),
+                           trace = FALSE, parallel = TRUE)
+    total_time <- difftime(Sys.time(), start, units = "sec")[[1]]
+    expt <- ((total_time/n) * nrow(data))
+    
+  } # end of if (type == "fit")
+  
+  if (type == "speed") {
+    if (missing(fit)) stop("ctmm `fit` object not provided.")
+    
+    if (is.null(extract_pars(fit, name = "velocity")))
+      return(outputs)
+    
+    dti <- data[[2,"t"]] - data[[1,"t"]]
+    tauv <- extract_pars(fit, name = "velocity")
+    tauv <- tauv$value[2] %#% tauv$unit[2]
+    
+    n <- 1000
+    if (nrow(data) <= n) {
+      m <- 1/nrow(data)
+      if (tauv/dti > 2) expt <- abs(1.511852 + 0.126215 * tauv/dti)
+      if (tauv/dti <= 2) expt <- abs(7.179 - 4.334 * dti/tauv)
+      
+      expt_min <- floor(1 + expt * m * 2) / 2
+      expt <- round_any(1 + expt * m, 1, f = ceiling)
+      
+      outputs[1,1:3] <- c(expt, expt_min, expt)
+      outputs$unit <- fix_unit(expt, "minutes")$unit
+      outputs$range <- paste("\u2264", expt, outputs$unit)
+      return(outputs)
+    }
+    
+    start <- Sys.time()
+    sim <- simulate(fit, t = seq(0, 1 %#% "day", by = tauv/3), seed)
+    speed <- par.speed(align_lists(list(fit), list(sim)),
+                       trace = trace,
+                       parallel = parallel)
+    total_time <- difftime(Sys.time(), start, units = "secs")[[1]]
+    
+    m <- (max(data$t) / (1 %#% "day")) * .01
+    if (tauv/dti > 2) expt <- total_time * m + 0.126215 * tauv/dti
+    if (tauv/dti <= 2) expt <- total_time * m - 4.334 * dti/tauv
+    expt <- min(expt, 60)
+    
+  } # end of if (type == "speed")
+  
+  expt <- expt_unit %#% expt
+  if (with_truth) expt <- 2 + expt * 2
+  
+  tmp_ext <- ceiling(expt_unit %#% expt)
+  if (tmp_ext >= 15) {
+    expt_max <- round_any(tmp_ext, 5, f = ceiling)
+    expt_min <- tmp_ext - 5
+  } else if (tmp_ext < 15 & tmp_ext > 5) {
+    expt_max <- round_any(tmp_ext, 1, f = ceiling)
+    expt_min <- tmp_ext - 2
+  } else if (tmp_ext <= 5) {
+    expt_min <- expt_max <- tmp_ext
   }
   
-  expt_units <- ifelse(expt_max == 1, units, "minutes")
+  if (tmp_ext <= 1) {
+    range <- paste("\u2264", "1", expt_unit)
+  } else {
+    expt_unit <- "minutes"
+    range <- ifelse(expt_min == expt_max,
+                    paste("\u2264", expt_max, expt_unit),
+                    paste(expt_min, "\u2013", expt_max, expt_unit))
+  }
   
-  outputs <- data.frame(expt, expt_min, expt_max, expt_units)
-  names(outputs) <- c("mean", "min", "max", "units")
+  outputs <- data.frame("mean" = expt, 
+                        "min" = expt_min,
+                        "max" = expt_max, 
+                        "unit" = expt_unit,
+                        "range" = range)
   return(outputs)
-  
 }
+
 
 
 #' Calculate distance
@@ -693,24 +744,51 @@ guesstimate_time <- function(data,
 #'
 #' @noRd
 #'
-calc_dist <- function(data) {
+measure_distance <- function(data) {
 
   tmpdat <- data.frame(
     x = data$x,
     y = data$y)
 
   tmpdist <- list()
-  for(i in 2:nrow(data)) {
+  for (i in 2:nrow(data)) {
     tmpdist[[i]] <-
-      sqrt((tmpdat$x[i] - tmpdat$x[i-1])^2 +
-             (tmpdat$y[i] - tmpdat$y[i-1])^2)
+      sqrt((tmpdat$x[i] - tmpdat$x[i - 1])^2 +
+             (tmpdat$y[i] - tmpdat$y[i - 1])^2)
   }
   dist <- c(0, do.call("rbind", tmpdist))
-  return(dist)
 
   # dist <- c(0, sqrt((data$x - lag(data$x))^2 +
   #                     (data$y - lag(data$y))^2)[-1])
-  # return(dist)
+  
+  return(dist)
 
 }
+
+#' Convert to a different unit
+#'
+#' @description Calculate distance traveled
+#' @keywords internal
+#'
+#' @importFrom ctmm `%#%`
+#' @importFrom dplyr `%>%`
+#' @noRd
+#'
+convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
+  if (is.data.frame(x) &&
+      "value" %in% names(x) && "unit" %in% names(x)) {
+    unit <- x$unit
+    x <- x$value
+  } else if (missing(unit)) {
+    stop("'unit' must be specified when passing a single value.")
+  }
+  
+  out <- (new_unit %#% (x %#% unit)) %>% 
+    fix_unit(., new_unit)
+  
+  if (to_text) out <- paste0(out[1], " ", out[2])
+  
+  return(out)
+}
+
 
