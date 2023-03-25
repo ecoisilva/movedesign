@@ -500,7 +500,9 @@ mod_tab_sims_server <- function(id, vals) {
       
       list(input$generateSeed,
            input$tau_p0,
+           input$tau_p0_units,
            input$tau_v0,
+           input$tau_v0_units,
            input$sigma0)
     })
     
@@ -508,18 +510,18 @@ mod_tab_sims_server <- function(id, vals) {
     
     observe({
       req(vals$active_tab == 'sims')
-      reset_data_values(vals)
+      reset_reactiveValues(vals) # reset vals between data tabs
       
     }) %>% # end of observe,
       bindEvent(input$generateSeed)
     
-    ## Calculate deterministic speed: --------------------------------------
+    ## Calculate deterministic speed: -------------------------------------
     
     output$sims_speed <- renderText({
       
-      if(input$sigma0 == "" ||
-         input$tau_p0 == "" ||
-         input$tau_v0 == "") {
+      if (input$sigma0 == "" ||
+          input$tau_p0 == "" ||
+          input$tau_v0 == "") {
         
         v <- data.frame(value = "", unit = "")
         
@@ -582,7 +584,7 @@ mod_tab_sims_server <- function(id, vals) {
       
     }) %>% bindEvent(input$sigma0_units)
     
-    # SIMULATIONS ---------------------------------------------------------
+    # OPERATIONS ----------------------------------------------------------
     ## Generate random seed: ----------------------------------------------
     
     observe({
@@ -599,17 +601,18 @@ mod_tab_sims_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'sims')
       
-      vals$tau_p0 <- data.frame(
-        value = c(NA, input$tau_p0, NA),
-        unit = rep(input$tau_p0_units, 3))
+      vals$tau_p0 <- data.frame(value = c(NA, input$tau_p0, NA),
+                                unit = rep(input$tau_p0_units, 3))
+      rownames(vals$tau_p0) <- c("low", "est", "high")
       
-      vals$tau_v0 <- data.frame(
-        value = c(NA, input$tau_v0, NA),
-        unit = rep(input$tau_v0_units, 3))
+      vals$tau_v0 <- data.frame(value = c(NA, input$tau_v0, NA),
+                                unit = rep(input$tau_v0_units, 3))
+      rownames(vals$tau_v0) <- c("low", "est", "high")
       
-      vals$sigma0 <- data.frame(
-        value = c(NA, input$sigma0, NA),
-        unit = rep(input$sigma0_units, 3))
+      vals$sigma0 <- data.frame(value = c(NA, input$sigma0, NA),
+                                unit = rep(input$sigma0_units, 3))
+      rownames(vals$sigma0) <- c("low", "est", "high")
+      
       vals$is_run <- FALSE
       
     }) %>% bindEvent(saved_pars())
@@ -644,16 +647,13 @@ mod_tab_sims_server <- function(id, vals) {
         tmp_tauv <= 3600 ~ "minutes",
         TRUE ~ "hours")
       
-      # print(paste(vals$dur0, vals$dur0_units))
-      # print(paste(vals$dti0, vals$dti0_units))
-      
       simulate_data(
         mod = vals$ctmm_mod,
         dur = vals$dur0, dur_units = vals$dur0_units,
         dti = vals$dti0, dti_units = vals$dti0_units,
         seed = vals$seed0)
       
-    }) %>%
+    }) %>% # end of reactive, sim0()
       bindCache(input$tau_p0,
                 input$tau_p0_units,
                 input$tau_v0,
@@ -682,7 +682,7 @@ mod_tab_sims_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'sims')
       
-      if(!is.null(vals$seed0)) {
+      if (!is.null(vals$seed0)) {
         
         validate(
           need(input$tau_p0 != '', "Select a value."),
@@ -818,12 +818,12 @@ mod_tab_sims_server <- function(id, vals) {
           html = TRUE,
           size = "xs")
         
-      } # end of if() statement
+      } # end of if () statement
     }) %>% # end of observe,
       bindEvent(to_run())
     
     # PLOTS ---------------------------------------------------------------
-    ### Rendering simulated data plot (xy): -------------------------------
+    ## Rendering simulated data plot (xy): --------------------------------
     
     output$simPlot_id <- ggiraph::renderGirafe({
       req(vals$data0, vals$is_run, vals$data_type == "simulated")
@@ -937,7 +937,7 @@ mod_tab_sims_server <- function(id, vals) {
       
     })
     
-    ### Rendering route (xyt), for 1-day of data: -------------------------
+    ## Rendering route (xyt), for 1-day of data: --------------------------
     
     output$simInput_timeline <- renderUI({
       req(vals$data0, vals$is_run, vals$data_type == "simulated")
@@ -979,7 +979,7 @@ mod_tab_sims_server <- function(id, vals) {
       tmin_elapsed <- paste("minutes" %#% max(dat$t), "minutes")
       
       # Distance traveled:
-      dat$dist <- calc_dist(dat)
+      dat$dist <- measure_distance(dat)
       dist <- paste(
         scales::label_comma(
           accuracy = 1)(sum(dat$dist, na.rm = TRUE)),
@@ -1095,11 +1095,11 @@ mod_tab_sims_server <- function(id, vals) {
       out$time_elapsed <- paste(
         round("days" %#% max(vals$data0$t), 0), "days")
       
-      distances <- calc_dist(vals$data0)
+      distances <- measure_distance(vals$data0)
       tdist <- sum(distances, na.rm = TRUE)
       mdist <- mean(distances)
       
-      if(tdist > 1000) {
+      if (tdist > 1000) {
         out$tdist <- paste(scales::label_comma(
           accuracy = 1)("km" %#% tdist), "km")
       } else {

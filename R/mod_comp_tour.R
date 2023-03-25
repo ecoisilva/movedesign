@@ -63,12 +63,12 @@ mod_comp_tour_server <- function(id, vals) {
       intro <- c(
         intro,
         HTML(paste(
-          span("Warning:", class = "cl-dgr-l"),
+          span("Warning:", class = "cl-dgr"),
           "do not interact with anything outside of highlighted zones",
           "create alongside the tutorial boxes.",
           p(),
           "This tutorial will",
-          span("not", class = "cl-dgr-l"),
+          span("not", class = "cl-dgr"),
           "cover definitions in detail,",
           "but you can check out the more comprehensive",
           fontawesome::fa("circle-question", fill = "white"),
@@ -298,8 +298,8 @@ mod_comp_tour_server <- function(id, vals) {
       
       ## Device tab: ------------------------------------------------------
       
-      tab4 <- paste0("#tab_device_1", "-")
-      element <- c(element, paste0(tab4, "reg_intro"))
+      tab4 <- paste0("#tab_design_1", "-")
+      element <- c(element, paste0(tab4, "dev_intro"))
       intro <- c(
         intro,
         HTML(paste(
@@ -317,7 +317,7 @@ mod_comp_tour_server <- function(id, vals) {
         )))
 
       # c(element, "#content_device-type")
-      element <- c(element, paste0(tab4, "reg_intro")) 
+      element <- c(element, paste0(tab4, "dev_intro")) 
       intro <- c(
         intro,
         HTML(paste(
@@ -333,7 +333,7 @@ mod_comp_tour_server <- function(id, vals) {
           "can be collected."
         )))
 
-      element <- c(element, paste0(tab4, "regBox_gps_device"))
+      element <- c(element, paste0(tab4, "devBox_gps_device"))
       intro <- c(
         intro,
         HTML(paste(
@@ -359,7 +359,7 @@ mod_comp_tour_server <- function(id, vals) {
             "and proceed to the next tutorial box.")
         )))
       
-      element <- c(element, paste0(tab4, "regBox_sampling"))
+      element <- c(element, paste0(tab4, "devBox_sampling"))
       intro <- c(
         intro,
         HTML(paste(
@@ -370,7 +370,7 @@ mod_comp_tour_server <- function(id, vals) {
           "As sampling interval decreases (shorter time between",
           "new fixes), the battery",
           "life of the device decreases until it approaches",
-          wrap_none(span("zero", class = "cl-dgr-l"), "."),
+          wrap_none(span("zero", class = "cl-dgr"), "."),
           p(),
           "For the tutorial, the sampling interval of",
           span("2 hours", class = "cl-sea-l"),
@@ -381,7 +381,7 @@ mod_comp_tour_server <- function(id, vals) {
           "for a clearer view of the curve."
         )))
       
-      element <- c(element, paste0(tab4, "regBox_sampling"))
+      element <- c(element, paste0(tab4, "devBox_sampling"))
       intro <- c(
         intro,
         HTML(paste(
@@ -401,7 +401,7 @@ mod_comp_tour_server <- function(id, vals) {
           "Wait until both are finished before proceeding."
         )))
       
-      element <- c(element, paste0(tab4, "regBox_sizes"))
+      element <- c(element, paste0(tab4, "devBox_sizes"))
       intro <- c(
         intro,
         HTML(paste(
@@ -419,7 +419,7 @@ mod_comp_tour_server <- function(id, vals) {
           "< 5 and", HTML("N<sub>speed</sub>"),"\u2248 165."
         )))
       
-      element <- c(element, paste0(tab4, "regBox_sims"))
+      element <- c(element, paste0(tab4, "devBox_sims"))
       intro <- c(
         intro,
         HTML(paste(
@@ -436,7 +436,7 @@ mod_comp_tour_server <- function(id, vals) {
           em("i.e."), "if the semi-variance reaches an asymptote."
         )))
       
-      element <- c(element, paste0(tab4, "regBox_sizes"))
+      element <- c(element, paste0(tab4, "devBox_sizes"))
       intro <- c(
         intro,
         HTML(paste(
@@ -450,7 +450,7 @@ mod_comp_tour_server <- function(id, vals) {
           )
         )))
       
-      element <- c(element, paste0(tab4, "regBox_summary"))
+      element <- c(element, paste0(tab4, "devBox_summary"))
       intro <- c(
         intro,
         HTML(paste(
@@ -463,7 +463,7 @@ mod_comp_tour_server <- function(id, vals) {
       ## Analyses tab: ----------------------------------------------------
       ### Home range ------------------------------------------------------
 
-      element <- c(element, "#group_design")
+      element <- c(element, "#group_analyses")
       intro <- c(
         intro,
         HTML(paste(
@@ -497,7 +497,7 @@ mod_comp_tour_server <- function(id, vals) {
           "This is the visual output from the",
           span("home range", class = "cl-sea"), "estimation.",
           "You want the 95% CIs (in", wrap_none(
-            span("red", class = "cl-dgr-l"), ")"),
+            span("red", class = "cl-dgr"), ")"),
           "to 'hug' the estimate (in grey)",
           "as much as possible. To show the 95% CIs, click on",
           "the corresponding grey buttons).",
@@ -526,7 +526,7 @@ mod_comp_tour_server <- function(id, vals) {
           wrap_none(
             span("Expected error", style = "color: #bdbdbd;"),
             ", which is the ", span("relative error (in %) ",
-                                    class = "cl-dgr-l"),
+                                    class = "cl-dgr"),
             "of the point estimate (and of the 95% CIs; ",
             "once again, low", HTML("&#x2014"),
             "high) in relation to the expected value (truth) ",
@@ -539,7 +539,7 @@ mod_comp_tour_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Similarly to the plot, you want the",
-          span("expected error", class = "cl-dgr-l"),
+          span("expected error", class = "cl-dgr"),
           "to be low, and the CIs to 'hug' the point estimate",
           "as much as possible. If not, the point estimate is highly",
           "uncertain."

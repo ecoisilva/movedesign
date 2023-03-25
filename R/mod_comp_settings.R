@@ -74,46 +74,41 @@ mod_comp_settings_server <- function(id, vals) {
       vals$parallel <- input$parallel
     }) %>% bindEvent(input$parallel)
 
-    observe({
-
-
-    }) %>% bindEvent(input$lang_select)
-
+    # observe({
+    # 
+    # }) %>% bindEvent(input$lang_select)
+    
     # DYNAMIC UI ELEMENTS -------------------------------------------------
-
+    
     output$text_save <- renderUI({
+      
+      out_text <- "Save all stored values to your local environment."
       if (is.null(vals$data0)) {
-        p(style = "text-align: justify; color: #ffffff;",
+        out_text <- paste(
           "Return here after running any analyses to save",
-          "all stored values to your local environment."
-        )
-      } else {
-        p(style = "text-align: justify",
-          "Save all stored values",
-          "to your local environment."
-        )
+          "all stored values to your local environment.")
       }
-    }) # end of output$text_save
-
+      
+      p(style = "font-size: 14px; text-align: justify; color: #ffffff;",
+        out_text)
+      
+    }) # end of output, "text_save"
+    
     # SETTINGS ------------------------------------------------------------
     ## Save settings/values (for next session): ---------------------------
-
+    
     output$download_settings <- downloadHandler(
       filename = function() {
         paste0("movedesign-settings_", Sys.Date(), ".rds")
       },
       content = function(file) {
         if (is.null(vals$data0)) {
-
-          shiny::showNotification("No data to save",
-                                  type = "error", duration = 8)
-
-        } else {
-          saveRDS(reactiveValuesToList(vals), file = file)
-        }
-      }
-
-    ) # end of output$downloadHandler
+          shiny::showNotification(
+            "No data to save", type = "error", duration = 8)
+        } else { saveRDS(reactiveValuesToList(vals), file = file) }
+        
+      } # end of content
+    ) # end of output, "download_settings"
 
   }) # end of moduleServer
 }

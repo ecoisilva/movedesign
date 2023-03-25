@@ -11,14 +11,13 @@
 mod_tab_data_select_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    shiny::fluidRow(
+    fluidRow(
       
       # Introduction: -----------------------------------------------------
       
-      div(class = div_column_main,
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
           
           shinydashboardPlus::box(
-            
             title = span("Select movement data:", class = "ttl-tab"),
             icon = fontawesome::fa(name = "file-circle-plus",
                                    height = "21px",
@@ -41,8 +40,7 @@ mod_tab_data_select_ui <- function(id) {
                 span("behaves similarly", class = "cl-sea-d"),
                 "to your intended study species,",
                 "as all subsequent steps will built upon these",
-                "parameters.",
-                br()),
+                "parameters.", br()),
               
               p(style = "text-align: center;",
                 "First, choose a species and individual",
@@ -59,7 +57,7 @@ mod_tab_data_select_ui <- function(id) {
       
       # [left column] -----------------------------------------------------
       
-      div(class = div_column_left,
+      div(class = "col-xs-12 col-sm-4 col-md-4 col-lg-3",
           
           # Select species & individual: ----------------------------------
           
@@ -71,32 +69,57 @@ mod_tab_data_select_ui <- function(id) {
             solidHeader = TRUE,
             collapsible = FALSE,
             
-            shinyWidgets::pickerInput(
+            # shinyWidgets::pickerInput(
+            #   inputId = ns("sp_selected"),
+            #   label = NULL,
+            #   choices = ctmm_species,
+            #   choicesOpt = list(
+            #     subtext = c(
+            #       "Syncerus caffer",
+            #       "Pelecanus occidentalis",
+            #       "Nasua narica",
+            #       "Panthera onca",
+            #       "Chrysocyon brachyurus",
+            #       "Procapra gutturosa",
+            #       "Glyptemys insculpta"),
+            #     style = c(rep("font-style: italic;", 7))),
+            #   options = list(`live-search` = TRUE,
+            #                  title = "Pick a species"),
+            #   selected = NULL),
+            
+            shiny::selectizeInput(
               inputId = ns("sp_selected"),
               label = NULL,
-              choices = ctmm_species,
-              choicesOpt = list(
-                subtext = c(
-                  "Syncerus caffer",
-                  "Pelecanus occidentalis",
-                  "Nasua narica",
-                  "Panthera onca",
-                  "Chrysocyon brachyurus",
-                  "Procapra gutturosa",
-                  "Glyptemys insculpta"),
-                style = c(rep("font-style: italic;", 7))),
-              options = list(`live-search` = TRUE,
-                             title = "Pick a species"),
-              selected = NULL),
+              choices = list(
+                "African Buffalo" = "buffalo",
+                "Brown Pelican" = "pelican",
+                "Coati" = "coati",
+                "Jaguar" = "jaguar",
+                "Maned Wolf" = "wolf",
+                "Mongolian Gazelle" = "gazelle",
+                "Wood turtle" = "turtle"),
+              selected = NULL,
+              options = list(
+                placeholder = "Pick a species",
+                onInitialize = I('function() { this.setValue(""); }')
+              )
+            ),
             
-            shinyWidgets::pickerInput(
+            div(
+              class = "text_binom",
+              verbatimTextOutput(outputId = ns("binomial_name"))
+            ),
+            
+            shiny::selectizeInput(
               inputId = ns("id_selected"),
               label = NULL,
               choices = "",
+              selected = NULL,
               multiple = FALSE,
-              options = list(`live-search` = TRUE,
-                             title = "Pick an individual"),
-              selected = NULL),
+              options = list(
+                placeholder = "Pick an individual",
+                onInitialize = I('function() { this.setValue(""); }'))
+            ),
             
             footer = splitLayout(
               uiOutput(ns("selectUI_validate")),
@@ -110,43 +133,12 @@ mod_tab_data_select_ui <- function(id) {
             
           ), # end of box // selectBox_species
           
-          # Select variables: ---------------------------------------------
-          
-          # shinydashboardPlus::box(
-          #   title = span("Variables", class = "ttl-box_solid"),
-          #   id = ns("selectBox_variables"),
-          #   status = "primary",
-          #   width = NULL,
-          #   solidHeader = TRUE,
-          #   collapsible = FALSE, closable = FALSE,
-          #
-          #   selectInput(inputId = ns("selectVar_x"),
-          #               label = "X coordinate:",
-          #               selected = "x",
-          #               choices = ""),
-          #   selectInput(inputId = ns("selectVar_y"),
-          #               label = "Y coordinate:",
-          #               selected = "y",
-          #               choices = ""),
-          #   selectInput(inputId = ns("selectVar_t"),
-          #               label = "Datetime:",
-          #               selected = "timestamp",
-          #               choices = ""),
-          #
-          #   actionButton(
-          #     inputId = ns("selectButton_extract"),
-          #     icon =  icon("paper-plane"),
-          #     label = "Extract",
-          #     width = "100%",
-          #     class = "btn-primary")
-          #
-          # ), # end of box // selectBox_variables
-          
           # Tracking regime: ----------------------------------------------
           
           shinydashboardPlus::box(
             title = span("Tracking regime:", class = "ttl-box"),
             id = ns("selectBox_regime"),
+            status = "info",
             width = NULL,
             solidHeader = FALSE,
             collapsible = TRUE,
@@ -161,7 +153,7 @@ mod_tab_data_select_ui <- function(id) {
       
       # [right column] ----------------------------------------------------
       
-      div(class = div_column_right,
+      div(class = "col-xs-12 col-sm-8 col-md-8 col-lg-9",
           
           # Visualization: ------------------------------------------------
           
@@ -176,20 +168,29 @@ mod_tab_data_select_ui <- function(id) {
             
           ) # end of box // selectBox_viz
           
-      ), # end of column (center)
+      ), # end of column (right)
       
       # [bottom column] ---------------------------------------------------
       
-      div(class = div_column_main,
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
           
-          # Displaying relevant metrics: ----------------------------------
+          # Displaying relevant information: ------------------------------
           
-          ## Extracted parameters:
           div(class = "col-lg-6 no-padding-left",
-              uiOutput(ns("selectUI_parameters"))
+              shinydashboardPlus::box(
+                title = span("Displaying parameters:", class = "ttl-box"),
+                id = ns("selectBox_parameters"),
+                width = NULL,
+                solidHeader = FALSE,
+                
+                ## Extracted parameters:
+                uiOutput(ns("selectUI_parameters"))
+                
+              ) # end of box // selectBox_parameters
           ), # end of div
           
           ## Sample sizes:
+          
           div(class = "col-lg-6 no-padding-right",
               shinydashboardPlus::box(
                 title = span("Displaying sample sizes:",
@@ -199,9 +200,9 @@ mod_tab_data_select_ui <- function(id) {
                 solidHeader = FALSE,
                 
                 fluidRow(
-                  column(width = 4, uiOutput(ns("selectBlock_n"))),
-                  column(width = 4, uiOutput(ns("selectBlock_Narea"))),
-                  column(width = 4, uiOutput(ns("selectBlock_Nspeed"))),
+                  column(width = 4, uiOutput(ns("selBlock_n"))),
+                  column(width = 4, mod_blocks_ui(ns("selBlock_Narea"))),
+                  column(width = 4, mod_blocks_ui(ns("selBlock_Nspeed")))
                 ) # end of fluidRow
                 
               ) # end of box // selectBox_sizes
@@ -223,8 +224,8 @@ mod_tab_data_select_ui <- function(id) {
     
     # MODALS: -------------------------------------------------------------
     
-    create_modal(var = "taup",  id = "select"),
-    create_modal(var = "tauv",  id = "select"),
+    create_modal(var = "taup", id = "select"),
+    create_modal(var = "tauv", id = "select"),
     create_modal(var = "sigma", id = "select"),
     NULL
     
@@ -239,46 +240,72 @@ mod_tab_data_select_server <- function(id, vals) {
     ns <- session$ns
     pal <- load_pal()
     
-    # DYNAMIC UI ELEMENTS -----------------------------------------------
-    ## Hide all boxes at start: -----------------------------------------
-    
-    tmpnames <- c("regime",
-                  "sizes",
-                  "misc")
-    
-    for(i in 1:length(tmpnames)) {
-      shinyjs::hide(id = paste0("selectBox_", tmpnames[i]))
-    }
-    
-    ## Match id for input, plot and table: --------------------------------
+    # MAIN REACTIVE VALUES ------------------------------------------------
+    ## Match id for input, plot and table:
     
     observe({
-      req(input$id_selected)
+      req(input$id_selected != "")
       vals$id <- input$id_selected
+    }) %>% bindEvent(input$id_selected)
+    
+    observe({
+      vals$id <- vals$table_selection
+    })
+    observe({
+      vals$id <- vals$plot_selection
     })
     
     observe({
-      req(vals$table_selection)
-      vals$id <- names(vals$dataList)[vals$table_selection$selected]
-    })
-    
-    observe({
-      req(vals$plot_selection)
-      vals$id <- names(vals$dataList)[
-        match(vals$plot_selection, names(vals$dataList))]
-    })
-    
-    observe({
-      req(vals$dataList, vals$id)
+      req(input$sp_selected != "")
       
-      shinyWidgets::updatePickerInput(
+      shiny::updateSelectizeInput(
         session,
         inputId = "id_selected",
         label = NULL,
-        choices = names(vals$dataList),
-        selected = isolate(vals$id))
+        choices = names(dataset_selected()))
       
-    }) # end of observe
+    }) %>% # end of observe,
+      bindEvent(input$sp_selected)
+    
+    observe({
+      req(vals$active_tab == 'data_select')
+      
+      shiny::updateSelectizeInput(
+        session,
+        inputId = "id_selected",
+        label = NULL,
+        choices = names(dataset_selected()),
+        selected = vals$id)
+      
+    }) %>% bindEvent(vals$id)
+    
+    # DYNAMIC UI ELEMENTS -------------------------------------------------
+    ## Hide all boxes at start: -------------------------------------------
+    
+    boxnames <- c("regime", 
+                  "parameters",
+                  "sizes",
+                  "misc")
+    
+    for (i in 1:length(boxnames)) {
+      shinyjs::hide(id = paste0("selectBox_", boxnames[i]))
+    }
+    
+    ## Add scientific name below common name: -----------------------------
+    
+    output$binomial_name <- renderText({
+      req(input$sp_selected != "")
+      
+      nms <- c("buffalo" = "Syncerus caffer",
+               "pelican" = "Pelecanus occidentalis",
+               "coati" = "Nasua narica",
+               "jaguar" = "Panthera onca",
+               "wolf" = "Chrysocyon brachyurus",
+               "gazelle" = "Procapra gutturosa",
+               "turtle" = "Glyptemys insculpta")
+      
+      return(nms[input$sp_selected][[1]])
+    }) # end of renderText, "binomial_name"
     
     ## Render validate button: --------------------------------------------
     
@@ -302,39 +329,98 @@ mod_tab_data_select_server <- function(id, vals) {
       
       return(out)
       
-    }) # end of renderUI // selectUI_validate
+    }) # end of renderUI, "selectUI_validate"
     
-    # SELECT DATA -------------------------------------------------------
-    ## Select species: --------------------------------------------------
+    ## Render parameters box: ---------------------------------------------
     
-    ### 1.1. Load species data from the 'ctmm' package:
+    output$selectUI_parameters <- renderUI({
+      req(vals$data_type == "selected",
+          vals$tmpid, vals$tmpsp1, vals$tmpsp2)
+      
+      tagList(
+        column(
+          align = "center", width = 12,
+          
+          p("These parameters have been extracted from",
+            "individual", span(vals$tmpid, class = "cl-sea-d"),
+            "and species", span(vals$tmpsp1, class = "cl-sea-d"),
+            wrap_none("(", em(vals$tmpsp2), ")."),
+            "They will only update if you change the",
+            "individual and/or species selected, and then",
+            "click the buttons",
+            icon("wand-magic-sparkles", class = "cl-mdn"),
+            span("Validate", class = "cl-mdn"), "and",
+            icon("paper-plane", class = "cl-mdn"),
+            wrap_none(span("Extract", class = "cl-mdn"), "."))
+          
+        ), # end of column (for text)
+        
+        column(width = 12, uiOutput(ns("selBlock_process"))),
+        
+        fluidRow(
+          column(width = 6, mod_blocks_ui(ns("selBlock_taup"))),
+          column(width = 6, mod_blocks_ui(ns("selBlock_tauv")))),
+        
+        fluidRow(
+          column(width = 6, mod_blocks_ui(ns("selBlock_sigma"))),
+          column(width = 6, mod_blocks_ui(ns("selBlock_speed"))))
+        
+      ) # end of out_ui
+      
+    }) # end of renderUI, "selectUI_parameters"
+    
+    # ALERTS --------------------------------------------------------------
+    
+    ## After clicking "Extract" button:
     
     observe({
-      req(vals$active_tab == 'data_select')
+      req(vals$which_question)
       
-      vals$data0 <- NULL
-      vals$data_type <- "selected"
+      if (is.null(vals$is_valid)) {
+        shinyalert::shinyalert(
+          title = "Oops!",
+          text = tagList(span(
+            'Please select a species and an individual',
+            'first, then click the',
+            icon("wand-magic-sparkles", class = "cl-mdn"),
+            span('Validate', class = "cl-mdn"), "and",
+            icon("paper-plane", class = "cl-mdn"),
+            span('Extract', class = "cl-mdn"),
+            'buttons.'),
+          html = TRUE,
+          size = "xs"))
+      }
       
-      vals$species <- input$sp_selected
-      utils::data(list = vals$species, package = "ctmm")
+    }) %>% # end of observe, then:
+      bindEvent(input$selectButton_extract)
+    
+    # OPERATIONS ----------------------------------------------------------
+    ## 1. Select data: ----------------------------------------------------
+    
+    ### 1.1. Load species dataset from the 'ctmm' package:
+    
+    dataset_selected <- reactive({
+      req(input$sp_selected != "")
+      reset_reactiveValues(vals) # reset vals between data tabs
       
-      tmp <- NULL
-      if (vals$species == "buffalo") tmp <- buffalo
-      if (vals$species == "pelican") tmp <- pelican
-      if (vals$species == "coati") tmp <- coati
-      if (vals$species == "jaguar") tmp <- jaguar
-      if (vals$species == "wolf") tmp <- wolf
-      if (vals$species == "gazelle") tmp <- gazelle
-      if (vals$species == "turtle") tmp <- turtle
+      utils::data(list = input$sp_selected, package = "ctmm")
       
-      req(tmp)
+      out_dataset <- NULL
+      if (input$sp_selected == "buffalo") out_dataset <- buffalo
+      if (input$sp_selected == "pelican") out_dataset <- pelican
+      if (input$sp_selected == "coati") out_dataset <- coati
+      if (input$sp_selected == "jaguar") out_dataset <- jaguar
+      if (input$sp_selected == "wolf") out_dataset <- wolf
+      if (input$sp_selected == "gazelle") out_dataset <- gazelle
+      if (input$sp_selected == "turtle") out_dataset <- turtle
+      
+      req(out_dataset)
       
       # Check if data is anonymized:
       
-      if (!("timestamp" %in% names(tmp[[1]]))) {
+      if (!("timestamp" %in% names(out_dataset[[1]]))) {
         
-        tmp <- pseudonymize(tmp)
-        vals$is_pseudonymized <- TRUE
+        out_dataset <- pseudonymize(out_dataset)
         
         shinyFeedback::showToast(
           type = "success",
@@ -345,144 +431,138 @@ mod_tab_data_select_server <- function(id, vals) {
             progressBar = FALSE,
             closeButton = TRUE,
             preventDuplicates = TRUE,
-            positionClass = "toast-bottom-right")
-        )
+            positionClass = "toast-bottom-right"))
         
         msg_log(
           style = "success",
           message = paste0("Data pseudonymization ",
                            msg_success("completed"), "."),
           detail = "Origin location and time added.")
-        
-      } else { vals$is_pseudonymized <- FALSE }
+      }
       
-      vals$dataList <- tmp
+      vals$species <- input$sp_selected
+      vals$dataList <- out_dataset
+      vals$data_type <- "selected"
+
+      index <- rownames(vals$ctmm) %>% match(x = input$sp_selected)
+      vals$species_common <- vals$ctmm[index, 1]
+      vals$species_binom <- vals$ctmm[index, 2]
       
-      shinyWidgets::updatePickerInput(
-        session,
-        inputId = "id_selected",
-        label = NULL,
-        choices = names(vals$dataList))
+      vals$id <- NULL
+      return(out_dataset)
       
-    }) %>% # end of observe
+    }) %>% # end of reactive,
       bindEvent(input$sp_selected)
     
     # 1.2. Subset data based on individual selection:
-
-    observe({
-      req(vals$dataList,
-          vals$id,
-          vals$active_tab == 'data_select')
+    
+    data_selected <- reactive({
       
-      vals$is_valid <- FALSE
-      df_subset <- vals$dataList[[vals$id]]
-
-      index <- ctmm_species %>% match(x = vals$species)
-      vals$species_common <- names(ctmm_species[index])
-      vals$species_binom <- names(ctmm_species_binom[index])
-      vals$data0 <- df_subset
+      out_data <- dataset_selected()[[vals$id]]
+      vals$input_x <- ifelse(!is.null(out_data$"x"),
+                             "x", "longitude")
+      vals$input_y <- ifelse(!is.null(out_data$"y"),
+                             "y", "latitude")
+      vals$input_t <- ifelse(!is.null(out_data$"timestamp"),
+                             "timestamp", "t")
       
-      # shinyjs::enable("selectButton_extract")
+      return(out_data)
+    })
+    
+    ## 2. Validate data: --------------------------------------------------
+    
+    guess <- reactive({
+      ctmm::ctmm.guess(dataset_selected()[[vals$id]],
+                       interactive = FALSE)
+    })
+    
+    fit_selected <- reactive({
       
-    }) %>% # end of observe,
-      bindEvent(input$id_selected, ignoreInit = TRUE)
-
-    ## Validate data: ---------------------------------------------------
-
-    observe({
-      if (is.null(vals$which_question)) {
-
-        shinyalert::shinyalert(
-          title = "No research goal selected",
-          text = span(
-            "Please select a research goal in the",
-            icon("house", class = "cl-blk"),
-            span("Home", class = "cl-blk"),
-            "tab before proceeding."),
-          html = TRUE,
-          size = "xs")
-      }
-      
-      req(vals$which_question,
-          vals$data0, vals$id)
-      
-      ### Model fitting:
-
-      guess <- reactive({
-        ctmm::ctmm.guess(vals$data0, interactive = FALSE)
-      }) %>% bindCache(vals$species_binom,
-                       vals$id)
-      
-      vals$guess <- guess()
-
       msg_log(
         style = "warning",
         message = paste0("Model fit ",
                          msg_warning("found"), "..."))
-
+      
       fitList <- readRDS(
         system.file("extdata",
-                    paste0(vals$species, "_fitList.rds"),
+                    paste0(input$sp_selected, "_fitList.rds"),
                     package = "movedesign"))
-
-      msg_log(
-        style = "success",
-        message = paste0("Model fit ",
-                         msg_success("loaded"), "."))
       
-      vals$fit0 <- fitList[[vals$id]][[1]]
-      vals$needs_fit <- FALSE
-      rm(fitList)
-
+      msg_log(paste0("...Model fit ",
+                    msg_success("loaded"), "."))
+      
+      out_fit <- fitList[[vals$id]][[1]]
+      vals$fit0 <- out_fit
+      vals$guess0 <- guess()
+      return(out_fit)
+      
+    }) # end of reactive // fit_selected
+    
+    observe({
+      
+      if (is.null(vals$which_question)) {
+        
+        shinyalert::shinyalert(
+          title = "No research goal selected",
+          text = tagList(span(
+            "Please select a research question in the",
+            icon("house", class = "cl-blk"),
+            span("Home", class = "cl-blk"),
+            "tab before proceeding.")),
+          html = TRUE,
+          size = "xs")
+      }
+      
+    }) %>% bindEvent(input$validate_select)
+    
+    is_valid <- reactive({
+      req(vals$dataList, input$id_selected != "")
+      
       ### Set up for validation:
       
-      taup <- extract_pars(vals$fit0, par = "position")
-      tauv <- extract_pars(vals$fit0, par = "velocity")
-
-      ### Validate based on research questions:
+      taup <- extract_pars(fit_selected(), name = "position")
+      tauv <- extract_pars(fit_selected(), name = "velocity")
       
-      vals$is_valid <- TRUE
+      ### Validate based on research question(s):
+      
+      is_data_valid <- FALSE
       if (is.null(taup) && is.null(tauv)) {
         
         shinyalert::shinyalert(
           type = "error",
-
           title = "Dataset invalid",
-          text = span(
+          text = tagList(span(
             "Data is",
             wrap_none(span("independent", class = "cl-dgr"), ","),
             "and no signature of autocorrelation parameters",
             "remains in this dataset.",
             "Please select a different individual or dataset to",
             "proceed with", span("home range", class = "cl-dgr"),
-            "estimation."),
-
+            "estimation.")),
+          
           confirmButtonText = "Dismiss",
           html = TRUE)
+
+      } else if ("Home range" %in% vals$which_question) {
+        is_data_valid <- TRUE
         
-        vals$is_valid <- NULL
-      }
-      
-      req(vals$is_valid)
-      
-      if ("Home range" %in% vals$which_question) {
         if (is.null(taup)) {
           
           shinyalert::shinyalert(
             type = "error",
             
             title = "Dataset invalid",
-            text = span(
+            text = tagList(span(
               "No significant signature of the animal's",
               span("position autocorrelation", class = "cl-dgr"),
               "parameter remains in this dataset.",
               "Please select a different individual or dataset to",
               "proceed with", span("home range", class = "cl-dgr"),
-              "estimation."),
+              "estimation.")),
             
             confirmButtonText = "Dismiss",
             html = TRUE)
-
+          
           msg_log(
             style = "danger",
             message = paste("No signature of",
@@ -490,55 +570,57 @@ mod_tab_data_select_server <- function(id, vals) {
                             "found."),
             detail = "Select a different dataset to proceed.")
           
-          vals$is_valid <- NULL
+          is_data_valid <- FALSE
         }
-      }
-
-      if ("Speed & distance" %in% vals$which_question) {
+        
+      } else if ("Speed & distance" %in% vals$which_question) {
+        is_data_valid <- TRUE
+        
         if (is.null(tauv)) {
-
+          
           shinyalert::shinyalert(
             type = "error",
-
             title = "Dataset invalid",
-            text = span(
+            text = tagList(span(
               "No significant signature of the animal's",
               span("velocity autocorrelation", class = "cl-dgr"),
               "parameter remains in this dataset.",
               "Please select a different individual or dataset to",
               "proceed with", span("distance/speed", class = "cl-dgr"),
-              "estimation."),
-
+              "estimation.")),
+            
             confirmButtonText = "Dismiss",
             html = TRUE)
-
+          
           msg_log(
             style = "danger",
             message = paste("No signature of",
                             msg_danger("velocity autocorrelation"),
                             "found."),
             detail = "Select a different dataset to proceed.")
-
-          vals$is_valid <- NULL
+          
+          is_data_valid <- NULL
         }
       }
+      
+      req(vals$id)
+      vals$data0 <- data_selected()
+      vals$is_valid <- is_data_valid
+      return(is_data_valid)
+      
+    }) # end of reactive
 
-      req(vals$is_valid)
-      vals$input_x <- ifelse(!is.null(vals$data0$"x"),
-                             "x", "longitude")
-      vals$input_y <- ifelse(!is.null(vals$data0$"y"),
-                             "y", "latitude")
-      vals$input_t <- ifelse(!is.null(vals$data0$"timestamp"),
-                             "timestamp", "t")
+    observe({
+      req(is_valid())
 
       msg_log(
         style = "success",
         message = paste0("Species and individual ",
                          msg_success("validated"), "."),
         detail = paste0("Species selected is the ",
-                        msg_success(vals$species),
+                        msg_success(input$sp_selected),
                         ", and the individual is ",
-                        msg_success(vals$id), "."))
+                        msg_success(input$id_selected), "."))
       
       shinyFeedback::showToast(
         type = "success",
@@ -549,123 +631,47 @@ mod_tab_data_select_server <- function(id, vals) {
           progressBar = FALSE,
           closeButton = TRUE,
           preventDuplicates = TRUE,
-          positionClass = "toast-bottom-right"
-        )
+          positionClass = "toast-bottom-right")
       )
-
-      # if (!input$select_intro$collapsed &&
-      #    vals$tour_active) { NULL } else {
-      #      shinydashboardPlus::updateBox("select_intro",
-      #                                    action = "toggle")
-      #    }
-
+      
     }) %>% # end of observe,
       bindEvent(input$validate_select)
 
-    # PARAMETERS --------------------------------------------------------
-    # After clicking "Extract" button:
-
+    # PARAMETERS ----------------------------------------------------------
+    ## Extract spatial variance, timescales, etc.: ------------------------
+    
+    extract_sigma <- reactive({
+      if (is.null(vals$var_fraction)) frac <- .65
+      else frac <- vals$var_fraction
+      
+      svf <- extract_svf(data_selected(), fraction = frac)
+      vals$svf <- svf
+      
+      return(extract_pars(obj = vals$fit0, 
+                          name = "sigma", 
+                          data = vals$data0,
+                          fraction = frac))
+      
+    }) # end of reactive
+    
     observe({
-      req(vals$which_question)
-      shinyjs::show(id = "selectBox_regime")
-
-      if (is.null(vals$is_valid)) {
-
-        shinyalert::shinyalert(
-          title = "Oops!",
-          text = span(
-            'Please select a species and an individual',
-            'first, then click the',
-            icon("wand-magic-sparkles", class = "cl-mdn"),
-            span('Validate', class = "cl-mdn"), "and",
-            icon("paper-plane", class = "cl-mdn"),
-            span('Extract', class = "cl-mdn"),
-            'buttons.'),
-          html = TRUE,
-          size = "xs")
-        
-      }
-
-      req(vals$data_type == "selected",
+      req(vals$which_question,
+          vals$data_type == "selected",
           vals$data0, vals$is_valid)
       
+      shinyjs::show(id = "selectBox_parameters")
+      shinyjs::show(id = "selectBox_regime")
       shinyjs::show(id = "selectBox_sizes")
-
+      
+      vals$sigma0 <- extract_sigma()
+      vals$tau_p0 <- extract_pars(fit_selected(), name = "position")
+      vals$tau_v0 <- extract_pars(fit_selected(), name = "velocity")
+      vals$speed0 <- extract_pars(fit_selected(), name = "speed")
+      
       vals$tmpsp1 <- vals$species_common
       vals$tmpsp2 <- vals$species_binom
       vals$tmpid <- vals$id
-
-      ## Extract semi-variance parameter: -------------------------------
       
-      if (is.null(vals$var_fraction)) frac <- .65
-      else frac <- vals$var_fraction
-
-      svf <- extract_svf(vals$data0, fraction = frac)
-      vals$svf <- svf
-      vals$sigma0 <- extract_pars(obj = vals$fit0, 
-                                  par = "sigma", 
-                                  data = vals$data0,
-                                  fraction = frac)
-      
-      ## Extract timescale and spatial parameters: ----------------------
-
-      taup <- extract_pars(vals$fit0, par = "position")
-      vals$tau_p0 <- taup
-
-      tauv <- extract_pars(vals$fit0, par = "velocity")
-      vals$tau_v0 <- tauv
-      
-      output$selectUI_parameters <- renderUI({
-
-        shinydashboardPlus::box(
-          title = span("Displaying parameters:", class = "ttl-box"),
-          id = ns("selectBox_parameters"),
-          width = NULL,
-          solidHeader = FALSE,
-
-          column(
-            align = "center", width = 12,
-
-            renderUI({
-              req(vals$tmpid)
-              
-              if (vals$tmpid == "Simulated individual") {
-                NULL
-              } else {
-                req(vals$tmpid, vals$tmpsp1, vals$tmpsp2)
-
-                p("These parameters have been extracted from",
-                  "individual", span(vals$tmpid, class = "cl-sea-d"),
-                  "and species", span(vals$tmpsp1, class = "cl-sea-d"),
-                  wrap_none("(", em(vals$tmpsp2), ")."),
-                  "They will only update if you change the",
-                  "individual and/or species selected, and then",
-                  "click the buttons",
-                  icon("wand-magic-sparkles", class = "cl-mdn"),
-                  span("Validate", class = "cl-mdn"), "and",
-                  icon("paper-plane", class = "cl-mdn"),
-                  wrap_none(span("Extract", class = "cl-mdn"), "."))
-
-              } # end of if () statement
-            }) # end of renderUI
-
-          ), # end of column (for text)
-
-          column(width = 12, uiOutput(ns("selectBlock_process"))),
-
-          fluidRow(
-            column(width = 6, uiOutput(ns("selectBlock_taup"))),
-            column(width = 6, uiOutput(ns("selectBlock_tauv")))
-          ),
-
-          fluidRow(
-            column(width = 6, uiOutput(ns("selectBlock_sigma"))),
-            column(width = 6, uiOutput(ns("selectBlock_speed")))
-          )
-
-        ) # end of box
-      }) # end of renderUI
-
       shinyFeedback::showToast(
         type = "success",
         message = "Parameters extracted!",
@@ -676,42 +682,43 @@ mod_tab_data_select_server <- function(id, vals) {
           closeButton = TRUE,
           preventDuplicates = TRUE,
           positionClass = "toast-bottom-right"))
-
+      
       msg_log(
         style = "success",
         message = paste0("Parameters ",
                          msg_success("extracted"), "."),
         detail = paste("Proceed to",
-                        msg_success('Sampling design'), "tab."))
+                       msg_success('Sampling design'), "tab."))
       
       if (!vals$tour_active) {
         shinyalert::shinyalert(
           className = "modal_success",
           type = "success",
           title = "Success!",
-          html = TRUE,
-          text = span(
+          text = tagList(span(
             "Proceed to the", br(),
             icon("stopwatch", class = "cl-mdn"),
-            span('Tracking regime', class = "cl-mdn"), "tab."),
+            span("Tracking regime", class = "cl-mdn"), "tab."
+          )),
+          html = TRUE,
           size = "xs")
       }
       
     }) %>% # end of observe, then:
       bindEvent(input$selectButton_extract)
-
-    # BLOCKS ------------------------------------------------------------
-    ## Movement process: ------------------------------------------------
-
-    output$selectBlock_process <- shiny::renderUI({
+    
+    # BLOCKS --------------------------------------------------------------
+    ## Movement process: --------------------------------------------------
+    
+    output$selBlock_process <- shiny::renderUI({
       req(vals$tmpid, vals$fit0)
-
+      
       if (vals$tmpid == "Simulated individual") {
         NULL } else {
           sum.fit <- summary(vals$fit0)
-
+          
           parBlock(
-            header = shiny::fluidRow(
+            header = fluidRow(
               style = paste("margin-bottom: -14px;"),
               actionButton(
                 inputId = ns("selectHelp_mods"),
@@ -720,309 +727,185 @@ mod_tab_data_select_server <- function(id, vals) {
                 style = paste("background-color: #fff;",
                               "color: black;",
                               "padding: 0;")),
-              br(), "Movement process"
-            ),
+              br(), "Movement process"),
             value = sum.fit$name[1])
-
+          
         } # end of if () statement
-    }) # end of renderUI
-
-    ## Timescale parameters: --------------------------------------------
-
-    output$selectBlock_taup <- shiny::renderUI({
-      req(vals$tmpid, vals$fit0, vals$tau_p0)
-
-      if (vals$tmpid == "Simulated individual") {
-        NULL } else {
-
-          par <- vals$tau_p0
-          tau_p0 <- fix_unit(par["est", 1], par$unit[1])
-          tau_p0_min <- scales::label_comma(.1)(par["low", 1])
-          tau_p0_max <- scales::label_comma(.1)(par["high", 1])
-
-          parBlock(
-            header = shiny::fluidRow(
-              style = paste("margin-bottom: -14px;"),
-              actionButton(
-                inputId = ns("selectHelp_taup"),
-                icon = icon("circle-question"),
-                label = NULL,
-                style = paste("background-color: #fff;",
-                              "color: black;",
-                              "padding: 0;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_taup_select"),
-              br(),
-              wrap_none("Position autocorrelation ",
-                        "(\u03C4", tags$sub("p"), ")")
-            ),
-            value = paste(tau_p0$value, tau_p0$unit),
-            subtitle = paste(ifelse(tau_p0_min == 0,
-                                    "0", tau_p0_min),
-                             "\u2014", tau_p0_max))
-
-        } # end of if () statement
-    }) # end of renderUI
-
-    output$selectBlock_tauv <- shiny::renderUI({
-      req(vals$tmpid, vals$fit0, vals$tau_v0)
-
-      if (vals$tmpid == "Simulated individual") {
-        NULL } else {
-
-          par <- vals$tau_v0
-          tau_v0 <- fix_unit(par["est", 1], par$unit[1])
-          tau_v0_min <- scales::label_comma(.1)(par["low", 1])
-          tau_v0_max <- scales::label_comma(.1)(par["high", 1])
-
-          parBlock(
-            header = shiny::fluidRow(
-              style = paste("margin-bottom: -14px;"),
-              actionButton(
-                inputId = ns("selectHelp_tauv"),
-                icon = icon("circle-question"),
-                label = NULL,
-                style = paste("background-color: #fff;",
-                              "color: black;",
-                              "padding: 0;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_tauv_select"),
-              br(),
-              wrap_none("Velocity autocorrelation ",
-                        "(\u03C4", tags$sub("v"), ")")
-            ),
-            value = paste(tau_v0$value, tau_v0$unit),
-            subtitle = paste(ifelse(tau_v0_min == 0,
-                                    "0", tau_v0_min),
-                             "\u2014", tau_v0_max))
-
-        } # end of if () statement
-    }) # end of renderUI
-
-    ## Other parameters: --------------------------------------------------
+    }) # end of renderUI, "selBlock_process"
     
-    output$selectBlock_sigma <- shiny::renderUI({
-      req(vals$tmpid, vals$fit0, vals$sigma0)
+    ## Timescale parameters: ----------------------------------------------
+    
+    observe({
+      req(vals$tau_p0)
+      
+      mod_blocks_server(
+        id = "selBlock_taup", 
+        vals = vals, type = "tau", name = "tau_p0",
+        input_name = list(
+          chr = "select_taup0",
+          html = wrap_none("Position autocorrelation ",
+                           "(\u03C4", tags$sub("p"), ")")),
+        input_modal = "modal_taup_select")
+    })
+    
+    observe({
+      req(vals$tau_v0)
+      
+      mod_blocks_server(
+        id = "selBlock_tauv",
+        vals = vals, type = "tau", name = "tau_v0",
+        input_name = list(
+          chr = "select_tauv0",
+          html = wrap_none("Velocity autocorrelation ",
+                           "(\u03C4", tags$sub("v"), ")")),
+        input_modal = "modal_tauv_select")
+    })
+    
+    ## Spatial variance: --------------------------------------------------
+    
+    observe({
+      req(vals$sigma0)
+      
+      mod_blocks_server(
+        id = "selBlock_sigma",
+        vals = vals, type = "sigma", name = "sigma0",
+        input_name = list(
+          chr = "select_sigma0",
+          html = span(HTML("Semi-variance (\u03C3)"))),
+        input_modal = "modal_sigma_select")
+    })
+    
+    ## Speed: -------------------------------------------------------------
+    
+    observe({
+      req(vals$speed0)
 
-      if (vals$tmpid == "Simulated individual") {
-        NULL } else {
-
-          par <- vals$sigma0
-          sig <- fix_unit(par$value[2], unit = par$unit[2],
-                           convert = TRUE, ui = TRUE)
-          sig_lci <- fix_unit(par$value[1], unit = par$unit[1],
-                               convert = TRUE, ui = TRUE)
-          sig_uci <- fix_unit(par$value[3], unit = par$unit[3],
-                               convert = TRUE, ui = TRUE)
-
-          parBlock(
-            header = shiny::fluidRow(
-              style = paste("margin-bottom: -14px;"),
-              actionButton(
-                inputId = ns("selectHelp_sigma"),
-                icon = icon("circle-question"),
-                label = NULL,
-                style = paste("background-color: #fff;",
-                              "color: black;",
-                              "padding: 0;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_sigma_select"),
-              br(),
-              span(HTML("Semi-variance (\u03C3)"))
-            ),
-            value = span(HTML("&nbsp;", sig$value, sig$unit)),
-            subtitle =  paste(ifelse(sig_lci$value == 0,
-                                     "0", sig_lci$value),
-                              "\u2014", sig_uci$value))
-
-        } # end of if () statement
-    }) # end of renderUI
-
-    output$selectBlock_speed <- shiny::renderUI({
-      req(vals$tmpid, vals$fit0)
-
-      if (vals$tmpid == "Simulated individual") {
-        NULL } else {
-
-          par <- extract_pars(vals$fit0, par = "speed")
-          speed <- fix_unit(par["est", 1], par$unit[1])
-          speed_lci <- scales::label_comma(.1)(par["low", 1])
-          speed_uci <- scales::label_comma(.1)(par["high", 1])
-          unit <- speed$unit %>% abbrv_unit()
-
-          parBlock(
-            header = shiny::fluidRow(
-              style = paste("margin-bottom: -14px;"),
-              actionButton(
-                inputId = ns("selectHelp_speed"),
-                icon = icon("circle-question"),
-                label = NULL,
-                style = paste("background-color: #fff;",
-                              "color: black;",
-                              "padding: 0;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_speed_select"),
-              br(),
-              span(HTML("Velocity (\u03BD)"))
-            ),
-            value = span(HTML("&nbsp;", speed$value, unit)),
-            subtitle =  paste(ifelse(speed_lci == 0,
-                                     "0", speed_lci),
-                              "\u2014", speed_uci))
-
-        } # end of if () statement
-    }) # end of renderUI
-
-    ##  Tracking regime: --------------------------------------------------
-
+      mod_blocks_server(
+        id = "selBlock_speed",
+        vals = vals, type = "speed", name = "speed0",
+        input_name = list(
+          chr = "select_speed0",
+          html = span(HTML("Velocity (\u03BD)"))),
+        input_modal = "modal_speed_select")
+      
+    })
+    
+    ## Tracking regime: ---------------------------------------------------
+    
     output$selectInfo_dur <- shiny::renderUI({
       req(vals$data0)
-
-      dur <- extract_pars(vals$data0, par = "period")
+      
+      dur <- extract_pars(vals$data0, name = "period")
       out <- fix_unit(dur$value, dur$unit)
-
+      
       parBlock(header = "Sampling duration",
                value = paste(out[1], out[2]))
-
+      
     }) # end of renderUI // selectInfo_dur
-
+    
     output$selectInfo_dti <- shiny::renderUI({
       req(vals$data0)
-
-      dti <- extract_pars(vals$data0, par = "interval")
+      
+      dti <- extract_pars(vals$data0, name = "interval")
       out <- fix_unit(dti$value, dti$unit)
-
+      
       parBlock(header = "Sampling interval",
                value = paste(out[1], out[2]),
                subtitle = "between fixes")
-
+      
     }) # end of renderUI // selectInfo_dti
     
     ## Sample sizes: ------------------------------------------------------
-
-    output$selectBlock_n <- shiny::renderUI({
+    
+    output$selBlock_n <- shiny::renderUI({
       req(vals$data0)
-
+      
       sampleBlock(
+        number = NULL,
         numberIcon = FALSE,
         header = nrow(vals$data0),
         line1 = "Absolute sample size",
         line2 = "(n)",
         rightBorder = FALSE,
         marginBottom = TRUE)
-
-    }) # end of renderUI // selectBlock_n (absolute sample size)
-
-    output$selectBlock_Narea <- shiny::renderUI({
-      req(vals$fit0)
-
-      N <- extract_dof(vals$fit0, par = "area")
-      n <- nrow(vals$data0)
-      vals$N1 <- N
-
-      value <- paste0(
-        "-", round((100 - ((N * 100) / n)), 1), "%")
-
-      sampleBlock(
-        number = value,
-        numberIcon = TRUE,
-        header = round(N, 1),
-        line1 = "Effective sample size",
-        line2 = HTML(paste0("(N", tags$sub("area"), ")")),
-        rightBorder = FALSE,
-        marginBottom = FALSE)
-
-    }) # end of renderUI // selectBlock_Narea (effective)
-
-    output$selectBlock_Nspeed <- shiny::renderUI({
-      req(vals$fit0)
-
-      N <- extract_dof(vals$fit0, par = "speed")
-      n <- nrow(vals$data0)
-      vals$N2 <- N
-
-      value <- paste0(
-        "-", round((100 - ((N * 100) / n)), 1), "%")
-
-      sampleBlock(
-        number = value,
-        numberIcon = TRUE,
-        header = round(N, 1),
-        line1 = "Effective sample size",
-        line2 = wrap_none("(N", tags$sub("speed"), ")"),
-        rightBorder = FALSE,
-        marginBottom = FALSE)
-
-    }) # end of renderUI // selectBlock_Nspeed (effective)
-
-    # MODALS & HELP -----------------------------------------------------
-
+      
+    }) # end of renderUI, "uplBlock_n" (absolute sample size)
+    
     observe({
-
+      req(vals$fit0)
+      
+      mod_blocks_server(
+        id = "selBlock_Narea", 
+        vals = vals, data = vals$data0, fit = vals$fit0,
+        type = "N", name = "area")
+    
+      mod_blocks_server(
+        id = "selBlock_Nspeed", 
+        vals = vals, data = vals$data0, fit = vals$fit0,
+        type = "N", name = "speed")
+      
+    }) # end of observe
+    
+    # MODALS & HELP -------------------------------------------------------
+    
+    observe({
       shiny::showModal(
         shiny::modalDialog(
           title = "Movement models or processes:",
-
-          reactable::reactableOutput(ns("dataTable_processes")),
-
-          footer = tagList(
-            modalButton("Dismiss")
-          ),
+          
+          reactable::reactableOutput(ns("selTable_models")),
+          
+          footer = tagList(modalButton("Dismiss")),
           size = "l"))
-
-    }) %>% bindEvent(input$selectHelp_mods)
+      
+    }) %>% # end of observe,
+      bindEvent(input$selectHelp_mods)
     
-    output$dataTable_processes <- reactable::renderReactable({
-
+    output$selTable_models <- reactable::renderReactable({
       mods <- movedesign::movmods
-      nm <- sub('(^\\w+)\\s.+','\\1', 
-                summary(vals$fit0)$name[1])
 
-      if (is.null(match(nm, mods$name_short))) {
-        preselected_mod <- NULL
-      } else {
-        preselected_mod <- match(nm, mods$name_short)
+      nm <- sub('(^\\w+)\\s.+','\\1', 
+                summary(fit_selected())$name[1])
+      
+      preselected_mod <- NULL
+      if (!is.null(match(nm, mods$name_short))) {
+        preselected_mod <- match(nm, mods$name_short) 
+      }
+      out <- mods %>% dplyr::select(!.data$name_short)
+      
+      cell_yn <- function(value) {
+        # Render as an X mark or check mark
+        if (value == "No") "\u274c No" else "\u2714\ufe0f Yes"
       }
       
-      out <- mods %>% dplyr::select(!.data$name_short)
-
       reactable::reactable(
         out,
-        searchable = TRUE,
+        searchable = FALSE,
         highlight = TRUE,
         defaultSelected = preselected_mod,
-        defaultColDef =
-          reactable::colDef(
-            headerClass = "rtable_header",
-            align = "left"),
+        defaultColDef = reactable::colDef(
+          headerClass = "rtable_header",
+          align = "left"),
         columns = list(
           name = reactable::colDef(
             name = "Movement process",
             minWidth = 195),
-
+          
           tau_p = reactable::colDef(
             minWidth = 60,
             name = paste0("\u03C4","\u209A"),
-            cell = reactable::JS(
-              paste0("function(cellInfo) {
-                // Render as an X mark or check mark
-                return cellInfo.value === 'No' ? '\u274c No' : ",
-                     "'\u2714\ufe0f Yes'}"))),
-
+            cell = cell_yn),
+          
           tau_v = reactable::colDef(
             minWidth = 60,
             name = paste0("\u03C4","\u1D65"),
-            cell = reactable::JS(
-              paste0("function(cellInfo) {
-                // Render as an X mark or check mark
-                return cellInfo.value === 'No' ? '\u274c No' : ",
-                     "'\u2714\ufe0f Yes'}"))),
-
+            cell = cell_yn),
+          
           hrange = reactable::colDef(
             minWidth = 80,
             name = "Home range",
-            cell = reactable::JS(
-              paste0("function(cellInfo) {
-                // Render as an X mark or check mark
-                return cellInfo.value === 'No' ? '\u274c No' : ",
-                     "'\u2714\ufe0f Yes'}"))),
-
+            cell = cell_yn),
+          
           pars = reactable::colDef(
             name = "Parameterization")
         ),
@@ -1030,18 +913,8 @@ mod_tab_data_select_server <- function(id, vals) {
           rowSelectedStyle = list(
             backgroundColor = "#eee",
             boxShadow = "inset 2px 0 0 0 #009da0")))
-
-    }) # end of renderReactable // dataTable_processes
-
-    # Additional information: -------------------------------------------
-
-    output$selectUI_time <- renderText({
-      req(vals$selectOut_time)
-
-      paste0("Model fitting took approximately ",
-             round(vals$selectOut_time, 1), " minutes.")
-
-    }) # end of renderText // selectOut_time
+      
+    }) # end of renderReactable // selTable_models
     
   }) # end of moduleServer
 }

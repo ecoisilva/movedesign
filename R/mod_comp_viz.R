@@ -96,7 +96,6 @@ mod_comp_viz_ui <- function(id) {
 mod_comp_viz_server <- function(id, vals) {
   moduleServer( id, function(input, output, session) {
     ns <- session$ns
-    
     pal <- load_pal()
 
     observe({
@@ -120,54 +119,26 @@ mod_comp_viz_server <- function(id, vals) {
 
     # SUMMARIZE DATA ----------------------------------------------------
 
-    observe({ # First, create data summary:
+    data_summary <- reactive({
       req(vals$dataList)
       
-      # Check if data is anonymized:
-      
-      if (!("timestamp" %in% names(vals$dataList[[1]]))) {
-
-        vals$dataList <- pseudonymize(vals$dataList)
-        vals$is_pseudonymized <- TRUE
-        
-        shinyFeedback::showToast(
-          type = "success",
-          title = "Data is anonymized...",
-          message = "Origin location and time added.",
-          .options = list(
-            timeOut = 2500,
-            progressBar = FALSE,
-            closeButton = TRUE,
-            preventDuplicates = TRUE,
-            positionClass = "toast-bottom-right"
-          )
-        )
-        
-        msg_log(
-          style = "success",
-          message = paste0("Data pseudonymization ",
-                           msg_success("completed"), "."),
-          detail = "Origin location and time added.")
-
-      } else { vals$is_pseudonymized <- FALSE }
-      
-      dfList <- as_tele_list(vals$dataList)
+      dfList <- as_tele_list(isolate(vals$dataList))
       sumdfList <- summary(dfList)
       
-      for(i in 1:length(dfList)) {
+      for (i in 1:length(dfList)) {
         sumdfList$n[i] <- nrow(dfList[[i]])
       }
-
+      
       sum_col1 <- grep("period", names(sumdfList))
       sum_col2 <- grep("interval", names(sumdfList))
       sumdfList[,sum_col1] <- round(sumdfList[sum_col1], 1)
       sumdfList[,sum_col2] <- round(sumdfList[sum_col2], 1)
       sumdfList <- sumdfList %>% 
         dplyr::select(-longitude, -latitude)
-
-      vals$sum <- sumdfList
       
-    }) # end of observe
+      return(sumdfList)
+      
+    })
 
     output$dataTable_showVars <- renderUI({
       req(vals$input_x,
@@ -204,7 +175,7 @@ mod_comp_viz_server <- function(id, vals) {
           newdat.all <- as_tele_df(vals$dataList)
         } else {
           data_df <- list()
-          for(i in 1:length(vals$dataList)) {
+          for (i in 1:length(vals$dataList)) {
             tmp <- vals$dataList[i]
             if (names(vals$dataList)[i] == "gps") {
               tmp <- tmp@.Data[1] %>% as.data.frame
@@ -292,8 +263,11 @@ mod_comp_viz_server <- function(id, vals) {
     }) # end of renderGirafe
 
     observe({
-      req(input$dataPlot_all_selected)
-      vals$plot_selection <- input$dataPlot_all_selected
+      req(vals$dataList,
+          input$dataPlot_all_selected)
+      
+      vals$plot_selection <- names(vals$dataList)[
+        match(input$dataPlot_all_selected, names(vals$dataList))]
     })
 
     ## Rendering individual data (xy): ----------------------------------
@@ -424,10 +398,9 @@ mod_comp_viz_server <- function(id, vals) {
     ## Table for summary of all individuals: ----------------------------
 
     output$dataTable_all <- reactable::renderReactable({
-      req(vals$sum)
 
       reactable::reactable(
-        vals$sum,
+        data_summary(),
         selection = "single",
         onClick = "select",
         searchable = TRUE,
@@ -435,7 +408,8 @@ mod_comp_viz_server <- function(id, vals) {
         compact = FALSE,
         striped = TRUE,
 
-        defaultSelected = match(vals$id, names(vals$dataList)),
+        defaultSelected = match(vals$id,
+                                names(isolate(vals$dataList))),
         defaultColDef =
           reactable::colDef(
             headerClass = "rtable_header", align = "left"),
@@ -449,11 +423,13 @@ mod_comp_viz_server <- function(id, vals) {
 
     observe({
       state <- req(reactable::getReactableState("dataTable_all"))
+      state <- names(vals$dataList)[state$selected]
+      
       vals$table_selection <- state
     })
 
     ## Table for selected individual data: ------------------------------
-
+    
     output$dataTable_id <- reactable::renderReactable({
       req(vals$data0, input$show_vars)
 
