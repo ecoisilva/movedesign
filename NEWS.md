@@ -1,3 +1,26 @@
+# movedesign 0.1.1
+
+## New features
+
+-   Home range plots now also show the true 95% area.
+-   Added `citation("movedesign")`.
+
+## Minor improvements
+
+-   Added a blocks module.
+-   Uploading/selecting data optimized.
+-   Added more alert and error messages when needed.
+
+## Bug fixes
+
+-   Uploading incorrectly labeled files no longer crashes the app. 
+-   Fixed a bug in table outputs due to version 0.4.4 of `reactable`.
+-   Main guided tour should correctly follow new changes.
+-   `fix_unit()` should now deal properly with speed units.
+-   `extract_pars()` now works with all current movement models.
+-   `guesstimate_time()` adjusted for short runs.
+-   `simulate_gps()` should now run properly when dur_unit is changed, and when dur is set to higher values.
+
 # movedesign 0.1.0
 
 -   Initial release of movedesign.
@@ -7,7 +30,6 @@
 -   Guided tours now cover all modules.
 -   Report now covers scenario where both questions are requested.
 -   `guesstimate_time()` now works for `ctmm::speed()` as well.
--   Scatterplot in home range tab now also plots the true 95% area.
 
 ## Minor improvements
 

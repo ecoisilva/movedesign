@@ -24,7 +24,6 @@ Imports:
     ggiraph,
     ggplot2,
     golem (>= 0.3.2),
-    grid,
     parallel,
     plyr,
     reactable,

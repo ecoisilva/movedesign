@@ -25,13 +25,13 @@ app_ui <- function(request) {
         title = tagList(
           tags$span(
             class = "logo-mini",
-            tags$img(title = "movedesign app",
+            tags$img(title = "movedesign",
                      src = "www/favicon.ico",
                      height = "30px")),
 
           tags$span(
             class = "logo-lg",
-            tags$img(title = "movedesign app",
+            tags$img(title = "movedesign",
                      src = "www/logo.png",
                      height = "50px"))
         ),
