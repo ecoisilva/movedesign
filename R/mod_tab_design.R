@@ -1594,16 +1594,19 @@ mod_tab_design_server <- function(id, vals) {
     ## Simulating GPS battery life: ---------------------------------------
     
     simulating_gps <- reactive({
-      req(input$gps_dur > 0)
+      req(vals$dev$dur)
       
-      if ((input$gps_dur %#% input$gps_dur_unit) < 10 %#% "days") {
+      dur <- vals$dev$dur$value %#% vals$dev$dur$unit
+      req(dur > 2 %#% "days")
+      
+      if ((dur) < 10 %#% "days") {
         input_cutoff <- .5 %#% "days"
       } else { input_cutoff <- 2 %#% "days" }
       
       dat <- simulate_gps(
         data = movedesign::fixrates,
-        b_max = input$gps_dur,
-        b_unit = input$gps_dur_unit,
+        b_max = vals$dev$dur$value,
+        b_unit = vals$dev$dur$unit,
         cutoff = input_cutoff,
         dti_max = input$gps_dti_max)
       
@@ -1929,8 +1932,8 @@ mod_tab_design_server <- function(id, vals) {
         pal_values <- pal$dgr
       } else { pal_values <- c(pal$mdn, pal$dgr) }
       
-      gps_sim$dur <- input$gps_dur_unit %#% gps_sim$dur_sec
-      dur_unit <- input$gps_dur_unit
+      gps_sim$dur <- vals$dev$dur$unit %#% gps_sim$dur_sec
+      dur_unit <- vals$dev$dur$unit
       
       ymax <- max(gps_sim$dur) + diff(range(gps_sim$dur)) * .2
       
@@ -2029,11 +2032,6 @@ mod_tab_design_server <- function(id, vals) {
     
     output$devPlot_gps <- ggiraph::renderGirafe({
       req(vals$active_tab == 'device')
-
-      validate(need(
-        vals$dev$dur$value %#%
-          vals$dev$dur$unit > 2 %#% "days",
-        "Duration cannot be lower than 2 days."))
       
       dti_scale <- dti_yn <- NULL
       device <- preparing_gps()

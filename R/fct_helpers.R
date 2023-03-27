@@ -462,6 +462,8 @@ simulate_gps <- function(data,
   stopifnot(is.character(b_unit) || is.null(b_unit))
   stopifnot(is.character(dti_max) || is.null(dti_max))
   if (b_max == 0) stop("Duration (b_max) cannot be 0.")
+  if (b_max < 2 && b_unit == "days") 
+    stop("Duration (b_max) cannot be less than 2 days.")
   
   trace <- FALSE
   dti <- dti_notes <- dti_scale <- dti_yn <- frq_hrs <- NULL
@@ -570,10 +572,11 @@ simulate_gps <- function(data,
     print(Sys.time() - start_time)
   }
   
-  if (abs(err) >= threshold) 
+  if (abs(err) >= threshold) {
     msg_log(
       style = "error", 
       message = "Something went wrong!")
+  }
   
   newdata$dur_sec <- y %#% unit
   newdata$dur_mth <- "months" %#% newdata$dur_sec
