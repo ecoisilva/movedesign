@@ -733,20 +733,13 @@ mod_tab_sims_server <- function(id, vals) {
         vals$hr <- NULL
         vals$sd <- NULL
         
-        time_sim <- difftime(Sys.time(), start_sim, units = "min")
-        
-        if (round(time_sim, 1) < 1) {
-          tmpdetail <- paste("This step took less than one minute.")
-        } else {
-          tmpdetail <- paste("This step took approximately",
-                             round(time_sim, 0), "minutes.")
-        }
-        
+        time_sim0 <- difftime(Sys.time(), start_sim, units = "secs")
+
         msg_log(
           style = "success",
           message = paste0("Simulation ",
                            msg_success("completed"), "."),
-          detail = tmpdetail)
+          with_time = time_sim0)
         
         vals$is_valid <- TRUE
         shinybusy::remove_modal_spinner()

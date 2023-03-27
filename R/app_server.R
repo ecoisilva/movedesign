@@ -214,7 +214,7 @@ app_server <- function(input, output, session) {
 
   # Overall table theme:
   options(reactable.theme = reactable::reactableTheme(
-    borderColor = "#f2f2f2",
+    borderColor = "#c7c7c7",
     rowSelectedStyle = list(
       backgroundColor = "#eee",
       boxShadow = "inset 2px 0 0 0 #009da0")

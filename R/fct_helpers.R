@@ -680,12 +680,11 @@ guesstimate_time <- function(data,
     
     n <- 1000
     if (nrow(data) <= n) {
-      m <- 1/nrow(data)
-      if (tauv/dti > 2) expt <- abs(1.511852 + 0.126215 * tauv/dti)
-      if (tauv/dti <= 2) expt <- abs(7.179 - 4.334 * dti/tauv)
-      
-      expt_min <- floor(1 + expt * m * 2) / 2
-      expt <- round_any(1 + expt * m, 1, f = ceiling)
+      m <- (max(data$t) / (1 %#% "day")) * .05
+      if (tauv/dti > 3) expt <- 1.698715 + 0.126393 * tauv/dti
+      if (tauv/dti <= 3) expt <- 0.6998 + 1.9132 * dti/tauv      
+      expt_min <- floor(2 + expt * m * 2) / 2
+      expt <- round_any(2 + expt * m, 1, f = ceiling)
       
       outputs[1,1:3] <- c(expt, expt_min, expt)
       outputs$unit <- fix_unit(expt, "minutes")$unit
@@ -700,15 +699,15 @@ guesstimate_time <- function(data,
                        parallel = parallel)
     total_time <- difftime(Sys.time(), start, units = "secs")[[1]]
     
-    m <- (max(data$t) / (1 %#% "day")) * .01
-    if (tauv/dti > 2) expt <- total_time * m + 0.126215 * tauv/dti
-    if (tauv/dti <= 2) expt <- total_time * m - 4.334 * dti/tauv
-    expt <- min(expt, 60)
+    m <- (max(data$t) / (1 %#% "day")) * .05
+    if (tauv/dti > 3) expt <- total_time * m + 0.126215 * tauv/dti
+    if (tauv/dti <= 3) expt <- total_time * m - 4.334 * dti/tauv
+    expt <- max(expt, 60)
     
   } # end of if (type == "speed")
   
   expt <- expt_unit %#% expt
-  if (with_truth) expt <- 2 + expt * 2
+  if (with_truth) expt <- expt + expt * 2
   
   tmp_ext <- ceiling(expt_unit %#% expt)
   if (tmp_ext >= 15) {

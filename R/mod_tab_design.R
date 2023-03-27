@@ -1857,7 +1857,7 @@ mod_tab_design_server <- function(id, vals) {
         
         start <- Sys.time()
         fit1 <- fitting_model()
-        time_fit1 <- difftime(Sys.time(), start, units = "mins")
+        time_fit1 <- difftime(Sys.time(), start, units = "secs")
         
         if (!is.null(fit1)) {
           msg_log(
@@ -2548,8 +2548,8 @@ mod_tab_design_server <- function(id, vals) {
     # Save information for report if table is not requested:
     
     observe({
-      req(vals$active_tab == 'regime',
-          vals$dev$n, vals$dev$N1, vals$dev$N2)
+      req(vals$active_tab == 'device',
+          vals$dev$n, vals$dev$N1, vals$dev$N2, vals$fit1)
       
       req(is.null(vals$dev$tbl))
       vals$report_dev_yn <- FALSE

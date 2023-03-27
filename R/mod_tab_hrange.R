@@ -1744,7 +1744,7 @@ mod_tab_hrange_server <- function(id, vals) {
       req(vals$active_tab == 'hr',
           vals$is_analyses)
       
-      req(is.null(vals$dev$tbl))
+      req(is.null(vals$hr$tbl))
       vals$report_hr_yn <- FALSE
       
       if (is.null(vals$hrErr_new)) {

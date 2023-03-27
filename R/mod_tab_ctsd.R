@@ -234,21 +234,16 @@ mod_tab_ctsd_ui <- function(id) {
                   uiOutput(ns("sdText_new1")),
                   
                   fluidRow(
-                    column(width = 6, 
-                           mod_blocks_ui(ns("distBlock_est"))),
-                    column(width = 6, 
-                           mod_blocks_ui(ns("distBlock_err")))),
+                    div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
+                        mod_blocks_ui(ns("distBlock_est"))),
+                    div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
+                        mod_blocks_ui(ns("distBlock_err")))),
                   
                   fluidRow(
-                    column(width = 6, 
-                           mod_blocks_ui(ns("distBlock_est_new"))),
-                    column(width = 6, 
-                           mod_blocks_ui(ns("distBlock_err_new"))))
-                  
-                  # mod_blocks_ui(ns("distBlock_est")),
-                  # mod_blocks_ui(ns("distBlock_est_new")),
-                  # mod_blocks_ui(ns("distBlock_err")),
-                  # mod_blocks_ui(ns("distBlock_err_new"))
+                    div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
+                        mod_blocks_ui(ns("distBlock_est_new"))),
+                    div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
+                        mod_blocks_ui(ns("distBlock_err_new"))))
                   
                 ) # end of div
                 
@@ -295,11 +290,6 @@ mod_tab_ctsd_ui <- function(id) {
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
                         mod_blocks_ui(ns("sdBlock_err_new"))))
                 
-                  # mod_blocks_ui(ns("sdBlock_est")),
-                  # mod_blocks_ui(ns("sdBlock_err")),
-                  # mod_blocks_ui(ns("sdBlock_est_new")),
-                  # mod_blocks_ui(ns("sdBlock_err_new"))
-                  
                 ) # end of div
 
               ) # end of panel (2 out of 2)
@@ -1177,7 +1167,7 @@ mod_tab_ctsd_server <- function(id, vals) {
             confirm_time <- x
           },
           text = tagList(span(
-            "Expected run time for the next phase", br(),
+            "Expected run time for estimation", br(),
             "is approximately",
             wrap_none(span(out_expt$value, out_expt$unit,
                            class = "cl-dgr"), ".")
@@ -1190,13 +1180,15 @@ mod_tab_ctsd_server <- function(id, vals) {
           html = TRUE
         )
       } else { confirm_time <- TRUE }
+      
       vals$sd$confirm_time <- confirm_time
       
     }) %>% # end of observe,
       bindEvent(input$run_sd)
     
     observe({
-      req(vals$sd$confirm_time)
+      req(vals$sd$confirm_time,
+          !vals$sd$completed)
       
       msg_log(
         style = "warning",
@@ -1773,19 +1765,23 @@ mod_tab_ctsd_server <- function(id, vals) {
         p1 <- ggplot2::geom_path(
           alldat, mapping = ggplot2::aes(
             x = x, y = y),
-          col = "grey70", size = 1.8)
+          col = "grey70", size = 1.5)
+        p1_main <- ggplot2::geom_path(
+          alldat, mapping = ggplot2::aes(
+            x = x, y = y),
+          col = "grey30", size = 0.4)
       }
 
       if ("initial" %in% datasets) {
         p2 <- ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(
             x = x, y = y),
-          linewidth = 0.4, col = pal$sea)
+          linewidth = 0.2, col = pal$sea)
         p2_points <- ggiraph::geom_point_interactive(
           newdat, mapping = ggplot2::aes(
             x = x, y = y,
             tooltip = timestamp),
-          size = 0.8, col = pal$sea)
+          size = 0.4, col = pal$sea)
       }
 
       if ("new" %in% datasets) {
@@ -1794,17 +1790,18 @@ mod_tab_ctsd_server <- function(id, vals) {
         p3 <- ggplot2::geom_path(
           vals$sd$data, mapping = ggplot2::aes(
             x = x, y = y),
-          linewidth = 0.4, col = pal$dgr)
+          linewidth = 0.2, col = pal$dgr)
         p3_points <- ggiraph::geom_point_interactive(
           vals$sd$data, mapping = ggplot2::aes(
             x = x, y = y,
             tooltip = timestamp),
-          size = 0.8, col = pal$dgr)
+          size = 0.4, col = pal$dgr)
       }
 
       p <- ggplot2::ggplot() +
 
         { if ("full" %in% datasets) p1 } +
+        { if ("full" %in% datasets) p1_main } +
         
         { if ("initial" %in% datasets) p2 } +
         { if ("initial" %in% datasets) p2_points } +
@@ -2022,21 +2019,21 @@ mod_tab_ctsd_server <- function(id, vals) {
         ctsd_err_max = vals$speedErr_new$value[[3]],
         dist = NA,
         dist_err = vals$distErr_new$value[[2]])
-
+      
       out$tauv <- paste(
         scales::label_comma(.1)(vals$tau_v0$value[2]),
         abbrv_unit(vals$tau_v0$unit[2]))
-
+      
       out_dur <- fix_unit(vals$sd$dur$value, vals$sd$dur$unit)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
-
+      
       out_dti <- fix_unit(vals$sd$dti$value, vals$sd$dti$unit)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
-
+      
       out_ctsd <- fix_unit(vals$speedEst_new$value[[2]],
                            vals$speedEst_new$unit[[2]])
       out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
-
+      
       out_dist <- fix_unit(vals$distEst_new$value[[2]],
                            vals$distEst_new$unit[[2]], convert = TRUE)
       out$dist <- paste(out_dist$value, out_dist$unit)
@@ -2362,6 +2359,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         vals$report_sd_yn <- TRUE
         vals$sd$tbl <- sdRow_new()
       }
+      
 
     }) # end of observe
     

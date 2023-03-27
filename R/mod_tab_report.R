@@ -2295,17 +2295,7 @@ mod_tab_report_server <- function(id, vals) {
         dti = character(0),
         n = numeric(0),
         N1 = numeric(0),
-        N2 = numeric(0),
-        area = character(0),
-        area_err = numeric(0),
-        area_err_min = numeric(0),
-        area_err_max = numeric(0),
-        ctsd = character(0),
-        ctsd_err = numeric(0),
-        ctsd_err_min = numeric(0),
-        ctsd_err_max = numeric(0),
-        dist = character(0),
-        dist_err = numeric(0))
+        N2 = numeric(0))
       
       tmpdat <- dt_regs %>% dplyr::select(.data$device:.data$N2)
       tmpdat <- suppressMessages(dplyr::full_join(dat, tmpdat))
@@ -2348,9 +2338,9 @@ mod_tab_report_server <- function(id, vals) {
       dat <- vals$report_full
       
       if (nrow(dat) >= 2) {
-        if (all(dat[nrow(dat) - 1,2:6] == dat[nrow(dat), 2:6])) {
+        if (all(dat[nrow(dat) - 1,2:6] == dat[nrow(dat), 2:6]))
           dat <- dplyr::coalesce(dat[1, ], dat[2, ])
-        }}
+      }
       
       vals$report_full <- dplyr::distinct(dat)
       
@@ -2384,12 +2374,12 @@ mod_tab_report_server <- function(id, vals) {
         "dist",
         "dist_err")
       
-      if ("Home range" %in% vals$which_question) {
-        choices_subset <- choices[c(1:8, 10:13)]
-      }
-      
-      if ("Speed & distance" %in% vals$which_question) {
-        choices_subset <- choices[c(1:7, 9, 14:19)]
+      if (length(vals$which_question) == 1) {
+        if (vals$which_question == "Home range")
+          choices_subset <- choices[c(1:8, 10:13)]
+        
+        if (vals$which_question == "Speed & distance")
+          choices_subset <- choices[c(1:7, 9, 14:19)]
       }
       
       nms <- data.frame(
@@ -2418,33 +2408,49 @@ mod_tab_report_server <- function(id, vals) {
         dat <- dat %>% dplyr::select(choices_subset)
       }
       
-      nms_sizes <- c("n", "N1", "N2")
       if ("Home range" %in% vals$which_question) {
-        nms_sizes <- c("n", "N1")
-        nms_hr <- choices[c(10:13)]
-        colgroups <- list(
-          reactable::colGroup(
-            name = "Home range",
-            columns = nms_hr),
-          reactable::colGroup(
-            name = "Sample sizes", 
-            columns = nms_sizes))
+        nms_sizes <- reactable::colGroup(
+          name = "Sample sizes", 
+          columns = c("n", "N1"))
+        nms_hr <- reactable::colGroup(
+          name = "Home range",
+          columns = c("area",
+                      "area_err",
+                      "area_err_min",
+                      "area_err_max"))
+        
+        colgroups <- list(nms_sizes,
+                          nms_hr)
       }
       
       if ("Speed & distance" %in% vals$which_question) {
-        nms_sizes <- c("n", "N2")
-        nms_ctsd <- choices[c(14:17)]
-        nms_dist <- choices[c(18:19)]
-        colgroups <- list(
-          reactable::colGroup(
-            name = "Speed",
-            columns = nms_ctsd),
-          reactable::colGroup(
-            name = "Distance",
-            columns = nms_dist),
-          reactable::colGroup(
-            name = "Sample sizes", 
-            columns = nms_sizes))
+        nms_sizes <-  reactable::colGroup(
+          name = "Sample sizes", 
+          columns = c("n", "N2"))
+        nms_ctsd <- reactable::colGroup(
+          name = "Speed",
+          columns = c("ctsd",
+                      "ctsd_err",
+                      "ctsd_err_min",
+                      "ctsd_err_max"))
+        nms_dist <- reactable::colGroup(
+          name = "Distance",
+          columns = c("dist", "dist_err"))
+        
+        colgroups <- list(nms_sizes,
+                          nms_ctsd,
+                          nms_dist)
+      }
+      
+      if (length(vals$which_question) == 2) {
+        nms_sizes <-  reactable::colGroup(
+          name = "Sample sizes", 
+          columns = c("n", "N1", "N2"))
+          
+          colgroups <- list(nms_sizes,
+                            nms_hr,
+                            nms_ctsd,
+                            nms_dist)
       }
       
       namedcolumns <- list(
