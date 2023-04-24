@@ -1031,7 +1031,7 @@ mod_tab_hrange_server <- function(id, vals) {
       sim <- ctmm::simulate(dat, fit, t = t_new, seed = vals$seed0)
       sim <- pseudonymize(sim)
       sim$index <- 1:nrow(sim)
-      return(dat)
+      return(sim)
       
     }) %>% # end of reactive, simulating_data_new()
       bindCache(vals$hr$dur,
