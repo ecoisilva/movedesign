@@ -55,8 +55,8 @@ mod_comp_tour_server <- function(id, vals) {
       
       # for dti == 2 hours
       dur <- "10.1 months"
-      N1 <- "32"
-      N2 <- "1,284"
+      N1 <- "40"
+      N2 <- "1,511"
       
       span(
         "For the current parameters, the sampling interval of",
@@ -75,7 +75,7 @@ mod_comp_tour_server <- function(id, vals) {
       # N1 <- c("18.1", "eighteen")
       
       # for dti == 2 hours
-      N1 <- c("32", "32")
+      N1 <- c("40", "40")
       
       span(
         HTML("N<sub>area</sub>"), "is equal to", wrap_none(N1[1], ","),
@@ -96,7 +96,7 @@ mod_comp_tour_server <- function(id, vals) {
       # N2 <- "3,918"
       
       # for dti == 2 hours
-      N2 <- "1,284"
+      N2 <- "1,511"
       
       span(
         HTML("N<sub>speed</sub>"), "is equal to", wrap_none(N2, ","),
