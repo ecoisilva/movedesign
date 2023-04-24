@@ -36,7 +36,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">movedesign</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,7 +88,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Installation</h1>
             
-            <h4 data-toc-skip class="date">2023-03-01</h4>
+            <h4 data-toc-skip class="date">2023-04-24</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/ecoisilva/movedesign/tree/mainvignettes/installation.Rmd" class="external-link"><code>vignettes/installation.Rmd</code></a></small>
       <div class="d-none name"><code>installation.Rmd</code></div>
@@ -97,38 +97,54 @@
     
     
 <div class="section level2">
-<h2 id="installation-issues">Installation issues:<a class="anchor" aria-label="anchor" href="#installation-issues"></a>
+<h2 id="installation-issues">Installation issues<a class="anchor" aria-label="anchor" href="#installation-issues"></a>
 </h2>
 <div class="section level3">
-<h3 id="package-dependencies">Package dependencies:<a class="anchor" aria-label="anchor" href="#package-dependencies"></a>
+<h3 id="check-package-dependencies">Check package dependencies:<a class="anchor" aria-label="anchor" href="#check-package-dependencies"></a>
 </h3>
 <p>The <code>movedesign</code> package requires many non-default
-packages. If you are met with errors during install/upgrade, restart
-your R session (in the RStudio menu bar, this is <code>Session</code>
-&gt; <code>Restart R</code>) and install again to potentially solve the
-problem.</p>
+packages. If you are met with errors during installation/updates, try
+restarting your R session (in the <code>RStudio</code> menu bar, this is
+<code>Session</code> &gt; <code>Restart R</code>; or close and re-open
+<code>R</code>) and reinstalling the package through:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"ecoisilva/movedesign"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> </span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="failed-to-install-unknown-package-from-github">Failed to install ‘unknown package’ from GitHub<a class="anchor" aria-label="anchor" href="#failed-to-install-unknown-package-from-github"></a>
+<h3 id="check-if-rgdal-installed-correctly">Check if <code>rgdal</code> installed correctly:<a class="anchor" aria-label="anchor" href="#check-if-rgdal-installed-correctly"></a>
+</h3>
+<p>During installation in Linux systems (for example, Ubuntu 20.04),
+<code>rgdal</code> (one of the dependencies of <code>movedesign</code>)
+may fail to install correctly. One potential solution is to install
+<code>rgdal</code> through the terminal (not the R console!):</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># packages libgdal-dev and libproj-dev are also required:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install gdal-bin proj-bin libgdal-dev libproj-dev</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install r-cran-rgdal </span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="failed-to-install-unknown-package-from-github">Failed to install ‘unknown package’ from GitHub:<a class="anchor" aria-label="anchor" href="#failed-to-install-unknown-package-from-github"></a>
 </h3>
 <p><strong>Step 1:</strong> Generate a GitHub personal access token with
 the following command in the RStudio console:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu"><a href="https://usethis.r-lib.org/reference/github-token.html" class="external-link">create_github_token</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu">create_github_token</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>This will take you to GitHub to generate a token. Configure the token
 (or just scroll down and generate it using the default settings) and
 copy it to your clipboard.</p>
 <p><strong>Step 2:</strong> Save the personal access token in your R
 environment. Return to RStudio and enter:</p>
-<pre><code><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu"><a href="https://usethis.r-lib.org/reference/edit.html" class="external-link">edit_r_environ</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu">edit_r_environ</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>in the console. This opens a new window in RStudio. When that window
 opens, write:</p>
 <pre><code><span><span class="va">GITHUB_PAT</span><span class="op">=</span><span class="st">"GITHUB_PERSONAL_ACCESS_TOKEN"</span></span></code></pre>
 <p>where <code>GITHUB_PERSONAL_ACCESS_TOKEN</code> is the token (a
 string of letters and numbers) you just copied from GitHub.</p>
 <p><strong>Step 3:</strong> Save this file, close it, and restart R.
-After that, you should be good able to install
-<code>movedesign</code>.</p>
+After that, you should be able to install <code>movedesign</code>
+through the usual command:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"ecoisilva/movedesign"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> </span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
