@@ -210,7 +210,8 @@ mod_tab_hrange_ui <- function(id) {
                   span("Regime", class = "ttl-panel")
                 ),
 
-                div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-9",
+                div(id = "hr_outputs",
+                    class = "col-xs-12 col-sm-12 col-md-12 col-lg-9",
                     p(),
                     shinyWidgets::checkboxGroupButtons(
                       inputId = ns("hr_contours"),
@@ -320,7 +321,7 @@ mod_tab_hrange_ui <- function(id) {
                   class = "btn-warning"),
                 br(),
                 shiny::actionButton(
-                  inputId = ns("show_hr_table"),
+                  inputId = ns("add_hr_table"),
                   label = span("Add to",
                                span("table", class = "cl-sea")),
                   icon = icon("bookmark"),
@@ -356,9 +357,9 @@ mod_tab_hrange_ui <- function(id) {
             width = NULL,
             solidHeader = FALSE,
 
-            verbatimTextOutput(outputId = ns("time_hr")),
-            verbatimTextOutput(outputId = ns("time_hr_new")),
-            verbatimTextOutput(outputId = ns("time_hr_total"))
+            verbatimTextOutput(outputId = ns("out_time_hr")),
+            verbatimTextOutput(outputId = ns("out_time_hr_new")),
+            verbatimTextOutput(outputId = ns("out_time_hr_total"))
             
           ) # end of box
       ) # end of column (bottom)
@@ -377,7 +378,7 @@ mod_tab_hrange_server <- function(id, vals) {
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
-    vals$hr <- reactiveValues(time = c(0,0), completed = FALSE)
+    vals$hr <- reactiveValues()
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at start: --------------------------------------------
@@ -555,11 +556,12 @@ mod_tab_hrange_server <- function(id, vals) {
           type = "error",
           title = "No data found",
           text = tagList(span(
-            "Please upload, select or simulate an", br(),
-            span("movement dataset", class = "cl-dgr"),
-            "first in the",
-            icon("paw", class = "cl-mdn"),
-            span("Data", class = "cl-mdn"), "tabs."
+            "Please", wrap_none(
+              span("upload", class = "cl-dgr"), end = ","),
+            span("select", class = "cl-dgr"), "or",
+            span("simulate", class = "cl-dgr"), "data first",
+            "in the", icon("paw", class = "cl-mdn"),
+            span("Species", class = "cl-mdn"), "tabs."
           )),
           html = TRUE,
           size = "xs")
@@ -645,7 +647,7 @@ mod_tab_hrange_server <- function(id, vals) {
               HTML(paste0(span(vals$tmpid, class = "cl-dgr"), ".")),
               br(), "Please extract parameters in the",
               icon("paw", class = "cl-mdn"),
-              span("Data", class = "cl-mdn"), "tab",
+              span("Species", class = "cl-mdn"), "tab",
               "for the appropriate individual before",
               "estimating home range."),
             html = TRUE,
@@ -660,11 +662,11 @@ mod_tab_hrange_server <- function(id, vals) {
     ## Fitting movement model (if needed): --------------------------------
     
     estimating_time <- reactive({
-      out_time <- guesstimate_time(vals$data1, 
-                                   parallel = vals$parallel)
+      
+      out_time <- guess_time(vals$data1, parallel = vals$parallel)
       return(out_time)
       
-    }) %>% # end of reactive, calculating_time()
+    }) %>% # end of reactive, estimating_time()
       bindCache(c(vals$tau_p0, 
                   vals$tau_v0,
                   vals$dur, 
@@ -791,18 +793,15 @@ mod_tab_hrange_server <- function(id, vals) {
       
       dur <- "days" %#% vals$dur$value %#% vals$dur$unit
       taup <- "days" %#% vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
-      dur <- round(dur, 0)
-      taup <- round(taup, 0)
       
-      opts_dur <- c(10, 
-                    dur, 
-                    taup, 
-                    taup * c(10, 50,
-                             100, 200, 400, 600, 800, 
-                             1000, 2000)
-      ) %>% round_any(5, f = round) %>%
+      opts_dur <- c(10, dur, taup, 
+                    taup * c(10, 25, 50, 75, 100)
+      ) %>% round_any(5, f = round)
+      opts_dur <- c(1, 2, 3, 4, opts_dur,
+                    365, 730, 1096, 1461, 1826) %>%
         unique() %>% sort()
       opts_dur <- opts_dur[opts_dur != 0]
+      selected_dur <- opts_dur[which.min(abs(opts_dur - taup * 10))]
       
       # Sampling interval:
       
@@ -869,14 +868,9 @@ mod_tab_hrange_server <- function(id, vals) {
               label = "Sampling duration (in days):",
               width = "100%",
               choices = opts_dur,
-              selected = taup * 10 %>%
-                round_any(5, f = round),
-              from_min = ifelse(dur > taup * 10,
-                                dur, taup * 10) %>%
-                round_any(5, f = round),
-              from_max = ifelse(dur > taup * 800,
-                                dur, taup * 2000) %>%
-                round_any(5, f = round)
+              selected = selected_dur,
+              from_min = selected_dur,
+              from_max = max(opts_dur)
             ),
             
             shinyWidgets::sliderTextInput(
@@ -918,6 +912,20 @@ mod_tab_hrange_server <- function(id, vals) {
     # Calculate and create true home range:
     estimating_truth <- reactive({
       
+      # mean_x <- mean(vals$data1$x)
+      # mean_y <- mean(vals$data1$y)
+      # if (!is.null(vals$hr$data)) {
+      #   mean_x <- mean(c(vals$data1$x, vals$hr$data$x))
+      #   mean_y <- mean(c(vals$data1$y, vals$hr$data$y))
+      # }
+      
+      # t_new <- seq(0, 2000 %#% "days", by = 1 %#% "day")[-1]
+      # dat_full <- ctmm::simulate(
+      #   vals$data1, vals$fit0, t = t_new, seed = vals$seed0)
+      # mean_x <- mean(c(dat_full$x))
+      # mean_y <- mean(c(dat_full$y))
+      
+      mean_x <- mean_y <- 0
       sig <- vals$sigma0$value[2] %#% vals$sigma0$unit[2]
       area <- -2 * log(0.05) * pi * sig
       radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
@@ -925,9 +933,9 @@ mod_tab_hrange_server <- function(id, vals) {
         id = rep(1, each = 100),
         angle = seq(0, 2 * pi, length.out = 100))
       truth$x <- unlist(lapply(
-        mean(vals$data1$x), function(x) x + radius_x * cos(truth$angle)))
+        mean_x, function(x) x + radius_x * cos(truth$angle)))
       truth$y <- unlist(lapply(
-        mean(vals$data1$y), function(x) x + radius_y * sin(truth$angle)))
+        mean_y, function(x) x + radius_y * sin(truth$angle)))
       
       # xy <- truth %>% dplyr::select(long, lat)
       # truth <- sp::SpatialPointsDataFrame(
@@ -959,6 +967,7 @@ mod_tab_hrange_server <- function(id, vals) {
       
       for (i in 1:length(tmplist)) shinyjs::show(id = tmplist[i])
       
+      vals$hr$time <- c(0,0)
       start <- Sys.time()
       
       msg_log(
@@ -991,13 +1000,15 @@ mod_tab_hrange_server <- function(id, vals) {
       time_hr <- difftime(Sys.time(), start, units = "sec")
       vals$hr$time[1] <- vals$hr$time[1] + time_hr[[1]]
       
+      shinyjs::show(id = "hrBox_misc")
+      
       msg_log(
         style = "success",
         message = paste0("Estimation ",
                          msg_success("completed"), "."),
         with_time = vals$time_hr)
       
-      vals$hr$completed <- TRUE
+      vals$hr_completed <- TRUE
       
       shinybusy::remove_modal_spinner()
       
@@ -1008,46 +1019,62 @@ mod_tab_hrange_server <- function(id, vals) {
     
     simulating_data_new <- reactive({
       
+      dat <- vals$data1
+      if (vals$fit0$isotropic == TRUE) { fit <- vals$fit0
+      } else fit <- vals$ctmm_mod
+      
       dur <- vals$hr$dur$value %#% vals$hr$dur$unit
       dti <- vals$hr$dti$value %#% vals$hr$dti$unit
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
       # Fill in the gaps of original dataset + new duration:
-      dat <- ctmm::simulate(
-        vals$data0, vals$fit0, t = t_new, seed = vals$seed0)
-      
-      dat <- pseudonymize(dat)
-      dat$index <- 1:nrow(dat)
+      sim <- ctmm::simulate(dat, fit, t = t_new, seed = vals$seed0)
+      sim <- pseudonymize(sim)
+      sim$index <- 1:nrow(sim)
       return(dat)
       
     }) %>% # end of reactive, simulating_data_new()
       bindCache(vals$hr$dur,
                 vals$hr$dti,
-                vals$data0,
-                vals$fit0)
+                vals$data1)
+    
+    estimating_time_new <- reactive({
+      
+      out_time <- guess_time(vals$hr$data, parallel = vals$parallel)
+      return(out_time)
+      
+    }) %>% # end of reactive, estimating_time_new()
+      bindCache(c(vals$hr$dur,
+                  vals$hr$dti,
+                  vals$hr$data))
     
     fitting_model_new <- reactive({
       
       guess <- ctmm::ctmm.guess(vals$hr$data, interactive = FALSE)
       vals$guess_new <- guess
       
-      if (vals$data_type == "simulated") {
-        mod1 <- vals$ctmm_mod
-      } else {
-        mod1 <- prepare_mod(
-          tau_p = vals$tau_p0$value[2], tau_p_units = vals$tau_p0$unit[2],
-          tau_v = vals$tau_v0$value[2], tau_v_units = vals$tau_v0$unit[2],
-          sigma = vals$sigma0$value[2], sigma_units = vals$sigma0$unit[2])
-      }
+      # if (vals$data_type == "simulated") {
+      #   mod1 <- vals$ctmm_mod
+      # } else {
+      #   mod1 <- prepare_mod(
+      #     tau_p = vals$tau_p0$value[2], 
+      #     tau_p_units = vals$tau_p0$unit[2],
+      #     tau_v = vals$tau_v0$value[2], 
+      #     tau_v_units = vals$tau_v0$unit[2],
+      #     sigma = vals$sigma0$value[2], 
+      #     sigma_units = vals$sigma0$unit[2])
+      # }
+      # inputList <- list(list(vals$hr$data, mod1))
+      # out_fit <- par.ctmm.fit(inputList, parallel = vals$parallel)
       
-      inputList <- list(list(vals$hr$data, mod1))
-      fit <- par.ctmm.fit(inputList, parallel = TRUE)
-      return(fit)
+      inputList <- list(list(vals$hr$data, guess))
+      out_fit <- par.ctmm.select(inputList, parallel = vals$parallel)
+      return(out_fit)
       
     }) %>% # end of reactive, fitting_model_new()
-      bindCache(vals$hr$dur,
-                vals$hr$dti,
-                vals$hr$data)
+      bindCache(c(vals$hr$dur,
+                  vals$hr$dti,
+                  vals$hr$data))
     
     estimating_hr_new <- reactive({
       ctmm::akde(data = vals$hr$data, CTMM = vals$hr$fit)
@@ -1146,6 +1173,11 @@ mod_tab_hrange_server <- function(id, vals) {
         detail = "Please wait for model selection to finish:")
       
       start_fit <- Sys.time()
+      expt <- estimating_time_new()
+      shinybusy::remove_modal_spinner()
+      
+      loading_modal("Selecting new movement model",
+                    runtime = expt$range, for_time = TRUE)
       vals$hr$fit <- fitting_model_new()
       time_sd <- difftime(Sys.time(), start_fit, units = "sec")
       
@@ -1153,7 +1185,6 @@ mod_tab_hrange_server <- function(id, vals) {
         style = "success",
         message = paste0("Model fit ", msg_success("completed"), "."),
         with_time = time_sd)
-      
       shinybusy::remove_modal_spinner()
       
       ### 3. Run the home range estimator (AKDE):
@@ -1274,7 +1305,7 @@ mod_tab_hrange_server <- function(id, vals) {
     ## Plotting new home range: -------------------------------------------
     
     output$hrPlot_new <- ggiraph::renderGirafe({
-      req(vals$is_analyses, vals$hr$data, vals$akde_new)
+      req(vals$hr$data, vals$akde_new)
       
       if (!is.null(input$hr_truth_new)) {
         show_truth <- ifelse(input$hr_truth_new, TRUE, FALSE)
@@ -1303,21 +1334,21 @@ mod_tab_hrange_server <- function(id, vals) {
         options = list(
           ggiraph::opts_zoom(max = 5),
           ggiraph::opts_hover(
-            css = paste("fill:#ffbf00;",
-                        "stroke:#ffbf00;")),
+            css = paste("fill: #ffbf00;",
+                        "stroke: #ffbf00;")),
           ggiraph::opts_selection(
             type = "single",
-            css = paste("fill:#dd4b39;",
-                        "stroke:#eb5644;")))
+            css = paste("fill: #dd4b39;",
+                        "stroke: #eb5644;")))
       )
       
     }) # end of renderGirafe
     
     # TABLES --------------------------------------------------------------
     ## Initial sampling design: -------------------------------------------
-    
+
     hrRow <- reactive({
-      
+
       out <- data.frame(
         data = "Initial",
         taup = NA,
@@ -1329,42 +1360,42 @@ mod_tab_hrange_server <- function(id, vals) {
         area_err = vals$hrErr$value[[2]],
         area_err_min = vals$hrErr$value[[1]],
         area_err_max = vals$hrErr$value[[3]])
-      
+
       out$taup <- paste(
         scales::label_comma(.1)(vals$tau_p0$value[2]),
         abbrv_unit(vals$tau_p0$unit[2]))
-      
-      out_dur <- fix_unit(vals$dur$value, vals$dur$unit)
+
+      out_dur <- fix_unit(vals$dur$value, vals$dur$unit, convert = TRUE)
       out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
-      
+
       out_dti <- fix_unit(vals$dti$value, vals$dti$unit)
       out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
-      
+
       area <- scales::label_comma(.1)(vals$hrEst$value[[2]])
       out$area <- paste(area, abbrv_unit(vals$hrEst$unit[[2]]))
       
       return(out)
-      
+
     }) %>% # end of reactive, hrRow()
       bindCache(vals$dur,
                 vals$dti)
-    
+
     observe({
       req(vals$data1, vals$dev$N1, vals$hrErr)
-      
+
       shinyjs::show(id = "hrBox_summary")
-      
+
       vals$hr$tbl <<- rbind(vals$hr$tbl, hrRow())
       vals$hr$tbl <- dplyr::distinct(vals$hr$tbl)
       vals$report_hr_yn <- TRUE
       
     }) %>% # end of observe
-      bindEvent(input$show_hr_table)
-    
+      bindEvent(input$add_hr_table)
+
     ## New sampling design: -----------------------------------------------
-    
+
     hrRow_new <- reactive({
-      
+
       out <- data.frame(
         data = "Modified",
         taup = NA,
@@ -1381,7 +1412,7 @@ mod_tab_hrange_server <- function(id, vals) {
         scales::label_comma(.1)(vals$tau_p0$value[2]),
         abbrv_unit(vals$tau_p0$unit[2]))
       
-      out_dur <- fix_unit(vals$hr$dur$value, vals$hr$dur$unit, 
+      out_dur <- fix_unit(vals$hr$dur$value, vals$hr$dur$unit,
                           convert = TRUE)
       out$dur <- paste(out_dur[1], abbrv_unit(out_dur[,2]))
       
@@ -1392,27 +1423,27 @@ mod_tab_hrange_server <- function(id, vals) {
       out$area <- paste(area, abbrv_unit(vals$hrEst_new$unit[[2]]))
       
       return(out)
-      
+
     }) %>%
       bindCache(vals$hr$dur,
                 vals$hr$dti)
-    
+
     observe({
       req(vals$hr$fit, vals$hrEst_new)
-      
+
       vals$hr$tbl <<- rbind(vals$hr$tbl, hrRow_new())
       vals$hr$tbl <- dplyr::distinct(vals$hr$tbl)
       vals$report_hr_yn <- TRUE
       
     }) %>% # end of observe
-      bindEvent(vals$hr$fit)
-    
+      bindEvent(input$add_hr_table)
+
     ## Rendering output table: --------------------------------------------
-    
+
     output$hrTable <- reactable::renderReactable({
       req(vals$hr$tbl)
-      
-      columnNames <- list(
+
+      nms <- list(
         data = "Data:",
         taup = "\u03C4\u209A",
         dur = "Duration",
@@ -1423,113 +1454,113 @@ mod_tab_hrange_server <- function(id, vals) {
         area_err = "Error",
         area_err_min = "Error (min)",
         area_err_max = "Error (max)")
-      
+
       reactable::reactable(
         data = vals$hr$tbl,
         compact = TRUE,
         highlight = TRUE,
         striped = TRUE,
-        
+
         defaultPageSize = 5,
         paginationType = "jump",
         showPageSizeOptions = TRUE,
         pageSizeOptions = c(5, 10, 20),
         showPageInfo = FALSE,
-        
+
         defaultColDef =
           reactable::colDef(
             headerClass = "rtable_header",
             align = "center",
             minWidth = 60),
-        
+
         columns = list(
           data = reactable::colDef(
-            name = columnNames[["data"]]),
+            name = nms[["data"]]),
           taup = reactable::colDef(
-            minWidth = 80, name = columnNames[["taup"]],
+            minWidth = 80, name = nms[["taup"]],
             style = list(fontWeight = "bold")),
           dur = reactable::colDef(
-            minWidth = 80, name = columnNames[["dur"]],
+            minWidth = 80, name = nms[["dur"]],
             style = list(fontWeight = "bold")),
           dti = reactable::colDef(
-            minWidth = 80, name = columnNames[["dti"]],
+            minWidth = 80, name = nms[["dti"]],
             style = list(fontWeight = "bold")),
           n = reactable::colDef(
-            name = columnNames[["n"]],
-            style = list(color = format_num),
+            name = nms[["n"]],
+            style = format_num,
             format = reactable::colFormat(separators = TRUE,
                                           digits = 0)),
           N1 = reactable::colDef(
-            minWidth = 80, name = columnNames[["N1"]],
-            style = list(color = format_num),
+            minWidth = 80, name = nms[["N1"]],
+            style = format_num,
             format = reactable::colFormat(separators = TRUE,
                                           digits = 1)),
           area = reactable::colDef(
-            minWidth = 80, name = columnNames[["area"]]),
-          
+            minWidth = 80, name = nms[["area"]]),
+
           area_err = reactable::colDef(
-            minWidth = 80, name = columnNames[["area_err"]],
-            style = list(color = format_perc),
+            minWidth = 80, name = nms[["area_err"]],
+            style = format_perc,
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)),
           area_err_min = reactable::colDef(
-            minWidth = 80, name = columnNames[["area_err_min"]],
-            style = list(color = format_perc),
+            minWidth = 80, name = nms[["area_err_min"]],
+            style = format_perc,
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1)),
           area_err_max = reactable::colDef(
-            minWidth = 80, name = columnNames[["area_err_max"]],
-            style = list(color = format_perc),
+            minWidth = 80, name = nms[["area_err_max"]],
+            style = format_perc,
             format = reactable::colFormat(percent = TRUE,
                                           digits = 1))
         ))
-      
+
     }) # end of renderReactable, "hrTable"
-    
+
     # BLOCKS --------------------------------------------------------------
-    
+
     ## Tracking device: ---------------------------------------------------
     ### Initial sampling design: ------------------------------------------
-    
+
     observe({
       req(vals$data1)
-      
+
       mod_blocks_server(
-        id = "hrBlock_dur", 
+        id = "hrBlock_dur",
         vals = vals, data = vals$data1,
         type = "dur", input_name = "Sampling duration")
-      
+
       mod_blocks_server(
-        id = "hrBlock_dti", 
+        id = "hrBlock_dti",
         vals = vals, data = vals$data1,
         type = "dti", input_name = "Sampling interval")
-      
+
     }) # end of observe
-    
+
     ### Modified sampling design: -----------------------------------------
-    
+
     observe({
       req(vals$hr$data)
-      
+
       mod_blocks_server(
-        id = "hrBlock_dur_new", 
+        id = "hrBlock_dur_new",
         vals = vals, data = vals$hr$data,
         type = "dur", input_name = "Sampling duration",
         class = "cl-mdn")
-      
+
       mod_blocks_server(
-        id = "hrBlock_dti_new", 
+        id = "hrBlock_dti_new",
         vals = vals, data = vals$hr$data,
         type = "dti", input_name = "Sampling interval",
         class = "cl-mdn")
-      
+
     }) # end of observe
-    
+
     ## Sample sizes: ------------------------------------------------------
-    
+
     output$hrBlock_n <- shiny::renderUI({
       req(vals$data1)
-      
+
       sampleBlock(
         number = NULL,
         numberIcon = FALSE,
@@ -1538,22 +1569,22 @@ mod_tab_hrange_server <- function(id, vals) {
         line2 = "(n)",
         rightBorder = FALSE,
         marginBottom = TRUE)
-      
+
     }) # end of renderUI, "hrBlock_n"
-    
+
     observe({
       req(vals$fit1)
-      
+
       mod_blocks_server(
-        id = "hrBlock_N", 
+        id = "hrBlock_N",
         vals = vals, data = vals$data1, fit = vals$fit1,
         type = "N", name = "area")
-      
+
     }) # end of observe
-    
+
     output$hrBlock_n_new <- shiny::renderUI({
       req(vals$hr$data)
-      
+
       sampleBlock(
         number = NULL,
         numberIcon = FALSE,
@@ -1562,58 +1593,58 @@ mod_tab_hrange_server <- function(id, vals) {
         line2 = "(n)",
         rightBorder = FALSE,
         marginBottom = FALSE)
-      
+
     }) # end of renderUI, 'hrBlock_n_new"
-    
+
     observe({
       req(vals$hr$fit)
-      
+
       mod_blocks_server(
-        id = "hrBlock_N_new", 
+        id = "hrBlock_N_new",
         vals = vals, data = vals$hr$data, fit = vals$hr$fit,
         type = "N", name = "area", class = "cl-mdn")
-      
+
     }) # end of observe
-    
+
     ## Outputs: -----------------------------------------------------------
     ### Home range area: --------------------------------------------------
-    
+
     observe({
       req(vals$akde, vals$hrEst, vals$hrErr)
-      
+
       mod_blocks_server(
         id = "hrBlock_est",
         vals = vals, type = "hr", name = "hrEst")
-      
+
       mod_blocks_server(
-        id = "hrBlock_err", 
+        id = "hrBlock_err",
         vals = vals, type = "hr", name = "hrErr")
-      
+
     }) # end of observe
-    
+
     observe({
       req(vals$akde_new, vals$hrEst_new, vals$hrErr_new)
-      
+
       mod_blocks_server(
-        id = "hrBlock_est_new", 
+        id = "hrBlock_est_new",
         vals = vals, type = "hr", name = "hrEst_new",
         class = "cl-mdn")
-      
+
       mod_blocks_server(
-        id = "hrBlock_err_new", 
+        id = "hrBlock_err_new",
         vals = vals, type = "hr", name = "hrErr_new",
         class = "cl-mdn")
-      
+
     }) # end of observe
-    
+
     # HELP TOUR & MODALS --------------------------------------------------
     ## Help tour (sampling design): ---------------------------------------
-    
+
     observe({
-      
+
       element <- intro <- character(0)
       element <- c(element, "#Tour_main")
-      
+
       intro <- c(
         intro,
         HTML(paste(
@@ -1622,19 +1653,19 @@ mod_tab_hrange_server <- function(id, vals) {
           span("Modify", class = "cl-sea"), "button",
           "to adjust the sampling design."))
       )
-      
+
       # element <- c(element, "#hr_intro")
-      # 
+      #
       # intro <- c(
       #   intro,
       #   HTML(paste(
       #     "hr_intro."))
       # )
-      
+
       tour <- data.frame(element = element,
                          intro = intro,
                          stringsAsFactors = FALSE)
-      
+
       rintrojs::introjs(
         session = session,
         options = list(
@@ -1647,18 +1678,18 @@ mod_tab_hrange_server <- function(id, vals) {
         ),
         events = list(onbeforechange =
                         rintrojs::readCallback('switchTabs')))
-      
+
     }) %>% # observe event, bound to:
       bindEvent(input$hrHelp_regime)
-    
+
     ## Help modal (biases): -----------------------------------------------
-    
+
     observe({
-      
+
       shiny::showModal(
         shiny::modalDialog(
           title = h3("Home range:"),
-          
+
           p("As animal movement",
             "is inherently", span("autocorrelated", class = "cl-sea-d"),
             "(locations are similar as a function of space and",
@@ -1667,29 +1698,29 @@ mod_tab_hrange_server <- function(id, vals) {
                  class = "cl-sea"),
             "are the most appropriate method for",
             span("home range", class = "cl-sea-d"), "estimation."),
-          
+
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
-      
+
     }) %>% # observe event, bound to:
       bindEvent(input$hrHelp_method)
-    
+
     observe({
       shiny::showModal(
         shiny::modalDialog(
           title = h3("Explaining biases:"),
-          
+
           withMathJax(
             paste0("$$\\small{\\text{Relative error (%)}",
                    " = \\frac{\\text{estimate}-\\text{truth}}",
                    "{\\text{truth}}\\times 100}$$")
           ),
-          
+
           p(class = "cl-mdn",
             style = "text-align: center;",
             "How much uncertainty is associated",
             "with an estimate?"),
-          
+
           p("The", span("relative error (%)", class = "cl-dgr"),
             "of an", span("home range estimate", class = "cl-sea-d"),
             "decreases as",
@@ -1699,54 +1730,57 @@ mod_tab_hrange_server <- function(id, vals) {
                  wrap_none("(\u03C4", tags$sub("p"), ")"),
                  "timescale.", class = "cl-sea-d"),
           ),
-          
+
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
-      
+
     }) %>% # observe event, bound to:
       bindEvent(input$hrHelp_bias)
-    
+
     # MISC ----------------------------------------------------------------
-    
-    output$time_hr <- renderText({
-      req(vals$hr$time[1] > 0)
+
+    output$out_time_hr <- renderText({
+      req(vals$hr$time)
       
       out <- fix_unit(vals$hr$time[1], "seconds", convert = TRUE)
-      paste0("Initial sampling design took approximately ",
-             out$value, " ", out$unit, ".")
+      out_txt <- paste0("Initial sampling design took approximately ",
+                        out$value, " ", out$unit, ".")
+      out_txt
       
     }) # end of renderText, "time_hr"
     
-    output$time_hr_new <- renderText({
-      req(vals$hr$time[2] > 0)
+    output$out_time_hr_new <- renderText({
+      req(vals$hr$time, vals$akde_new)
       
       out <- fix_unit(vals$hr$time[2], "seconds", convert = TRUE)
-      paste0("New sampling design took approximately ",
-             out$value, " ", out$unit, ".")
+      out_txt <- paste0("New sampling design took approximately ",
+                        out$value, " ", out$unit, ".")
+      out_txt
       
     }) # end of renderText, "time_hr_new"
     
-    output$time_hr_new <- renderText({
-      req(vals$hr$time[1] > 0, vals$cthr_new)
+    output$out_time_hr_total <- renderText({
+      req(vals$hr$time, vals$akde_new)
       
       total_time <- vals$hr$time[1] + vals$hr$time[2]
       
       out <- fix_unit(total_time, "seconds", convert = TRUE)
-      paste0("... In total, this section took approximately",
-             out$value, " ", out$unit, ".")
+      out_txt <- paste0("... In total, this section took ",
+                        out$value, " ", out$unit, ".")
+      out_txt
       
     }) # end of renderText, "time_hr_total"
-    
-    
+
+
     # Save information for report if table is not requested:
-    
+
     observe({
       req(vals$active_tab == 'hr',
           vals$is_analyses)
-      
+
       req(is.null(vals$hr$tbl))
       vals$report_hr_yn <- FALSE
-      
+
       if (is.null(vals$hrErr_new)) {
         req(vals$hrErr)
         vals$report_hr_yn <- TRUE
@@ -1756,7 +1790,7 @@ mod_tab_hrange_server <- function(id, vals) {
         vals$report_hr_yn <- TRUE
         vals$hr$tbl <- hrRow_new()
       }
-      
+
     }) %>% # end of observe,
       bindEvent(list(input$run_hr, input$run_hr_new))
     

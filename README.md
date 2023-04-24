@@ -1,17 +1,20 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# <img src='https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/logo.png' align="left" height="150" />
+# movedesign <img style="padding: 15px 0px 0px 0px;"  src='https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/logo.png' align="right" height="140"/>
 
 <!-- badges: start -->
 
-[![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
-[![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)
-[![DOI](https://zenodo.org/badge/474098792.svg)](https://zenodo.org/badge/latestdoi/474098792)
-[![HitCount](https://hits.dwyl.com/ecoisilva/movedesign.svg?style=flat-square)](http://hits.dwyl.com/ecoisilva/movedesign)
+[![DOI](https://zenodo.org/badge/474098792.svg)](https://zenodo.org/badge/latestdoi/474098792)<br>
+[![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)<br>
+[![Project Status: Active – The project has reached a stable, usable
+state and is being actively
+developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)](http://hits.dwyl.com/ecoisilva/movedesign)<br>
 <!-- [![Codecov test coverage](https://codecov.io/gh/ecoisilva/movedesign/branch/main/graph/badge.svg)](https://app.codecov.io/gh/ecoisilva/movedesign?branch=main) -->
-<!-- badges: end -->
+<!-- badges: end --> <br>
+
+## Overview
 
 The goal of `movedesign` is to assist researchers in designing movement
 ecology studies related to two main research questions: the estimation
@@ -36,7 +39,7 @@ The app was built using the `golem` framework.
 
 ## Installation
 
-You can install the development version of `movedesign` like so:
+You can install the stable version of `movedesign` like so:
 
 ``` r
 install.packages("remotes")
@@ -46,16 +49,38 @@ remotes::install_github("ecoisilva/movedesign")
 If you run with any problems, try the solutions listed in the
 [instalation
 issues](https://ecoisilva.github.io/movedesign/articles/installation.html)
-vignette, and run the tutorial in the “Home” tab (see the
-[tutorial](https://ecoisilva.github.io/movedesign/articles/tutorial.html)
-vignette for how to begin the tour).
+vignette.
 
 ## Run the app
 
-To launch the `movedesign` Shiny app, type the following code into the R
-console after you have loaded the library:
+To launch `movedesign`, type the following code into the R console after
+you have loaded the library:
 
 ``` r
 library(movedesign)
 movedesign::run_app()
 ```
+
+## How to use the app
+
+Run the guided tutorial in the “Home” tab (see the
+[vignette](https://ecoisilva.github.io/movedesign/articles/tutorial.html)
+for how to begin), and check out the preprint
+[here](https://www.biorxiv.org/content/10.1101/2023.01.27.525894v1) for
+further details.
+
+## Getting help
+
+If you encounter a bug, please [submit an
+issue](https://github.com/ecoisilva/movedesign/issues). For more general
+questions and suggestions, contact [Inês Silva](i.simoes-silva@hzdr.de).
+
+## Citation
+
+``` r
+citation("movedesign")
+```
+
+> Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese,
+> J. M. (2023). movedesign: Shiny R app to evaluate sampling design for
+> animal tracking movement studies. bioRxiv, 2023-01.

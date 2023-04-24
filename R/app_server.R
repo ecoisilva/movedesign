@@ -27,8 +27,7 @@ app_server <- function(input, output, session) {
     "turtle" = "Glyptemys insculpta")
   
   vals <- reactiveValues(
-    ctmm = data.frame(cbind(species,
-                            species_binom)),
+    ctmm = data.frame(cbind(species, species_binom)),
     dev = NULL,
     pars = NULL,
     hr = NULL,
@@ -38,7 +37,7 @@ app_server <- function(input, output, session) {
     time = c(0,0),
     tour_active = FALSE,
     alert_active = TRUE,
-    overwrite_seed = FALSE,
+    overwrite_active = FALSE,
     crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
   
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
@@ -55,7 +54,7 @@ app_server <- function(input, output, session) {
     # title, icon
     info_upload <- c("Import data", "file-csv")
     info_select <- c("Select data", "file-circle-plus")
-    info_sims <- c("Simulate data", "file-signature")
+    info_sims <- c("Simulate data", "file-pen")
     info_regs <- c("Sampling design", "stopwatch")
     info_hr <- c("Home range", "map-location-dot")
     info_ctsd <- c("Speed & distance", "gauge-high")

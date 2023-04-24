@@ -574,11 +574,9 @@ mod_tab_design_server <- function(id, vals) {
                  "Duration cannot be less than 2 days."))
           
           gps <- vals$gps
-          
           vals$dur <- data.frame(
-            value = input$gps_dur_unit %#%
-              gps[reg_selected(), ]$dur_sec,
-            unit = input$gps_dur_unit)
+            value = round("days" %#% gps[reg_selected(), ]$dur_sec, 1),
+            unit = "days")
           
           tmpdti_notes <- gps[reg_selected(), ]$dti_notes
           tmpdti_unit <- sub('^.* ([[:alnum:]]+)$',
@@ -590,12 +588,10 @@ mod_tab_design_server <- function(id, vals) {
         } else {
           req(vals$dev$dur, vals$dev$dti)
           
-          vals$dur <- data.frame(
-            value = vals$dev$dur$value,
-            unit = vals$dev$dur$unit)
-          vals$dti <- data.frame(
-            value = vals$dev$dti$value,
-            unit = vals$dev$dti$unit)
+          vals$dur <- data.frame(value = vals$dev$dur$value,
+                                 unit = vals$dev$dur$unit)
+          vals$dti <- data.frame(value = vals$dev$dti$value,
+                                 unit = vals$dev$dti$unit)
         }
         
       } else if (input$device_type == "VHF") {
@@ -728,7 +724,7 @@ mod_tab_design_server <- function(id, vals) {
       } else { shinyjs::hide(id = "devBox_summary") }
 
     }) %>% # end of observe,
-      bindEvent(vals$dev$tbl)
+      bindEvent(input$devButton_save)
 
     ## Update device settings: --------------------------------------------
     
@@ -859,7 +855,7 @@ mod_tab_design_server <- function(id, vals) {
     writing_regime <- reactive({
       req(vals$dur, vals$dti)
       
-      out_dur <- fix_unit(vals$dur$value, vals$dur$unit)
+      out_dur <- fix_unit(vals$dur$value, vals$dur$unit, convert = TRUE)
       out_dti <- fix_unit(vals$dti$value, vals$dti$unit)
       
       dur <- out_dur$value
@@ -868,18 +864,14 @@ mod_tab_design_server <- function(id, vals) {
       dti <- out_dti$value
       dti_unit <- out_dti$unit
       
+      dur_day <- fix_unit(vals$dur$value, vals$dur$unit)
       if (grepl("day", dur_unit)) {
-        
         txt_dur <- wrap_none(
-          ifelse(dur == 1, "", paste0(dur, " ")), 
-          dur_unit,
+          ifelse(dur == 1, "", paste0(dur_day$value, " ")), 
+          dur_day$unit,
           css = "cl-sea", end = ".")
         
       } else if (grepl("month", dur_unit)) {
-        
-        dur_day <- "days" %#% dur %#% dur_unit
-        dur_day <- fix_unit(dur_day, "days")
-        
         txt_dur <- span(
           span(dur, dur_unit, class = "cl-sea"),
           "(\u2248", wrap_none(
@@ -894,6 +886,10 @@ mod_tab_design_server <- function(id, vals) {
           span(dur, dur_unit, class = "cl-sea"),
           "(\u2248", wrap_none(dur_mth$value, " ", dur_mth$unit,
                                css = "cl-sea", end = ")."))
+      } else {
+        txt_dur <- wrap_none(
+          ifelse(dur == 1, "", paste0(dur, " ")), 
+          dur_unit, css = "cl-sea", end = ".")
       }
       
       if (dti == 1) {
@@ -1113,8 +1109,7 @@ mod_tab_design_server <- function(id, vals) {
             
             #### 1.1. Select tracking regime:
             
-            p("What", span("sampling interval", class = "col-hgl"),
-              "will you evaluate?") %>%
+            p("What sampling interval will you evaluate?") %>%
               tagAppendAttributes(class = 'subheader'),
             
             if (!input$gps_from_plot) {
@@ -1124,11 +1119,9 @@ mod_tab_design_server <- function(id, vals) {
               p(style = "padding-bottom: 15px;",
                 
                 "Please select a",
-                span("GPS fix rate", class = "col-hgl"),
-                "from the", span("plot", class = "col-key"),
-                "below to further evaluate that",
-                HTML(paste0(span("sampling design",
-                                 class = "col-hgl"), "."))) },
+                span("GPS fix rate", class = "label_intext"),
+                "from the", span("plot", class = "cl-sea"), "below",
+                "to further evaluate that sampling design.") },
             
             if (input$gps_from_plot) {
               column(
@@ -1183,8 +1176,7 @@ mod_tab_design_server <- function(id, vals) {
             #   outputId = ns("devPlot_vhf"),
             #   width = "100%", height = "50%"),
             
-            p("What", span("sampling interval", class = "col-hgl"),
-              "will you evaluate?") %>%
+            p("What sampling interval will you evaluate?") %>%
               tagAppendAttributes(class = 'subheader'),
             
             uiOutput(ns("vhfSelect_fix")),
@@ -1259,50 +1251,55 @@ mod_tab_design_server <- function(id, vals) {
     
     ## Change sample size text: -------------------------------------------
     
-    legend_sizes <- reactive({
-      
+    output$devPlotSubtitle <- renderUI({
+      req(vals$which_question)
       if (length(vals$which_question) > 1) {
+        req(vals$tau_p0, vals$tau_v0)
+        
         ui <- tagList(
-          "Note: The secondary axis is showing an approximation of",
-          "the effective sample sizes",
-          span("N[area]", class = "cl-sea"),
-          "and", span("N[speed]", class = "cl-grn-d"),
-          "for each sampling design;",
-          "true N values may differ.")
+          span("Note:", class = "help-block-ttl"), 
+          "The primary axis is the", 
+          wrap_none(span("sampling duration", col = "black"), end = ","),
+          "(points), and the secondary axis (lines) are",
+          "the expected effective sample sizes (roughly estimated)",
+          "\u2014", span("N[area]", class = "cl-sea"),
+          "and", span("N[speed]", class = "cl-grn-d"), "\u2014",
+          "for each sampling design; true N values may differ.")
       } else {
         
         switch(
           vals$which_question,
           "Home range" = {
+            req(vals$tau_p0)
             ui <- tagList(
-              "Note: The secondary axis is showing",
-              "the effective sample size",
-              span("N[area]", class = "cl-sea"),
-              "for each sampling design.")
+              span("Note:", class = "help-block-ttl"), 
+              "The secondary axis (lines) are",
+              "the expected effective sample sizes (roughly estimated)",
+              "\u2014", span("N[area]", class = "cl-sea"), "\u2014",
+              "for each sampling design; true N may differ.")
           },
           "Speed & distance" = {
+            req(vals$tau_v0)
             ui <- tagList(
-              "Note: The secondary axis is showing",
-              "the effective sample size",
-              span("N[speed]", class = "cl-dgr"),
-              "for each sampling design.")
+              span("Note:", style = "help-block-ttl"), 
+              "The secondary axis (lines) are",
+              "the expected effective sample sizes (roughly estimated)",
+              "\u2014", span("N[speed]", class = "cl-dgr"), "\u2014",
+              "for each sampling design; true N may differ.")
           },
           stop(paste0("No handler for ",
                       vals$which_question, "."))
         )
       }
       
-      ui <- span(class = "help-block",
-                 ui,
-                 "Switch to logarithmic scale to show these",
+      ui <- span(class = "help-block", ui,
+                 "Sampling interval (x axis) is set to",
+                 "logarithmic scale to show these",
                  "values more clearly.")
       
-    }) # end of reactive, legend_sizes()
-    
-    output$devPlotSubtitle <- renderUI({
-      req(vals$which_question)
-      legend_sizes()
-    })
+      return(ui)
+      
+    }) # end of renderUI, "devPlotSubtitle"
     
     info_sizes <- reactive({
         if (input$est_type == 1) {
@@ -1352,7 +1349,7 @@ mod_tab_design_server <- function(id, vals) {
       max_dur <- ifelse(
         vals$dev$dur$value == 0,
         TRUE, vals$dev$dur$value %#%
-          vals$dev$dur$unit > 20 %#% "years")
+          vals$dev$dur$unit > 10 %#% "years")
 
        if ((min_dur || max_dur) && vals$alert_active) {
         shinyalert::shinyalert(
@@ -1361,7 +1358,7 @@ mod_tab_design_server <- function(id, vals) {
           text = tagList(span(
             "Maximum duration cannot be shorter than",
             span("2 days", class = "cl-dgr"),
-            "or greater than", span("20 years", class = "cl-dgr"),
+            "or greater than", span("10 years", class = "cl-dgr"),
             "for the simulation to succeed. In these conditions,",
             "the plot will not update.", p(),
             "Please choose a different",
@@ -1381,6 +1378,46 @@ mod_tab_design_server <- function(id, vals) {
     
     ## Regime... ----------------------------------------------------------
     ### ...GPS & Satellite loggers: ---------------------------------------
+    
+    # Alert if research question(s)/data are NOT available:
+    
+    observe({
+      req(vals$active_tab == 'device')
+      next_step <- TRUE
+  
+      # Check if questions were set:
+      if (is.null(vals$which_question)) {
+        next_step <- FALSE
+        shinyalert::shinyalert(
+          title = "No research goal selected",
+          text = tagList(span(
+            "Please select a research question in the",
+            icon("house", class = "cl-blk"),
+            span("Home", class = "cl-blk"),
+            "tab before proceeding.")),
+          html = TRUE,
+          size = "xs")
+      }
+      
+      # Check if there is data:
+      req(next_step)
+      
+      if (is.null(vals$data0))
+        shinyalert::shinyalert(
+          type = "error",
+          title = "No data found",
+          text = tagList(span(
+            "Please", wrap_none(
+              span("upload", class = "cl-dgr"), end = ","),
+            span("select", class = "cl-dgr"), "or",
+            span("simulate", class = "cl-dgr"), "data first",
+            "in the", icon("paw", class = "cl-mdn"),
+            span("Species", class = "cl-mdn"), "tabs."
+          )),
+          html = TRUE,
+          size = "xs")
+        
+    }) # end of observe
     
     # Alert if user did NOT select fix rate before validation:
     
@@ -1437,6 +1474,7 @@ mod_tab_design_server <- function(id, vals) {
           
         } # end of if (vals$dur < 1 %#% "days")
       }
+      
       
     }) %>% # end of observer,
       bindEvent(input$validate_gps)
@@ -1608,7 +1646,9 @@ mod_tab_design_server <- function(id, vals) {
         b_max = vals$dev$dur$value,
         b_unit = vals$dev$dur$unit,
         cutoff = input_cutoff,
-        dti_max = input$gps_dti_max)
+        dti_max = input$gps_dti_max,
+        seed = vals$seed0,
+        set_seed = vals$overwrite_active)
       
       if (all(dat$dur_sec == 0)) return(NULL)
       
@@ -1628,41 +1668,39 @@ mod_tab_design_server <- function(id, vals) {
       
       return(dat)
       
-    }) %>% # end of reactive, simulating_gps()
-      bindCache(list(input$gps_dur,
-                     input$gps_dur_unit,
-                     input$gps_dti_max))
+    }) # %>% # end of reactive, simulating_gps()
+      # bindCache(list(input$gps_dur,
+      #                input$gps_dur_unit,
+      #                input$gps_dti_max,
+      #                vals$seed0))
     
     ## Simulating new conditional data: -----------------------------------
-    
-    setting_seed <- reactive({
-      if (vals$data_type != "simulated") {
-        seed <- round(stats::runif(1, min = 1, max = 10000), 0)
-        vals$seed0 <- seed
-      } else {  seed <- vals$seed0 }
-      
-      # seed <- ifelse(vals$tour_active, 100, vals$seed0)
-      if (vals$overwrite_seed) vals$seed0 <- seed <- 100
-      return(seed)
-      
-    }) # end of reactive, setting_seed()
-    
+   
     ### Prepare parameters:
     
     simulating_data <- reactive({
       
+      dat <- vals$data0
       dur <- vals$dur$value %#% vals$dur$unit
       dti <- vals$dti$value %#% vals$dti$unit
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
-      out_data <- ctmm::simulate(
-        vals$data0,
-        vals$fit0,
-        t = t_new,
-        seed = setting_seed())
-      out_data <- pseudonymize(out_data)
+      if (vals$data_type == "simulated") {
+        fit <- vals$ctmm_mod 
+      } else {
+        if (vals$fit0$isotropic == TRUE) { fit <- vals$fit0
+        } else fit <- vals$ctmm_mod <- prepare_mod(
+          tau_p = vals$tau_p0$value[2], 
+          tau_p_units = vals$tau_p0$unit[2], 
+          tau_v = vals$tau_v0$value[2], 
+          tau_v_units = vals$tau_v0$unit[2], 
+          sigma = vals$sigma0$value[2], 
+          sigma_units = vals$sigma0$unit[2])
+      }
       
-      return(out_data)
+      sim <- ctmm::simulate(dat, fit, t = t_new, seed = vals$seed0)
+      sim <- pseudonymize(sim)
+      return(sim)
       
     }) %>% # end of reactive, simulating_data()
       bindCache(c(vals$species, 
@@ -1673,8 +1711,7 @@ mod_tab_design_server <- function(id, vals) {
     estimating_time <- reactive({
       
       loading_modal("Calculating run time")
-      out_time <- guesstimate_time(vals$data1, 
-                                   parallel = vals$parallel)
+      out_time <- guess_time(vals$data1, parallel = vals$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out_time)
@@ -1739,6 +1776,8 @@ mod_tab_design_server <- function(id, vals) {
       vals$dev$n <- nrow(data1)
       vals$needs_fit <- TRUE
       vals$is_analyses <- NULL
+      vals$hr_completed <- FALSE
+      vals$sd_completed <- FALSE
       
       # If there is data loss:
       
@@ -2031,13 +2070,18 @@ mod_tab_design_server <- function(id, vals) {
     }) # end of reactive, preparing_gps()
     
     output$devPlot_gps <- ggiraph::renderGirafe({
-      req(vals$active_tab == 'device')
+      req(vals$active_tab == 'device',
+          input$gps_dur,
+          input$gps_dur_unit,
+          input$gps_dti_max,
+          input$device_log)
       
       dti_scale <- dti_yn <- NULL
       device <- preparing_gps()
       device$gps$x <- log(device$gps$dti)
 
       x_label <- "Log of sampling interval (time between fixes)"
+      pos <- c(0.25, 0.85)
       p_x <- ggplot2::geom_vline(
         xintercept = min(device$gps$x),
         alpha = 0)
@@ -2050,6 +2094,7 @@ mod_tab_design_server <- function(id, vals) {
 
           device$gps$x <- device$gps$dti
           x_label <- "Sampling interval (time between fixes)"
+          pos <- c(0.75, 0.85)
           p_x <- ggplot2::geom_vline(
             xintercept = min(log(device$gps$x)),
             color = "grey80",
@@ -2077,8 +2122,8 @@ mod_tab_design_server <- function(id, vals) {
           mapping = ggplot2::aes(
             x = .data$x,
             y = device$axis1$a1 + .data$N_area * device$axis1$b1,
+            color = "Narea",
             group = 1),
-          color = pal$sea,
           size = 3, alpha = .2)
       }
       if (device$add_N2) {
@@ -2087,8 +2132,8 @@ mod_tab_design_server <- function(id, vals) {
           mapping = ggplot2::aes(
             x = .data$x,
             y = device$axis2$a2 + .data$N_speed * device$axis2$b2,
+            color = "Nspeed",
             group = 1),
-          color = pal$grn,
           size = 3, alpha = .2)
       }
 
@@ -2096,7 +2141,7 @@ mod_tab_design_server <- function(id, vals) {
         device$gps, ggplot2::aes(
           x = .data$x,
           y = .data$dur,
-          color = .data$cutoff,
+          fill = .data$cutoff,
           tooltip = .data$dti_notes,
           data_id = as.numeric(.data$id))) +
 
@@ -2137,52 +2182,67 @@ mod_tab_design_server <- function(id, vals) {
             limits = c(0, ymax)) }
         } +
 
-        ggiraph::geom_point_interactive(size = 1.5) +
-        ggplot2::scale_color_manual(values = device$pal) +
-
+        ggiraph::geom_point_interactive(shape = 21, size = 2) +
         p_x_scale +
-
-        ggplot2::scale_fill_manual(
+        
+        ggplot2::scale_fill_manual(values = device$pal) +
+        ggplot2::scale_color_manual(
           name = "",
-          labels = c(expression(N[area],
-                     expression(N[speed])),
-          values = c(pal$sea, pal$dgr))) +
+          labels = c(bquote(N[area]),
+                     bquote(N[speed])),
+          breaks = c("Narea", "Nspeed"),
+          values = c(pal$sea, pal$grn)) +
 
         ggplot2::labs(
           x = x_label,
           y = paste0("Durations (in ", input$gps_dur_unit, ")")) +
 
         theme_movedesign() +
-        ggplot2::guides(color = "none") +
-        ggplot2::theme(legend.position = c(0.85, 0.85))
-
-      if (vals$tour_active) {
-        tmp <- match("1 fix every 2 hours", device$gps$dti_notes)
-        preselected <- as.character(tmp)
-      } else { preselected <- character(0) }
+        ggplot2::guides(fill = "none") +
+        ggplot2::theme(
+          legend.position = pos,
+          legend.text = ggplot2::element_text(size = 14),
+          axis.title.y.right = ggplot2::element_text(angle = 90))
+      
+      # preselected <- character(0)
+      # if (vals$tour_active) {
+      #   tmp <- match("1 fix every 2 hours", device$gps$dti_notes)
+      #   preselected <- as.character(tmp)
+      # }
 
       ggiraph::girafe(
         ggobj = p,
         width_svg = 5, height_svg = 4,
         options = list(
+          ggiraph::opts_tooltip(
+            css = paste(
+              "z-index: 99999999999999 !important;",
+              "background-color: var(--midnight) !important;",
+              "color: var(--white) !important;",
+              "border: 1px var(--midnight) solid !important;",
+              "border-radius: 4px;",
+              "padding: 5px;")),
           ggiraph::opts_hover(
-            css = paste("r:4pt;",
-                        "fill: #ffbf00;",
-                        "stroke: #ffbf00;")),
+            css = paste(
+              "r: 4pt;",
+              "fill: #ffbf00;",
+              "stroke: #ffbf00;")),
           ggiraph::opts_selection(
-            selected = preselected,
+            # selected = preselected,
             type = "single",
-            css = paste("r: 4pt;",
-                        "fill: #2c3b41;",
-                        "stroke: #2c3b41;")),
+            css = paste(
+              "r: 4pt;",
+              "fill: #2c3b41;",
+              "stroke: #2c3b41;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
 
-    }) %>% # end of renderGirafe, "devPlot_gps",
-      bindEvent(input$gps_dur,
-                input$gps_dur_unit,
-                input$gps_dti_max,
-                input$device_log,
-                vals$which_question)
+    }) # %>% # end of renderGirafe, "devPlot_gps",
+      # bindEvent(input$gps_dur,
+      #           input$gps_dur_unit,
+      #           input$gps_dti_max,
+      #           input$device_log,
+      #           vals$which_question,
+      #           vals$overwrite_seed)
     
     ## Plotting new simulated data plot (xy): -----------------------------
     
@@ -2331,8 +2391,11 @@ mod_tab_design_server <- function(id, vals) {
       } else if (grepl("year", out$unit)) {
         out_new <- convert_to(out, new_unit = "months")
         txt <- paste0("(or ", out_new[1], " ", out_new[2], ")")
+      } else if (grepl("days", out$unit)) {
+        out <- fix_unit(vals$dur$value, vals$dur$unit)
+        txt <- NULL
       } else {
-        txt = NULL
+        txt <- NULL
       }
       
       parBlock(
@@ -2443,7 +2506,7 @@ mod_tab_design_server <- function(id, vals) {
       
       out$device <- input$device_type
       
-      dur <- fix_unit(vals$dur$value, vals$dur$unit)
+      dur <- fix_unit(vals$dur$value, vals$dur$unit, convert = TRUE)
       dti <- fix_unit(vals$dti$value, vals$dti$unit)
       
       out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
@@ -2475,7 +2538,7 @@ mod_tab_design_server <- function(id, vals) {
     output$devTable <- reactable::renderReactable({
       req(vals$dev$tbl)
       
-      columnNames <- list(
+      nms <- list(
         device = "Type",
         dur = "Duration",
         dti = "Interval",
@@ -2504,30 +2567,30 @@ mod_tab_design_server <- function(id, vals) {
         
         columns = list(
           device = reactable::colDef(
-            name = columnNames[["device"]]),
+            name = nms[["device"]]),
           dur = reactable::colDef(
-            minWidth = 80, name = columnNames[["dur"]],
+            minWidth = 80, name = nms[["dur"]],
             style = list(fontWeight = "bold")),
           dti = reactable::colDef(
-            minWidth = 80, name = columnNames[["dti"]],
+            minWidth = 80, name = nms[["dti"]],
             style = list(fontWeight = "bold")),
           n = reactable::colDef(
-            name = columnNames[["n"]],
-            style = list(color = format_num),
+            name = nms[["n"]],
+            style = format_num,
             format = reactable::colFormat(separators = TRUE,
                                           digits = 0)),
           N1 = reactable::colDef(
-            minWidth = 80, name = columnNames[["N1"]],
-            style = list(color = format_num),
+            minWidth = 80, name = nms[["N1"]],
+            style = format_num,
             format = reactable::colFormat(separators = TRUE,
                                           digits = 1)),
           N2 = reactable::colDef(
-            minWidth = 80, name = columnNames[["N2"]],
-            style = list(color = format_num),
+            minWidth = 80, name = nms[["N2"]],
+            style = format_num,
             format = reactable::colFormat(separators = TRUE,
                                           digits = 1)),
           fit = reactable::colDef(
-            minWidth = 70, name = columnNames[["fit"]])
+            minWidth = 70, name = nms[["fit"]])
         ))
       
     }) # end of renderReactable, "devTable"

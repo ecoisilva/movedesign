@@ -21,7 +21,7 @@ mod_tab_sims_ui <- function(id) {
           shinydashboardPlus::box(
             
             title = span("Simulate movement data:", class = "ttl-tab"),
-            icon = fontawesome::fa(name = "file-signature",
+            icon = fontawesome::fa(name = "file-pen",
                                    height = "21px",
                                    margin_left = "14px",
                                    margin_right = "8px",
@@ -527,7 +527,7 @@ mod_tab_sims_server <- function(id, vals) {
         
       } else {
         v <- sqrt((input$sigma0 %#% input$sigma0_units) * pi/2) / 
-          sqrt(prod((input$tau_v0 %#% input$tau_v0_units) * 
+          sqrt(prod((input$tau_v0 %#% input$tau_v0_units), 
                       (input$tau_p0 %#% input$tau_p0_units)))
         
         v <- fix_unit(v, "m/s", convert = TRUE)
@@ -629,11 +629,11 @@ mod_tab_sims_server <- function(id, vals) {
       
       vals$dur0 <- dplyr::case_when(
         tmp_taup >= ("days" %#% tmp_tauv) ~ 
-          ifelse(tmp_taup > 1, 
-                 round(tmp_taup * 10, 1), 10),
+          ifelse(tmp_taup > 1,
+                 round(tmp_taup * 20, 1), 20),
         TRUE ~ 
           ifelse(("days" %#% tmp_tauv) > 1,
-                 "days" %#% tmp_tauv * 10, 10)
+                 round("days" %#% tmp_tauv * 20, 1), 20)
       )
       vals$dur0_units <- "days"
 
@@ -694,7 +694,6 @@ mod_tab_sims_server <- function(id, vals) {
         
         ### Simulate full dataset: ----------------------------------------
         
-        msg_header("Data simulation:")
         msg_log(
           style = "warning",
           message = paste0("Generating ",
@@ -774,6 +773,7 @@ mod_tab_sims_server <- function(id, vals) {
           detail = "Please wait for model fit to finish.")
         
         vals$fit0 <- fit0()
+        
         vals$time_sims <- difftime(Sys.time(), start_sim,
                                    units = "mins")
         
@@ -856,7 +856,11 @@ mod_tab_sims_server <- function(id, vals) {
         ggplot2::geom_path(
           vals$data0, mapping = ggplot2::aes(
             x = x, y = y),
-          col = "grey90", size = 1) +
+          col = "grey90", linewidth = 1) +
+        ggplot2::geom_point(
+          vals$data0, mapping = ggplot2::aes(
+            x = x, y = y),
+          col = "grey60", size = 1.2) +
         
         ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(

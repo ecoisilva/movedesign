@@ -79,7 +79,7 @@
   z-index: 10099;
   background-color: transparent;
   border: none;
-  border-radius: 0!important;
+  border-radius: 0 !important;
   box-shadow: none;
   transition: all .3s ease-out;
 }

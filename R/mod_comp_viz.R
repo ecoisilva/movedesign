@@ -18,7 +18,7 @@ mod_comp_viz_ui <- function(id) {
         value = ns("dataPanel_all"),
         title = tagList(
           icon("paw", class = "cl-sea"),
-          span("Data", class = "ttl-panel")
+          span("Dataset", class = "ttl-panel")
         ),
 
         p(),
@@ -167,9 +167,11 @@ mod_comp_viz_server <- function(id, vals) {
 
     output$dataPlot_all <- ggiraph::renderGirafe({
       req(vals$dataList, vals$data_type != "simulated")
-
+      
+      # if (length(vals$dataList) == 1)
+      
       if (vals$data_type == "selected") {
-
+        
         # to address compatibility of the pelican dataset:
         if (vals$species != "pelican") {
           newdat.all <- as_tele_df(vals$dataList)

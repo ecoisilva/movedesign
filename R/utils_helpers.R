@@ -98,48 +98,56 @@ errorBlock <- function(icon = NULL,
   cl <- "errorblock"
   if (isTRUE(rightBorder)) cl <- paste0(cl, " border-right")
 
+  
+  if (value > 0) {
+    tmptext <- span("Overestimation", icon("angle-up"))
+  } else {
+    tmptext <- span("Underestimation", icon("angle-down"))
+  }
+  
+  getColor <- function(v) {
+    if (abs(v) >= 0.8) {
+      out <- "#dd4b39"
+    } else if (abs(v) > 0.1 && abs(v) < 0.8) {
+      out <- "#ffb300"
+    } else if (abs(v) <= 0.1) {
+      out <- "#009da0" 
+    }
+    return(out)
+  }
+  
+  color_err <- paste("color:", getColor(value), "!important;")
+  color_err_min <- getColor(min)
+  color_err_max <- getColor(max)
+  
+  value <- sigdigits(value * 100, 2)
   min <- ifelse((min * 100) %% 1 == 0,
                 scales::label_comma(accuracy = 1)(min * 100),
                 scales::label_comma(accuracy = .1)(min * 100))
-
+  
   max <- ifelse((max * 100) %% 1 == 0,
                 scales::label_comma(accuracy = 1)(max * 100),
                 scales::label_comma(accuracy = .1)(max * 100))
-
-  range <- paste0(min, "% \u2014 ", max, "%")
-
-  if (!is.null(value)) {
-    if (value > 0) {
-      tmptext <- span("Overestimation", icon("angle-up"))
-    } else {
-      tmptext <- span("Underestimation", icon("angle-down"))
-    }
-
-    if (abs(value) >= 0.8) {
-      numberColor <- "color: var(--danger) !important;" }
-    if (abs(value) < 0.2 || abs(value) < 0.8) {
-      numberColor <- "color: var(--gold) !important;" }
-    if (abs(value) <= 0.2) {
-      numberColor <- "color: var(--sea) !important;" }
-  }
-
-  value <- sigdigits(value * 100, 2)
-
+  
+  range <- wrap_none(
+    "[", wrap_none(min, color = color_err_min),
+    ", ", wrap_none(max, "%", color = color_err_max), "]")
+  # range <- paste0(min, "% \u2014 ", max, "%")
+  
   shiny::tags$div(
     class = "errorblock",
-
-    if (!is.null(icon)) {
-      shiny::tags$span(
-        class = "errorblock-icon", icon(icon), br())},
+    
+    if (!is.null(icon)) { shiny::tags$span(
+      class = "errorblock-icon", icon(icon), br()) },
     shiny::tags$span(class = "errorblock-text", text, br()),
-    shiny::tags$span(class = "errorblock-percentage",
-                     tmptext, br(), style = numberColor),
     shiny::tags$span(class = "errorblock-header",
-                     span(HTML(paste0(
-                       HTML("&nbsp;"), value, "%"))),
-                     style = numberColor),
-    shiny::tags$span(class = "errorblock-percentage", br(), range)
-  )
+                     tmptext, br(), style = color_err),
+    shiny::tags$span(class = "errorblock-value",
+                     span(HTML(paste0(value, "%")), style = color_err)),
+    shiny::tags$span(class = "errorblock-header", br(),
+                     range)
+  ) # end of div
+  
 }
 
 #' Parameter blocks
@@ -315,43 +323,25 @@ msg_log <- function(..., detail,
 }
 
 
-#' Create main log
-#'
-#' @description Create message logs to show throughout app run.
-#' @return The return value, if any, from executing the utility.
-#' @keywords internal
-#'
-#' @noRd
-msg_header <- function(header) {
-  
-  time_stamp <- stringr::str_c(
-    "[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "]")
-
-  cat(msg_main(time_stamp), header, "\n")
-}
-
 #' Create message steps
 #'
-#' @description Create message steps
+#' @description Create message logs
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
 msg_step <- function(current, total, style) {
   
-  if (style == "success") {
-    text_current <- msg_success(current) }
-
-  if (style == "warning") {
-    text_current <- msg_warning(current) }
-
-  if (style == "danger") {
-    text_current <- msg_danger(current)  }
-
-  if (style == "error") {
-    text_current <- crayon::bold(msg_danger(current)) }
-
-  return(paste0(" (step ", text_current, " out of ", total, ")."))
+  if (style == "success") 
+    txt <- msg_success(current)
+  if (style == "warning") 
+    txt <- msg_warning(current)
+  if (style == "danger") 
+    txt <- msg_danger(current)
+  if (style == "error") 
+    txt <- crayon::bold(msg_danger(current))
+  
+  return(paste0(" (step ", txt, " out of ", total, ")."))
 }
 
 #' Reset reactive values
@@ -365,6 +355,7 @@ reset_reactiveValues <- function(vals) {
 
   vals$is_valid <- FALSE
 
+  if (!is.null(vals$species)) vals$species <- NULL
   if (!is.null(vals$id)) vals$id <- NULL
   if (!is.null(vals$data_type)) vals$data_type <- NULL
   if (!is.null(vals$data0)) vals$data0 <- NULL
@@ -387,12 +378,9 @@ reset_reactiveValues <- function(vals) {
 #' @noRd
 help_modal <- function(input, file) {
   bsplus::shinyInput_label_embed(
-    input,
-    bsplus::shiny_iconlink(
-      name = "circle-question",
-      class = "icon_help") %>%
-      bsplus::bs_attach_modal(
-        id_modal = file))
+    input, bsplus::shiny_iconlink(
+      name = "circle-question", class = "icon_help") %>%
+      bsplus::bs_attach_modal(id_modal = file))
 }
 
 
@@ -465,11 +453,11 @@ plotting_hr <- function(input1,
     pal <- c("#007d80", "#00484a")
   } else if (to_plot == "modified") {
     ud <- input2[["ud"]]
-    pal <- c(color, color)
+    pal <- c("#dd4b39", "#cc1b34")
   }
   
   show_col <- ifelse(show_both, "#00484a", "white")
-  show_alpha <- ifelse(show_both, 1, 0)
+  show_alpha <- ifelse(show_both, 0.3, 0)
   
   extent[1,1] <- min(extent[1,1], min(truth$x), min(data$x))
   extent[2,1] <- max(extent[2,1], max(truth$x), max(data$x))
@@ -491,21 +479,23 @@ plotting_hr <- function(input1,
     p1 <- ggplot2::geom_polygon(
       data = pol_ud[["uci"]],
       mapping = ggplot2::aes(x = long, y = lat, group = group),
-      fill = color, color = color, linetype = "dotted", alpha = .2)
+      fill = color, color = color, 
+      linetype = "dotted", alpha = .2)
   }
   
   if ("est" %in% contours) {
     p2 <- ggplot2::geom_polygon(
       data = pol_ud[["est"]],
       mapping = ggplot2::aes(x = long, y = lat, group = group),
-      fill = pal[1], color = color, alpha = .2)
+      fill = pal[1], color = color, alpha = .1)
   }
   
   if ("lci" %in% contours) {
     p3 <- ggplot2::geom_polygon(
       data = pol_ud[["lci"]],
       mapping = ggplot2::aes(x = long, y = lat, group = group),
-      fill = color, color = color, linetype = "dotted", alpha = .2)
+      fill = color, color = pal[2], 
+      linetype = "dotted", alpha = .2)
   }
   
   p <- ggplot2::ggplot() +
@@ -520,22 +510,23 @@ plotting_hr <- function(input1,
     ggplot2::geom_path(
       data = data,
       mapping = ggplot2::aes(x = x, y = y),
-      color = pal[2], size = 0.4, alpha = .4) +
+      color = pal[2], linewidth = 0.4, alpha = .4) +
     
     ggplot2::geom_point(
       data = data,
       mapping = ggplot2::aes(x = x, y = y),
-      color = pal[2], size = 1) +
+      color = pal[2], size = 1, alpha = .3) +
     
     { if ("uci" %in% contours) p1 } +
     { if ("est" %in% contours) p2 } +
     { if ("lci" %in% contours) p3 } +
-
+    
     { if (show_both)
       ggplot2::geom_point(
         data = data1,
         mapping = ggplot2::aes(x = x, y = y),
-        color = show_col, alpha = show_alpha, size = 1)
+        color = show_col, alpha = show_alpha, 
+        size = 1)
     } +
     
     ggplot2::scale_x_continuous( 
@@ -550,6 +541,7 @@ plotting_hr <- function(input1,
     theme_movedesign() +
     ggplot2::theme(legend.position = "none")
 }
+
 
 
 #' Plot variogram
@@ -654,7 +646,7 @@ loading_modal <- function(x, runtime = NULL, for_time = FALSE) {
     out_txt <- tagList(
       span(x[1], style = "color: #797979;"),
       HTML(paste0(span(x[2], class = "cl-sea"),
-                  span(".", style = "color: #797979;"))),
+                  span("...", style = "color: #797979;"))),
       p(),
       p("Expected run time:",
         style = paste("background-color: #eaeaea;",
@@ -717,27 +709,25 @@ wrap_none <- function(text, ...,
 #'
 #' @noRd
 format_num <- function(value) {
-  if (value < 5) {
-    color <- "var(--danger)"
-  } else if (value > 5 & value < 30) {
-    color <- "var(--gold)"
-  } else {
-    color <- "var(--midnight)"
-  }
+  color <- case_when(
+    value < 5 ~ "#dd4b39",
+    value > 5 & value < 30 ~ "#ffa600",
+    TRUE ~ "#222d32")
+  list(color = color) #, fontWeight = "bold")
 }
 
 #' format_perc
 #'
 #' @noRd
 format_perc <- function(value) {
-  if (abs(value) > .8) {
-    color <- "var(--danger)"
-  } else if (abs(value) > .2 & abs(value) < .8) {
-    color <- "#f5b700"
-  } else {
-    color <- "var(--sea)"
-  }
+  color <- case_when(
+    abs(value) > .8 ~ "#dd4b39",
+    abs(value) > .1 & abs(value) < .8 ~ "#ffa600",
+    TRUE ~ "#006669")
+  list(color = color) #, fontWeight = "bold")
 }
+
+
 
 #' Calculate limits for plots.
 #'
@@ -1002,7 +992,7 @@ newTabItem <- function(tabName = NULL, ...) {
 as_tele_df <- function(object) {
   
   data_df <- list()
-  for(i in 1:length(object)) {
+  for (i in 1:length(object)) {
     tempdf <- object[[i]]
     tempdf$id <- names(object)[i]
     data_df[[i]] <- tempdf
@@ -1074,26 +1064,24 @@ pseudonymize <- function(data,
   return(data)
 }
 
-#' Extract total variance or average variance from ctmm.
+#' Extract spatial variance from ctmm.
 #'
 #' @description Extract total variance or average variance
 #' @keywords internal
 #'
 #' @noRd
 #' 
-var.covm <- function(sigma, ave = FALSE) {
+var.covm <- function(sigma, average = FALSE) {
  
-  if (ncol(sigma) == 1) {
-    sigma <- return(sigma@par["major"])
-  }
+  if (ncol(sigma) == 1) return(sigma@par["major"])
+  
   sigma <- attr(sigma, "par")[c("major", "minor")]
   sigma <- sort(sigma, decreasing = TRUE)
   
-  if (ave) {
-    sigma <- mean(sigma, na.rm = TRUE)
-  } else {
-    sigma <- sum(sigma, na.rm = TRUE)
-  }
+  sigma <- ifelse(average,
+                  mean(sigma, na.rm = TRUE),
+                  sum(sigma, na.rm = TRUE))
+  
   return(sigma)
 }
 
@@ -1374,13 +1362,15 @@ par.speed <- function(input,
     
   } else {
     internal_cores <- 1
-    out_speed <- par.lapply(input, ctmm.speed, cores, parallel)
+    out_speed <- par.lapply(input, ctmm.speed, 
+                            internal_cores, 
+                            parallel)
   }
   
   if (any(has_error(out_speed))) {
     msg_log(
         style = "danger",
-        message = paste0("Speed estimation", msg_danger("failed"), "."),
+        message = paste0("Speed estimation ", msg_danger("failed"), "."),
         detail = "May be due to low sample size.")
   }
   

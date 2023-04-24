@@ -18,7 +18,7 @@
 -   Main guided tour should correctly follow new changes.
 -   `fix_unit()` should now deal properly with speed units.
 -   `extract_pars()` now works with all current movement models.
--   `guesstimate_time()` adjusted for short runs.
+-   `guess_time()` adjusted for short runs.
 -   `simulate_gps()` should now run properly when dur_unit is changed, and when dur is set to higher values.
 
 # movedesign 0.1.0
@@ -29,7 +29,7 @@
 
 -   Guided tours now cover all modules.
 -   Report now covers scenario where both questions are requested.
--   `guesstimate_time()` now works for `ctmm::speed()` as well.
+-   `guess_time()` now works for `ctmm::speed()` as well.
 
 ## Minor improvements
 

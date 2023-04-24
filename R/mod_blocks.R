@@ -134,7 +134,8 @@ mod_blocks_server <- function(id,
                  }
                  
                  value <- paste(value, out$unit[2])
-                 subtitle <- paste(out$value[1], "\u2014", out$value[3])
+                 subtitle <- paste(round(out$value[1], 1),
+                                   "\u2014", round(out$value[3], 1))
                }
                
                if (grepl("Err", name)) {

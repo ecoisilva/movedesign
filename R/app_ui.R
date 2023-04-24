@@ -164,7 +164,7 @@ app_ui <- function(request) {
         right = tags$div(
           HTML(paste('<i class="fa fa-copyright"',
                      'style = "color:#222d32;"> </i>',
-                     "2022")))
+                     "2022-2023")))
 
       ) # end of dashboardFooter
     ) # end of dashboardPage
@@ -195,26 +195,26 @@ golem_add_external_resources <- function() {
       path = app_sys("app/www"),
       app_title = "movedesign"
     ),
-
-    shinyFeedback::useShinyFeedback(),
     
     # Activate tooltips and popovers:
     bsplus::use_bs_tooltip(),
     bsplus::use_bs_popover(),
 
     # Font types:
-    tags$link(href = paste0("https://fonts.googleapis.com/css?",
-                            "family=",
-                            "Plus+Jakarta+Sans", "|",
-                            "Roboto+Condensed", "|",
-                            "Roboto+Condensed:wght@700", "|",
-                            "Fira+Mono", "|",
-                            "Fira+Sans+Condensed",
-                            "&display=fallback"),
-              rel = "stylesheet"),
-
+    tags$link(href = paste0(
+      "https://fonts.googleapis.com/css?",
+      "family=",
+      "Plus+Jakarta+Sans", "|",
+      "Roboto+Condensed", "|",
+      "Roboto+Condensed:wght@700", "|",
+      "Fira+Mono", "|",
+      "Fira+Sans+Condensed",
+      "&display=fallback"),
+      rel = "stylesheet"),
+    
     # Misc:
     rintrojs::introjsUI(), # set up introjs
+    shinyFeedback::useShinyFeedback(), # set up shinyFeedback
     shinyjs::useShinyjs(), # set up shinyjs
     shinyjs::extendShinyjs(script = "www/fullscreen.js",
                            functions = c("toggleFullScreen"))

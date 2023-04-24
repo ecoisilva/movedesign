@@ -314,9 +314,9 @@ calculate_ci <- function(variable, level) {
 #' @keywords internal
 #'
 #' @noRd
-extract_pars <- function(obj, name, 
-                         fraction = .65, 
-                         data = NULL) {
+extract_pars <- function(obj = NULL, 
+                         data = NULL,
+                         name, fraction = .65) {
   
   out <- unit <- NULL
   if (name == "sigma") { 
@@ -324,7 +324,7 @@ extract_pars <- function(obj, name,
     
     svf <- extract_svf(data, fraction = fraction)
     out <- c("low" = mean(svf$var_low95) %#% "km^2",
-             "est" = var.covm(obj$sigma, ave = T),
+             "est" = var.covm(obj$sigma, average = T),
              "high" = mean(svf$var_upp95) %#% "km^2")
     
     out <- data.frame(value = out, "unit" = "m^2")
@@ -440,10 +440,10 @@ extract_svf <- function(data, fraction = .65) {
 #' @description Simulate GPS battery life decay
 #'
 #' @param data data.frame. A dataset with frequencies.
-#' @param b_max Numeric. Value for the range of duration (y).
-#' @param b_unit Character. Unit for the range of duration (y).
+#' @param b_max Numeric. Maximum duration (y) for the GPS device.
+#' @param b_unit Character. Unit for the maximum duration (y).
 #' @param cutoff Character. Cut-off for for minimum duration required.
-#' @param dti_max Maximum sampling interval (or minimum) frequency for the maximum duration.
+#' @param dti_max Maximum sampling interval (or minimum frequency) for the maximum duration.
 #' @keywords internal
 #'
 #' @importFrom ctmm `%#%`
@@ -454,7 +454,9 @@ simulate_gps <- function(data,
                          b_max,
                          b_unit,
                          cutoff,
-                         dti_max) {
+                         dti_max,
+                         seed = NULL,
+                         set_seed = FALSE) {
   
   stopifnot(!is.null(data))
   stopifnot(is.numeric(b_max) || is.null(b_max))
@@ -464,6 +466,7 @@ simulate_gps <- function(data,
   if (b_max == 0) stop("Duration (b_max) cannot be 0.")
   if (b_max < 2 && b_unit == "days") 
     stop("Duration (b_max) cannot be less than 2 days.")
+  if (set_seed) set.seed(seed)
   
   trace <- FALSE
   dti <- dti_notes <- dti_scale <- dti_yn <- frq_hrs <- NULL
@@ -501,6 +504,12 @@ simulate_gps <- function(data,
   max_attempts <- 150
   start_time <- Sys.time()
   threshold <- ifelse(params[["b_max"]] > 31, 0.01, 1)
+  
+  params[["scale"]] <- dplyr::case_when(
+    params[["b_max"]] < 31 ~ 1,
+    params[["b_max"]] < 365 ~ params[["b_max"]] * 0.01,
+    TRUE ~ params[["b_max"]] * 0.02)
+  
   while (abs(err) > threshold && i < max_attempts) {
 
     # Update the log-logistic function:
@@ -512,7 +521,7 @@ simulate_gps <- function(data,
     
     err <- 100 - (max(y) * 100) / params[["b_max"]]
     if (trace) print(paste0(i, ", Error: ", round(err, 2), "%"))
-    if (abs(err) <= threshold) break
+    if (abs(err) < threshold) break
     
     # prev_val <- ifelse(i == 1, 0, curr_val)
     # curr_val <- f$pars[["b_max"]]
@@ -541,7 +550,7 @@ simulate_gps <- function(data,
     err <- 100 - (max(y) * 100) / params[["b_max"]]
     if (trace) print(paste0(i, ", Error: ", round(err, 2), "%"))
     
-    if (abs(err) <= threshold) break
+    if (abs(err) < threshold) break
     
     if (!params[["id"]]) {
       
@@ -572,7 +581,7 @@ simulate_gps <- function(data,
     print(Sys.time() - start_time)
   }
   
-  if (abs(err) >= threshold) {
+  if (abs(err) > threshold) {
     msg_log(
       style = "error", 
       message = "Something went wrong!")
@@ -593,6 +602,7 @@ simulate_gps <- function(data,
     data %>% dplyr::select(dti, dti_scale, dti_yn),
     by = "dti")
   
+  if (set_seed) set.seed(NULL)
   return(newdata)
 }
 
@@ -608,9 +618,10 @@ update_f <- function(x, init) {
   
   d <- init[1] + 6.756 * init[2]
   if (!sign(d/init[2]) == 1) {
-    return(list(y = rep(0, length(x)), pars = c("b_max" = 0,
-                                                "b_50" = 0,
-                                                "beta" = 0)))
+    return(list(y = rep(0, length(x)), 
+                pars = c("b_max" = 0,
+                         "b_50" = 0,
+                         "beta" = 0)))
   }
   
   e <- 1.005511 / 
@@ -632,13 +643,13 @@ update_f <- function(x, init) {
 #'
 #' @noRd
 #'
-guesstimate_time <- function(data, 
-                             seed,
-                             type = "fit",
-                             fit = NULL,
-                             with_truth = FALSE,
-                             trace = FALSE,
-                             parallel = TRUE) {
+guess_time <- function(data, 
+                       seed,
+                       type = "fit",
+                       fit = NULL,
+                       with_truth = FALSE,
+                       trace = FALSE,
+                       parallel = TRUE) {
   
   if (!type %in% c("fit", "speed"))
     stop("type =", type, " is not supported.", call. = FALSE)
@@ -651,82 +662,83 @@ guesstimate_time <- function(data,
   names(outputs) <- c("mean", "min", "max", "unit", "range")
   
   if (type == "fit") {
-    n <- 4000
+    n <- 2500
     if (nrow(data) < n) {
+      outputs$mean <- ifelse(nrow(data) < 1000, 1, 2)
       outputs$range <- paste(
-        "\u2264", ifelse(nrow(data) < 2000, 2, 5), "minutes")
-      outputs$mean <- outputs$max <- 5
+        "\u2264", outputs$mean,
+        ifelse(nrow(data) < 1000, expt_unit, "minutes"))
+      outputs$max <- 5
       return(outputs)
     }
     
     start <- Sys.time()
-    guess <- ctmm::ctmm.guess(data[1:n, ], interactive = FALSE)
-    fit <- par.ctmm.select(list(list(data[1:n, ], guess)),
+    guess <- ctmm::ctmm.guess(data[1:200, ], interactive = FALSE)
+    fit <- par.ctmm.select(list(list(data[1:200, ], guess)),
                            trace = FALSE, parallel = TRUE)
     total_time <- difftime(Sys.time(), start, units = "sec")[[1]]
-    expt <- ((total_time/n) * nrow(data))
+    expt <- expt_unit %#% (total_time * nrow(data) / 200)
+    
+    expt <- round_any(expt, 1, f = floor)
+    expt_min <- max(round_any(expt, 1, f = floor) - 2, 0)
+    expt_max <- round_any(expt, 2, f = ceiling)
+    if (expt >= 15) expt_max <- round_any(expt, 5, f = ceiling)
     
   } # end of if (type == "fit")
   
   if (type == "speed") {
     if (missing(fit)) stop("ctmm `fit` object not provided.")
-    
-    if (is.null(extract_pars(fit, name = "velocity")))
-      return(outputs)
+    if (is.null(summary(fit)$DOF["speed"])) return(outputs)
+    tauv <- extract_pars(fit, name = "velocity")
+    if (is.null(tauv)) return(outputs)
+    if (tauv$value[2] == 0) return(outputs)
     
     dti <- data[[2,"t"]] - data[[1,"t"]]
-    tauv <- extract_pars(fit, name = "velocity")
+    dur <- extract_pars(data, name = "period")
     tauv <- tauv$value[2] %#% tauv$unit[2]
+    N <- summary(fit)$DOF["speed"]
     
-    n <- 1000
-    if (nrow(data) <= n) {
-      m <- (max(data$t) / (1 %#% "day")) * .05
-      if (tauv/dti > 3) expt <- 1.698715 + 0.126393 * tauv/dti
-      if (tauv/dti <= 3) expt <- 0.6998 + 1.9132 * dti/tauv      
-      expt_min <- floor(2 + expt * m * 2) / 2
-      expt <- round_any(2 + expt * m, 1, f = ceiling)
+    x1 <- log(N)
+    x2 <- tauv/dti
+    x3 <- "days" %#% dur$value %#% dur$unit
+    
+    if (tauv/dti < 1) {
+      y_min <- max(exp(1.3915 + 0.1195 * x1), 1)
+      y <- exp(3.4924 - 0.1978 * x1) 
+      if (N < 30) {
+        y_max <- exp(4.15038 - 0.3159 * x1 + 0.01912 * x3)
+        if (N <= 5) y_max <- y_max * 3
+      } else { y_max <- y }
       
-      outputs[1,1:3] <- c(expt, expt_min, expt)
-      outputs$unit <- fix_unit(expt, "minutes")$unit
-      outputs$range <- paste("\u2264", expt, outputs$unit)
-      return(outputs)
+      expt_min <- round_any(expt_unit %#% y, 1, f = ceiling)
+      expt <- round_any(expt_unit %#% y, 2, f = ceiling)
+      expt_max <- round_any(expt_unit %#% y_max, 5, f = ceiling)
+      
+    } else {
+      if (tauv/dti < 10 && tauv/dti >= 1)
+        y <- exp(-3.28912 + 1.01494 * x1 + 0.01953 * x1 * x2)
+      if (tauv/dti >= 10)
+        y <- exp(-2.0056285 + 0.9462089 * x1 + 0.0023285 * x1 * x2)
+      
+      y <- expt_unit %#% y
+      expt_min <- ceiling(y * 2) / 2 
+      expt <- round_any(y, 1, f = ceiling)
+      expt_max <- round_any(y, 5, f = ceiling)
     }
-    
-    start <- Sys.time()
-    sim <- simulate(fit, t = seq(0, 1 %#% "day", by = tauv/3), seed)
-    speed <- par.speed(align_lists(list(fit), list(sim)),
-                       trace = trace,
-                       parallel = parallel)
-    total_time <- difftime(Sys.time(), start, units = "secs")[[1]]
-    
-    m <- (max(data$t) / (1 %#% "day")) * .05
-    if (tauv/dti > 3) expt <- total_time * m + 0.126215 * tauv/dti
-    if (tauv/dti <= 3) expt <- total_time * m - 4.334 * dti/tauv
-    expt <- max(expt, 60)
-    
   } # end of if (type == "speed")
   
-  expt <- expt_unit %#% expt
-  if (with_truth) expt <- expt + expt * 2
+  if (with_truth) expt <- expt + 3
+  if (with_truth) expt_min <- expt_min + 3
+  if (with_truth) expt_max <- expt_max + 5
   
-  tmp_ext <- ceiling(expt_unit %#% expt)
-  if (tmp_ext >= 15) {
-    expt_max <- round_any(tmp_ext, 5, f = ceiling)
-    expt_min <- tmp_ext - 5
-  } else if (tmp_ext < 15 & tmp_ext > 5) {
-    expt_max <- round_any(tmp_ext, 1, f = ceiling)
-    expt_min <- tmp_ext - 2
-  } else if (tmp_ext <= 5) {
-    expt_min <- expt_max <- tmp_ext
-  }
-  
-  if (tmp_ext <= 1) {
+  if (expt <= 1) {
     range <- paste("\u2264", "1", expt_unit)
   } else {
     expt_unit <- "minutes"
-    range <- ifelse(expt_min == expt_max,
-                    paste("\u2264", expt_max, expt_unit),
-                    paste(expt_min, "\u2013", expt_max, expt_unit))
+    range <- ifelse(
+      expt_min == expt_max,
+      paste("\u2264", expt_max, expt_unit),
+      paste0(expt_min, "\u2013", expt_max, " ", expt_unit))
   }
   
   outputs <- data.frame("mean" = expt, 
@@ -736,7 +748,6 @@ guesstimate_time <- function(data,
                         "range" = range)
   return(outputs)
 }
-
 
 
 #' Calculate distance
@@ -769,7 +780,7 @@ measure_distance <- function(data) {
 
 #' Convert to a different unit
 #'
-#' @description Calculate distance traveled
+#' @description Convert to a different unit.
 #' @keywords internal
 #'
 #' @importFrom ctmm `%#%`

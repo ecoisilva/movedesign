@@ -97,7 +97,7 @@ testthat::test_that("{shinytest2}: Simulate works", {
   
   # app$view()
   
-  app$set_inputs(`tab_about_1-overwrite_seed` = TRUE,
+  app$set_inputs(`tab_about_1-overwrite_active` = TRUE,
                  `tab_about_1-which_data` = "Simulate",
                  `tab_about_1-which_question` = "Home range")
   
@@ -129,7 +129,7 @@ testthat::test_that("{shinytest2}: Select + GPS works", {
     width = 1200, height = 960)
   # app$view()
   
-  app$set_inputs(`tab_about_1-overwrite_seed` = TRUE,
+  app$set_inputs(`tab_about_1-overwrite_active` = TRUE,
                  `tab_about_1-which_data` = "Select",
                  `tab_about_1-which_question` = "Home range")
 

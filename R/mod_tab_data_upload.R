@@ -479,7 +479,7 @@ mod_tab_data_upload_server <- function(id, vals) {
           size = "xs")
         
       } else {
-        vals$species_binom <- input$sp_uploaded
+        vals$species <- vals$species_binom <- input$sp_uploaded
         vals$needs_fit <- TRUE
         
       } # end of if ()
@@ -491,7 +491,6 @@ mod_tab_data_upload_server <- function(id, vals) {
     
     observe({
       req(vals$which_question)
-      shinyjs::show(id = "uploadBox_regime")
       
       if (is.null(vals$is_valid)) {
         shinyalert::shinyalert(
@@ -528,8 +527,14 @@ mod_tab_data_upload_server <- function(id, vals) {
     dataset_uploaded <- reactive({
       reset_reactiveValues(vals) # reset vals between data tabs
       
+      species <- NULL
       out_dataset <- NULL
       out_dataset <- reading_file()
+      
+      if ("individual.taxon.canonical.name" %in% names(out_dataset)) {
+        species <- out_dataset$individual.taxon.canonical.name[1]
+      }
+      
       out_dataset <- tryCatch(ctmm::as.telemetry(out_dataset),
                               error = function(e) e)
       
@@ -543,18 +548,26 @@ mod_tab_data_upload_server <- function(id, vals) {
       }
       
       req(out_dataset)
-      
       msg_log(
         style = "success",
         message = paste0("File ",
                          msg_success("submitted"), "."),
         detail = "Please select one individual from this dataset.")
       
+      # Check number of individuals within dataset:
+      
+      dataList <- out_dataset
+      if ("timestamp" %in% names(out_dataset)) {
+        dataList <- list()
+        dataList[[1]] <- out_dataset
+        names(dataList) <- summary(as_tele_list(out_dataset))$identity
+      }
+      
       # Check if data is anonymized:
       
-      if (!("timestamp" %in% names(out_dataset[[1]]))) {
+      if (!("timestamp" %in% names(dataList[[1]]))) {
         
-        out_dataset <- pseudonymize(out_dataset)
+        dataList <- pseudonymize(dataList)
         
         shinyFeedback::showToast(
           type = "success",
@@ -575,25 +588,28 @@ mod_tab_data_upload_server <- function(id, vals) {
       }
       
       shinyjs::show(id = "uploadBox_species")
+      shinyjs::hide(id = "uploadVar_x")
+      shinyjs::hide(id = "uploadVar_y")
+      shinyjs::hide(id = "uploadVar_t")
       
       if (!input$uploadBox_file$collapsed) {
         shinydashboardPlus::updateBox("uploadBox_file",
                                       action = "toggle")
       }
       
-      # Check number of individuals within dataset:
-      
-      dataList <- out_dataset
-      if (names(out_dataset)[[1]] == "timestamp") {
-        dataList <- list()
-        dataList[[1]] <- out_dataset
-        names(dataList) <- summary(as_tele_list(out_dataset))$identity
-      }
-      
-      vals$dataList <- out_dataset
+      vals$dataList <- dataList
       vals$data_type <- "uploaded"
       vals$id <- NULL
       
+      if (!is.null(species))
+        if (species != "") {
+          shiny::updateTextInput(
+            session = session,
+            inputId = "sp_uploaded",
+            label = "Scientific name:",
+            value = species)
+        }
+
       return(dataList)
       
     }) # end of reactive
@@ -632,13 +648,37 @@ mod_tab_data_upload_server <- function(id, vals) {
         )
       )
       
-      out <- guesstimate_time(vals$data0, parallel = vals$parallel)
+      out <- guess_time(vals$data0, parallel = vals$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out)
       
     }) %>% # end of reactive, timing_fit()
       bindCache(c(vals$id, vals$species_binom))
+    
+    fitting_model <- reactive({
+      
+      guess0 <- ctmm::ctmm.guess(vals$data0, interactive = FALSE)
+      inputList <- list(list(vals$data0, guess0))
+      
+      vals$fit0 <- NULL
+      fit0 <- tryCatch(
+        par.ctmm.select(inputList, parallel = vals$parallel),
+        error = function(e) e)
+      
+      if (!inherits(fit0, "error")) { 
+        vals$fit0 <- fit0
+      } else {
+        msg_log(
+          style = "danger",
+          message = paste0("Model fit ", msg_danger("failed"), "."),
+          detail = "May be due to low absolute sample size.")
+      }
+      return(fit0)
+      
+    }) %>% # end of reactive, fitting_model()
+      bindCache(vals$data0,
+                vals$id, vals$species_binom)
     
     observe({
       req(vals$which_question,
@@ -686,26 +726,11 @@ mod_tab_data_upload_server <- function(id, vals) {
                     runtime = expt$range, for_time = TRUE)
       
       start <- Sys.time()
-      guess0 <- ctmm::ctmm.guess(vals$data0, interactive = FALSE)
-      inputList <- list(list(vals$data0, guess0))
-      
-      vals$fit0 <- NULL
-      fit0 <- tryCatch(
-        par.ctmm.select(inputList, parallel = vals$parallel),
-        error = function(e) e)
+      fit0 <- fitting_model()
+      req(vals$fit0)
       
       time_fit0 <- difftime(Sys.time(), start, units = "sec")
       vals$time[1] <- vals$time[1] + time_fit0[[1]]
-      
-      if (!inherits(fit0, "error")) { 
-        vals$fit0 <- fit0
-      } else {
-        msg_log(
-          style = "danger",
-          message = paste0("Model fit ", msg_danger("failed"), "."),
-          detail = "May be due to low absolute sample size.")
-      }
-      req(vals$fit0)
       
       msg_log(
         style = 'success',
@@ -871,6 +896,14 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$tau_v0 <- extract_pars(vals$fit0, name = "velocity")
       vals$speed0 <- extract_pars(vals$fit0, name = "speed")
       
+      # vals$ctmm_mod <- prepare_mod(
+      #   tau_p = vals$tau_p0$value[[2]],
+      #   tau_p_units = vals$tau_p0$unit[[2]],
+      #   tau_v = vals$tau_v0$value[[2]], 
+      #   tau_v_units = vals$tau_v0$unit[[2]],
+      #   sigma = vals$sigma0$value[[2]], 
+      #   sigma_units = vals$sigma0$unit[[2]])
+      
       vals$tmpsp <- vals$species_binom
       vals$tmpid <- vals$id
       
@@ -914,6 +947,8 @@ mod_tab_data_upload_server <- function(id, vals) {
       shinyjs::hide(id = "uploadVar_x")
       shinyjs::hide(id = "uploadVar_y")
       shinyjs::hide(id = "uploadVar_t")
+      
+      shinyjs::show(id = "uploadBox_regime")
       
     }) %>% # end of observe, then:
       bindEvent(input$uploadButton_extract)

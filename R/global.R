@@ -1,5 +1,26 @@
 
-# Main links and variables: -----------------------------------------------
+# .onLoad <- function(libname, pkgname) {
+#   rlang::run_on_load()
+# }
+# 
+# rlang::on_load(rlang::local_use_cli(inline = TRUE))
+# 
+# .onAttach <- function(libname, pkgname) {
+#   version <- utils::packageDescription(pkgname, fields = "Version")
+# 
+#   website <- "https://github.com/ecoisilva/movedesign/issues"
+#   if (interactive())
+#     website <- "{.url https://github.com/ecoisilva/movedesign/issues}"
+#   
+#   rlang::inform(
+#     class = "packageStartupMessage",
+#     message = c(
+#       "!" = paste("Issues?", website),
+#       "i" = 'Citation: \tFor citation details, run: {.code citation("movedesign")}',
+#       "x" = "Silence? {.code suppressPackageStartupMessages(library(movedesign))}"
+#     )
+#   )
+# }
 
 # Global variables:
 utils::globalVariables(
@@ -39,23 +60,3 @@ msg_main <- crayon::make_style("dimgray")
 msg_success <- crayon::make_style("#009da0")
 msg_danger <- crayon::make_style("#dd4b39")
 msg_warning <- crayon::make_style("#ffbf00")
-
-# 'ctmm' R package, available species: ------------------------------------
-
-ctmm_species <- c(
-  "African Buffalo" = "buffalo",
-  "Brown Pelican" = "pelican",
-  "Coati" = "coati",
-  "Jaguar" = "jaguar",
-  "Maned Wolf" = "wolf",
-  "Mongolian Gazelle" = "gazelle",
-  "Wood turtle" = "turtle")
-
-ctmm_species_binom <- c(
-  "Syncerus caffer" = "buffalo",
-  "Pelecanus occidentalis" = "pelican",
-  "Nasua narica" = "coati",
-  "Panthera onca" = "jaguar",
-  "Chrysocyon brachyurus" = "wolf",
-  "Procapra gutturosa" = "gazelle",
-  "Glyptemys insculpta" = "turtle")
