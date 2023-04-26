@@ -2278,13 +2278,15 @@ mod_tab_report_server <- function(id, vals) {
       if ("Home range" %in% vals$which_question) {
         req(vals$hr$tbl)
         dt_hr <- vals$hr$tbl
-        dt_hr <- dt_hr[nrow(dt_hr), ]
+        dt_hr <- dt_hr %>% dplyr::filter(data == "Initial") 
+        # dt_hr <- dt_hr[nrow(dt_hr), ] 
       }
       
       if ("Speed & distance" %in% vals$which_question) {
         req(vals$sd$tbl)
         dt_sd <- vals$sd$tbl
-        dt_sd <- dt_sd[nrow(dt_sd), ]
+        dt_sd <- dt_sd %>% dplyr::filter(data == "Initial") 
+        # dt_sd <- dt_sd[nrow(dt_sd), ]
       }
       
       dat <- data.frame(

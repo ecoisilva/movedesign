@@ -1,3 +1,4 @@
+`%!in%` <- Negate(`%in%`) 
 
 #' Parameter blocks
 #'
@@ -227,6 +228,7 @@ extract_units <- function(input) {
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
+#' @importFrom dplyr `%>%`
 #' @noRd
 help_text <- function(title, subtitle, content) {
   shiny::fluidRow(
@@ -248,6 +250,7 @@ help_text <- function(title, subtitle, content) {
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
+#' @importFrom dplyr `%>%`
 #' @noRd
 help_tip <- function(input, text, placement = "bottom") {
   bsplus::shinyInput_label_embed(
@@ -266,6 +269,7 @@ help_tip <- function(input, text, placement = "bottom") {
 #' @keywords internal
 #'
 #' @importFrom crayon make_style
+#' @importFrom ctmm `%#%`
 #' 
 #' @noRd
 msg_log <- function(..., detail, 
@@ -375,6 +379,7 @@ reset_reactiveValues <- function(vals) {
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
+#' @importFrom dplyr `%>%`
 #' @noRd
 help_modal <- function(input, file) {
   bsplus::shinyInput_label_embed(
@@ -549,6 +554,7 @@ plotting_hr <- function(input1,
 #' @description Plot variogram from ctmm
 #' @keywords internal
 #'
+#' @importFrom dplyr `%>%`
 #' @noRd
 plotting_svf <- function(data, fill) {
 
@@ -605,6 +611,7 @@ sigdigits <- function(x, digits) {
 #' @description Subset time frame
 #' @keywords internal
 #'
+#' @importFrom dplyr `%>%`
 #' @noRd
 #'
 subset_timeframe <- function(var, value) {

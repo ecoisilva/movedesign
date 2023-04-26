@@ -334,14 +334,14 @@ mod_tab_sims_ui <- function(id) {
                 style = "padding-right: 0px;",
                 
                 div(id = "sims-footer",
-                    actionButton(
+                    shiny::actionButton(
                       inputId = ns("repeat_sim"),
                       label = "Repeat",
                       icon = icon("rotate-right"),
                       class = "btn-info",
                       width = "120px"),
                     HTML("&nbsp;"),
-                    actionButton(
+                    shiny::actionButton(
                       inputId = ns("simButton_save"),
                       label = span("Add to",
                                    span("table", class = "cl-sea")),

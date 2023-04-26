@@ -99,9 +99,8 @@ fix_unit <- function(input,
     x_html <- unit
   }
   
-  if (!is.character(unit)) {
-    stop("`unit` argument must be a character string.")
-  }
+  if (!is.numeric(value)) stop("'value' must be numeric.") 
+  if (!is.character(unit)) stop("`unit` must be a character string.")
   
   units_tm <- c("year", "month", "week",
                 "day", "hour", "minute", "second")
@@ -270,6 +269,7 @@ prepare_mod <- function(tau_p,
 #' @param tau_v0_units character vector of sampling interval units.
 #' @param seed0 random seed value for simulation.
 #'
+#' @importFrom ctmm `%#%`
 #' @noRd
 simulate_data <- function(mod,
                           dur,
@@ -313,6 +313,7 @@ calculate_ci <- function(variable, level) {
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
+#' @importFrom ctmm `%#%`
 #' @noRd
 extract_pars <- function(obj = NULL, 
                          data = NULL,
@@ -410,6 +411,7 @@ extract_dof <- function(obj, par) {
 #' @description Extract semi-variance data
 #' @keywords internal
 #'
+#' @importFrom ctmm `%#%`
 #' @noRd
 extract_svf <- function(data, fraction = .65) {
 
@@ -641,6 +643,8 @@ update_f <- function(x, init) {
 #' @description Calculate computation time of ctmm functions.
 #' @keywords internal
 #'
+#' @importFrom ctmm `%#%`
+#' @importFrom dplyr `%>%`
 #' @noRd
 #'
 guess_time <- function(data, 

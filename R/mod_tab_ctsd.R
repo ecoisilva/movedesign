@@ -1191,9 +1191,11 @@ mod_tab_ctsd_server <- function(id, vals) {
       expt <- timing_speed()
       vals$sd$expt_time <- expt
       
+      tmpnms <- names(summary(vals$fit1)$DOF)
+      N <- summary(vals$fit1)$DOF[grep("speed", tmpnms)][[1]]
+      
+      req(N)
       if ((as.numeric(expt$max) %#% expt$unit) > 900) {
-        
-        expt_n <- ifelse(N <= 30, "low", "high")
         
         shinyalert::shinyalert(
           className = "modal_warning",
@@ -1202,8 +1204,7 @@ mod_tab_ctsd_server <- function(id, vals) {
             vals$sd$confirm_time <- x
           },
           text = tagList(span(
-            "Due to", expt_n, "sample size,",
-            "expected run time for estimation",
+            "Expected run time for estimation",
             "could be on average", span(expt$range, class = "cl-dgr"),
             "but may take \u003E", wrap_none(
               span(expt$max, expt$unit, class = "cl-dgr"), ".")
@@ -1563,12 +1564,11 @@ mod_tab_ctsd_server <- function(id, vals) {
           callbackR = function(x) {
             vals$sd$confirm_time2 <- x
           },
-          
           text = tagList(span(
             "Expected run time for estimation", br(),
             "is approximately",
-            span(expt$range, class = "cl-dgr"),
-            "(high uncertainty due to low sample size)."
+            wrap_none(
+            span(expt$range, class = "cl-dgr"), end = ".")
           )),
           type = "warning",
           showCancelButton = TRUE,
@@ -1593,7 +1593,8 @@ mod_tab_ctsd_server <- function(id, vals) {
       N <- summary(vals$sd$fit)$DOF[grep("speed", tmpnms)][[1]]
       vals$N2_new <- N
       
-      if (N < 30) {
+      req(N)
+      if (N < 5) {
         set_col <- "color: #dd4b39;"
         p_extra <- tagList(
           p("(high uncertainty due to low sample size)",

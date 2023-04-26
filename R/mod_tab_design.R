@@ -528,6 +528,7 @@ mod_tab_design_server <- function(id, vals) {
     ### Initial sampling parameters:
     
     observe({ # GPS duration
+      req(input$gps_dur, input$gps_dur_unit)
       vals$dev$dur <- data.frame(
         value = input$gps_dur, unit = input$gps_dur_unit)
       
@@ -535,6 +536,7 @@ mod_tab_design_server <- function(id, vals) {
       bindEvent(input$gps_dur)
     
     observe({ # GPS interval
+      req(input$gps_dti, input$gps_dti_unit)
       vals$dev$dti <- data.frame(
         value = input$gps_dti, unit = input$gps_dti_unit)
       
@@ -542,6 +544,7 @@ mod_tab_design_server <- function(id, vals) {
       bindEvent(input$gps_dti)
     
     observe({ # VHF duration
+      req(input$vhf_dur, input$vhf_dur_unit)
       vals$dev$dur <- data.frame(
         value = input$vhf_dur, unit = input$vhf_dur_unit)
       
@@ -549,6 +552,7 @@ mod_tab_design_server <- function(id, vals) {
       bindEvent(input$vhf_dur)
     
     observe({ # VHF interval
+      req(input$vhf_dti, input$vhf_dti_unit)
       vals$dev$dti <- data.frame(
         value = input$vhf_dti, unit = input$vhf_dti_unit)
       
@@ -559,15 +563,20 @@ mod_tab_design_server <- function(id, vals) {
     ### Final sampling parameters:
     
     observe({
+      req(input$device_type)
       vals$dur <- NULL
       vals$dti <- NULL
       
       # GPS:
       if (input$device_type == "GPS") {
+        req(!is.null(input$gps_from_plot))
         
         if (input$gps_from_plot &&
             !is.null(input$devPlot_gps_selected)) {
-          req(vals$gps)
+          req(vals$gps,
+              input$gps_dur,
+              input$gps_dur_unit)
+          
           validate(
             need(input$gps_dur %#%
                    input$gps_dur_unit > 2 %#% "days", 
@@ -579,8 +588,7 @@ mod_tab_design_server <- function(id, vals) {
             unit = "days")
           
           tmpdti_notes <- gps[reg_selected(), ]$dti_notes
-          tmpdti_unit <- sub('^.* ([[:alnum:]]+)$',
-                             '\\1', tmpdti_notes)
+          tmpdti_unit <- sub('^.* ([[:alnum:]]+)$', '\\1', tmpdti_notes)
           vals$dti <- data.frame(
             value = tmpdti_unit %#% gps[reg_selected(), ]$dti,
             unit = tmpdti_unit)
@@ -597,7 +605,9 @@ mod_tab_design_server <- function(id, vals) {
       } else if (input$device_type == "VHF") {
         
         if (!is.null(input$devPlot_vhf_selected)) {
-          req(vals$vhf)
+          req(vals$vhf,
+              input$vhf_dti,
+              input$vhf_dti_unit)
           
           vals$dur <- data.frame(
             value = vals$vhf[reg_selected(), ]$dur,
@@ -627,7 +637,8 @@ mod_tab_design_server <- function(id, vals) {
       req(vals$tau_p0, 
           vals$tau_v0,
           vals$dur,
-          vals$dti)
+          vals$dti,
+          input$est_type)
       
       n <- NULL
       N1 <- NULL
@@ -644,12 +655,11 @@ mod_tab_design_server <- function(id, vals) {
       vals$dev$n <- n
       
       if (!is.null(input$device_loss)) {
-        
+        req(input$device_loss)
         n_loss <- round(n * (input$device_loss/100), 0)
         n <- length(t0) - n_loss
-        vals$lost <- data.frame(
-          perc = input$device_loss,
-          n = n_loss)
+        vals$lost <- data.frame(perc = input$device_loss,
+                                n = n_loss)
       }
       r <- dti / tauv
       
@@ -665,6 +675,7 @@ mod_tab_design_server <- function(id, vals) {
         
       } else if (input$est_type == 2) {
         if (!is.null(vals$fit1)) {
+          req(vals$fit1)
           vals$is_fitted <- "Yes"
           vals$dev$n <- nrow(vals$data1)
           tmpnms <- names(summary(vals$fit1)$DOF)
@@ -867,8 +878,7 @@ mod_tab_design_server <- function(id, vals) {
       dur_day <- fix_unit(vals$dur$value, vals$dur$unit)
       if (grepl("day", dur_unit)) {
         txt_dur <- wrap_none(
-          ifelse(dur == 1, "", paste0(dur_day$value, " ")), 
-          dur_day$unit,
+          dur_day$value, " ", dur_day$unit,
           css = "cl-sea", end = ".")
         
       } else if (grepl("month", dur_unit)) {
@@ -915,10 +925,9 @@ mod_tab_design_server <- function(id, vals) {
           frq_unit <- "fix every day"
         }
         
-        txt_frq <- span("(\u2248",
-                        wrap_none(
-                          round(frq, 1), " ", frq_unit,
-                          color = "var(--sea)", end = ")"))
+        txt_frq <- span("(\u2248", wrap_none(
+          round(frq, 1), " ", frq_unit,
+          color = "var(--sea)", end = ")"))
       }
       
       out <- p(style = "max-width: 700px;",
@@ -945,7 +954,7 @@ mod_tab_design_server <- function(id, vals) {
       bindEvent(input$gps_dti_max)
     
     output$min_frq <- renderText({
-      req(input$gps_dti_max)
+      req(input$gps_from_plot, input$gps_dti_max)
       
       out <- ""
       if (input$gps_dti_max == "1 fix every 12 hours")
@@ -1252,7 +1261,7 @@ mod_tab_design_server <- function(id, vals) {
     ## Change sample size text: -------------------------------------------
     
     output$devPlotSubtitle <- renderUI({
-      req(vals$which_question)
+      req(vals$which_question, input$gps_from_plot)
       if (length(vals$which_question) > 1) {
         req(vals$tau_p0, vals$tau_v0)
         
@@ -1302,28 +1311,28 @@ mod_tab_design_server <- function(id, vals) {
     }) # end of renderUI, "devPlotSubtitle"
     
     info_sizes <- reactive({
-        if (input$est_type == 1) {
-
-          out_text <- helpText(
-            "As", span("effective sample sizes", class = "cl-sea"),
-            "are", HTML(paste0(
-              span("roughly estimated", class = "cl-dgr"), ",")),
-            "these values will update before validation.",
-            "However, they should only be used for a quick evaluation,",
-            "and will not always correspond to the real sample sizes.")
-
-        } else {
-
-          out_text <- helpText(
-            "As", span("effective sample sizes", class = "cl-sea"),
-            "are extracted from the",
-            HTML(paste0(span("model fit", class = "cl-dgr"), ",")),
-            "these values will", span("not", style = "color: #000;"),
-            "update automatically.", br(), "Click the",
-            icon("bolt", class = "cl-mdn"),
-            HTML(paste0(span("Run", class = "cl-mdn"))),
-            "button to recalculate them.")
-        }
+      if (input$est_type == 1) {
+        
+        out_text <- helpText(
+          "As", span("effective sample sizes", class = "cl-sea"),
+          "are", HTML(paste0(
+            span("roughly estimated", class = "cl-dgr"), ",")),
+          "these values will update before validation.",
+          "However, they should only be used for a quick evaluation,",
+          "and will not always correspond to the real sample sizes.")
+        
+      } else {
+        
+        out_text <- helpText(
+          "As", span("effective sample sizes", class = "cl-sea"),
+          "are extracted from the",
+          HTML(paste0(span("model fit", class = "cl-dgr"), ",")),
+          "these values will", span("not", style = "color: #000;"),
+          "update automatically.", br(), "Click the",
+          icon("bolt", class = "cl-mdn"),
+          HTML(paste0(span("Run", class = "cl-mdn"))),
+          "button to recalculate them.")
+      }
     }) # end of reactive, info_sizes
 
     output$devText_sizes <- renderUI({
@@ -1484,13 +1493,13 @@ mod_tab_design_server <- function(id, vals) {
     observe({
       req(vals$dev$is_valid,
           vals$dev$n,
+          vals$which_limits,
           input$device_max)
       
       # Check GPS storage limit (if selected):
       
-      vals$storage <- input$device_max
-      
-      if (vals$dev$n > vals$storage) {
+      if (("max" %in% vals$which_limits) &&
+          vals$dev$n > vals$storage) {
         
         shinyalert::shinyalert(
           title = "Not enough GPS storage",
@@ -1632,7 +1641,9 @@ mod_tab_design_server <- function(id, vals) {
     ## Simulating GPS battery life: ---------------------------------------
     
     simulating_gps <- reactive({
-      req(vals$dev$dur)
+      req(vals$dev$dur,
+          input$gps_dti_max,
+          vals$seed0)
       
       dur <- vals$dev$dur$value %#% vals$dev$dur$unit
       req(dur > 2 %#% "days")
@@ -1661,18 +1672,17 @@ mod_tab_design_server <- function(id, vals) {
           dplyr::filter(.data$cutoff == "Y") %>%
           dplyr::pull(id)
         
-        if (length(tmp) > 3) {
+        if (length(tmp) > 3)
           dat <- dat %>% dplyr::filter(id <= (min(tmp) + 3))
-        }
       }
       
       return(dat)
       
     }) # %>% # end of reactive, simulating_gps()
-      # bindCache(list(input$gps_dur,
-      #                input$gps_dur_unit,
-      #                input$gps_dti_max,
-      #                vals$seed0))
+    # bindCache(list(input$gps_dur,
+    #                input$gps_dur_unit,
+    #                input$gps_dti_max,
+    #                vals$seed0))
     
     ## Simulating new conditional data: -----------------------------------
    
@@ -1825,7 +1835,7 @@ mod_tab_design_server <- function(id, vals) {
         
         expt <- estimating_time()
         vals$expt <- expt
-
+        
         vals$dev$confirm_time <- NULL
         if ((as.numeric(expt$max) %#% expt$unit) > 900) {
           
@@ -1839,7 +1849,7 @@ mod_tab_design_server <- function(id, vals) {
               "Expected run time for the next phase", br(),
               "is approximately",
               wrap_none(span(
-                expt$range, vals$expt_unit, class = "cl-dgr"), ".")
+                expt$range, expt$unit, class = "cl-dgr"), ".")
             )),
             type = "warning",
             showCancelButton = TRUE,
@@ -2237,12 +2247,12 @@ mod_tab_design_server <- function(id, vals) {
           ggiraph::opts_toolbar(saveaspng = FALSE)))
 
     }) # %>% # end of renderGirafe, "devPlot_gps",
-      # bindEvent(input$gps_dur,
-      #           input$gps_dur_unit,
-      #           input$gps_dti_max,
-      #           input$device_log,
-      #           vals$which_question,
-      #           vals$overwrite_seed)
+    # bindEvent(input$gps_dur,
+    #           input$gps_dur_unit,
+    #           input$gps_dti_max,
+    #           input$device_log,
+    #           vals$which_question,
+    #           vals$overwrite_seed)
     
     ## Plotting new simulated data plot (xy): -----------------------------
     
