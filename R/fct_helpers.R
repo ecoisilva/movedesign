@@ -237,19 +237,34 @@ fix_unit <- function(input,
 #' @importFrom ctmm `%#%`
 #' @noRd
 prepare_mod <- function(tau_p,
-                        tau_p_units,
+                        tau_p_unit = NULL,
                         tau_v,
-                        tau_v_units,
+                        tau_v_unit = NULL,
                         sigma,
-                        sigma_units) {
-
-  # characteristic timescales
-  taup <- tau_p %#% tau_p_units # position autocorrelation
-  tauv <- tau_v %#% tau_v_units # velocity autocorrelation
-
-  sig <- sigma %#% sigma_units # spatial variance
-
-  # generate the mod0
+                        sigma_unit = NULL) {
+  
+  if (missing(tau_p_unit)) {
+    
+    if (!("unit" %in% names(tau_p)))
+      stop("tau must contain named columns 'value' and 'unit'.")
+    taup <- tau_p$value %#% tau_p$unit
+  } else { taup <- tau_p %#% tau_p_unit }
+  
+  if (missing(tau_v_unit)) {
+    
+    if (!("unit" %in% names(tau_v)))
+      stop("tau must contain named columns 'value' and 'unit'.")
+    tauv <- tau_v$value %#% tau_v$unit
+  } else { tauv <- tau_v %#% tau_v_unit }
+  
+  if (missing(sigma_unit)) {
+    if (!("unit" %in% names(sigma)))
+      stop("sigma must contain named columns 'value' and 'unit'.")
+    
+    sig <- sigma$value %#% sigma$unit
+  } else { sig <- sigma %#% sigma_unit }
+  
+  # Generate movement model:
   mod <- ctmm::ctmm(tau = c(taup, tauv),
                     isotropic = TRUE,
                     sigma = sig,
@@ -271,18 +286,29 @@ prepare_mod <- function(tau_p,
 #'
 #' @importFrom ctmm `%#%`
 #' @noRd
-simulate_data <- function(mod,
+simulate_data <- function(data = NULL,
+                          mod,
                           dur,
                           dur_units,
                           dti,
                           dti_units,
                           seed) {
-
+  
   dur <- round(dur %#% dur_units, 0) # duration
   dti <- round(dti %#% dti_units, 0) # interval
-
-  t0 <- seq(0, dur, by = dti)
-  dat <- ctmm::simulate(mod, t = t0, seed = seed)
+  
+  t0 <- seq(0, dur, by = dti)[-1]
+  if (!is.null(data)) {
+    dat <- ctmm::simulate(data = data, 
+                          fit = mod,
+                          t = t0, 
+                          seed = seed)
+  } else {
+    dat <- ctmm::simulate(mod,
+                          t = t0, 
+                          seed = seed)
+  }
+  
   dat <- pseudonymize(dat)
   dat$index <- 1:nrow(dat)
 

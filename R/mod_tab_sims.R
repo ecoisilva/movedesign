@@ -620,9 +620,9 @@ mod_tab_sims_server <- function(id, vals) {
     sim0 <- reactive({
       
       vals$ctmm_mod <- prepare_mod(
-        tau_p = input$tau_p0, tau_p_units = input$tau_p0_units,
-        tau_v = input$tau_v0, tau_v_units = input$tau_v0_units,
-        sigma = input$sigma0, sigma_units = input$sigma0_units)
+        tau_p = input$tau_p0, tau_p_unit = input$tau_p0_units,
+        tau_v = input$tau_v0, tau_v_unit = input$tau_v0_units,
+        sigma = input$sigma0, sigma_unit = input$sigma0_units)
       
       tmp_taup <- "days" %#% input$tau_p0 %#% input$tau_p0_units
       tmp_tauv <- input$tau_v0 %#% input$tau_v0_units
@@ -1069,6 +1069,7 @@ mod_tab_sims_server <- function(id, vals) {
     simRow <- reactive({
       
       out <- data.frame(
+        seed = NA,
         taup = NA,
         tauv = NA,
         sigma = NA,
@@ -1076,6 +1077,8 @@ mod_tab_sims_server <- function(id, vals) {
         tdist = NA,
         mdist = NA,
         speed = NA)
+      
+      out$seed <- vals$seed0
       
       out$taup <- paste(
         scales::label_comma(accuracy = .1)(vals$tau_p0$value[2]),
@@ -1114,8 +1117,7 @@ mod_tab_sims_server <- function(id, vals) {
       speedunits <- tmpnames[grep("speed", tmpnames)] %>%
         extract_units() %>% abbrv_unit()
       
-      out$speed <-
-        paste(scales::label_comma(
+      out$speed <- paste(scales::label_comma(
           accuracy = .1)(speed), speedunits)
       
       return(out)
@@ -1127,6 +1129,7 @@ mod_tab_sims_server <- function(id, vals) {
       shinyjs::disable("simButton_save")
       
       vals$dt_sims <<- rbind(vals$dt_sims, simRow())
+      vals$dt_sims <- dplyr::distinct(vals$dt_sims)
       vals$report_sims_yn <- TRUE
       
     }) %>% # end of observe
@@ -1134,6 +1137,9 @@ mod_tab_sims_server <- function(id, vals) {
     
     output$simTable <- reactable::renderReactable({
       req(vals$dt_sims)
+      
+      print(vals$dt_sims)
+      dt_sims <- vals$dt_sims[, -1]
       
       columnNames <- list(
         taup = "\u03C4\u209A",
@@ -1145,7 +1151,7 @@ mod_tab_sims_server <- function(id, vals) {
         speed = "Speed (mean)")
       
       reactable::reactable(
-        vals$dt_sims,
+        dt_sims,
         compact = TRUE,
         highlight = TRUE,
         striped = TRUE,

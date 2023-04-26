@@ -225,35 +225,40 @@ mod_tab_about_server <- function(id, vals) {
     observe({
       vals$which_data <- input$which_data
       vals$which_question <- input$which_question
-    })
+    }, label = "o-about_questions")
 
+    observe({
+      vals$overwrite_active <- input$overwrite_active
+    }, label = "o-about_overwrite")
+    
     observe({
       shinyWidgets::updateCheckboxGroupButtons(
         session = session,
         inputId = "which_question",
         selected = vals$which_question)
-    })
-
+    }, label = "o-about_update")
+    
     # SETTINGS ------------------------------------------------------------
-    ## Set seed: ----------------------------------------------------------
+    ## Generating seed: ---------------------------------------------------
     
     observe({
       req(vals$active_tab == 'about')
-   
-      seed <- round(stats::runif(1, min = 1, max = 10000), 0)
+      
       if (input$overwrite_active) {
-        seed <- 10001
+        req(input$overwrite_active)
+        
         msg_log(
           style = "warning",
           message = paste0("Seed is now ", msg_warning("fixed"), "."),
           detail = "Not recommended outside of tutorials.")
+        vals$seed0 <- 1000001
+        
+      } else {
+        seed <- round(stats::runif(1, min = 1, max = 100000), 0)
+        vals$seed0 <- seed
       }
       
-      vals$seed0 <- seed
-      vals$overwrite_active <- input$overwrite_active
-      
-      
-    }) # end of observe
+    }, label = "o-about_generate_seed") # end of observe
     
     ## Restore settings/values (from previous session): -------------------
     
@@ -279,7 +284,7 @@ mod_tab_about_server <- function(id, vals) {
           ),
           size = "s"))
 
-    }) %>% # end of observe, then:
+    }, label = "o-about_restore") %>% # end of observe,
       bindEvent(input$restore_state)
 
   })

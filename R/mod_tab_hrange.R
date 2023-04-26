@@ -1058,11 +1058,11 @@ mod_tab_hrange_server <- function(id, vals) {
       # } else {
       #   mod1 <- prepare_mod(
       #     tau_p = vals$tau_p0$value[2], 
-      #     tau_p_units = vals$tau_p0$unit[2],
+      #     tau_p_unit = vals$tau_p0$unit[2],
       #     tau_v = vals$tau_v0$value[2], 
-      #     tau_v_units = vals$tau_v0$unit[2],
+      #     tau_v_unit = vals$tau_v0$unit[2],
       #     sigma = vals$sigma0$value[2], 
-      #     sigma_units = vals$sigma0$unit[2])
+      #     sigma_unit = vals$sigma0$unit[2])
       # }
       # inputList <- list(list(vals$hr$data, mod1))
       # out_fit <- par.ctmm.fit(inputList, parallel = vals$parallel)
