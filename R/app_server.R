@@ -27,7 +27,7 @@ app_server <- function(input, output, session) {
     "turtle" = "Glyptemys insculpta")
   
   vals <- reactiveValues(
-    nsims = 0,
+    nsims = 1,
     ctmm = data.frame(cbind(species, species_binom)),
     dev = NULL,
     pars = NULL,

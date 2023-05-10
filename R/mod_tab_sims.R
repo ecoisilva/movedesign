@@ -16,7 +16,7 @@ mod_tab_sims_ui <- function(id) {
       
       # Introduction: -----------------------------------------------------
       
-      div(class = div_column_main,
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
           
           shinydashboardPlus::box(
             
@@ -51,7 +51,7 @@ mod_tab_sims_ui <- function(id) {
       # [right column] ----------------------------------------------------
       
       div(id = "sim-parameters",
-          class = div_column_left,
+          class = "col-xs-12 col-sm-4 col-md-4 col-lg-3",
           
           # PARAMETERS: ---------------------------------------------------
           ## Timescale parameters -----------------------------------------
@@ -160,7 +160,8 @@ mod_tab_sims_ui <- function(id) {
               cellWidths = c("92%", "15px"),
               
               p(HTML("&nbsp;"),
-                HTML("Semi-variance (\u03C3):")) %>%
+                wrap_none("Location variance ",
+                          "(\u03C3", tags$sub("p"), "):")) %>%
                 tagAppendAttributes(class = 'label_split'),
               
               actionButton(
@@ -194,7 +195,8 @@ mod_tab_sims_ui <- function(id) {
             ), # end of splitLayout
             
             p(HTML("&nbsp;"),
-              HTML("Movement speed (\u03BD):")) %>%
+              wrap_none("Velocity variance (\u03C3", 
+                        tags$sub("v"), "):")) %>%
               tagAppendAttributes(class = 'label_split'),
             verbatimTextOutput(outputId = ns("sims_speed"))
             
@@ -230,7 +232,7 @@ mod_tab_sims_ui <- function(id) {
       
       # [center column] ---------------------------------------------------
       
-      div(class = div_column_right,
+      div(class = "col-xs-12 col-sm-8 col-md-8 col-lg-9",
           
           # Visualization: ------------------------------------------------
           
@@ -286,8 +288,9 @@ mod_tab_sims_ui <- function(id) {
                 
                 p(class = "fluid-padding"),
                 div(id = ns("help_sim_guide"),
-                    p("Quick", wrap_none(span("guidelines",
-                                              class = "cl-sea"), ":")) %>%
+                    p("Quick", 
+                      wrap_none(span("guidelines",
+                                     class = "cl-sea"), ":")) %>%
                       tagAppendAttributes(class = 'subheader'),
                     
                     helpText(
@@ -298,14 +301,16 @@ mod_tab_sims_ui <- function(id) {
                       "To change directional persistence, modify",
                       span("velocity autocorrelation", class = "cl-sea"),
                       HTML(paste0("(\u03C4", tags$sub("v"), ").")),
-                      "To change the area covered,",
-                      "modify", span("semi-variance", class = "cl-sea"),
-                      "(\u03C3).",
+                      "To change the area covered, modify",
+                      span("location variance", class = "cl-sea"), 
+                      wrap_none("(\u03C3", tags$sub("p"), ")."),
                       "Increasing either",
                       HTML(paste0("\u03C4", tags$sub("p"))), "or",
                       HTML(paste0("\u03C4", tags$sub("v"))),
-                      "lowers", span("movement speed", class = "cl-sea"),
-                      "(\u03BD), while increasing \u03C3 raises it."
+                      "lowers the", span("velocity variance", 
+                                         class = "cl-sea"),
+                      wrap_none("(\u03C3", tags$sub("v"), "),"),
+                      "while increasing \u03C3\u209A raises it."
                     ), p(style = "padding-bottom: 25px;")
                 ),
                 
@@ -337,7 +342,7 @@ mod_tab_sims_ui <- function(id) {
                     shiny::actionButton(
                       inputId = ns("repeat_sim"),
                       label = "Repeat",
-                      icon = icon("rotate-right"),
+                      icon = icon("repeat"),
                       class = "btn-info",
                       width = "120px"),
                     HTML("&nbsp;"),
@@ -416,7 +421,7 @@ mod_tab_sims_ui <- function(id) {
       
       # [bottom column] ---------------------------------------------------
       
-      div(class = div_column_main,
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
           
           # Information and R console: ------------------------------------
           
@@ -738,7 +743,7 @@ mod_tab_sims_server <- function(id, vals) {
           style = "success",
           message = paste0("Simulation ",
                            msg_success("completed"), "."),
-          with_time = time_sim0)
+          run_time = time_sim0)
         
         vals$is_valid <- TRUE
         shinybusy::remove_modal_spinner()
@@ -777,18 +782,11 @@ mod_tab_sims_server <- function(id, vals) {
         vals$time_sims <- difftime(Sys.time(), start_sim,
                                    units = "mins")
         
-        if (round(vals$time_sims, 1) < 1) {
-          tmpdetail <- paste("This step took less than one minute.")
-        } else {
-          tmpdetail <- paste("This step took approximately",
-                             round(vals$time_sims, 1), "minutes.")
-        }
-        
         msg_log(
           style = "success",
           message = paste0("Model fitting ",
                            msg_success("completed"), "."),
-          detail = tmpdetail)
+          run_time = vals$time_sims)
         
         shinyjs::enable("simButton_save")
         shinyjs::show(id = "simBox_misc")
@@ -1138,13 +1136,12 @@ mod_tab_sims_server <- function(id, vals) {
     output$simTable <- reactable::renderReactable({
       req(vals$dt_sims)
       
-      print(vals$dt_sims)
       dt_sims <- vals$dt_sims[, -1]
       
       columnNames <- list(
         taup = "\u03C4\u209A",
         tauv = "\u03C4\u1D65",
-        sigma = "\u03C3",
+        sigma = "\u03C3\u209A",
         time_elapsed = "Time elapsed:",
         tdist = "Dist (total)",
         mdist = "Dist (mean)",
@@ -1234,17 +1231,19 @@ mod_tab_sims_server <- function(id, vals) {
         intro,
         HTML(paste(
           "Then, you set the",
-          span("semi-variance", class = "cl-sea"), "(\u03C3)",
+          span("location variance", class = "cl-sea"),
+          wrap_none("(\u03C3", tags$sub("p"), ")"),
           "parameter, or the average spatial variability",
           "between any two locations.",
           p(),
           "These three variables",
           wrap_none("(\u03C4", tags$sub("p"), ", ",
                     "\u03C4", tags$sub("v"), ", and ",
-                    "\u03C3)"),
+                    "\u03C3", tags$sub("p"), ")"),
           "determine the next relevant parameter:",
-          span("velocity", class = "cl-sea"), "(\u03BD),",
-          "or the directional speed of the simulated animal.",
+          span("velocity variance", class = "cl-sea"),
+          wrap_none("(\u03C3", tags$sub("v"), ")"),
+          "or the directional speed variability of the simulated animal.",
           p(),
           "For an in-depth explanation of each parameter,",
           "click the", fontawesome::fa("circle-question"),
@@ -1268,8 +1267,8 @@ mod_tab_sims_server <- function(id, vals) {
                class = "cl-sea"),
           "parameter.",
           "To increase the overall area covered during travel,",
-          "increase", span("semi-variance", class = "cl-sea"),
-          "(\u03C3)."
+          "increase", span("location variance", class = "cl-sea"),
+          wrap_none("(\u03C3", tags$sub("p"), ").")
         )))
       
       element <- c(element, paste0(tabinfo, "simBox_submit"))
@@ -1315,7 +1314,7 @@ mod_tab_sims_server <- function(id, vals) {
         intro,
         HTML(paste(
           "If needed, you can use the",
-          fontawesome::fa("rotate-right", fill = pal$sea),
+          fontawesome::fa("repeat", fill = pal$sea),
           span("Repeat", fill = pal$sea), "button to quickly",
           "simulate a new individual.",
           p(),

@@ -39,6 +39,15 @@ mod_tab_report_ui <- function(id) {
                         uiOutput(outputId = ns("report_device")),
                         p(style = "padding-top: 0px"),
                         
+                        p(HTML("&nbsp;"),
+                          "No. of simulations:") %>%
+                          tagAppendAttributes(class = 'label_split'),
+                        fluidRow(
+                          column(width = 12,
+                                 verbatimTextOutput(
+                                   outputId = ns("rep_nsims"))
+                          )), p(style = "padding-bottom: 5px;"),
+                        
                         shinyWidgets::autonumericInput(
                           inputId = ns("ci"),
                           label = span("Credible intervals:",
@@ -59,20 +68,49 @@ mod_tab_report_ui <- function(id) {
                         
                       ) # end of panel
                     )) # end of tabBox // repTabs_details
-              ), # end of box // repBox_details
+              ) # end of box // repBox_details
               
-              shinydashboardPlus::box(
-                title = NULL,
-                width = NULL,
-                headerBorder = FALSE,
-                
-                uiOutput(ns("repInfo_hrErr")),
-                uiOutput(ns("repInfo_speedErr")),
-                uiOutput(ns("repBlock_distErr")),
-                
-                br()
-                
-              )) # end of box
+          ), # end of div (no headers)
+          
+          shinydashboardPlus::box(
+            title = span("Home range:", class = "ttl-box"),
+            id = ns("repBox_hr_err"),
+            status = "info",
+            width = NULL,
+            solidHeader = FALSE,
+            collapsible = FALSE,
+            
+            mod_blocks_ui(ns("repBlock_hrErr")),
+            br()
+            
+          ), # end of box
+          
+          shinydashboardPlus::box(
+            title = span("Speed:", class = "ttl-box"),
+            id = ns("repBox_speed_err"),
+            status = "info",
+            width = NULL,
+            solidHeader = FALSE,
+            collapsible = FALSE,
+            
+            mod_blocks_ui(ns("repBlock_speedErr")),
+            br()
+            
+          ), # end of box
+          
+          shinydashboardPlus::box(
+            title = span("Distance:", class = "ttl-box"),
+            id = ns("repBox_dist_err"),
+            status = "info",
+            width = NULL,
+            solidHeader = FALSE,
+            collapsible = FALSE,
+            
+            mod_blocks_ui(ns("repBlock_distErr")),
+            br()
+            
+          ) # end of box
+              
       ), # end of UI column (left)
       
       # [right column] ----------------------------------------------------
@@ -138,7 +176,7 @@ mod_tab_report_ui <- function(id) {
       
       ## Final report: ----------------------------------------------------
       
-      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-10",
+      div(class = "col-xs-12 col-sm-8 col-md-8 col-lg-10",
           
           shinydashboardPlus::box(
             
@@ -163,7 +201,7 @@ mod_tab_report_ui <- function(id) {
                 div(id = ns("section-comparison"),
                     
                     p("Quick comparison with other",
-                      wrap_none(span("regimes", 
+                      wrap_none(span("designs", 
                                      class = "cl-sea"), "?")) %>%
                       tagAppendAttributes(class = "subheader"),
                     
@@ -172,12 +210,7 @@ mod_tab_report_ui <- function(id) {
                            uiOutput(ns("highlighting_reg"))),
                     
                     uiOutput(outputId = ns("reportPlots_error")),
-                    
-                    helpText(
-                      "Note: This comparison is based on aggregated",
-                      "information from 400 simulations, so mean",
-                      "estimates will not match your current values."),
-                    
+                    uiOutput(ns("repPlotLegend3")),
                     uiOutput(ns("end_comparison"))
                     
                 ) # end of div // section-comparison
@@ -189,7 +222,7 @@ mod_tab_report_ui <- function(id) {
       
       # [bottom column] ---------------------------------------------------
       
-      div(class = div_column_main,
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
           
           ## Tables: ------------------------------------------------------
           
@@ -200,9 +233,6 @@ mod_tab_report_ui <- function(id) {
             solidHeader = FALSE,
             
             reactable::reactableOutput(ns("endTable"))
-            
-            # footer = tagList(
-            #   uiOutput(outputId = ns("reportInput_vars")))
             
           ) # end of box // tables
           
@@ -228,6 +258,9 @@ mod_tab_report_server <- function(id, vals) {
     ## Hide elements at start: --------------------------------------------
     
     shinyjs::hide(id = "end_comparison")
+    shinyjs::hide(id = "repBox_hr_err")
+    shinyjs::hide(id = "repBox_speed_err")
+    shinyjs::hide(id = "repBox_dist_err")
     
     boxnames <- c("analyses", "tables")
     for (i in 1:length(boxnames)) {
@@ -328,6 +361,14 @@ mod_tab_report_server <- function(id, vals) {
       
     }) # end of renderUI, "highlighting_reg"
     
+    ## Rendering total number of simulations: -----------------------------
+    
+    output$rep_nsims <- renderText({
+      req(vals$simList)
+      return(length(vals$simList))
+      
+    }) # end of renderText, "rep_nsims"
+    
     # ALERTS --------------------------------------------------------------
     
     observe({
@@ -379,7 +420,13 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(duration == out_dur)
       
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-      vals$hrCI <- suppressWarnings(
+      vals$hr_CI <- data.frame(
+        mean = mean(newdat$error, na.rm = TRUE),
+        CI_low = mean(newdat$error_lci, na.rm = TRUE),
+        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+
+      # Credible intervals:
+      vals$hr_HDI <- suppressWarnings(
         bayestestR::ci(newdat$error, ci = ci, method = "HDI"))
       
     }) # end of observe
@@ -405,7 +452,13 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(duration == out_dur)
       
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-      vals$hrCI_new <- 
+      vals$hr_CI_new <- data.frame(
+        mean = mean(newdat$error, na.rm = TRUE),
+        CI_low = mean(newdat$error_lci, na.rm = TRUE),
+        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+      
+      # Credible intervals:
+      vals$hr_HDI_new <-
         suppressWarnings(bayestestR::ci(
           newdat$error, ci = ci, method = "HDI"))
       
@@ -440,7 +493,13 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(dti == out_dti)
       
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-      vals$sdCI <- suppressWarnings(
+      vals$sd_CI <- data.frame(
+        mean = mean(newdat$error, na.rm = TRUE),
+        CI_low = mean(newdat$error_lci, na.rm = TRUE),
+        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+      
+      # Credible intervals:
+      vals$sd_HDI <- suppressWarnings(
         bayestestR::ci(newdat$error, ci = ci, method = "HDI"))
       
     }) # end of observe
@@ -467,7 +526,13 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(dti == out_dti$value)
       
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-      vals$sdCI_new <- suppressWarnings(
+      vals$sd_CI_new <- data.frame(
+        mean = mean(newdat$error, na.rm = TRUE),
+        CI_low = mean(newdat$error_lci, na.rm = TRUE),
+        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+      
+      # Credible intervals:
+      vals$sd_HDI_new <- suppressWarnings(
         bayestestR::ci(newdat$error, ci = ci, method = "HDI"))
       
     }) %>% # end of observe,
@@ -513,7 +578,8 @@ mod_tab_report_server <- function(id, vals) {
       ideal_dur <- fix_unit(tau_p * 30, "seconds", convert = TRUE)
       dur_unit <- ideal_dur$unit
       
-      ideal_dti <- fix_unit((tau_v / 3), "seconds", convert = TRUE)
+      ideal_dti <- fix_unit(vals$tau_v0$value[2],
+                            vals$tau_v0$unit[2], convert = TRUE)
       dti_unit <- ideal_dti$unit
       
       # Current sampling design:
@@ -533,10 +599,15 @@ mod_tab_report_server <- function(id, vals) {
       
       if (dti$value <= ideal_dti$value) {
         diff_dti <- tau_v / (vals$dti$value %#% vals$dti$unit)
-        vals$ctsd_col$hex <- pal$dgr
-        vals$ctsd_col$css <- "var(--danger)"
       } else {
         diff_dti <- 1 / (tau_v / (vals$dti$value %#% vals$dti$unit))
+      }
+      
+      min_dti <- fix_unit(dti_unit %#% (tau_v * 3), dti_unit)
+      
+      if (dti$value > 3 * ideal_dti$value) {
+      vals$ctsd_col$hex <- pal$dgr
+      vals$ctsd_col$css <- "var(--danger)"
       }
       
       if ((dti$value %#% dti$unit) <= tau_v) {
@@ -587,7 +658,7 @@ mod_tab_report_server <- function(id, vals) {
       ### For home range estimation:
       
       if ("Home range" %in% vals$which_question) {
-        req(vals$hrCI)
+        req(vals$hr_HDI)
         N1 <- scales::label_comma(accuracy = 1)(vals$dev$N1)
         
         out_regime <- out_reg_hr <-
@@ -610,17 +681,21 @@ mod_tab_report_server <- function(id, vals) {
       ## Speed and distance estimation:
       
       if ("Speed & distance" %in% vals$which_question) {
-        req(vals$sdCI)
+        req(vals$sd_HDI)
         N2 <- scales::label_comma(accuracy = 1)(vals$dev$N2)
         
         out_regime <- out_reg_ctsd <-
-          p("The minimum", span("sampling interval", class = "cl-sea"),
+          p("The ", span("sampling interval", class = "cl-sea"),
             "for", span("speed & distance", class = "cl-grn"),
-            "estimation should be less than the",
+            "estimation should ideally be near or less than the",
             span("velocity autocorrelation", class = "cl-sea"),
             wrap_none("parameter (", tags$sub("v"), "),"),
             "or \u2264", wrap_none(ideal_dti$value, " ", ideal_dti$unit,
                                    css = "cl-grn", end = "."),
+            "Or, at a minimum, less than 3", icon(name = "xmark"),
+            wrap_none("\u03C4", tags$sub("v")), "(\u2264",
+            wrap_none(min_dti$value, " ", min_dti$unit, ")"),
+            "for longer sampling durations.",
             "Your current interval (\u0394t) is",
             dti_text,
             "\u2248", wrap_none(dti$value, " ", dti$unit,
@@ -644,14 +719,14 @@ mod_tab_report_server <- function(id, vals) {
       ## Home range estimation:
       
       if ("Home range" %in% vals$which_question) {
-        req(vals$hrCI, vals$hrErr)
+        req(vals$hr_HDI, vals$hrErr)
         
-        hrCI <- c(round(vals$hrCI$CI_low * 100, 1),
-                  round(vals$hrCI$CI * 100, 0),
-                  round(vals$hrCI$CI_high * 100, 1))
+        hrCI <- c(round(vals$hr_HDI$CI_low * 100, 1),
+                  round(vals$hr_HDI$CI * 100, 0),
+                  round(vals$hr_HDI$CI_high * 100, 1))
         
         txt_level <- ifelse(
-          vals$hrCI$CI_high < .3 & vals$hrCI$CI_low > -.3,
+          vals$hr_HDI$CI_high < .3 & vals$hr_HDI$CI_low > -.3,
           "and with low", "but with high")
         
         opts_dur <- 2^seq(1, 12, by = 1)
@@ -664,16 +739,16 @@ mod_tab_report_server <- function(id, vals) {
         if (dur$value >= ideal_dur$value) {
           vals$report$is_hr <- TRUE
           out_hr1 <- span(
+            style = "font-weight: bold;",
             "Your current sampling duration is likely sufficient",
-            "for", span("home range", class = "cl-grn"),
-            "estimation,", txt_level, "uncertainty.")
+            "for home range estimation,", txt_level, "uncertainty.")
           
         } else {
           vals$report$is_hr <- FALSE
           out_hr1 <- span(
+            style = "font-weight: bold;",
             "Your current sampling duration may be insufficient",
-            "for", span("home range", class = "cl-grn"),
-            "estimation.")
+            "for home range estimation.")
         }
         
         out_hr2 <- span(
@@ -686,8 +761,9 @@ mod_tab_report_server <- function(id, vals) {
         
         out_analyses <- out_hr <- p(
           out_hr1,
-          "Your error estimate",
-          "based on a single simulation was",
+          "Your error estimate based on a",
+          span(style = "font-weight: bold;", "single"), 
+          "simulation was",
           wrap_none(round(vals$hrErr$value[[2]] * 100, 1), "%."),
           out_hr2)
         
@@ -697,16 +773,17 @@ mod_tab_report_server <- function(id, vals) {
       
       if ("Speed & distance" %in% vals$which_question) {
         
+        req(!is.null(vals$is_ctsd))
         if (vals$is_ctsd) {
-          req(vals$sdCI, vals$speedErr$value)
+          req(vals$sd_HDI, vals$speedErr$value)
           
-          sdCI <- c(round(vals$sdCI$CI_low * 100, 1),
-                    round(vals$sdCI$CI * 100, 0),
-                    round(vals$sdCI$CI_high * 100, 1))
+          sdCI <- c(round(vals$sd_HDI$CI_low * 100, 1),
+                    round(vals$sd_HDI$CI * 100, 0),
+                    round(vals$sd_HDI$CI_high * 100, 1))
           
           txt_level <- ifelse(
-            vals$sdCI$CI_high < .3 &
-              vals$sdCI$CI_low > -.3,
+            vals$sd_HDI$CI_high < .3 &
+              vals$sd_HDI$CI_low > -.3,
             "and with low", "but with high")
           
           ctsd_err <- vals$speedErr$value[[2]]
@@ -724,26 +801,26 @@ mod_tab_report_server <- function(id, vals) {
         if (vals$dev$N2 >= 30) {
           
           vals$report$is_ctsd <- TRUE
-          out_ctsd1 <- 
-            span("Your current sampling interval is likely sufficient",
-                 "for", span("speed & distance", class = "cl-grn"),
-                 "estimation,", txt_level, "uncertainty.")
+          out_ctsd1 <- span(
+            style = "font-weight: bold;",
+            "Your current sampling interval is likely sufficient",
+            "for speed & distance estimation,", 
+            txt_level, "uncertainty.")
           
         } else {
           if (vals$dev$N2 > 0) {
             vals$report$is_ctsd <- FALSE
-            out_ctsd1 <-
-              span("Your current sampling interval may be insufficient",
-                   "for", span("speed & distance", class = "cl-grn"),
-                   "estimation.")
+            out_ctsd1 <- span(
+              style = "font-weight: bold;",
+              "Your current sampling interval may be insufficient",
+              "for speed & distance estimation.")
             
           } else {
             vals$report$is_ctsd <- FALSE
-            out_ctsd1 <-
-              span("Your current sampling interval was too coarse",
-                   "for", span("speed & distance", class = "cl-grn"),
-                   "estimation.")
-            
+            out_ctsd1 <- span(
+              style = "font-weight: bold;",
+              "Your current sampling interval was too coarse",
+              "for speed & distance estimation.")
           }
         }
         
@@ -759,8 +836,9 @@ mod_tab_report_server <- function(id, vals) {
           
           out_analyses <- out_ctsd <- p(
             out_ctsd1,
-            "Your error estimate",
-            "based on a single simulation was",
+            "Your error estimate based on a",
+            span(style = "font-weight: bold;", "single"), 
+            "simulation was",
             wrap_none(round(ctsd_err * 100, 1), "%."),
             out_ctsd2)
           
@@ -779,30 +857,76 @@ mod_tab_report_server <- function(id, vals) {
     observe({
       req(length(vals$which_question) > 1,
           vals$hr_completed,
-          vals$sd_completed)
+          vals$sd_completed,
+          vals$simList)
       
       ### Both home range and speed & distance:
       
       is_hr <- vals$report$is_hr
       is_ctsd <- vals$report$is_ctsd
+      req(!is.null(is_hr), !is.null(is_ctsd))
       
-      sufficient <- span("sufficient", class = "cl-grn")
-      insufficient <- span("insufficient", class = "cl-dgr")
+      # sufficient <- span("sufficient", class = "cl-grn")
+      # insufficient <- span("insufficient", class = "cl-dgr")
       
+      ## Number of simulations:
+      
+      out_nsims <- span(
+        "a", span(style = "font-weight: bold;", "single"), 
+        "simulation")
+      if (length(vals$simList) > 1) {
+        out_nsims <- span(
+          span(style = "font-weight: bold;", length(vals$simList)), 
+          "simulations")
+      }
+      
+      # Home range estimation errors:
+      
+      hrErr_lci <- round(vals$hrErr$value[[1]] * 100, 1)
+      hrErr_est <- round(vals$hrErr$value[[2]] * 100, 1)
+      hrErr_uci <- round(vals$hrErr$value[[3]] * 100, 1)
+      
+      if (length(vals$simList) > 1) {
+        req(vals[["hrErrList"]])
+        hrErr_lci <- round(
+          mean(vals[["hrErrList"]]$lci * 100, na.rm = TRUE), 1)
+        hrErr_est <- round(
+          mean(vals[["hrErrList"]]$est * 100, na.rm = TRUE), 1)
+        hrErr_uci <- round(
+          mean(vals[["hrErrList"]]$uci * 100, na.rm = TRUE), 1)
+      }
+      
+      # Speed and distance errors:
+      
+      if (vals$dev$N2 > 0) {
+        sdErr_lci <- round(vals$speedErr$value[[1]] * 100, 1)
+        sdErr_est <- round(vals$speedErr$value[[2]] * 100, 1)
+        sdErr_uci <- round(vals$speedErr$value[[3]] * 100, 1)
+        
+        if (length(vals$simList) > 1) {
+          req(vals[["speedErrList"]])
+          sdErr_lci <- round(
+            mean(vals[["speedErrList"]]$lci * 100, na.rm = TRUE), 1)
+          sdErr_est <- round(
+            mean(vals[["speedErrList"]]$est * 100, na.rm = TRUE), 1)
+          sdErr_uci <- round(
+            mean(vals[["speedErrList"]]$uci * 100, na.rm = TRUE), 1)
+        }
+      }
       
       if (is_hr & !is_ctsd) {
         out <- span(
           style = "font-weight: bold;",
           
-          "Your current tracking regime is likely", sufficient,
-          "for home range estimation, but", insufficient,
+          "Your current tracking regime is likely sufficient",
+          "for home range estimation, but insufficient",
           "for speed & distance estimation.")
         
         if (vals$dev$N2 == 0)
           out <- span(
             style = "font-weight: bold;",
             
-            "Your current tracking regime is likely", sufficient,
+            "Your current tracking regime is likely sufficient",
             "for home range estimation, and is inappropriate for",
             span("inappropriate", class = "cl-dgr"),
             "for speed & distance estimation.")
@@ -812,8 +936,8 @@ mod_tab_report_server <- function(id, vals) {
         out <- span(
           style = "font-weight: bold;",
           
-          "Your current tracking regime may be", insufficient,
-          "for home range estimation, but likely", sufficient,
+          "Your current tracking regime may be insufficient",
+          "for home range estimation, but likely sufficient",
           "for speed & distance estimation.")
       }
       
@@ -821,7 +945,7 @@ mod_tab_report_server <- function(id, vals) {
         out <- span(
           style = "font-weight: bold;",
           
-          "Your current tracking regime is likely", sufficient,
+          "Your current tracking regime is likely sufficient",
           "for both home range estimation and for",
           "speed & distance estimation.")
       }
@@ -830,7 +954,7 @@ mod_tab_report_server <- function(id, vals) {
         out <- span(
           style = "font-weight: bold;",
           
-          "Your current tracking regime may be", insufficient,
+          "Your current tracking regime may be insufficient",
           "for both home range estimation and for",
           "speed & distance estimation.")
         
@@ -838,7 +962,7 @@ mod_tab_report_server <- function(id, vals) {
           out <- span(
             style = "font-weight: bold;",
             
-            "Your current tracking regime may be", insufficient,
+            "Your current tracking regime may be insufficient",
             "for home range estimation, and is inappropriate for",
             span("inappropriate", class = "cl-dgr"),
             "for speed & distance estimation.")
@@ -846,20 +970,20 @@ mod_tab_report_server <- function(id, vals) {
       
       out_analyses <- p(
         out,
-        "For home range estimation, your error estimate",
-        "based on a single simulation was",
-        wrap_none(round(vals$hrErr$value[[2]] * 100, 1), "%"),
-        wrap_none("[", round(vals$hrErr$value[[1]] * 100, 1),
-                  ", ", round(vals$hrErr$value[[3]] * 100, 1),
+        "For home range estimation, your error estimate based on",
+        out_nsims, "was",
+        ifelse(hrErr_est == 0, "less than 0.01%",
+               wrap_none(hrErr_est, "%")),
+        wrap_none("[", hrErr_lci, ", ", hrErr_uci,
                   "%]", css = "cl-blk", end = "."),
         
         if (vals$dev$N2 > 0) {
-          span("For speed estimation, your error estimate",
-               "based on a single simulation was",
-               wrap_none(round(vals$speedErr$value[[2]] * 100, 1), "%"),
-               wrap_none("[", round(vals$speedErr$value[[1]] * 100, 1),
-                         ", ", round(vals$speedErr$value[[3]] * 100, 1),
-                         "%]", css = "cl-blk", end = "."))
+          span(
+            "For speed estimation, your error estimate based on",
+            out_nsims, "was",
+            wrap_none(sdErr_est, "%"),
+            wrap_none("[", sdErr_lci, ", ", sdErr_uci,
+                      "%]", css = "cl-blk", end = "."))
         } else {
           span("Your sampling interval was",
                "too coarse, so it was not possible to estimate speed.")
@@ -904,12 +1028,31 @@ mod_tab_report_server <- function(id, vals) {
                       value = TRUE)),
                 
                 ggiraph::girafeOutput(
-                  outputId = ns("plot_hr_density"),
+                  outputId = ns("repPlot_hr"),
                   width = "100%", height = "100%"),
+                uiOutput(ns("repPlotLegend1")),
+                
+                # fluidRow(
+                #   style = "text-align: center;",
+                #   span("Precision of",
+                #        wrap_none(span("designs",
+                #                       class = "cl-sea"), ":")) %>%
+                #     tagAppendAttributes(class = "subheader"),
+                #   actionButton(
+                #     inputId = ns("explain_precision"),
+                #     icon = icon("circle-question"),
+                #     label = NULL,
+                #     style = paste("background-color: #fff;",
+                #                   "color: black;",
+                #                   "padding: 0;",
+                #                   "margin: -5px 0 0 0;")) %>%
+                #     bsplus::bs_attach_modal(id_modal = "modal_precision")
+                # ), # end of fluidRow
                 
                 ggiraph::girafeOutput(
-                  outputId = ns("plot_density_details"),
+                  outputId = ns("repPlot_precision"),
                   width = "100%", height = "100%"),
+                uiOutput(ns("repPlotLegend2")),
                 
                 vals$report$analyses) # end of tagList
               
@@ -933,12 +1076,30 @@ mod_tab_report_server <- function(id, vals) {
                       value = TRUE)),
                 
                 ggiraph::girafeOutput(
-                  outputId = ns("plot_sd_density"),
+                  outputId = ns("repPlot_sd"),
                   width = "100%", height = "100%"),
+                uiOutput(ns("repPlotLegend1")),
+                
+                # fluidRow(
+                #   span("Precision of",
+                #        wrap_none(span("designs",
+                #                       class = "cl-sea"), ":")) %>%
+                #     tagAppendAttributes(class = "subheader"),
+                #   actionButton(
+                #     inputId = ns("explain_precision"),
+                #     icon = icon("circle-question"),
+                #     label = NULL,
+                #     style = paste("background-color: #fff;",
+                #                   "color: black;",
+                #                   "padding: 0;",
+                #                   "margin: -5px 0 0 0;")) %>%
+                #     bsplus::bs_attach_modal(id_modal = "modal_precision")
+                # ), # end of fluidRow
                 
                 ggiraph::girafeOutput(
-                  outputId = ns("plot_density_details"),
+                  outputId = ns("repPlot_precision"),
                   width = "100%", height = "100%"),
+                uiOutput(ns("repPlotLegend2")),
                 
                 vals$report$analyses) # end of tagList
               
@@ -950,33 +1111,57 @@ mod_tab_report_server <- function(id, vals) {
           output$end_report <- renderUI({
             out <- tagList(
               vals$report$species,
-              vals$report$regime)
+              vals$report$regime,
+              vals$report$analyses)
           })
           
           output$end_report_both <- renderUI({
             req(length(vals$which_question) > 1)
             
-            out <- tagList(
-              splitLayout(
-                cellWidths = c("50%", "50%"), 
-                tagList(
-                  p(span("Home range", class = "cl-mdn")) %>%
-                    tagAppendAttributes(class = "subheader"),
-                  ggiraph::girafeOutput(
-                    outputId = ns("plot_hr_density"),
-                    width = "100%", height = "100%")), 
-                tagList(
-                  p(span("Speed & distance", class = "cl-mdn")) %>%
-                    tagAppendAttributes(class = "subheader"),
-                  ggiraph::girafeOutput(
-                    outputId = ns("plot_sd_density"),
-                    width = "100%", height = "100%"))),
-              
-              ggiraph::girafeOutput(
-                outputId = ns("plot_density_details"),
-                width = "100%", height = "100%"),
-              
-              vals$report$analyses) # end of tagList
+            out <- div(
+              id = "content-report",
+              tagList(
+                splitLayout(
+                  cellWidths = c("50%", "50%"), 
+                  tagList(
+                    p(span("AKDE error", class = "cl-mdn")) %>%
+                      tagAppendAttributes(class = "subheader"),
+                    ggiraph::girafeOutput(
+                      outputId = ns("repPlot_hr"),
+                      width = "100%", height = "100%")), 
+                  tagList(
+                    p(span("CTSD error", class = "cl-mdn")) %>%
+                      tagAppendAttributes(class = "subheader"),
+                    ggiraph::girafeOutput(
+                      outputId = ns("repPlot_sd"),
+                      width = "100%", height = "100%"))),
+                uiOutput(ns("repPlotLegend1")),
+                
+                # fluidRow(
+                #   span("Precision of",
+                #        wrap_none(span("designs",
+                #                       class = "cl-sea"), ":")) %>%
+                #     tagAppendAttributes(class = "subheader"),
+                #   actionButton(
+                #     inputId = ns("explain_precision"),
+                #     icon = icon("circle-question"),
+                #     label = NULL,
+                #     style = paste("background-color: #fff;",
+                #                   "color: black;",
+                #                   "padding: 0;",
+                #                   "margin: -5px 0 0 0;")) %>%
+                #     bsplus::bs_attach_modal(id_modal = "modal_precision")
+                # ), # end of fluidRow
+                
+                ggiraph::girafeOutput(
+                  outputId = ns("repPlot_precision"),
+                  width = "100%", height = "100%"),
+                
+                uiOutput(ns("repPlotLegend2"))
+                
+                
+              ) # end of tagList
+            ) # end of div
             
           }) # end of renderUI, "end_report_both"
           
@@ -995,12 +1180,12 @@ mod_tab_report_server <- function(id, vals) {
         
         highlighted_dur <- as.numeric(input$highlight_dur)
         
-        CI <- round(vals$hrCI_new$CI * 100, 0)
-        LCI <- round(vals$hrCI_new$CI_low * 100, 1)
-        UCI <- round(vals$hrCI_new$CI_high * 100, 1)
+        CI <- round(vals$hr_HDI_new$CI * 100, 0)
+        LCI <- round(vals$hr_HDI_new$CI_low * 100, 1)
+        UCI <- round(vals$hr_HDI_new$CI_high * 100, 1)
         
         txt_level <- ifelse(
-          vals$hrCI_new$CI_high < .3 & vals$hrCI_new$CI_low > -.3,
+          vals$hr_HDI_new$CI_high < .3 & vals$hr_HDI_new$CI_low > -.3,
           "and with low", "but with high")
         
         ideal_dur <- fix_unit(
@@ -1050,12 +1235,12 @@ mod_tab_report_server <- function(id, vals) {
         out_dti <- fix_unit(highlighted_dti, "seconds",
                             convert = TRUE)
         
-        CI <- round(vals$sdCI_new$CI * 100, 0)
-        LCI <- round(vals$sdCI_new$CI_low * 100, 1)
-        UCI <- round(vals$sdCI_new$CI_high * 100, 1)
+        CI <- round(vals$sd_HDI_new$CI * 100, 0)
+        LCI <- round(vals$sd_HDI_new$CI_low * 100, 1)
+        UCI <- round(vals$sd_HDI_new$CI_high * 100, 1)
         
         txt_level <- ifelse(
-          vals$sdCI_new$CI_high < .3 & vals$sdCI_new$CI_low > -.3,
+          vals$sd_HDI_new$CI_high < .3 & vals$sd_HDI_new$CI_low > -.3,
           "and with low", "but with high")
         
         ideal_dti <- fix_unit(
@@ -1109,78 +1294,126 @@ mod_tab_report_server <- function(id, vals) {
     }) # end of observe
     
     # PLOTS ---------------------------------------------------------------
-    
-    # output$repPlot_id <- ggiraph::renderGirafe({
-    #   req(vals$data1)
-    #   
-    #   newdat <- vals$data1
-    #   yrange <- diff(range(newdat$y))
-    #   xrange <- diff(range(newdat$x))
-    #   
-    #   if (yrange < 1.5 * xrange) {
-    #     ymin <- min(newdat$y) - yrange * .3
-    #     ymax <- max(newdat$y) + yrange * .3
-    #   } else if (yrange < 2 * xrange) {
-    #     ymin <- min(newdat$y) - yrange * .5
-    #     ymax <- max(newdat$y) + yrange * .5
-    #   } else {
-    #     ymin <- min(newdat$y)
-    #     ymax <- max(newdat$y)
-    #   }
-    #   
-    #   if (xrange < 2 * yrange) {
-    #     xmin <- min(newdat$x) - xrange * .5
-    #     xmax <- max(newdat$x) + xrange * .5
-    #   } else {
-    #     xmin <- min(newdat$x)
-    #     xmax <- max(newdat$x)
-    #   }
-    #   
-    #   p <- ggplot2::ggplot() +
-    #     
-    #     ggplot2::geom_path(
-    #       newdat, mapping = ggplot2::aes(
-    #         x = x, y = y,
-    #         color = timestamp),
-    #       alpha = .9) +
-    #     ggiraph::geom_point_interactive(
-    #       newdat, mapping = ggplot2::aes(
-    #         x = x, y = y,
-    #         color = timestamp),
-    #       size = 1.2) +
-    #     
-    #     ggplot2::labs(x = "x coordinate",
-    #                   y = "y coordinate") +
-    #     
-    #     ggplot2::scale_x_continuous(
-    #       labels = scales::comma,
-    #       limits = c(xmin, xmax)) +
-    #     ggplot2::scale_y_continuous(
-    #       labels = scales::comma,
-    #       limits = c(ymin, ymax)) +
-    #     viridis::scale_color_viridis(
-    #       name = "Tracking time:",
-    #       option = "D", trans = "time",
-    #       breaks = c(min(newdat$timestamp),
-    #                  max(newdat$timestamp)),
-    #       labels = c("Start", "End")) +
-    #     
-    #     theme_movedesign() +
-    #     ggplot2::theme(legend.position = "none")
-    #   
-    #   ggiraph::girafe(
-    #     ggobj = p,
-    #     width_svg = 5, height_svg = 5,
-    #     options = list(
-    #       ggiraph::opts_sizing(rescale = TRUE, width = .5),
-    #       ggiraph::opts_toolbar(saveaspng = FALSE)))
-    #   
-    # }) # end of renderGirafe, "repPlot_id"
-    
     ## Rendering density plots: -------------------------------------------
     
-    #### Home range simulations:
-    output$plot_hr_density <- ggiraph::renderGirafe({
+    output$repPlotLegend1 <- renderUI({
+      req(vals$which_question, input$ci,
+          vals$tau_p0, vals$tau_v0, vals$dur, vals$dti)
+      
+      input_taup <- "days" %#% 
+        vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
+      input_tauv <- vals$tau_v0$value[2] %#% vals$tau_v0$unit[2]
+      input_dur <- "days" %#% vals$dur$value %#% vals$dur$unit
+      input_dti <- vals$dti$value %#% vals$dti$unit
+      
+      dt_hr <- movedesign::sims_hrange[[1]] %>%
+        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% duration, 1))
+      
+      out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
+      dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
+      
+      dt_sd <- movedesign::sims_speed[[1]] %>%
+        dplyr::mutate(dur = round("days" %#% dur, 1))
+      out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
+      out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
+      dur_for_sd <- dt_sd$dur[which.min(abs(dt_sd$dur - input_dur))]
+      
+      dt_sd <- movedesign::sims_speed[[1]] %>%
+        dplyr::select(.data$dti, .data$dti_notes) %>%
+        unique()
+      out_dti <- dt_sd$dti[which.min(abs(dt_sd$dti - input_dti))]
+      dti_for_sd <- dt_sd$dti_notes[match(out_dti, dt_sd$dti)]
+      dti_for_sd
+      
+      txt_highlight <- ""
+      if (!is.null(input$highlight_dur) ||
+          !is.null(input$highlight_dti)) {
+        txt_highlight <- span(
+          "The comparison requested is in",
+          wrap_none(
+            "(", fontawesome::fa("diamond", fill = "black"),
+            " in ", span("black", style = "color: black;"), ").")
+        )
+      }
+      
+      if (length(vals$which_question) > 1) {
+        ui <- tagList(
+          fontawesome::fa("circle-exclamation", fill = pal$dgr),
+          span("Note:", class = "help-block-note"), 
+          "These plots show the probability density of estimate errors",
+          "based on 400 simulations, with the medians",
+          wrap_none(
+            "(", fontawesome::fa("diamond"), " in lighter colors),"),
+          "and the", wrap_none(input$ci, "%"),
+          "credible intervals (shaded areas + lines).",
+          "For AKDE, the 400 simulations were based on", 
+          "movement processes with \u03C4\u209A = ", out_taup, "days;",
+          "for CTSD, \u03C4\u1D65 = ", 
+          out_tauv$value, paste0(out_tauv$unit, "."),
+          "Your simulation(s)",
+          "estimate errors are the circles", wrap_none(
+            "(", fontawesome::fa("circle", prefer_type = "solid"), ")"),
+          "in darker colors.")
+        
+      } else {
+        
+        switch(
+          vals$which_question,
+          "Home range" = {
+            ui <- tagList(
+              fontawesome::fa("circle-exclamation", fill = pal$dgr),
+              span("Note:", class = "help-block-note"), 
+              "This plot shows the probability density of estimate errors",
+              "based on 400 simulations for a sampling interval of", 
+              wrap_none(dti_for_sd, ","), "with the median",
+              wrap_none(
+                "(", fontawesome::fa("diamond", fill = pal$sea),
+                " in ", span("light blue", class = "cl-sea"), "),"),
+              "and the", wrap_none(input$ci, "%"),
+              "credible intervals (shaded area).",
+              "Your simulation(s)'",
+              "error is the circle", wrap_none(
+                "(", fontawesome::fa("circle", prefer_type = "solid",
+                                     fill = pal$sea_d), ")"),
+              "in", wrap_none(span("darker blue",
+                                   class = "cl-sea-d"), "."),
+              txt_highlight)
+          },
+          "Speed & distance" = {
+            ui <- tagList(
+              fontawesome::fa("circle-exclamation", fill = pal$dgr),
+              span("Note:", class = "help-block-note"), 
+              "This plot shows the probability density of estimate errors",
+              "based on 400 simulations for a sampling duration of", 
+              dur_for_hr, "days,", "with the median",
+              wrap_none(
+                "(", fontawesome::fa("diamond", fill = pal$sea),
+                " in ", span("light blue", class = "cl-sea"), "),"),
+              "and the", wrap_none(input$ci, "%"),
+              "credible intervals (shaded area).",
+              "In contrast, your simulation(s)'",
+              "error is the circle", wrap_none(
+                "(", fontawesome::fa("circle", prefer_type = "solid",
+                                     fill = pal$sea_d), ")"),
+              "in", wrap_none(span("darker blue",
+                                   class = "cl-sea-d"), "."),
+              txt_highlight)
+          },
+          stop(paste0("No handler for ",
+                      vals$which_question, "."))
+        )
+      }
+      
+      ui <- span(class = "help-block", ui)
+      
+      return(ui)
+      
+    }) # end of renderUI, "repPlotLegend1"
+    
+    #### Accuracy of home range simulations: ------------------------------
+    
+    output$repPlot_hr <- ggiraph::renderGirafe({
       req(vals$which_question, input$ci)
       
       input_ci <- ifelse(is.null(input$ci), .95, input$ci/100)
@@ -1203,7 +1436,7 @@ mod_tab_report_server <- function(id, vals) {
         "padding: 5px;",
         "color: #fff;")
       
-      # Preparingif () statements:
+      # Preparing if () statements:
       
       is_dur <- FALSE
       if (!is.null(input$highlight_dur))
@@ -1231,7 +1464,7 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(tau_p == out_taup) %>%
         dplyr::filter(duration == dur_for_hr) %>%
         stats::na.omit()
-      med <- median(ds1_hr$error)
+      med <- stats::median(ds1_hr$error)
       
       ds1_hr <- stats::density(ds1_hr$error)
       ds1_hr <- data.frame(x = ds1_hr$x, y = ds1_hr$y)
@@ -1244,10 +1477,10 @@ mod_tab_report_server <- function(id, vals) {
       if (is_log) ds1_hr$y <- ds1_hr$y / max(ds1_hr$y)
       
       ci1_hr <- subset(
-        ds1_hr, x >= vals$hrCI$CI_low & x <= vals$hrCI$CI_high)
+        ds1_hr, x >= vals$hr_HDI$CI_low & x <= vals$hr_HDI$CI_high)
       
       if (is_dur) {
-        req(vals$hrCI_new)
+        req(vals$hr_HDI_new)
         
         out_dur_new <- dt_hr$dur[
           abs(dt_hr$dur - as.numeric(input$highlight_dur)) %>%
@@ -1257,7 +1490,7 @@ mod_tab_report_server <- function(id, vals) {
           dplyr::filter(tau_p == out_taup) %>%
           dplyr::filter(duration == out_dur_new) %>%
           stats::na.omit()
-        med <- median(ds2_hr$error)
+        med <- stats::median(ds2_hr$error)
         
         ds2_hr <- stats::density(ds2_hr$error)
         ds2_hr <- data.frame(x = ds2_hr$x, y = ds2_hr$y)
@@ -1266,14 +1499,14 @@ mod_tab_report_server <- function(id, vals) {
           "max" = max(ds2_hr$x),
           "min" = min(ds2_hr$x))
         
-        vals$hrCI_new <- 
+        vals$hr_HDI_new <- 
           suppressWarnings(bayestestR::ci(
             ds2_hr$x, ci = input_ci, method = "HDI"))
         
         if (is_log) ds2_hr$y <- ds2_hr$y / max(ds2_hr$y)
         
         ci2_hr <- subset(
-          ds2_hr, x >= vals$hrCI_new$CI_low & x <= vals$hrCI_new$CI_high)
+          ds2_hr, x >= vals$hr_HDI_new$CI_low & x <= vals$hr_HDI_new$CI_high)
         
         hr_p1 <- ggplot2::geom_line(
           data = ds2_hr, mapping = ggplot2::aes(x = x, y = y),
@@ -1285,7 +1518,7 @@ mod_tab_report_server <- function(id, vals) {
           alpha = 0.2, fill = pal$mdn)
         
         hr_p3 <- ggplot2::geom_segment(
-          data = vals$hrCI_new,
+          data = vals$hr_HDI_new,
           mapping = ggplot2::aes(
             x = .data$CI_low,
             xend = .data$CI_high,
@@ -1301,8 +1534,8 @@ mod_tab_report_server <- function(id, vals) {
       }
       
       lbl <- c(
-        paste0("Current error"),
-        paste0("Median error + ", vals$hrCI$CI * 100,
+        paste0("AKDE error"),
+        paste0("Median AKDE error + ", vals$hr_HDI$CI * 100,
                "% HDI for ", dur_for_hr, " days"))
       brk <- c("now", "est")
       
@@ -1315,7 +1548,7 @@ mod_tab_report_server <- function(id, vals) {
       
       if (is_dur) {
         lbl <- c(
-          lbl, paste0("Median error + ", vals$hrCI$CI * 100,
+          lbl, paste0("Median AKDE error + ", vals$hr_HDI$CI * 100,
                       "% HDI for ", input$highlight_dur, " days"))
         brk <- c(brk, "est_new")
         
@@ -1350,8 +1583,8 @@ mod_tab_report_server <- function(id, vals) {
         
         ggplot2::geom_segment(
           mapping = ggplot2::aes(
-            x = vals$hrCI$CI_low,
-            xend = vals$hrCI$CI_high,
+            x = vals$hr_HDI$CI_low,
+            xend = vals$hr_HDI$CI_high,
             y = 0, yend = 0, col = "est",
             linetype = "est"),
           size = .8) +
@@ -1416,10 +1649,12 @@ mod_tab_report_server <- function(id, vals) {
                         "stroke: #004647;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
       
-    }) %>% # end of renderGirafe // plot_hr_density
+    }) %>% # end of renderGirafe // repPlot_hr
       bindEvent(list(input$build_report,
                      input$scale_density,
                      input$highlight_dur))
+    
+    #### Accuracy of speed & distance simulations: ------------------------
     
     observe({
       req(vals$data0, vals$tau_v0,
@@ -1488,7 +1723,7 @@ mod_tab_report_server <- function(id, vals) {
         dplyr::filter(dur == dur_for_sd) %>%
         dplyr::filter(dti == out_dti) %>% 
         stats::na.omit()
-      med <- median(ds1_sd$error)
+      med <- stats::median(ds1_sd$error)
         
       ds1_sd <- stats::density(ds1_sd$error)
       ds1_sd <- data.frame(x = ds1_sd$x, y = ds1_sd$y)
@@ -1501,10 +1736,10 @@ mod_tab_report_server <- function(id, vals) {
       if (is_log) ds1_sd$y <- ds1_sd$y / max(ds1_sd$y)
       
       ci1_sd <- subset(
-        ds1_sd, x >= vals$sdCI$CI_low & x <= vals$sdCI$CI_high)
+        ds1_sd, x >= vals$sd_HDI$CI_low & x <= vals$sd_HDI$CI_high)
       
       if (is_dti) {
-        req(vals$sdCI_new)
+        req(vals$sd_HDI_new)
         
         dti_new <- sd_opts$dti[match(input$highlight_dti,
                                      sd_opts$dti_notes)]
@@ -1518,7 +1753,26 @@ mod_tab_report_server <- function(id, vals) {
           dplyr::filter(dur == dur_for_sd) %>%
           dplyr::filter(dti == out_dti_new) %>%
           stats::na.omit()
-        med <- median(ds2_sd$error)
+        med <- stats::median(ds2_sd$error)
+        
+        if (nrow(ds2_sd) > 2) {
+          msg_log(style = "warning",
+                  message = paste0("Duration too low for ",
+                                   msg_warning("comparison"), "."))
+          
+          shinyFeedback::showToast(
+            type = "error",
+            message = "Interval invalid.",
+            .options = list(
+              timeOut = 2500,
+              extendedTimeOut = 3500,
+              progressBar = TRUE,
+              closeButton = TRUE,
+              preventDuplicates = TRUE,
+              positionClass = "toast-bottom-right")
+          )
+          req(nrow(ds2_sd) > 2)
+        }
         
         ds2_sd <- stats::density(ds2_sd$error)
         ds2_sd <- data.frame(x = ds2_sd$x, y = ds2_sd$y)
@@ -1527,14 +1781,14 @@ mod_tab_report_server <- function(id, vals) {
           "max" = max(ds2_sd$x),
           "min" = min(ds2_sd$x))
         
-        vals$sdCI_new <-
+        vals$sd_HDI_new <-
           suppressWarnings(bayestestR::ci(
             ds2_sd$x, ci = input_ci, method = "HDI"))
         
         if (is_log) ds2_sd$y <- ds2_sd$y / max(ds2_sd$y)
         
         ci2_sd <- subset(
-          ds2_sd, x >= vals$sdCI_new$CI_low & x <= vals$sdCI_new$CI_high)
+          ds2_sd, x >= vals$sd_HDI_new$CI_low & x <= vals$sd_HDI_new$CI_high)
         
         sd_p1 <- ggplot2::geom_line(
           data = ds2_sd, mapping = ggplot2::aes(x = x, y = y),
@@ -1546,7 +1800,7 @@ mod_tab_report_server <- function(id, vals) {
           alpha = 0.2, fill = pal$mdn)
         
         sd_p3 <- ggplot2::geom_segment(
-          data = vals$sdCI_new,
+          data = vals$sd_HDI_new,
           mapping = ggplot2::aes(
             x = .data$CI_low,
             xend = .data$CI_high,
@@ -1557,14 +1811,14 @@ mod_tab_report_server <- function(id, vals) {
         sd_p4 <- ggplot2::geom_point(
           data = ds2_sd,
           mapping = ggplot2::aes(
-            x = stats::median(x), y = 0,
+            x = mean(x), y = 0,
             col = "est_new", shape = "est_new"),
           size = 6)
       }
       
       lbl <- c(
-        paste0("Current error"),
-        paste0("Median error + ", vals$sdCI$CI * 100,
+        paste0("CTSD error"),
+        paste0("Median CTSD error + ", vals$sd_HDI$CI * 100,
                "% HDI for ", txt_dti))
       brk <- c("now", "est")
       
@@ -1579,7 +1833,7 @@ mod_tab_report_server <- function(id, vals) {
       
       if (is_dti) {
         lbl <- c(
-          lbl, paste0("Median error + ", vals$sdCI$CI * 100,
+          lbl, paste0("Median CTSD error + ", vals$sd_HDI$CI * 100,
                       "% HDI for ", txt_dti_new))
         brk <- c(brk, "est_new")
         
@@ -1595,7 +1849,7 @@ mod_tab_report_server <- function(id, vals) {
                       "Probability density", "Density")
       
       #### Speed simulations:
-      output$plot_sd_density <- ggiraph::renderGirafe({
+      output$repPlot_sd <- ggiraph::renderGirafe({
         
         p <- ds1_sd %>%
           ggplot2::ggplot(ggplot2::aes(x = x, y = y)) +
@@ -1618,8 +1872,8 @@ mod_tab_report_server <- function(id, vals) {
           
           ggplot2::geom_segment(
             mapping = ggplot2::aes(
-              x = vals$sdCI$CI_low,
-              xend = vals$sdCI$CI_high,
+              x = vals$sd_HDI$CI_low,
+              xend = vals$sd_HDI$CI_high,
               y = 0, yend = 0, col = "est",
               linetype = "est"),
             size = .8) +
@@ -1629,7 +1883,7 @@ mod_tab_report_server <- function(id, vals) {
           ggplot2::geom_point(
             data = ds1_sd,
             mapping = ggplot2::aes(
-              x = stats::median(x), y = 0,
+              x = mean(x), y = 0,
               col = "est", shape = "est"),
             size = 6) +
           
@@ -1685,17 +1939,110 @@ mod_tab_report_server <- function(id, vals) {
                           "stroke: #004647;")),
             ggiraph::opts_toolbar(saveaspng = FALSE)))
         
-      }) # end of renderGirafe // plot_sd_density
+      }) # end of renderGirafe // repPlot_sd
       
     }) %>% # end of observe,
       bindEvent(list(input$build_report,
                      input$scale_density,
                      input$highlight_dti))
     
-    ### Rendering density plot details: -----------------------------------
-
-    output$plot_density_details <- ggiraph::renderGirafe({
-      req(vals$hrCI, vals$sdCI)
+    ## Rendering precision plot: ------------------------------------------
+    
+    output$repPlotLegend2 <- renderUI({
+      req(vals$which_question, input$ci,
+          vals$tau_p0, vals$tau_v0, vals$dur, vals$dti)
+      
+      input_taup <- "days" %#% 
+        vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
+      input_dur <- "days" %#% vals$dur$value %#% vals$dur$unit
+      input_dti <- vals$dti$value %#% vals$dti$unit
+      
+      dt_hr <- movedesign::sims_hrange[[1]] %>%
+        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% duration, 1))
+      
+      out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
+      dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
+      
+      dt_sd <- movedesign::sims_speed[[1]] %>%
+        dplyr::mutate(dur = round(input_dur, 0)) %>%
+        dplyr::select(.data$dti, .data$dti_notes) %>%
+        unique()
+      
+      out_dti <- dt_sd$dti[which.min(abs(dt_sd$dti - input_dti))]
+      dti_for_sd <- dt_sd$dti_notes[match(out_dti, dt_sd$dti)]
+      dti_for_sd
+      
+      if (length(vals$which_question) > 1) {
+        ui <- tagList(
+          fontawesome::fa("circle-exclamation", fill = pal$dgr),
+          span("Note:", class = "help-block-note"), 
+          "This plot has the same information as above,",
+          "but showing each expected error in a different line.",
+          "If the", fontawesome::fa("circle", prefer_type = "solid"),
+          "and", fontawesome::fa("diamond"), " in lighter colors",
+          "do not have credible intervals, the number of",
+          "simulations was too low to calculate them.")
+        
+      } else {
+        
+        switch(
+          vals$which_question,
+          "Home range" = {
+            ui <- tagList(
+              fontawesome::fa("circle-exclamation", fill = pal$dgr),
+              span("Note:", class = "help-block-note"), 
+              "This plot shows the expected error",
+              "based on 400 simulations for a sampling duration of", 
+              dur_for_hr, "days,", "with the medians",
+              wrap_none(
+                "(", fontawesome::fa("diamond", fill = pal$sea),
+                " in ", span("light blue", class = "cl-sea"), "),"),
+              "and the", wrap_none(input$ci, "%"),
+              "credible intervals (lines in",
+              wrap_none(span("light blue", class = "cl-sea"), ")."),
+              "For comparison, your simulation(s)",
+              "mean error (with CIs if applicable) is the circle",
+              wrap_none(
+                "(", fontawesome::fa("circle", prefer_type = "solid",
+                                     fill = pal$sea_d), ")"),
+              "in", wrap_none(span("darker blue",
+                                   class = "cl-sea-d"), "."))
+          },
+          "Speed & distance" = {
+            ui <- tagList(
+              fontawesome::fa("circle-exclamation", fill = pal$dgr),
+              span("Note:", class = "help-block-note"), 
+              "This plot shows the expected error",
+              "based on 400 simulations for a sampling interval of", 
+              wrap_none(dti_for_sd, ","), "with the medians",
+              wrap_none(
+                "(", fontawesome::fa("diamond", fill = pal$sea),
+                " in ", span("light blue", class = "cl-sea"), "),"),
+              "and the", wrap_none(input$ci, "%"),
+              "credible intervals (lines in",
+              wrap_none(span("light blue", class = "cl-sea"), ")."),
+              "For comparison, your simulation(s)",
+              "mean error (with CIs, if applicable) is the circle",
+              wrap_none(
+                "(", fontawesome::fa("circle", prefer_type = "solid",
+                                     fill = pal$sea_d), ")"),
+              "in", wrap_none(span("darker blue",
+                                   class = "cl-sea-d"), "."))
+          },
+          stop(paste0("No handler for ",
+                      vals$which_question, "."))
+        )
+      }
+      
+      ui <- span(class = "help-block", ui)
+      
+      return(ui)
+      
+    }) # end of renderUI, "repPlotLegend2"
+    
+    output$repPlot_precision <- ggiraph::renderGirafe({
+      req(vals$hr_HDI, vals$sd_HDI)
       
       is_both <- FALSE
       if (!is.null(vals$which_question))
@@ -1741,11 +2088,10 @@ mod_tab_report_server <- function(id, vals) {
             question = "Home range",
             group = "est_new",
             type = "hr_est_new",
-            value = vals$report$ds2_hr[["median"]],
-            lci = vals$hrCI_new$CI_low,
-            uci = vals$hrCI_new$CI_high,
-            label = paste0("Median AKDE error + ", 
-                           input$ci, "% HDI for ",
+            value = vals$report$ds2_hr[["mean"]],
+            lci = vals$hr_HDI_new$CI_low,
+            uci = vals$hr_HDI_new$CI_high,
+            label = paste0("AKDE error for ",
                            input$highlight_dur, " days"),
             fill = pal$mdn,
             col = pal$mdn,
@@ -1765,10 +2111,9 @@ mod_tab_report_server <- function(id, vals) {
             group = "est_new",
             type = "sd_est_new",
             value = vals$report$ds2_sd[["median"]],
-            lci = vals$sdCI_new$CI_low,
-            uci = vals$sdCI_new$CI_high,
-            label = paste0("Median CTSD error + ", 
-                           input$ci, "% HDI for ", 
+            lci = vals$sd_HDI_new$CI_low,
+            uci = vals$sd_HDI_new$CI_high,
+            label = paste0("CTSD error for ", 
                            vals$report$txt_dti_new),
             fill = pal$mdn,
             col = pal$mdn,
@@ -1790,28 +2135,43 @@ mod_tab_report_server <- function(id, vals) {
             group = "est",
             type = "hr_est",
             value = vals$report$ds1_hr[["median"]],
-            lci = vals$hrCI$CI_low,
-            uci = vals$hrCI$CI_high,
-            label = paste0("Median AKDE error + ",
-                           input$ci, "% HDI for ",
+            lci = vals$hr_HDI$CI_low,
+            uci = vals$hr_HDI$CI_high,
+            label = paste0("AKDE error for ",
                            vals$report$dur_for_hr, " days"),
             fill = pal$sea,
             col = pal$sea,
             linetype = "solid",
             shape = 18)
         
+        if (!is.null(vals$simList)) {
+          if (length(vals$simList) == 1) {
+            err <- vals$hrErr$value
+            err[[1]] <- NA
+            err[[3]] <- NA
+          } else {
+            ci <- ifelse(is.null(input$ci), .95, input$ci/100)
+            err <- suppressWarnings(
+              bayestestR::ci(vals$hrErrList$est,
+                             ci = ci, method = "HDI"))
+            err <- data.frame(
+              lci = err$CI_low,
+              mean = mean(vals$hrErrList$est, na.rm = TRUE),
+              uci = err$CI_high)
+          }
+        }
+        
+        input_dur <- "days" %#% vals$dur$value %#% vals$dur$unit
         details <- details %>%
           dplyr::add_row(
             question = "Home range",
             group = "now",
             type = "hr_now",
-            value = ifelse(
-              !is.null(vals$hrErr), vals$hrErr$value[[2]], NA),
-            lci = ifelse(
-              !is.null(vals$hrErr), vals$hrErr$value[[1]], NA),
-            uci = ifelse(
-              !is.null(vals$hrErr), vals$hrErr$value[[3]], NA),
-            label = "Current AKDE error",
+            value = ifelse(!is.null(vals$hrErr), err[[2]], NA),
+            lci = ifelse(!is.null(vals$hrErr), err[[1]], NA),
+            uci = ifelse(!is.null(vals$hrErr), err[[3]], NA),
+            label = paste0("AKDE error for ", 
+                           round(input_dur, 1), " days"),
             fill = pal$sea_d,
             col = pal$sea_d,
             linetype = "dashed",
@@ -1834,26 +2194,49 @@ mod_tab_report_server <- function(id, vals) {
             value = vals$report$ds1_sd[["median"]],
             lci = vals$sdCI$CI_low,
             uci = vals$sdCI$CI_high,
-            label = paste0("Median CTSD error + ",
-                           input$ci, "% HDI for ",
+            label = paste0("CTSD error for ",
                            vals$report$txt_dti),
             fill = ifelse(is_both, pal$grn, pal$sea),
             col = ifelse(is_both, pal$grn, pal$sea),
             linetype = "solid",
             shape = 18)
         
+        if (!is.null(vals$simList)) {
+          if (length(vals$simList) == 1) {
+            err <- vals$speedErr$value
+            err[[1]] <- NA
+            err[[3]] <- NA
+          } else {
+            ci <- ifelse(is.null(input$ci), .95, input$ci/100)
+            err <- suppressWarnings(
+              bayestestR::ci(vals$speedErrList$est,
+                             ci = ci, method = "HDI"))
+            err <- data.frame(
+              lci = err$CI_low,
+              mean = mean(vals$speedErrList$est, na.rm = TRUE),
+              uci = err$CI_high)
+          }
+        }
+        
+        input_dur <- "days" %#% vals$dur$value %#% vals$dur$unit
+        input_dti <- vals$dti$value %#% vals$dti$unit
+        sd_opts <- movedesign::fixrates %>%
+          dplyr::select(.data$dti, .data$dti_notes) %>%
+          unique()
+        
+        out_dti <- sd_opts$dti[which.min(abs(sd_opts$dti - input_dti))]
+        input_dti <- sd_opts$dti_notes[match(out_dti, sd_opts$dti)]
+        input_dti
+        
         details <- details %>%
           dplyr::add_row(
             question = "Speed & distance",
             group = "now",
             type = "sd_now",
-            value = ifelse(
-              !is.null(vals$speedErr$value), vals$speedErr$value[[2]], NA),
-            lci = ifelse(
-              !is.null(vals$speedErr$value), vals$speedErr$value[[1]], NA),
-            uci = ifelse(
-              !is.null(vals$speedErr$value), vals$speedErr$value[[3]], NA),
-            label = "Current CTSD error",
+            value = ifelse(!is.null(vals$speedErr), err[[2]], NA),
+            lci = ifelse(!is.null(vals$speedErr), err[[1]], NA),
+            uci = ifelse(!is.null(vals$speedErr), err[[3]], NA),
+            label = paste0("CTSD error for ", input_dti),
             fill = ifelse(is_both, pal$grn_d, pal$sea_d),
             col = ifelse(is_both, pal$grn_d, pal$sea_d),
             linetype = "dashed",
@@ -1884,9 +2267,6 @@ mod_tab_report_server <- function(id, vals) {
       y_labels <- rep("___", details_length)
       
       p <- ggplot2::ggplot() +
-        # { if (is_both)
-        #   ggplot2::facet_wrap(~ .data$question, ncol = 2,
-        #                       scale = "free") } +
         ggplot2::geom_vline(xintercept = 0) +
         
         ggplot2::geom_point(
@@ -1898,7 +2278,7 @@ mod_tab_report_server <- function(id, vals) {
             col = .data$type,
             fill = .data$type,
             shape = .data$type),
-          size = 3) +
+          size = 6) +
         
         ggplot2::geom_segment(
           data = details,
@@ -1921,7 +2301,7 @@ mod_tab_report_server <- function(id, vals) {
         } +
         ggplot2::scale_y_discrete(
           labels = y_labels) +
-
+        
         ggplot2::scale_color_manual(
           name = "", labels = details$label,
           breaks = details$type,
@@ -1970,11 +2350,76 @@ mod_tab_report_server <- function(id, vals) {
                         "stroke: #004647;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
       
-    }) # end of renderGirafe // plot_density_details
+    }) # end of renderGirafe // repPlot_precision
     
-    ## Rendering error estimate plots: ------------------------------------
+    ## Rendering simulations + quick comparison plots: --------------------
     
-    output$plot_hr_error <- ggiraph::renderGirafe({
+    output$repPlotLegend3 <- renderUI({
+      req(vals$which_question, 
+          input$ci, vals$tau_p0, vals$tau_v0, vals$dur, vals$dti)
+      req(length(vals$which_question) == 1)
+      
+      input_taup <- "days" %#%
+        vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
+      input_dur <- "days" %#% vals$dur$value %#% vals$dur$unit
+      input_dti <- vals$dti$value %#% vals$dti$unit
+      
+      switch(
+        vals$which_question,
+        "Home range" = {
+          
+          dt_hr <- movedesign::sims_hrange[[1]] %>%
+            dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
+            dplyr::mutate(duration = round("days" %#% duration, 1))
+          max_dur <- max(dt_hr$duration)
+          
+          ui <- tagList(
+            fontawesome::fa("circle-exclamation", fill = pal$dgr),
+            span("Note:", class = "help-block-note"), 
+            "This plot shows only the mean expected errors and",
+            "(confidence intervals) simulated for different sampling",
+            "durations (from 1 day to", wrap_none(max_dur, " days)"),
+            "These are based on aggregated information from",
+            "up to 400 simulations, so mean values will not match",
+            "your current values.", br(),
+            "As sampling duration increases, we will expect lower",
+            "estimate errors (points) and",
+            "lower uncertainty (shaded area).")
+          
+        },
+        "Speed & distance" = {
+          
+          dt_sd <- movedesign::sims_speed[[1]] %>%
+            dplyr::mutate(duration = round("days" %#% dur, 1)) %>%
+            dplyr::select(.data$duration) %>%
+            unique()
+          max_dur <- max(dt_sd$duration)
+          
+          ui <- tagList(
+            fontawesome::fa("circle-exclamation", fill = pal$dgr),
+            span("Note:", class = "help-block-note"), 
+            "This plot shows only the mean expected errors and",
+            "(confidence intervals) simulated for different sampling",
+            "durations (from 1 day to", wrap_none(max_dur, " days)"),
+            "These are based on aggregated information from",
+            "up to 400 simulations, so mean values will not match",
+            "your current values.", br(),
+            "As sampling duration increases, we will expect lower",
+            "estimate errors (points) and",
+            "lower uncertainty (shaded area).")
+          
+        },
+        stop(paste0("No handler for ",
+                    vals$which_question, "."))
+      )
+      
+      ui <- span(class = "help-block", ui)
+      
+      return(ui)
+      
+    }) # end of renderUI, "repPlotLegend3"
+    
+    output$repPlot_comp_hr <- ggiraph::renderGirafe({
       req(vals$hrErr)
       
       tooltip_css <- paste(
@@ -2106,9 +2551,9 @@ mod_tab_report_server <- function(id, vals) {
                         "fill: #004647;",
                         "stroke: #004647;"))))
       
-    }) # end of renderGirafe // plot_hr_error
+    }) # end of renderGirafe // repPlot_comp_hr
     
-    output$plot_sd_error <- ggiraph::renderGirafe({
+    output$repPlot_comp_sd <- ggiraph::renderGirafe({
       req(vals$speedErr$value)
       
       tooltip_css <- paste(
@@ -2242,20 +2687,20 @@ mod_tab_report_server <- function(id, vals) {
                         "fill: #004647;",
                         "stroke: #004647;"))))
       
-    }) # end of renderGirafe // plot_sd_error
+    }) # end of renderGirafe // repPlot_comp_sd
     
     output$reportPlots_error <- renderUI({
       req(vals$which_question)
       
       if ("Home range" %in% vals$which_question) {
         out <- out_hr <- ggiraph::girafeOutput(
-          outputId = ns("plot_hr_error"),
+          outputId = ns("repPlot_comp_hr"),
           width = "100%", height = "100%")
       }
       
       if ("Speed & distance" %in% vals$which_question) {
         out <- out_sd <- ggiraph::girafeOutput(
-          outputId = ns("plot_sd_error"),
+          outputId = ns("repPlot_comp_sd"),
           width = "100%", height = "100%")
       }
       
@@ -2279,14 +2724,14 @@ mod_tab_report_server <- function(id, vals) {
         req(vals$hr$tbl)
         dt_hr <- vals$hr$tbl
         dt_hr <- dt_hr %>% dplyr::filter(data == "Initial") 
-        # dt_hr <- dt_hr[nrow(dt_hr), ] 
+        dt_hr <- dt_hr[nrow(dt_hr), ] 
       }
       
       if ("Speed & distance" %in% vals$which_question) {
         req(vals$sd$tbl)
         dt_sd <- vals$sd$tbl
         dt_sd <- dt_sd %>% dplyr::filter(data == "Initial") 
-        # dt_sd <- dt_sd[nrow(dt_sd), ]
+        dt_sd <- dt_sd[nrow(dt_sd), ]
       }
       
       dat <- data.frame(
@@ -2337,7 +2782,11 @@ mod_tab_report_server <- function(id, vals) {
       req(vals$active_tab == 'report', 
           vals$dev$tbl)
       
-      vals$report_full <<- rbind(vals$report_full, reportRow())
+      # vals$report_full <<- rbind(vals$report_full, reportRow())
+      ## issue with number of columns of arguments,
+      ## (and may not be necessary).
+      
+      vals$report_full <- reportRow()
       dat <- vals$report_full
       
       if (nrow(dat) >= 2) {
@@ -2346,6 +2795,7 @@ mod_tab_report_server <- function(id, vals) {
       }
       
       vals$report_full <- dplyr::distinct(dat)
+      set.seed(NULL)
       
     }) %>% # end of observe
       bindEvent(input$build_report)
@@ -2389,7 +2839,7 @@ mod_tab_report_server <- function(id, vals) {
         device = "Type",
         taup = "\u03C4\u209A",
         tauv = "\u03C4\u1D65",
-        sigma = "\u03C3",
+        sigma = "\u03C3\u209A",
         dur = "Duration",
         dti = "Interval",
         n = "n",
@@ -2604,7 +3054,7 @@ mod_tab_report_server <- function(id, vals) {
         vals = vals, data = vals$data0, fit = vals$fit0,
         type = "tau", name = "tau_v0",
         input_name = list(
-          html = wrap_none("Position autocorrelation ",
+          html = wrap_none("Velocity autocorrelation ",
                            "(\u03C4", tags$sub("v"), ")")))
       
     }) # end of observe
@@ -2617,17 +3067,17 @@ mod_tab_report_server <- function(id, vals) {
         vals = vals,
         type = "sigma", name = "sigma0",
         input_name = list(
-          html = span(HTML("Semi-variance (\u03C3)"))))
+          html = wrap_none("Location variance ",
+                           "(\u03C3", tags$sub("p"), ")")))
       
     }) # end of observe
     
     ## Tracking regime: ---------------------------------------------------
     
     output$repBlock_dur <- renderUI({
-      req(vals$data1)
+      req(vals$dur)
       
-      dur <- extract_pars(vals$data1, name = "period")
-      out <- fix_unit(dur, convert = TRUE)
+      out <- fix_unit(vals$dur, convert = TRUE)
       
       if (grepl("month", out$unit)) {
         out_new <- convert_to(out, new_unit = "days", to_text = TRUE)
@@ -2737,41 +3187,62 @@ mod_tab_report_server <- function(id, vals) {
     
     ## Outputs: -----------------------------------------------------------
     
-    output$repInfo_hrErr <- shiny::renderUI({
-      req(vals$hrErr, "Home range" %in% vals$which_question)
+    observe({
+      req(vals$simList,
+          vals$hrErr, "Home range" %in% vals$which_question)
       
-      errorBlock(icon = "radiation",
-                 text = "Home range error",
-                 value = vals$hrErr$value[[2]],
-                 min = vals$hrErr$value[[1]],
-                 max = vals$hrErr$value[[3]],
-                 rightBorder = FALSE)
+      shinyjs::show(id = "repBox_hr_err")
       
-    }) # end of renderUI // repInfo_hrErr
+      if (length(vals$simList) == 1) {
+        err_to_show <- "hrErr"
+      } else {
+        req(nrow(vals$hrEstList) == length(vals$simList))
+        err_to_show <- "hrErrList"
+      }
+      
+      mod_blocks_server(
+        id = "repBlock_hrErr",
+        vals = vals, type = "hr", name = err_to_show)    
+      
+    }) # end of observe
     
-    output$repInfo_speedErr <- shiny::renderUI({
-      req(vals$speedErr$value, "Speed & distance" %in% vals$which_question)
+    observe({
+      req(vals$simList,
+          vals$speedErr, "Speed & distance" %in% vals$which_question)
       
-      errorBlock(icon = "radiation",
-                 text = "Speed error",
-                 value = vals$speedErr$value[[2]],
-                 min = vals$speedErr$value[[1]],
-                 max = vals$speedErr$value[[3]],
-                 rightBorder = FALSE)
+      shinyjs::show(id = "repBox_speed_err")
       
-    }) # end of renderUI, "repInfo_speedErr"
+      if (length(vals$simList) == 1) {
+        err_to_show <- "speedErr"
+      } else {
+        req(nrow(vals$speedEstList) == length(vals$simList))
+        err_to_show <- "speedErrList"
+      }
+      
+      mod_blocks_server(
+        id = "repBlock_speedErr",
+        vals = vals, type = "ctsd", name = err_to_show)    
+      
+    }) # end of observe
     
-    output$repBlock_distErr <- shiny::renderUI({
-      req(vals$distErr$value, "Speed & distance" %in% vals$which_question)
+    observe({
+      req(vals$simList,
+          vals$distErr, "Speed & distance" %in% vals$which_question)
       
-      errorBlock(icon = "radiation",
-                 text = "Distance error",
-                 value = vals$distErr$value[[2]],
-                 min = vals$distErr$value[[1]],
-                 max = vals$distErr$value[[3]],
-                 rightBorder = FALSE)
+      shinyjs::show(id = "repBox_dist_err")
       
-    }) # end of renderUI, "repBlock_distErr"
+      if (length(vals$simList) == 1) {
+        err_to_show <- "distErr"
+      } else {
+        req(nrow(vals$distEstList) == length(vals$simList))
+        err_to_show <- "distErrList"
+      }
+      
+      mod_blocks_server(
+        id = "repBlock_distErr",
+        vals = vals, type = "ctsd", name = err_to_show)
+      
+    }) # end of observe
     
   }) # end of moduleServer
 }

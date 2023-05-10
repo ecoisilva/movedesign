@@ -213,7 +213,7 @@ mod_tab_design_ui <- function(id) {
           ### Number of simulations: --------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Number of simulations:", class = "ttl-box"),
+            title = span("Simulations to run:", class = "ttl-box"),
             id = ns("devBox_nsims"),
             status = "info",
             width = NULL,
@@ -227,19 +227,33 @@ mod_tab_design_ui <- function(id) {
                 shinyWidgets::autonumericInput(
                   inputId = ns("nsims"),
                   label = NULL,
-                  minimumValue = 0,
-                  maximumValue = 400,
+                  minimumValue = 1,
+                  maximumValue = 100,
                   value = 1,
                   decimalPlaces = 0,
-                  wheelStep = 1)
+                  wheelStep = 1) #,
                 
+                # p(HTML("&nbsp;"), "Total number of simulations:") %>%
+                #   tagAppendAttributes(class = 'label_split'),
                 # fluidRow(
                 #   column(width = 12,
-                #          verbatimTextOutput(outputId = ns("X"))
-                #   )), p(style = "padding: 0px;"),
+                #          verbatimTextOutput(outputId = ns("nsims_total"))
+                #   )), p(style = "padding: 0px;")
                 
               ) # end of fluidRow
-            ) # end of column
+            ), # end of column
+            
+            footer = column(
+              width = 12, align = "right",
+              style = "padding-left: 0px; padding-right: 0px;",
+              
+              shiny::actionButton(
+                inputId = ns("devButton_repeat"),
+                label = "Repeat",
+                icon = icon("repeat"),
+                class = "btn-info",
+                width = "110px")) # end of footer
+            
           ), # end of box // devBox_nsims
           
           ### Limitations: ------------------------------------------------
@@ -352,12 +366,16 @@ mod_tab_design_ui <- function(id) {
             ), # end of fluidRow
             
             br(),
-            footer = shiny::actionButton(
-              inputId = ns("devButton_save"),
-              label = span("Add to",
-                           span("table", class = "cl-sea")),
-              icon = icon("bookmark"),
-              width = "100%")
+            
+            footer = column(
+              width = 12, align = "right",
+              style = "padding-left: 0px; padding-right: 0px;",
+              
+              shiny::actionButton(
+                inputId = ns("devButton_save"),
+                label = span("Show", span("table", class = "cl-sea")),
+                icon = icon("bookmark"),
+                width = "110px")) # end of footer
             
           ) # end of box // devBox_sizes
           
@@ -512,7 +530,7 @@ mod_tab_design_ui <- function(id) {
       
       # [bottom column] ---------------------------------------------------
       
-      div(class = div_column_main,
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
           
           # Additional information: ---------------------------------------
           
@@ -554,6 +572,10 @@ mod_tab_design_server <- function(id, vals) {
       n = NULL, N1 = NULL, N2 = NULL,
       tbl = NULL
     )
+    
+    observe({
+      vals$nsims <- input$nsims + 1
+    })
     
     ## Sampling parameters: -----------------------------------------------
     
@@ -736,9 +758,29 @@ mod_tab_design_server <- function(id, vals) {
     for (i in 1:length(boxnames)) {
       shinyjs::hide(id = paste0("devBox_", boxnames[i]))
     }
+    
     shinyjs::hide(id = "which_limits")
     shinyjs::hide(id = "min_frq")
     shinyjs::disable("devButton_repeat")
+    
+    device_inputs <- reactive({
+      list(input$gps_dur,
+           input$gps_dur_unit,
+           input$gps_dti_max,
+           input$vhf_dur,
+           input$vhf_dur_unit,
+           input$vhf_dti,
+           input$vhf_dti_unit,
+           input$gps_from_plot,
+           input$devPlot_gps_selected,
+           input$devPlot_vhf_selected)
+    })
+    
+    observe({
+      req(vals$active_tab == 'device')
+      shinyjs::hide(id = "devBox_nsims")
+      vals$nsims <- 1
+    }) %>% bindEvent(device_inputs())
     
     ## Reveal boxes: ------------------------------------------------------
 
@@ -860,14 +902,14 @@ mod_tab_design_server <- function(id, vals) {
           inputId = ns("validate_gps"),
           icon =  icon("circle-check"),
           label = "Validated!",
-          width = "120px",
+          width = "100px",
           class = "btn-info")
       } else {
         shiny::actionButton(
           inputId = ns("validate_gps"),
           icon =  icon("wand-magic-sparkles"),
           label = "Validate",
-          width = "120px",
+          width = "100px",
           class = "btn-danger")
       }
 
@@ -1191,7 +1233,7 @@ mod_tab_design_server <- function(id, vals) {
                   hide.ui	= TRUE)
             },
             
-            uiOutput(ns("devPlotSubtitle")),
+            uiOutput(ns("devPlotLegend")),
             uiOutput(ns("devText"))
             
           ) # end of column (UI)
@@ -1241,29 +1283,45 @@ mod_tab_design_server <- function(id, vals) {
         
         GPS = { ### GPS & Satellite logger:
           
-          tagList(
-            column(width = 12, align = "right",
-                   style = "padding-right: 0px;",
-                   
-                   div(id = "sims-footer",
-                       shiny::actionButton(
-                         inputId = ns("devButton_repeat"),
-                         label = "Repeat",
-                         icon = icon("rotate-right"),
-                         class = "btn-info",
-                         width = "120px"))),
+          tagList(column(
+            width = 12, align = "right",
+            style = "padding-right: 5px;",
             
-            div(style = "position: absolute; left: 10px;",
-                uiOutput(ns("devButton_gps"), inline = TRUE),
-                HTML("&nbsp;"),
-                shiny::actionButton(
-                  inputId = ns("run_sim_new"),
-                  icon =  icon("bolt"),
-                  label = "Run",
-                  width = "120px",
-                  class = "btn-primary"))
+            uiOutput(ns("devButton_gps"), inline = TRUE),
+            HTML("&nbsp;"),
+            shiny::actionButton(
+              inputId = ns("run_sim_new"),
+              icon =  icon("bolt"),
+              label = "Run",
+              width = "120px",
+              class = "btn-primary")
             
-          ) # end of tagList (footer)
+          )) # end of tagList (footer)
+          
+          # tagList(
+          #   column(width = 9, align = "left",
+          #          style = "padding-left: 0px; padding-right: 0px;",
+          #          div(id = "sims-footer",
+          #              uiOutput(ns("devButton_gps"), inline = TRUE),
+          #              HTML("&nbsp;"),
+          #              shiny::actionButton(
+          #                inputId = ns("run_sim_new"),
+          #                icon =  icon("bolt"),
+          #                label = "Run",
+          #                width = "80px",
+          #                class = "btn-primary"))),
+          #   
+          #   column(width = 3, align = "right",
+          #          style = "padding-left: 0px; padding-right: 0px;",
+          #          
+          #          shiny::actionButton(
+          #            inputId = ns("devButton_repeat"),
+          #            label = "Repeat",
+          #            icon = icon("repeat"),
+          #            class = "btn-info",
+          #            width = "90px"))
+          #   
+          # ) # end of tagList (footer)
         },
       
         VHF = { ### VHF transmitter:
@@ -1301,13 +1359,14 @@ mod_tab_design_server <- function(id, vals) {
     
     ## Change sample size text: -------------------------------------------
     
-    output$devPlotSubtitle <- renderUI({
+    output$devPlotLegend <- renderUI({
       req(vals$which_question, input$gps_from_plot)
       if (length(vals$which_question) > 1) {
         req(vals$tau_p0, vals$tau_v0)
         
         ui <- tagList(
-          span("Note:", class = "help-block-ttl"), 
+          fontawesome::fa("circle-exclamation", fill = pal$dgr),
+          span("Note:", class = "help-block-note"), 
           "The primary axis is the", 
           wrap_none(span("sampling duration", col = "black"), end = ","),
           "(points), and the secondary axis (lines) are",
@@ -1322,7 +1381,8 @@ mod_tab_design_server <- function(id, vals) {
           "Home range" = {
             req(vals$tau_p0)
             ui <- tagList(
-              span("Note:", class = "help-block-ttl"), 
+              fontawesome::fa("circle-exclamation", fill = pal$dgr),
+              span("Note:", class = "help-block-note"), 
               "The secondary axis (lines) are",
               "the expected effective sample sizes (roughly estimated)",
               "\u2014", span("N[area]", class = "cl-sea"), "\u2014",
@@ -1331,7 +1391,8 @@ mod_tab_design_server <- function(id, vals) {
           "Speed & distance" = {
             req(vals$tau_v0)
             ui <- tagList(
-              span("Note:", style = "help-block-ttl"), 
+              fontawesome::fa("circle-exclamation", fill = pal$dgr),
+              span("Note:", style = "help-block-note"), 
               "The secondary axis (lines) are",
               "the expected effective sample sizes (roughly estimated)",
               "\u2014", span("N[speed]", class = "cl-dgr"), "\u2014",
@@ -1349,7 +1410,7 @@ mod_tab_design_server <- function(id, vals) {
       
       return(ui)
       
-    }) # end of renderUI, "devPlotSubtitle"
+    }) # end of renderUI, "devPlotLegend"
     
     info_sizes <- reactive({
       if (input$est_type == 1) {
@@ -1369,9 +1430,9 @@ mod_tab_design_server <- function(id, vals) {
           "are extracted from the",
           HTML(paste0(span("model fit", class = "cl-dgr"), ",")),
           "these values will", span("not", style = "color: #000;"),
-          "update automatically.", br(), "Click the",
+          "update automatically. Click the",
           icon("bolt", class = "cl-mdn"),
-          HTML(paste0(span("Run", class = "cl-mdn"))),
+          wrap_none(span("Run", class = "cl-mdn")),
           "button to recalculate them.")
       }
     }) # end of reactive, info_sizes
@@ -1380,6 +1441,14 @@ mod_tab_design_server <- function(id, vals) {
       req(input$est_type)
       info_sizes()
     })
+    
+    ## Render number of simulations: --------------------------------------
+    
+    # output$nsims_total <- renderText({
+    #   req(vals$simList)
+    #   return(paste("Total no.:", length(vals$simList)))
+    #   
+    # }) # end of renderText, "nsims_total"
     
     # ALERTS --------------------------------------------------------------
     
@@ -1793,6 +1862,9 @@ mod_tab_design_server <- function(id, vals) {
     observe({
       req(vals$data0,
           vals$fit0,
+          vals$tau_p0,
+          vals$tau_v0,
+          vals$sigma0,
           vals$dur, 
           vals$dti,
           vals$dev$is_valid)
@@ -1823,25 +1895,22 @@ mod_tab_design_server <- function(id, vals) {
       start <- Sys.time()
       data1 <- simulating_data()
       
-      vals$data1 <- data1
-      vals$data1_full <- data1
       vals$dev$n <- nrow(data1)
       vals$needs_fit <- TRUE
       vals$is_analyses <- NULL
       vals$hr_completed <- FALSE
       vals$sd_completed <- FALSE
       
-      vals$dev$dataList <- list(vals$data1) 
+      vals$fullList <- list(data1)
+      vals$seedList <- list(vals$seed0)
       
       # If there is data loss:
       
       if (!is.null(input$device_loss)) {
         if (input$device_loss > 0) {
-          
-          vals$data1_full <- data1
           to_keep <- round(nrow(data1) * (1 - vals$lost$perc/100))
           to_keep_vec <- sort(sample(1:nrow(data1), to_keep))
-          vals$data1 <- data1[to_keep_vec,]
+          data1 <- data1[to_keep_vec,]
         }
       } # end of input$device_loss
       
@@ -1849,64 +1918,65 @@ mod_tab_design_server <- function(id, vals) {
       
       if (!is.null(input$device_error)) {
         if (input$device_error > 0) {
-          vals$data1_full <- data1
           error_x <- stats::rnorm(nrow(data1), mean = 0,
                                   sd = input$device_error)
           error_y <- stats::rnorm(nrow(data1), mean = 0,
                                   sd = input$device_error)
           data1[c(2,3)] <- data1[c(2,3)] + c(error_x, error_y)
-          vals$data1 <- data1
           vals$error <- input$device_error
         }
       } # end of input$device_error
+      
+      vals$data1 <- data1
+      vals$simList <- list(data1)
       
       msg_log(
         style = "success",
         message = paste0("Simulation ",
                          msg_success("completed"), "."),
-        with_time = difftime(Sys.time(), start, units = "sec"))
+        run_time = difftime(Sys.time(), start, units = "sec"))
       
       shinybusy::remove_modal_spinner()
       
-      if (input$est_type == 1) {
+      # if (input$est_type == 1) {
+      #   
+      #   vals$needs_fit <- TRUE
+      #   
+      # } else {
+      
+      req(vals$data1)
+      shinybusy::remove_modal_spinner()
+      
+      expt <- estimating_time()
+      vals$expt <- expt
+      
+      vals$dev$confirm_time <- NULL
+      if ((as.numeric(expt$max) %#% expt$unit) > 900) {
         
-        vals$needs_fit <- TRUE
-        shinybusy::remove_modal_spinner()
-        
-      } else {
-        req(vals$data1)
-        shinybusy::remove_modal_spinner()
-        
-        expt <- estimating_time()
-        vals$expt <- expt
-        
-        vals$dev$confirm_time <- NULL
-        if ((as.numeric(expt$max) %#% expt$unit) > 900) {
-          
-          shinyalert::shinyalert(
-            className = "modal_warning",
-            title = "Do you wish to proceed?",
-            callbackR = function(x) {
-              vals$dev$confirm_time <- x
-            },
-            text = tagList(span(
-              "Expected run time for the next phase", br(),
-              "is approximately",
-              wrap_none(span(
-                expt$range, expt$unit, class = "cl-dgr"), ".")
-            )),
-            type = "warning",
-            showCancelButton = TRUE,
-            cancelButtonText = "Stop",
-            confirmButtonCol = pal$mdn,
-            confirmButtonText = "Proceed",
-            html = TRUE
-          )
-        } else { 
-          vals$dev$confirm_time <- TRUE
-          shinyjs::enable("devButton_repeat")
-        }
+        shinyalert::shinyalert(
+          className = "modal_warning",
+          title = "Do you wish to proceed?",
+          callbackR = function(x) {
+            vals$dev$confirm_time <- x
+          },
+          text = tagList(span(
+            "Expected run time for the next phase", br(),
+            "is approximately",
+            wrap_none(span(
+              expt$range, expt$unit, class = "cl-dgr"), ".")
+          )),
+          type = "warning",
+          showCancelButton = TRUE,
+          cancelButtonText = "Stop",
+          confirmButtonCol = pal$mdn,
+          confirmButtonText = "Proceed",
+          html = TRUE
+        )
+      } else { 
+        vals$dev$confirm_time <- TRUE
+        shinyjs::enable("devButton_repeat")
       }
+      # } # end of if (), est_type
       
     }, priority = 1) %>% # end of observe,
       bindEvent(input$run_sim_new)
@@ -1916,64 +1986,72 @@ mod_tab_design_server <- function(id, vals) {
       
       shinyjs::show(id = "devBox_sims")
       
-      if (input$est_type == 1) {
-        vals$needs_fit <- TRUE
-      } else {
+      # if (input$est_type == 1) {
+      #   vals$needs_fit <- TRUE
+      # } else {
         
+      msg_log(
+        style = "warning",
+        message = paste0("Model fit ",
+                         msg_warning("in progress"), ","),
+        detail = "Please wait for model selection to finish:")
+      
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        
+        text = tagList(span(
+          style = "font-size: 18px;",
+          span("Selecting", style = "color: #797979;"),
+          HTML(paste0(span("movement model", class = "cl-sea"),
+                      span(".", style = "color: #797979;"))),
+          p(),
+          p("Expected run time:",
+            style = paste("background-color: #eaeaea;",
+                          "color: #797979;",
+                          "font-size: 16px;",
+                          "text-align: center;")), br(),
+          p(vals$expt$range,
+            style = paste("background-color: #eaeaea;",
+                          "color: #009da0;",
+                          "font-size: 16px;",
+                          "text-align: center;",
+                          "margin-top: -40px;")),
+          p()
+        )) # end of text
+      ) # end of modal
+      
+      start <- Sys.time()
+      fit1 <- fitting_model()
+      time_fit1 <- difftime(Sys.time(), start, units = "secs")
+      
+      if (!is.null(fit1)) {
         msg_log(
-          style = "warning",
+          style = 'success',
           message = paste0("Model fit ",
-                           msg_warning("in progress"), ","),
-          detail = "Please wait for model selection to finish:")
+                           msg_success("completed"), "."),
+          run_time = time_fit1)
         
-        shinybusy::show_modal_spinner(
-          spin = "fading-circle",
-          color = "var(--sea)",
-          
-          text = tagList(span(
-            style = "font-size: 18px;",
-            span("Selecting", style = "color: #797979;"),
-            HTML(paste0(span("movement model", class = "cl-sea"),
-                        span(".", style = "color: #797979;"))),
-            p(),
-            p("Expected run time:",
-              style = paste("background-color: #eaeaea;",
-                            "color: #797979;",
-                            "font-size: 16px;",
-                            "text-align: center;")), br(),
-            p(vals$expt$range,
-              style = paste("background-color: #eaeaea;",
-                            "color: #009da0;",
-                            "font-size: 16px;",
-                            "text-align: center;",
-                            "margin-top: -40px;")),
-            p()
-          )) # end of text
-        ) # end of modal
+        vals$guess <- NULL
+        vals$needs_fit <- FALSE
+        vals$fit1 <- fit1
         
-        start <- Sys.time()
-        fit1 <- fitting_model()
-        time_fit1 <- difftime(Sys.time(), start, units = "secs")
+        vals$dev$tbl <<- rbind(
+          vals$dev$tbl, 
+          devRow(seed = vals$seed0,
+                 device = input$device_type,
+                 dur = vals$dur, dti = vals$dti,
+                 data = vals$data1, fit = vals$fit1)
+        )
         
-        if (!is.null(fit1)) {
-          msg_log(
-            style = 'success',
-            message = paste0("Model fit ",
-                             msg_success("completed"), "."),
-            with_time = time_fit1)
-          
-          vals$guess <- NULL
-          vals$needs_fit <- FALSE
-          vals$fit1 <- fit1
-          
-          vals$dev$fitList <- list(vals$fit1) 
-          vals$dev$seedList <- list(vals$seed0) 
-          
-          shinyjs::enable("devButton_save")
-          
-        } # end of if (), !is.null(fit1)
+        vals$fitList <- list(vals$fit1)
+        vals$report_dev_yn <- TRUE
         
-      } # end of if (), est_type
+        shinyjs::enable("devButton_save")
+        shinyjs::show(id = "devBox_nsims")
+        
+      } # end of if (), !is.null(fit1)
+      # } # end of if (), est_type
       
       if (!vals$tour_active) {
         shinyalert::shinyalert(
@@ -2008,7 +2086,6 @@ mod_tab_design_server <- function(id, vals) {
       bindEvent(vals$dev$confirm_time)
     
     ### Run simulations (nsims > 1): --------------------------------------
-    # to convert to module ................................................
     
     observe({
       req(vals$data0,
@@ -2016,148 +2093,123 @@ mod_tab_design_server <- function(id, vals) {
           vals$dur, 
           vals$dti,
           vals$dev$is_valid,
-          input$nsims)
+          input$nsims > 0)
       
-      shinyFeedback::showToast(
-        type = "info",
-        message = "Setting up simulation(s)...",
-        .options = list(
-          timeOut = 2500,
-          extendedTimeOut = 3500,
-          progressBar = TRUE,
-          closeButton = TRUE,
-          preventDuplicates = TRUE,
-          positionClass = "toast-bottom-right")
-      )
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = tagList(span(
+          style = "font-size: 18px;",
+          span("Simulating multiple", style = "color: #797979;"),
+          wrap_none(span("datasets", class = "cl-sea"),
+                      span("...", style = "color: #797979;")))
+        ))
       
       start <- Sys.time()
       for (i in 1:input$nsims) {
-        shinybusy::show_modal_spinner(
-          spin = "fading-circle",
-          color = "var(--sea)",
-          text = tagList(span(
-            style = "font-size: 18px;",
-            span("Simulating", style = "color: #797979;"),
-            HTML(paste0(span("data ", i, " out of ", input$nsims,
-                             class = "cl-sea"),
-                        span("...", style = "color: #797979;")))
-          ))
+        
+        shinyFeedback::showToast(
+          type = "info",
+          message = paste0("Simulating data ", i + 1, 
+                           " out of ", input$nsims + 1),
+          .options = list(
+            progressBar = FALSE,
+            closeButton = TRUE,
+            preventDuplicates = TRUE,
+            positionClass = "toast-bottom-right")
         )
         
+        msg_log(
+          style = "warning",
+          message = paste0("Sim no. ", i + 1, " ",
+                           msg_warning("in progress"), "..."))
+        
         ## (Re)generate seed:
+        set.seed(NULL)
         vals$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
-        
         data1 <- simulating_data()
-        vals$dev$dataList[[length(vals$dev$dataList) + 1]] <- data1
+        vals$fullList[[length(vals$simList) + 1]] <- data1
+        vals$seedList[[length(vals$seedList) + 1]] <- vals$seed0
         
-        shinybusy::remove_modal_spinner()
-      }
-      
-      print("Total number of datasets:")
-      print(length(vals$dev$dataList))
+        # If there is data loss:
+        
+        if (!is.null(input$device_loss)) {
+          if (input$device_loss > 0) {
+            to_keep <- round(nrow(data1) * (1 - vals$lost$perc/100))
+            to_keep_vec <- sort(sample(1:nrow(data1), to_keep))
+            data1 <- data1[to_keep_vec,]
+          }
+        } # end of input$device_loss
+        
+        # If there are errors associated with each location:
+        
+        if (!is.null(input$device_error)) {
+          if (input$device_error > 0) {
+            error_x <- stats::rnorm(nrow(data1), mean = 0,
+                                    sd = input$device_error)
+            error_y <- stats::rnorm(nrow(data1), mean = 0,
+                                    sd = input$device_error)
+            data1[c(2,3)] <- data1[c(2,3)] + c(error_x, error_y)
+            vals$error <- input$device_error
+          }
+        } # end of input$device_error
+        
+        vals$simList[[length(vals$simList) + 1]] <- data1
+        
+      } # end of for loop
       
       vals$data1 <- data1
-      vals$data1_full <- data1
       vals$dev$n <- nrow(data1)
       vals$needs_fit <- TRUE
       vals$is_analyses <- NULL
       vals$hr_completed <- FALSE
       vals$sd_completed <- FALSE
       
-      if (!is.null(input$device_loss)) {
-        if (input$device_loss > 0) {
-          
-          vals$data1_full <- data1
-          to_keep <- round(nrow(data1) * (1 - vals$lost$perc/100))
-          to_keep_vec <- sort(sample(1:nrow(data1), to_keep))
-          vals$data1 <- data1[to_keep_vec,]
-        }
-      } # end of input$device_loss
-      
-      # If there are errors associated with each location:
-      
-      if (!is.null(input$device_error)) {
-        if (input$device_error > 0) {
-          vals$data1_full <- data1
-          error_x <- stats::rnorm(nrow(data1), mean = 0,
-                                  sd = input$device_error)
-          error_y <- stats::rnorm(nrow(data1), mean = 0,
-                                  sd = input$device_error)
-          data1[c(2,3)] <- data1[c(2,3)] + c(error_x, error_y)
-          vals$data1 <- data1
-          vals$error <- input$device_error
-        }
-      } # end of input$device_error
-      
       msg_log(
         style = "success",
-        message = paste0("Simulation ",
+        message = paste0("Simulations ",
                          msg_success("completed"), "."),
-        with_time = difftime(Sys.time(), start, units = "sec"))
-   
-      # time_for_all <- vals$expt * input$nsims
+        run_time = difftime(Sys.time(), start, units = "sec"))
+      shinybusy::remove_modal_spinner()
       
-      shinybusy::show_modal_spinner(
-        spin = "fading-circle",
-        color = "var(--sea)",
-        
-        text = tagList(span(
-          style = "font-size: 18px;",
-          span("Selecting", style = "color: #797979;"),
-          HTML(paste0(span("movement model", class = "cl-sea"),
-                      span(".", style = "color: #797979;"))),
-          p(),
-          p("Expected run time:",
-            style = paste("background-color: #eaeaea;",
-                          "color: #797979;",
-                          "font-size: 16px;",
-                          "text-align: center;")), br(),
-          p(vals$expt$range, "(per simulation)",
-            style = paste("background-color: #eaeaea;",
-                          "color: #009da0;",
-                          "font-size: 14px;",
-                          "text-align: center;",
-                          "margin-top: -40px;")),
-          p(),
-          p("Number of simulation(s):",
-            style = paste("background-color: #eaeaea;",
-                          "color: #797979;",
-                          "font-size: 16px;",
-                          "text-align: center;")), br(),
-          p(input$nsims,
-            style = paste("background-color: #eaeaea;",
-                          "color: #009da0;",
-                          "font-size: 16px;",
-                          "text-align: center;",
-                          "margin-top: -40px;")),
-          p()
-        )) # end of text
-      ) # end of modal
+      loading_modal("Selecting movement model", type = "fit",
+                    exp_time = vals$expt,
+                    n = vals$nsims)
       
       start <- Sys.time()
       for (i in 1:input$nsims) {
         msg_log(
           style = "warning",
-          message = paste0("Model fit for sim no. ", i, " ",
+          message = paste0("Model fit for sim no. ", i + 1, " ",
                            msg_warning("in progress"), ","),
           detail = "Please wait for model selection to finish:")
         
         start_i <- Sys.time()
-        fit1 <- fitting_model()
+        # fit1 <- fitting_model()
+        
+        guess1 <- ctmm::ctmm.guess(vals$simList[[i]], interactive = FALSE)
+        inputList <- list(list(vals$simList[[i]], guess1))
+        fit1 <- par.ctmm.select(inputList, parallel = vals$parallel)
+        
         time_i <- difftime(Sys.time(), start_i, units = "secs")
         
         vals$guess <- NULL
         vals$needs_fit <- FALSE
         vals$fit1 <- fit1
         
-        vals$dev$fitList[[length(vals$dev$fitList) + 1]] <- vals$fit1
-        vals$dev$seedList[[length(vals$dev$seedList) + 1]] <- vals$seed0
+        vals$fitList[[length(vals$fitList) + 1]] <- vals$fit1
+        newrow <- devRow(seed = vals$seedList[[i + 1]],
+                         device = input$device_type,
+                         dur = vals$dur, dti = vals$dti,
+                         data = vals$simList[[i + 1]], 
+                         fit = vals$fitList[[i + 1]])
+        vals$dev$tbl <<- rbind(vals$dev$tbl, newrow)
         
         msg_log(
           style = 'warning',
-          message = paste0("Model fit for sim no. ", i, " ",
+          message = paste0("Model fit for sim no. ", i + 1, " ",
                            msg_success("completed"), "..."),
-          with_time = time_i)
+          run_time = time_i)
       }
       
       time_fits <- difftime(Sys.time(), start_i, units = "secs")
@@ -2165,7 +2217,7 @@ mod_tab_design_server <- function(id, vals) {
         style = 'success',
         message = paste0("All model fits ",
                          msg_success("completed"), "."),
-        with_time = time_fits)
+        run_time = time_fits)
       
       shinyFeedback::showToast(
         type = "success",
@@ -2181,9 +2233,6 @@ mod_tab_design_server <- function(id, vals) {
       )
       
       shinybusy::remove_modal_spinner()
-      
-      print("Total number of fits:")
-      print(length(vals$dev$fitList))
       
     }, label = "o-dev_repeat_sims") %>% # end of observer
       bindEvent(input$devButton_repeat)
@@ -2477,13 +2526,13 @@ mod_tab_design_server <- function(id, vals) {
               "stroke: #2c3b41;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
 
-    }) # %>% # end of renderGirafe, "devPlot_gps",
-    # bindEvent(input$gps_dur,
-    #           input$gps_dur_unit,
-    #           input$gps_dti_max,
-    #           input$device_log,
-    #           vals$which_question,
-    #           vals$overwrite_seed)
+    }) %>% # end of renderGirafe, "devPlot_gps",
+      bindEvent(input$gps_dur,
+                input$gps_dur_unit,
+                input$gps_dti_max,
+                input$device_log,
+                vals$which_question,
+                vals$overwrite_seed)
     
     ## Plotting new simulated data plot (xy): -----------------------------
     
@@ -2734,46 +2783,43 @@ mod_tab_design_server <- function(id, vals) {
     # TABLES --------------------------------------------------------------
     # Listing multiple sampling designs: ----------------------------------
     
-    devRow <- reactive({
+    devRow <- function(seed, device, 
+                       dur, dti,
+                       data, fit) {
       
       out <- data.frame(
-        seed = vals$seed0,
+        seed = seed,
         device = NA,
         dur = NA,
         dti = NA,
         n = NA,
         N1 = NA,
-        N2 = NA,
-        fit = NA)
+        N2 = NA)
+      # fit = NA)
       
-      out$device <- input$device_type
+      out$device <- device
       
-      dur <- fix_unit(vals$dur$value, vals$dur$unit, convert = TRUE)
-      dti <- fix_unit(vals$dti$value, vals$dti$unit)
+      dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
+      dti <- fix_unit(dti$value, dti$unit)
       
       out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
       out$dti <- paste(dti[1], abbrv_unit(dti[,2]))
       
-      out$n <- vals$dev$n
-      out$N1 <- vals$dev$N1
-      out$N2 <- vals$dev$N2
-      out$fit <- vals$is_fitted
+      out$n <- nrow(data)
+      out$N1 <- extract_dof(fit, name = "area")
+      out$N2 <- extract_dof(fit, name = "speed")
+      # out$fit <- vals$is_fitted
       
       return(out)
-      
-    })
+    }
     
     observe({
       req(vals$seed0,
           vals$dur, vals$dti,
-          vals$dev$n, vals$dev$N1, vals$dev$N2)
+          vals$data1, vals$fit1)
       
       shinyjs::show(id = "devBox_summary")
-      # shinyjs::disable("devButton_save")
-      
-      vals$dev$tbl <<- rbind(vals$dev$tbl, devRow())
       vals$dev$tbl <- dplyr::distinct(vals$dev$tbl)
-      vals$report_dev_yn <- TRUE
       
     }) %>% # end of observe,
       bindEvent(input$devButton_save)
@@ -2781,9 +2827,7 @@ mod_tab_design_server <- function(id, vals) {
     output$devTable <- reactable::renderReactable({
       req(vals$dev$tbl)
       
-      # print(vals$dev$tbl)
       dt_dev <- vals$dev$tbl[, -1]
-      
       nms <- list(
         device = "Type",
         dur = "Duration",
@@ -2853,18 +2897,6 @@ mod_tab_design_server <- function(id, vals) {
     shiny::exportTestValues(
       data1 = simulating_data()
     )
-    
-    # Save information for report if table is not requested:
-    
-    observe({
-      req(vals$active_tab == 'device',
-          vals$dev$n, vals$dev$N1, vals$dev$N2, vals$fit1)
-      
-      req(is.null(vals$dev$tbl))
-      vals$report_dev_yn <- FALSE
-      vals$dev$tbl <- devRow()
-      
-    }) # end of observe
     
   }) # end of moduleServer
 }
