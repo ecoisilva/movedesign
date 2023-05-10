@@ -243,6 +243,10 @@ prepare_mod <- function(tau_p,
                         sigma,
                         sigma_unit = NULL) {
   
+  if (missing(tau_p)) stop("tau_p is required.")
+  if (missing(tau_v)) stop("tau_v is required.")
+  if (missing(sigma)) stop("sigma is required.")
+  
   if (missing(tau_p_unit)) {
     
     if (!("unit" %in% names(tau_p)))
@@ -258,6 +262,7 @@ prepare_mod <- function(tau_p,
   } else { tauv <- tau_v %#% tau_v_unit }
   
   if (missing(sigma_unit)) {
+    
     if (!("unit" %in% names(sigma)))
       stop("sigma must contain named columns 'value' and 'unit'.")
     
@@ -316,18 +321,21 @@ simulate_data <- function(data = NULL,
 }
 
 
-CI.upper <- Vectorize(function(k, level) {
-  stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
-
-CI.lower <- Vectorize(function(k, level) {
-  stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
-
-calculate_ci <- function(variable, level) {
+#' Calculate confidence intervals
+#' @noRd
+calculate_ci <- function(data, level = 0.95) {
   
+  alpha <- 1 - (1 - level)/2 # two-tailed
+  
+  dof <- length(data) - 1
+  margin <- qt(alpha, df = dof) * sd(data)/sqrt(length(data))
+  lci <- mean(data) - margin
+  uci <- mean(data) + margin
+
   out <- data.frame(
     CI = level,
-    CI_low = CI.lower(variable, level),
-    CI_high = CI.upper(variable, level))
+    CI_low = lci,
+    CI_high = uci)
   
   return(out)
 }
@@ -410,11 +418,11 @@ extract_pars <- function(obj = NULL,
 #' @keywords internal
 #'
 #' @noRd
-extract_dof <- function(obj, par) {
+extract_dof <- function(obj, name) {
   
-  par_list <- c("mean", "speed", "area", "diffusion")
+  name_list <- c("mean", "speed", "area", "diffusion")
   
-  if (!(par %in% par_list)) {
+  if (!(name %in% name_list)) {
     stop("`par` argument is not valid.")
   }
   
@@ -422,7 +430,7 @@ extract_dof <- function(obj, par) {
     sum.fit <- summary(obj)
     nms.fit <- names(sum.fit$DOF)
     
-    out <- sum.fit$DOF[grep(par, nms.fit)][[1]]
+    out <- sum.fit$DOF[grep(name, nms.fit)][[1]]
     if (is.na(out)) out <- NULL
     
   } else {
@@ -440,7 +448,13 @@ extract_dof <- function(obj, par) {
 #' @importFrom ctmm `%#%`
 #' @noRd
 extract_svf <- function(data, fraction = .65) {
-
+  
+  CI.upper <- Vectorize(function(k, level) {
+    stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
+  
+  CI.lower <- Vectorize(function(k, level) {
+    stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
+  
   level <- 0.95
   SVF <- ctmm::variogram(data = data) # CI = "Gauss"
   vardat <- data.frame(SVF = SVF$SVF,
@@ -666,7 +680,7 @@ update_f <- function(x, init) {
 
 #' Rough estimation of computation time
 #'
-#' @description Calculate computation time of ctmm functions.
+#' @description Estimate computation time of ctmm functions.
 #' @keywords internal
 #'
 #' @importFrom ctmm `%#%`
@@ -741,8 +755,8 @@ guess_time <- function(data,
       } else { y_max <- y }
       
       expt_min <- round_any(expt_unit %#% y, 1, f = ceiling)
-      expt <- round_any(expt_unit %#% y, 2, f = ceiling)
-      expt_max <- round_any(expt_unit %#% y_max, 5, f = ceiling)
+      expt <- round_any(expt_unit %#% y, 1, f = ceiling)
+      expt_max <- round_any(expt_unit %#% y_max, 3, f = ceiling)
       
     } else {
       if (tauv/dti < 10 && tauv/dti >= 1)
@@ -753,13 +767,13 @@ guess_time <- function(data,
       y <- expt_unit %#% y
       expt_min <- ceiling(y * 2) / 2 
       expt <- round_any(y, 1, f = ceiling)
-      expt_max <- round_any(y, 5, f = ceiling)
+      expt_max <- round_any(y, 1, f = ceiling)
     }
   } # end of if (type == "speed")
   
-  if (with_truth) expt <- expt + 3
-  if (with_truth) expt_min <- expt_min + 3
-  if (with_truth) expt_max <- expt_max + 5
+  if (with_truth) expt <- expt + 2
+  if (with_truth) expt_min <- expt_min + 2
+  if (with_truth) expt_max <- expt_max + 4
   
   if (expt <= 1) {
     range <- paste("\u2264", "1", expt_unit)
@@ -780,9 +794,9 @@ guess_time <- function(data,
 }
 
 
-#' Calculate distance
+#' Measure straight-line distance
 #'
-#' @description Calculate distance traveled
+#' @description Measure distance
 #' @keywords internal
 #'
 #' @noRd

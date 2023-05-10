@@ -1,4 +1,24 @@
+
+#' Negate %in%
+#' 
+#' @noRd
 `%!in%` <- Negate(`%in%`) 
+
+#' Unicode names
+#' 
+#' @noRd
+txt.tau_p <- "\u03C4\u209A"
+txt.tau_v <- "\u03C4\u1D65"
+txt.sig_p <- "\u03C3\u209A"
+txt.sig_v <- "\u03C3\u1D65"
+
+#' Message types
+#' 
+#' @noRd
+msg_main <- crayon::make_style("dimgray")
+msg_success <- crayon::make_style("#009da0")
+msg_danger <- crayon::make_style("#dd4b39")
+msg_warning <- crayon::make_style("#ffbf00")
 
 #' Parameter blocks
 #'
@@ -94,11 +114,11 @@ errorBlock <- function(icon = NULL,
                        value = NULL,
                        min = NULL,
                        max = NULL,
+                       nsims = NULL,
                        rightBorder = FALSE) {
 
   cl <- "errorblock"
   if (isTRUE(rightBorder)) cl <- paste0(cl, " border-right")
-
   
   if (value > 0) {
     tmptext <- span("Overestimation", icon("angle-up"))
@@ -107,14 +127,15 @@ errorBlock <- function(icon = NULL,
   }
   
   getColor <- function(v) {
+    
+    if (is.na(v)) return( "#808080" )
     if (abs(v) >= 0.8) {
-      out <- "#dd4b39"
+      "#dd4b39"
     } else if (abs(v) > 0.1 && abs(v) < 0.8) {
-      out <- "#ffb300"
+      "#ffa700"
     } else if (abs(v) <= 0.1) {
-      out <- "#009da0" 
+      "#009da0"
     }
-    return(out)
   }
   
   color_err <- paste("color:", getColor(value), "!important;")
@@ -133,7 +154,19 @@ errorBlock <- function(icon = NULL,
   range <- wrap_none(
     "[", wrap_none(min, color = color_err_min),
     ", ", wrap_none(max, "%", color = color_err_max), "]")
-  # range <- paste0(min, "% \u2014 ", max, "%")
+  
+  if (abs(value) < .01) value <- paste0("< 0.01")
+  else if (abs(value) < .1) value <- round(value, 2)
+  
+  out_nsims <- NULL
+  if (!is.null(nsims)) {
+    out_nsims <- tagList(
+      p(),
+      shiny::tags$span(class = "errorblock-text", "Based on:", br()),
+      shiny::tags$span(class = "errorblock-header",
+                       nsims, ifelse(nsims == 1,
+                                     "simulation", "simulations")))
+  }
   
   shiny::tags$div(
     class = "errorblock",
@@ -146,7 +179,7 @@ errorBlock <- function(icon = NULL,
     shiny::tags$span(class = "errorblock-value",
                      span(HTML(paste0(value, "%")), style = color_err)),
     shiny::tags$span(class = "errorblock-header", br(),
-                     range)
+                     range), out_nsims
   ) # end of div
   
 }
@@ -216,9 +249,8 @@ extract_units <- function(input) {
       return(string)
     },
     error = function(e) {
-      print(
-        sprintf("An error occurred in extract_units at %s : %s",
-                Sys.time(), e))
+      print(sprintf("An error occurred in extract_units at %s : %s",
+                    Sys.time(), e))
     })
 }
 
@@ -273,21 +305,21 @@ help_tip <- function(input, text, placement = "bottom") {
 #' 
 #' @noRd
 msg_log <- function(..., detail, 
-                    with_time = NULL,
+                    exp_time = NULL,
+                    run_time = NULL,
                     style = NULL) {
   
-  if (!is.null(with_time)) {
-    total_time <- fix_unit(with_time[[1]], 
-                           "seconds", convert = TRUE)
+  if (!is.null(run_time)) {
+    total_time <- fix_unit(run_time[[1]], "seconds", convert = TRUE)
     
-    if (round(with_time, 0) <= 1 %#% "minute") {
+    if (round(run_time, 0) <= 1 %#% "minute") {
       detail <- "This step took less than one minute."
     } else {
       detail <- paste0("This step took approximately ",
                        round(total_time$value, 1), " ",
                        total_time$unit, ".")
     }
-  } # end of with_time
+  } # end of run_time
   
   if (is.null(style)) {
     out <- cat(' ', HTML(...), "\n")
@@ -623,6 +655,8 @@ subset_timeframe <- function(var, value) {
 #' @description WIP
 #' @keywords internal
 #'
+#' @importFrom dplyr `%>%`
+#' @importFrom ctmm `%#%`
 #' @noRd
 #'
 add_spinner <- function(ui, type = 4, height = "300px") {
@@ -635,44 +669,92 @@ add_spinner <- function(ui, type = 4, height = "300px") {
 }
 
 
-loading_modal <- function(x, runtime = NULL, for_time = FALSE) {
+loading_modal <- function(x, 
+                          exp_time = NULL,
+                          n = NULL, type = "speed") {
+  
+  if (missing(x))
+    stop("`x` argument not provided.")
+  if (!is.character(x))
+    stop("`unit` argument must be a character string.")
   
   x <- stringr::str_split(x, " ")[[1]]
   n_words <- length(x)
+  if (n_words > 2) x[2] <- paste(x[2:n_words], collapse = " ")
   
-  if (n_words > 2) {
-    x[2] <- paste(x[2:n_words], collapse = " ")
-  }
-  
-  if (!for_time) {
-  out_txt <- tagList(
-    span(x[1], style = "color: #797979;"),
-    HTML(paste0(span(x[2], class = "cl-sea"),
-                span("...", style = "color: #797979;"))))
+  if (is.null(exp_time)) {
+    out_txt <- p()
   } else {
-    out_txt <- tagList(
-      span(x[1], style = "color: #797979;"),
-      HTML(paste0(span(x[2], class = "cl-sea"),
-                  span("...", style = "color: #797979;"))),
-      p(),
-      p("Expected run time:",
-        style = paste("background-color: #eaeaea;",
-                      "color: #797979;",
-                      "font-size: 16px;",
-                      "text-align: center;")), br(),
-      p(runtime,
-        style = paste("background-color: #eaeaea;",
+    
+    if (!("mean" %in% names(exp_time)) || 
+        !("unit" %in% names(exp_time)) ||
+        !("range" %in% names(exp_time)))
+      stop(paste0("input must contain named columns 'mean'",
+                  "'range', and 'unit'."))
+    
+    
+    header_css <- paste("background-color: #eaeaea;",
+                        "color: #797979;",
+                        "font-size: 16px;",
+                        "text-align: center;")
+    time_css <- paste("background-color: #eaeaea;",
                       "color: #009da0;",
-                      "font-size: 16px;",
+                      "font-size: 15px;",
                       "text-align: center;",
-                      "margin-top: -40px;")),
-      p())
+                      "margin-top: -40px;")
+    
+    mean_time <- fix_unit(exp_time$mean * n,
+                          exp_time$unit, convert = T)
+    max_time <- fix_unit(exp_time$max * n, 
+                         exp_time$unit, convert = T)
+    tmp <- max_time$unit %#% (exp_time$min * n) %#% exp_time$unit
+    min_time <- fix_unit(ifelse(tmp <= 1, 2, tmp),
+                         max_time$unit)
+    
+    out_txt_range <- paste0(min_time$value, 
+                            "\u2013", max_time$value, 
+                            " ", max_time$unit)
+    if (type == "fit") {
+      out_txt_range <- paste0(mean_time$value, 
+                              " ", max_time$unit)
+    }
+    
+    if (!is.null(n)) {
+      if (!is.numeric(n))
+        stop("`n` argument must be numeric.")
+      
+      out_txt <- tagList(
+        p(),
+        p("Expected run time:",
+          style = paste("background-color: #eaeaea;",
+                        "color: #797979;",
+                        "font-size: 16px;",
+                        "text-align: center;")), br(),
+        p(exp_time$range, style = time_css), p())
+      
+      if (n > 1) {
+        out_txt <- tagList(
+          p(),
+          p("Expected run time:",
+            style = header_css), br(),
+          p(exp_time$range, "(per simulation)", 
+            style = time_css), p(),
+          p("Total run time:", 
+            style = header_css), br(),
+          p("\u2248", out_txt_range,
+            style = time_css), p())
+      }
+    }
   }
   
   shinybusy::show_modal_spinner(
     spin = "fading-circle",
     color = "var(--sea)",
-    text = out_txt
+    text = tagList(
+      span(x[1], style = "color: #797979;"),
+      HTML(paste0(span(x[2], class = "cl-sea"),
+                  span("...", style = "color: #797979;"))),
+      out_txt)
   ) # end of modal
   
 }
@@ -790,11 +872,11 @@ load_pal <- function() {
               grn = "#77b131",
               grn_d = "#508016",
               dgr = "#dd4b39",
-              gld = "#ffbf00")
+              gld = "#ffbf00",
+              gld_d = "#ea8500")
 
   return(out)
 }
-
 
 #' create_modal
 #'
@@ -885,17 +967,17 @@ create_modal <- function(var, id) {
 
     ) # end of fluidRow
   } # end of tauv
-
+  
   if (var == "sigma") {
     out_title <- shiny::h4(
-      span("Semi-variance", class = "cl-sea"), "parameter:")
+      span("location variance", class = "cl-sea"), "parameter:")
 
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
-
-      p("The", span("semi-variance", class = "cl-sea"),
-        "parameter", HTML("(\u03C3)"), "is the",
+      
+      p("The", span("location variance", class = "cl-sea"),
+        "parameter", wrap_none("(\u03C3", tags$sub("p"), ")"), "is the",
         "average square distance observed",
         "at two different times,",
         "and ultimately measures the spatial variability",
@@ -904,7 +986,7 @@ create_modal <- function(var, id) {
 
       p("We are simulating an",
         span("isotropic", class = "cl-sea-d"), "movement process,",
-        "so", HTML("\u03C3"),
+        "so", wrap_none("\u03C3", tags$sub("p")),
         "is the same in both the x and the y directions,",
         "resulting in a circular", span("home range", class = "cl-sea-d"),
         "area."
@@ -913,11 +995,11 @@ create_modal <- function(var, id) {
       p("As we are also modeling",
         span("range resident", class = "cl-sea-d"),
         "individuals (with a tendency to remain within their",
-        "home range),", HTML("\u03C3"), "is asymptotic:",
+        "home range),", HTML("\u03C3\u209A"), "is asymptotic:",
         "if the", span("sampling duration", class = "cl-dgr"),
         "is sufficient, the average square distance between any two",
         "locations will be equal to the chosen",
-        HTML("\u03C3"), "value.")
+        HTML("\u03C3\u209A"), "value.")
 
     ) # end of fluidRow
   } # end of tauv
@@ -1071,7 +1153,7 @@ pseudonymize <- function(data,
   return(data)
 }
 
-#' Extract spatial variance from ctmm.
+#' Extract location variance from ctmm.
 #'
 #' @description Extract total variance or average variance
 #' @keywords internal
@@ -1353,10 +1435,11 @@ par.ctmm.fit <- function(input,
 par.speed <- function(input,
                       cores = NULL,
                       trace = TRUE,
-                      parallel = TRUE) {
+                      parallel = TRUE,
+                      seed = NULL) {
   
-  ctmm.speed <- function(input) {
-    
+  set.seed(seed)
+  ctmm.speed <- function(input, seed = NULL) {
     ctmm::speed(input[[1]],
                 input[[2]],
                 cores = internal_cores,
@@ -1365,7 +1448,7 @@ par.speed <- function(input,
   
   if (length(input) == 1) {
     internal_cores <- if (parallel) -1 else 1
-    out_speed <- try(ctmm.speed(input[[1]]))
+    out_speed <- try(ctmm.speed(input[[1]], seed = seed))
     
   } else {
     internal_cores <- 1
@@ -1380,7 +1463,7 @@ par.speed <- function(input,
         message = paste0("Speed estimation ", msg_danger("failed"), "."),
         detail = "May be due to low sample size.")
   }
-  
+  set.seed(NULL)
   return(out_speed)
 }
 
