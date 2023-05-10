@@ -638,7 +638,7 @@ mod_tab_data_select_server <- function(id, vals) {
       bindEvent(input$validate_select)
 
     # PARAMETERS ----------------------------------------------------------
-    ## Extract spatial variance, timescales, etc.: ------------------------
+    ## Extract location variance, timescales, etc.: -----------------------
     
     extract_sigma <- reactive({
       if (is.null(vals$var_fraction)) frac <- .65
@@ -761,7 +761,7 @@ mod_tab_data_select_server <- function(id, vals) {
         input_modal = "modal_tauv_select")
     })
     
-    ## Spatial variance: --------------------------------------------------
+    ## Location variance: -------------------------------------------------
     
     observe({
       req(vals$sigma0)
@@ -771,7 +771,8 @@ mod_tab_data_select_server <- function(id, vals) {
         vals = vals, type = "sigma", name = "sigma0",
         input_name = list(
           chr = "select_sigma0",
-          html = span(HTML("Semi-variance (\u03C3)"))),
+          html = wrap_none("Location variance ",
+                    "(\u03C3", tags$sub("p"), ")")),
         input_modal = "modal_sigma_select")
     })
     
@@ -785,7 +786,8 @@ mod_tab_data_select_server <- function(id, vals) {
         vals = vals, type = "speed", name = "speed0",
         input_name = list(
           chr = "select_speed0",
-          html = span(HTML("Velocity (\u03BD)"))),
+          html = wrap_none("Velocity variance (\u03C3", 
+                           tags$sub("v"), ")")),
         input_modal = "modal_speed_select")
       
     })

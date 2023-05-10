@@ -24,7 +24,9 @@ mod_tab_about_ui <- function(id) {
         column(
           align = "center", width = 12,
           style = "padding: 0 20px 0 20px;",
-
+          
+        
+          
           img(src = "www/logo.png", height = "140px"), p(),
           
           p(style = "max-width: 685px;",
@@ -251,10 +253,10 @@ mod_tab_about_server <- function(id, vals) {
           style = "warning",
           message = paste0("Seed is now ", msg_warning("fixed"), "."),
           detail = "Not recommended outside of tutorials.")
-        vals$seed0 <- 1000001
+        vals$seed0 <- 100
         
       } else {
-        seed <- round(stats::runif(1, min = 1, max = 100000), 0)
+        seed <- round(stats::runif(1, min = 1, max = 999999), 0)
         vals$seed0 <- seed
       }
       

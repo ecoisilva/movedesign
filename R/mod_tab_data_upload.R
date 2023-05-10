@@ -722,8 +722,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                          msg_warning("in progress"), "."),
         detail = "Please wait for model selection to finish:")
       
-      loading_modal("Selecting movement model",
-                    runtime = expt$range, for_time = TRUE)
+      loading_modal("Selecting movement model", exp_time = expt$range)
       
       start <- Sys.time()
       fit0 <- fitting_model()
@@ -736,7 +735,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         style = 'success',
         message = paste0("Model fit ",
                          msg_success("completed"), "."),
-        with_time = time_fit0)
+        run_time = time_fit0)
       
       vals$needs_fit <- FALSE
       shinybusy::remove_modal_spinner()
@@ -866,7 +865,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       bindEvent(input$validate_upload)
     
     # PARAMETERS ----------------------------------------------------------
-    ## Extract spatial variance, timescales, etc.: ------------------------
+    ## Extract location variance, timescales, etc.: -----------------------
     
     extract_sigma <- reactive({
       if (is.null(vals$var_fraction)) frac <- .65
@@ -1007,7 +1006,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         input_modal = "modal_tauv_upload")
     })
     
-    ## Spatial variance: --------------------------------------------------
+    ## Location variance: -------------------------------------------------
     
     observe({
       req(vals$sigma0)
@@ -1017,7 +1016,8 @@ mod_tab_data_upload_server <- function(id, vals) {
         vals = vals, type = "sigma", name = "sigma0",
         input_name = list(
           chr = "select_sigma0",
-          html = span(HTML("Semi-variance (\u03C3)"))),
+          html = wrap_none("Location variance ",
+                           "(\u03C3", tags$sub("p"), ")")),
         input_modal = "modal_sigma_upload")
     })
     
@@ -1031,7 +1031,8 @@ mod_tab_data_upload_server <- function(id, vals) {
         vals = vals, type = "speed", name = "speed0",
         input_name = list(
           chr = "select_speed0",
-          html = span(HTML("Velocity (\u03BD)"))),
+          html = wrap_none("Velocity variance (\u03C3", 
+                           tags$sub("v"), ")")),
         input_modal = "modal_speed_upload")
     })
     
