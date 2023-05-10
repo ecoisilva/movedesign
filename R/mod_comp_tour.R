@@ -33,13 +33,6 @@ mod_comp_tour_server <- function(id, vals) {
     
     text_device <- reactive({
       
-      # if (vals$which_tutorial) {
-      #   span(
-      #    "Keep the current inputs as shown",
-      #    "(12 months, 1 fix every day),",
-      #    "and proceed to the next step.")  
-      # }
-      
       span(
         "Set the 'GPS battery life' to 2 years and the",
         "'maximum GPS fix rate' to 1 fix every 6 hours.")
@@ -48,15 +41,9 @@ mod_comp_tour_server <- function(id, vals) {
     
     text_sizes <- reactive({
       
-      # # for dti == 1 hour
-      # dur <- "5.7 months"
-      # N1 <- "18.1"
-      # N2 <- "3,918"
-      
-      # for dti == 2 hours
       dur <- "10.1 months"
-      N1 <- "40"
-      N2 <- "1,511"
+      N1 <- "32"
+      N2 <- "1,296"
       
       span(
         "For the current parameters, the sampling interval of",
@@ -71,11 +58,7 @@ mod_comp_tour_server <- function(id, vals) {
   
     text_hr <- reactive({
       
-      # # for dti == 1 hour
-      # N1 <- c("18.1", "eighteen")
-      
-      # for dti == 2 hours
-      N1 <- c("40", "40")
+      N1 <- rep("32", 2)
       
       span(
         HTML("N<sub>area</sub>"), "is equal to", wrap_none(N1[1], ","),
@@ -88,15 +71,7 @@ mod_comp_tour_server <- function(id, vals) {
     
     text_ctsd <- reactive({
       
-      # if (vals$overwrite_active) {
-      #   N2 <- "168"
-      # }
-      
-      # # for dti == 1 hour
-      # N2 <- "3,918"
-      
-      # for dti == 2 hours
-      N2 <- "1,511"
+      N2 <- "1,296"
       
       span(
         HTML("N<sub>speed</sub>"), "is equal to", wrap_none(N2, ","),
@@ -338,11 +313,11 @@ mod_comp_tour_server <- function(id, vals) {
           wrap_none(HTML("&#x2014"), ","),
           "the extracted characteristic timescales",
           paste0("(", span("position", class = "cl-sea-l"),
-                 ", ", span("velocity autocorrelation",
+                 ", and ", span("velocity autocorrelation",
                                class = "cl-sea-l"),
                  ")"), "and other measures",
-          paste0("(", span("semi-variance", class = "cl-sea-l"),
-                 ", ", span("velocity", class = "cl-sea-l"),
+          paste0("(", span("location", class = "cl-sea-l"),
+                 " and ", span("velocity variance", class = "cl-sea-l"),
                  ")."),
           "All subsequent steps will built upon this",
           "information."
@@ -499,11 +474,15 @@ mod_comp_tour_server <- function(id, vals) {
         HTML(paste(
           span(
             class = "tour_action", action_bell,
-            "Click on the", fontawesome::fa("bookmark"), 
-            "'Add to table'", 
-            "button to save all current parameters to",
-            "a table for a quick overview."
-          )
+            "Throughout this walkthrough, you can click on the", 
+            fontawesome::fa("bookmark"), "'Show table'", 
+            "button to show relevant inputs and outputs",
+            "in a table for a quick overview."),
+          p(),
+          "If you set different sampling parameters,",
+          "you can also check them here.",
+          "Keep in mind that for further analyses, the application",
+          "will use the last set of parameters/data simulated."
         )))
       
       element <- c(element, paste0(tab4, "devBox_summary"))
@@ -611,40 +590,40 @@ mod_comp_tour_server <- function(id, vals) {
           text_hr()
         )))
 
-      element <- c(element, paste0(tab5, "hrBox_viz"))
-      intro <- c(
-        intro,
-        HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            "You can once again save all results to a table",
-            "by clicking on the", fontawesome::fa("bookmark")
-            , "'Add to table'", "button located at the bottom",
-            "of the box."
-          )
-        )))
+      # element <- c(element, paste0(tab5, "hrBox_viz"))
+      # intro <- c(
+      #   intro,
+      #   HTML(paste(
+      #     span(
+      #       class = "tour_action", action_bell,
+      #       "You can once again see all outputs to a table",
+      #       "by clicking on the", fontawesome::fa("bookmark")
+      #       , "'Show table'", "button located at the bottom",
+      #       "of the box."
+      #     )
+      #   )))
       
-      element <- c(element, paste0(tab5, "hrBox_summary"))
+      # element <- c(element, paste0(tab5, "hrBox_summary"))
+      # intro <- c(
+      #   intro,
+      #   HTML(paste(
+      #     "Here are the outputs from the",
+      #     fontawesome::fa("map-location-dot", fill = pal$sea),
+      #     span("Home range", class = "cl-sea-l"), "tab.",
+      #     "Now we are ready to move on to",
+      #     span("speed & distance", class = "cl-sea-l"), "estimation."
+      #   )))
+      
+      element <- c(element, "#Tour_middle")
       intro <- c(
         intro,
         HTML(paste(
-          "Here are the outputs from the",
-          fontawesome::fa("map-location-dot", fill = pal$sea),
-          span("Home range", class = "cl-sea-l"), "tab.",
           "Now we are ready to move on to",
           span("speed & distance", class = "cl-sea-l"), "estimation."
         )))
       
       ### Speed & distance ------------------------------------------------
-
-      # element <- c(element, "#analyses")
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     "Now we can move on to",
-      #     span("speed & distance", class = "cl-sea-l"), "estimation."
-      #   )))
-
+      
       tab6 <- paste0("#tab_ctsd_1", "-")
       element <- c(element, paste0(tab6, "sd_intro"))
       intro <- c(
@@ -682,7 +661,7 @@ mod_comp_tour_server <- function(id, vals) {
           "for the current sampling design."
         )))
       
-      element <- c(element, paste0(tab6, "sdPlot_path"))
+      element <- c(element, paste0(tab6, "sdPlot_speed"))
       intro <- c(
         intro,
         HTML(paste(
@@ -706,28 +685,37 @@ mod_comp_tour_server <- function(id, vals) {
           text_ctsd()
         )))
 
-      element <- c(element, paste0(tab6, "sdBox_outputs"))
+      # element <- c(element, paste0(tab6, "sdBox_outputs"))
+      # intro <- c(
+      #   intro,
+      #   HTML(paste(
+      #     span(class = "tour_action", action_bell,
+      #          "You can once again see all outputs to a table",
+      #          "by clicking on the", fontawesome::fa("bookmark")
+      #          , "'Show table'", "button located at the bottom",
+      #          "of the box."
+      #     )
+      #   )))
+      # 
+      # element <- c(element, paste0(tab6, "sdBox_summary"))
+      # intro <- c(
+      #   intro,
+      #   HTML(paste(
+      #     "Here are the outputs from the",
+      #     fontawesome::fa("gauge-high", fill = pal$sea),
+      #     span("Speed & distance", class = "cl-sea-l"), "tab.",
+      #     "Now we are ready to move on to the",
+      #     span("Report", class = "cl-sea-l"), "tab."
+      #   )))
+      
+      element <- c(element, "#Tour_middle")
       intro <- c(
         intro,
         HTML(paste(
-          span(class = "tour_action", action_bell,
-            "You can once again save all results to a table",
-            "by clicking on the", fontawesome::fa("bookmark")
-            , "'Add to table'", "button located at the bottom",
-            "of the box.")
-        )))
-
-      element <- c(element, paste0(tab6, "sdBox_summary"))
-      intro <- c(
-        intro,
-        HTML(paste(
-          "Here are the outputs from the",
-          fontawesome::fa("gauge-high", fill = pal$sea),
-          span("Speed & distance", class = "cl-sea-l"), "tab.",
           "Now we are ready to move on to the",
           span("Report", class = "cl-sea-l"), "tab."
         )))
-
+      
       ## Report tab: ------------------------------------------------------
 
       tab7 <- paste0("#tab_report_1", "-")
@@ -739,43 +727,62 @@ mod_comp_tour_server <- function(id, vals) {
             class = "tour_action", action_bell,
 
             "Click the", fontawesome::fa("bookmark"),
-            "'Built report' button to see a detailed",
+            "'Build report' button to see a detailed",
             "answer to how likely your current sampling design",
-            "is to answer your research questions."),
+            "is to answer your research questions.")
+        )))
+      
+      element <- c(element, paste0(tab7, "repBox_analyses"))
+      intro <- c(
+        intro,
+        HTML(paste(
           p(),
           "In this case,",
           "is the", span("sampling duration", class = "cl-sea-l"),
           "sufficient to obtain a reliable",
           span("home range area", class = "cl-sea-l"), "estimate?",
-          p(),
           "And is the", span("sampling interval", class = "cl-sea-l"),
           "sufficient to obtain a reliable",
-          span("speed & distance", class = "cl-sea-l"), "estimate?"
+          span("speed & distance", class = "cl-sea-l"), "estimate?",
+          p(),
+          "You can also compare your results to our",
+          "simulations with similar",
+          span("timescale", class = "cl-sea-l"), "and",
+          span("sampling", class = "cl-sea-l"), "parameters."
         )))
-
-      # element <- c(element, paste0(tab7, "repBox_pars"))
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     "This box recaps all extracted parameters",
-      #     "and the current sampling design."
-      #   )))
-
-      element <- c(element, paste0(tab7, "repBox_analyses"))
+      
+      # element <- c(element, paste0(tab7, "repPlot_precision"))
+      # element <- c(element, "#content-report")
+      
+      element <- c(element, paste0(tab7, "repPlot_hr"))
       intro <- c(
         intro,
         HTML(paste(
-          "You can also compare your results to our",
-          "simulations of a similar",
-          span("timescale", class = "cl-sea-l"), "and",
-          span("sampling", class = "cl-sea-l"), "parameters.",
-          "In this case, 400 simulations of AKDE error for",
-          "a duration of 64 days (for \u03C4\u209A = 1 day),",
-          "and 400 simulations of CTSD error for",
-          "a sampling interval of one fix every 1.5 hours",
-          "(for \u03C4\u1D65 = 1 hour)."
+          "To interpret these plots: given 400 simulations",
+          " of a movement process with \u03C4\u209A = 8 days",
+          "(for a duration of 256 days), the expected errors",
+          "of AKDE estimates have a 95% probability of",
+          "falling within the range shown (shaded area in",
+          wrap_none(span("blue", class = "cl-sea"), ")."), p(),
+          "Even though our current error is only 2.9%, uncertainty",
+          "is still high, i.e., similar simulation parameters",
+          "resulted in an under- or overestimation of the home",
+          "range area up to 20-40%)."
         )))
-
+      
+      element <- c(element, paste0(tab7, "repPlot_sd"))
+      intro <- c(
+        intro,
+        HTML(paste(
+          "For speed & distance estimation, given 400 simulations",
+          "of a movement processes with \u03C4\u1D65 = 1 hour",
+          "(and a sampling interval of one fix every 1.5 hours),",
+          "the expected errors",
+          "of CTSD estimates have a 95% probability of",
+          "falling close to zero (shaded area in",
+          wrap_none(span("green", class = "cl-grn"), ").")
+        )))
+      
       element <- c(element, paste0(tab7, "repBox_tables"))
       intro <- c(
         intro,
