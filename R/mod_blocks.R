@@ -106,7 +106,7 @@ mod_blocks_server <- function(id,
              # Sample sizes:
              "metrics" = {
                
-               N <- extract_dof(fit, par = name)
+               N <- extract_dof(fit, name = name)
                n <- nrow(data)
                
                value <- round(N, 1)
@@ -122,6 +122,13 @@ mod_blocks_server <- function(id,
                out <- vals[[name]]
                
                if (grepl("Est", name)) {
+                 
+                 if (grepl("List", name)) {
+                   out <- data.frame(
+                     value = colMeans(out[,2:4]) %>% as.vector(),
+                     unit = out$unit[1])
+                 }
+
                  out <- fix_unit(out, ui = TRUE, convert = TRUE)
                  
                  if (type == "ctsd")
@@ -134,14 +141,32 @@ mod_blocks_server <- function(id,
                  }
                  
                  value <- paste(value, out$unit[2])
-                 subtitle <- paste(round(out$value[1], 1),
-                                   "\u2014", round(out$value[3], 1))
-               }
+                 subtitle <- paste(
+                   scales::label_comma(.1)(out$value[1]),
+                   "\u2014", scales::label_comma(.1)(out$value[3]))
+               
+               } # end of Est
                
                if (grepl("Err", name)) {
-                 value <- out$value
+                 
                  subtitle <- NULL
-               }
+                 if (grepl("List", name)) {
+                   
+                   est <- mean(vals[[name]]$est, na.rm = TRUE)
+                   # ci <- calculate_ci(vals[[name]]$est, level = 0.95)
+                   # lci <- ci$CI_low
+                   # uci <- ci$CI_high
+                   
+                   # Credible intervals:
+                   ci <- suppressWarnings(bayestestR::ci(
+                     vals[[name]]$est, ci = .95, method = "HDI"))
+                   lci <- ci$CI_low
+                   uci <- ci$CI_high
+                  
+                   value <- c(lci, est, uci)
+                 } else { value <- out$value }
+                 
+               } # end of Err
                
                perc <- NULL
                
@@ -162,6 +187,7 @@ mod_blocks_server <- function(id,
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     output$block <- shiny::renderUI({
+      req(vals$nsims)
       block_type <- check_type()
       
       ## Species parameters: ----------------------------------------------
@@ -277,9 +303,12 @@ mod_blocks_server <- function(id,
         
         if (grepl("Err", name)) {
           
+          out_text <- "Relative error"
+          if (grepl("List", name)) out_text <- "Expected error"
+          
           out_block <- errorBlock(
             icon = "radiation",
-            text = "Expected error",
+            text = out_text,
             value = prepare_outputs()[["value"]][[2]],
             min = prepare_outputs()[["value"]][[1]],
             max = prepare_outputs()[["value"]][[3]],
@@ -292,8 +321,6 @@ mod_blocks_server <- function(id,
       return(out_block)
       
     }) # end of renderUI
-    
-    
     
   }) # end of moduleServer
 }
