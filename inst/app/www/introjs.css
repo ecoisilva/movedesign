@@ -1,5 +1,5 @@
 
-/* general */
+/* General ------------------------------------------------------------- */
 
 .introjs-overlay {
  position: absolute;
@@ -31,7 +31,7 @@
   letter-spacing: 0.2px;
 }
 
-/* buttons */
+/* Buttons ------------------------------------------------------------- */
 
 .introjs-tooltipbuttons {
   @extend .flex;
