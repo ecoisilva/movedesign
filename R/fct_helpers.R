@@ -244,9 +244,6 @@ prepare_mod <- function(tau_p,
                         sigma_unit = NULL) {
   
   if (missing(tau_p)) stop("tau_p is required.")
-  if (missing(tau_v)) stop("tau_v is required.")
-  if (missing(sigma)) stop("sigma is required.")
-  
   if (missing(tau_p_unit)) {
     
     if (!("unit" %in% names(tau_p)))
@@ -254,6 +251,23 @@ prepare_mod <- function(tau_p,
     taup <- tau_p$value %#% tau_p$unit
   } else { taup <- tau_p %#% tau_p_unit }
   
+  if (missing(sigma)) stop("sigma is required.")
+  if (missing(sigma_unit)) {
+    
+    if (!("unit" %in% names(sigma)))
+      stop("sigma must contain named columns 'value' and 'unit'.")
+    sig <- sigma$value %#% sigma$unit
+  } else { sig <- sigma %#% sigma_unit }
+  
+  if (is.null(tau_v)) {
+    mod <- ctmm::ctmm(tau = taup,
+                      isotropic = TRUE,
+                      sigma = sig,
+                      mu = c(0,0))
+    return(mod)
+  }
+    
+  if (missing(tau_v)) stop("tau_v is required.")
   if (missing(tau_v_unit)) {
     
     if (!("unit" %in% names(tau_v)))
@@ -261,13 +275,6 @@ prepare_mod <- function(tau_p,
     tauv <- tau_v$value %#% tau_v$unit
   } else { tauv <- tau_v %#% tau_v_unit }
   
-  if (missing(sigma_unit)) {
-    
-    if (!("unit" %in% names(sigma)))
-      stop("sigma must contain named columns 'value' and 'unit'.")
-    
-    sig <- sigma$value %#% sigma$unit
-  } else { sig <- sigma %#% sigma_unit }
   
   # Generate movement model:
   mod <- ctmm::ctmm(tau = c(taup, tauv),
@@ -749,31 +756,37 @@ guess_time <- function(data,
     if (tauv/dti < 1) {
       y_min <- max(exp(1.3915 + 0.1195 * x1), 1)
       y <- exp(3.4924 - 0.1978 * x1) 
+      
       if (N < 30) {
         y_max <- exp(4.15038 - 0.3159 * x1 + 0.01912 * x3)
+        if (N > 5 && N < 15) y_max <- y_max * 2
         if (N <= 5) y_max <- y_max * 3
       } else { y_max <- y }
-      
+
       expt_min <- round_any(expt_unit %#% y, 1, f = ceiling)
       expt <- round_any(expt_unit %#% y, 1, f = ceiling)
-      expt_max <- round_any(expt_unit %#% y_max, 3, f = ceiling)
+      expt_max <- ifelse(
+        N > 30,
+        round_any(expt_unit %#% y_max, 2, f = ceiling),
+        round_any(expt_unit %#% y_max, 3, f = ceiling))
       
     } else {
       if (tauv/dti < 10 && tauv/dti >= 1)
-        y <- exp(-3.28912 + 1.01494 * x1 + 0.01953 * x1 * x2)
+        y <- y_max <- exp(-3.28912 + 1.01494 * x1 + 0.01953 * x1 * x2)
       if (tauv/dti >= 10)
-        y <- exp(-2.0056285 + 0.9462089 * x1 + 0.0023285 * x1 * x2)
+        y <- y_max <- exp(-2.0056285 + 0.9462089 * x1 + 0.0023285 * x1 * x2)
+      if (N < 15) y_max <- y_max + y_max * 2
       
       y <- expt_unit %#% y
       expt_min <- ceiling(y * 2) / 2 
       expt <- round_any(y, 1, f = ceiling)
-      expt_max <- round_any(y, 1, f = ceiling)
+      expt_max <- round_any(y_max, 1, f = ceiling)
     }
   } # end of if (type == "speed")
   
-  if (with_truth) expt <- expt + 2
-  if (with_truth) expt_min <- expt_min + 2
-  if (with_truth) expt_max <- expt_max + 4
+  if (with_truth) expt <- expt + 1
+  if (with_truth) expt_min <- expt_min
+  if (with_truth) expt_max <- expt_max + 2
   
   if (expt <= 1) {
     range <- paste("\u2264", "1", expt_unit)

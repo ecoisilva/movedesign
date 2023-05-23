@@ -682,6 +682,8 @@ loading_modal <- function(x,
   n_words <- length(x)
   if (n_words > 2) x[2] <- paste(x[2:n_words], collapse = " ")
   
+  n <- ifelse(is.null(n), 1, n)
+  
   if (is.null(exp_time)) {
     out_txt <- p()
   } else {
@@ -703,11 +705,12 @@ loading_modal <- function(x,
                       "text-align: center;",
                       "margin-top: -40px;")
     
-    mean_time <- fix_unit(exp_time$mean * n,
-                          exp_time$unit, convert = T)
-    max_time <- fix_unit(exp_time$max * n, 
-                         exp_time$unit, convert = T)
-    tmp <- max_time$unit %#% (exp_time$min * n) %#% exp_time$unit
+    mean_time <- fix_unit(exp_time$mean * n, exp_time$unit, convert = T)
+    max_time <- fix_unit(exp_time$max * n, exp_time$unit, convert = T)
+    
+    tmp <- max_time$unit %#% (
+        ifelse(exp_time$min == 0, .001, exp_time$min) * n) %#%
+      exp_time$unit
     min_time <- fix_unit(ifelse(tmp <= 1, 2, tmp),
                          max_time$unit)
     
@@ -716,7 +719,7 @@ loading_modal <- function(x,
                             " ", max_time$unit)
     if (type == "fit") {
       out_txt_range <- paste0(mean_time$value, 
-                              " ", max_time$unit)
+                              " ", mean_time$unit)
     }
     
     if (!is.null(n)) {

@@ -518,11 +518,24 @@ mod_tab_data_upload_server <- function(id, vals) {
     reading_file <- reactive({
       if (is.null(input$file_csv)) return("")
       
-      read.csv(file = input$file_csv$datapath,
-               header = input$file_header,
-               sep = input$file_sep,
-               quote = input$file_quote)
-    })
+      out_file <- tryCatch(read.csv(file = input$file_csv$datapath,
+                                    header = input$file_header,
+                                    sep = input$file_sep,
+                                    quote = input$file_quote),
+                           error = function(e) e)
+      
+      if (inherits(out_file, "error")) {
+        msg_log(
+          style = "warning",
+          message = paste0("File may be ",
+                           msg_warning("incorrectly formatted"), "."),
+          detail = "Check a different separator or quote.")
+        return(NULL)
+      }
+      
+      return(out_file)
+      
+    }) # end of reactive, reading_file()
     
     dataset_uploaded <- reactive({
       reset_reactiveValues(vals) # reset vals between data tabs
@@ -722,7 +735,7 @@ mod_tab_data_upload_server <- function(id, vals) {
                          msg_warning("in progress"), "."),
         detail = "Please wait for model selection to finish:")
       
-      loading_modal("Selecting movement model", exp_time = expt$range)
+      loading_modal("Selecting movement model", exp_time = expt)
       
       start <- Sys.time()
       fit0 <- fitting_model()
@@ -789,10 +802,10 @@ mod_tab_data_upload_server <- function(id, vals) {
           
           msg_log(
             style = "danger",
-            message = paste("No signature of",
-                            msg_danger("position autocorrelation"),
-                            "found."),
-            detail = "Select a different dataset to proceed.")
+            message = paste(
+              "No signature of",
+              msg_danger("position autocorrelation"), "found."),
+            detail = "Select a different individual or dataset to proceed.")
           
           vals$is_valid <- NULL
         }
@@ -895,14 +908,6 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$tau_v0 <- extract_pars(vals$fit0, name = "velocity")
       vals$speed0 <- extract_pars(vals$fit0, name = "speed")
       
-      # vals$ctmm_mod <- prepare_mod(
-      #   tau_p = vals$tau_p0$value[[2]],
-      #   tau_p_unit = vals$tau_p0$unit[[2]],
-      #   tau_v = vals$tau_v0$value[[2]], 
-      #   tau_v_unit = vals$tau_v0$unit[[2]],
-      #   sigma = vals$sigma0$value[[2]], 
-      #   sigma_unit = vals$sigma0$unit[[2]])
-      
       vals$tmpsp <- vals$species_binom
       vals$tmpid <- vals$id
       
@@ -987,7 +992,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         id = "uplBlock_taup", 
         vals = vals, type = "tau", name = "tau_p0",
         input_name = list(
-          chr = "select_taup0",
+          chr = "upload_taup0",
           html = wrap_none("Position autocorrelation ",
                            "(\u03C4", tags$sub("p"), ")")),
         input_modal = "modal_taup_upload")
@@ -1000,7 +1005,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         id = "uplBlock_tauv",
         vals = vals, type = "tau", name = "tau_v0",
         input_name = list(
-          chr = "select_tauv0",
+          chr = "upload_tauv0",
           html = wrap_none("Velocity autocorrelation ",
                            "(\u03C4", tags$sub("v"), ")")),
         input_modal = "modal_tauv_upload")
@@ -1015,7 +1020,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         id = "uplBlock_sigma",
         vals = vals, type = "sigma", name = "sigma0",
         input_name = list(
-          chr = "select_sigma0",
+          chr = "upload_sigma0",
           html = wrap_none("Location variance ",
                            "(\u03C3", tags$sub("p"), ")")),
         input_modal = "modal_sigma_upload")
@@ -1030,7 +1035,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         id = "uplBlock_speed",
         vals = vals, type = "speed", name = "speed0",
         input_name = list(
-          chr = "select_speed0",
+          chr = "upload_speed0",
           html = wrap_none("Velocity variance (\u03C3", 
                            tags$sub("v"), ")")),
         input_modal = "modal_speed_upload")

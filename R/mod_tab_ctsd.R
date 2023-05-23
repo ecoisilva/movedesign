@@ -200,34 +200,34 @@ mod_tab_ctsd_ui <- function(id) {
             
             tabsetPanel(
               id = ns("sdTabs_viz"),
-           
+              
               tabPanel(
                 title = "Distance",
                 value = ns("sdPanel_trajectory"),
                 icon = icon("route"),
                 
-                div(
-                  class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
-                  p(),
-                  shinyWidgets::sliderTextInput(
-                    inputId = ns("sd_nsim"),
-                    label = "Show simulation no.:",
-                    choices = seq(1, 100, by = 1)),
-                  p(),
-                  shinyWidgets::checkboxGroupButtons(
-                    inputId = ns("show_paths"),
-                    label = "Show trajectories:",
-                    choices =
-                      c("Fine-scale/truth" = "full",
-                        "Current design" = "initial"),
-                    selected = c("full", "initial"),
-                    checkIcon = list(yes = icon("circle-check")),
-                    justified = TRUE),
-                  p(),
-                  
-                  ggiraph::girafeOutput(
-                    outputId = ns("sdPlot_path"),
-                    width = "100%", height = "100%")) %>%
+                div(id = "sd_outputs",
+                    class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
+                    p(),
+                    shinyWidgets::sliderTextInput(
+                      inputId = ns("sd_nsim"),
+                      label = "Show simulation no.:",
+                      choices = seq(1, 100, by = 1)),
+                    p(),
+                    shinyWidgets::checkboxGroupButtons(
+                      inputId = ns("show_paths"),
+                      label = "Show trajectories:",
+                      choices =
+                        c("Fine-scale/truth" = "full",
+                          "Current design" = "initial"),
+                      selected = c("full", "initial"),
+                      checkIcon = list(yes = icon("circle-check")),
+                      justified = TRUE),
+                    p(),
+                    
+                    ggiraph::girafeOutput(
+                      outputId = ns("sdPlot_path"),
+                      width = "100%", height = "100%")) %>%
                   shinycssloaders::withSpinner(
                     type = getOption("spinner.type", default = 7),
                     color = getOption("spinner.color",
@@ -242,13 +242,17 @@ mod_tab_ctsd_ui <- function(id) {
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
                         mod_blocks_ui(ns("distBlock_est"))),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
-                        mod_blocks_ui(ns("distBlock_err")))),
+                        mod_blocks_ui(ns("distBlock_err")))
+                  ),
                   
                   fluidRow(
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
                         mod_blocks_ui(ns("distBlock_est_new"))),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
-                        mod_blocks_ui(ns("distBlock_err_new"))))
+                        mod_blocks_ui(ns("distBlock_err_new")))
+                  ),
+                  
+                  uiOutput(ns("sdUI_distLegend"))
                   
                 ) # end of div
                 
@@ -287,14 +291,18 @@ mod_tab_ctsd_ui <- function(id) {
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
                         mod_blocks_ui(ns("sdBlock_est"))),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
-                        mod_blocks_ui(ns("sdBlock_err")))),
+                        mod_blocks_ui(ns("sdBlock_err")))
+                  ),
                   
                   fluidRow(
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
                         mod_blocks_ui(ns("sdBlock_est_new"))),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
-                        mod_blocks_ui(ns("sdBlock_err_new"))))
-                
+                        mod_blocks_ui(ns("sdBlock_err_new")))
+                  ),
+                  
+                  uiOutput(ns("sdUI_sdLegend"))
+                  
                 ) # end of div
 
               ) # end of panel (2 out of 2)
@@ -340,14 +348,14 @@ mod_tab_ctsd_ui <- function(id) {
             width = NULL,
             solidHeader = FALSE,
 
-            reactable::reactableOutput(ns("sdTable")),
-            br(),
-            div(style = "display:inline-block; float:right",
-                shiny::actionButton(
-                  inputId = ns("sdTable_clear"),
-                  label = "Clear table",
-                  icon =  icon("trash"),
-                  width = "110px")), br()
+            reactable::reactableOutput(ns("sdTable")) #,
+            # br(),
+            # div(style = "display:inline-block; float:right",
+            #     shiny::actionButton(
+            #       inputId = ns("sdTable_clear"),
+            #       label = "Clear table",
+            #       icon =  icon("trash"),
+            #       width = "110px")), br()
 
           ), # end of box // sdBox_summary
 
@@ -663,6 +671,52 @@ mod_tab_ctsd_server <- function(id, vals) {
     }) %>% # end of observer,
       bindEvent(input$sd_nsim)
     
+    
+    ## Add note if CIs cannot be calculated: ------------------------------
+    
+    output$sdUI_distLegend <- output$sdUI_sdLegend <- renderUI({
+      req(vals$speedErrList,
+          vals$simList)
+
+      ci <- suppressWarnings(bayestestR::ci(
+        vals$speedErrList$est, ci = .95, method = "HDI"))
+      lci <- ci$CI_low
+      uci <- ci$CI_high
+
+      ui <- ""
+      if (length(vals$simList) > 1) {
+        if (is.na(lci) || is.na(uci))
+          ui <- tagList(
+            p(style = "margin-top: 35px;"),
+            span(class = "help-block",
+                 style = "text-align: center !important;",
+
+                 fontawesome::fa("circle-exclamation", fill = pal$dgr),
+                 span("Note:", class = "help-block-note"),
+                 "Credible intervals (CIs) were too large or the number of",
+                 "simulations insufficient, returning ",
+                 wrap_none(span("NAs", class = "cl-dgr"), "."),
+                 "Run more simulations to obtain valid CIs."))
+      } else {
+        ui <- tagList(
+          p(style = "margin-top: 22px;"),
+          span(class = "help-block",
+               style = "text-align: center !important;",
+
+               fontawesome::fa("circle-exclamation", fill = pal$dgr),
+               span("Note:", class = "help-block-note"),
+               "This relative error is based on a single simulation.",
+               "To obtain valid credible intervals, run more",
+               "simulations in the",
+               fontawesome::fa("stopwatch", fill = pal$sea),
+               span("Sampling design", class = "cl-sea"), "tab."))
+      }
+
+      return(ui)
+
+    }) %>% # end of renderUI, "sdUI_errLegend"
+      bindEvent(vals$speedErrList)
+    
     # ALERTS --------------------------------------------------------------
     
     ## If no initial data uploaded, selected or simulated:
@@ -675,7 +729,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           type = "error",
           title = "No data found",
           text = tagList(span(
-            "Please upload, select or simulate an", br(),
+            "Please upload, select or simulate a",
             span("movement dataset", class = "cl-dgr"),
             "first in the",
             icon("paw", class = "cl-mdn"),
@@ -932,7 +986,7 @@ mod_tab_ctsd_server <- function(id, vals) {
                          msg_warning("in progress"), "."),
         detail = "Please wait for model selection to finish:")
       
-      loading_modal("Selecting movement model", exp_time = expt$range)
+      loading_modal("Selecting movement model", exp_time = expt)
       
       start <- Sys.time()
       fit1 <- fitting_model()
@@ -1158,7 +1212,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       loading_modal("Calculating run time")
       msg_log(
         style = "warning",
-        message = paste0("Estimating ", msg_warning("run time"), ":"))
+        message = paste0("Estimating ", msg_warning("run time"), "..."))
       
       out_time <- guess_time(data = vals$data1, 
                              fit = vals$fit1, 
@@ -1346,7 +1400,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       msg_log(
         style = "warning",
         message = paste0("Estimating ",
-                         msg_warning("speed & distance"), ":"))
+                         msg_warning("speed & distance"), "..."))
       
       loading_modal("Estimating speed & distance", 
                     exp_time = vals$sd$expt_time,
@@ -1584,6 +1638,7 @@ mod_tab_ctsd_server <- function(id, vals) {
           positionClass = "toast-bottom-right"))
       
       vals$sd_completed <- TRUE
+      vals$sd$proceed_to_ctsd <- FALSE
       shinybusy::remove_modal_spinner()
       
     }) %>% # end of observe,
@@ -1596,7 +1651,7 @@ mod_tab_ctsd_server <- function(id, vals) {
       loading_modal("Calculating run time")
       msg_log(
         style = "warning",
-        message = paste0("Estimating ", msg_warning("run time"), ":"))
+        message = paste0("Estimating ", msg_warning("run time"), "..."))
       
       out_time <- guess_time(data = vals$sd$data, 
                              fit = vals$sd$fit, 
@@ -2306,8 +2361,8 @@ mod_tab_ctsd_server <- function(id, vals) {
         N2 = "N (speed)",
         ctsd = "Speed",
         ctsd_err = "Error",
-        ctsd_err_min = "Error (min)",
-        ctsd_err_max = "Error (max)",
+        ctsd_err_min = "Error (95% LCI)",
+        ctsd_err_max = "Error (95% UCI)",
         dist = "Distance",
         dist_err = "Error")
       
@@ -2401,10 +2456,10 @@ mod_tab_ctsd_server <- function(id, vals) {
 
     }) # end of renderReactable // sdTable
 
-    observe({
-      vals$sd$tbl <- NULL
-    }) %>% # end of observe,
-      bindEvent(input$sdTable_clear)
+    # observe({
+    #   vals$sd$tbl <- NULL
+    # }) %>% # end of observe,
+    #   bindEvent(input$sdTable_clear)
 
     # BLOCKS --------------------------------------------------------------
 
@@ -2574,7 +2629,46 @@ mod_tab_ctsd_server <- function(id, vals) {
         vals = vals, type = "dist", name = "distErr_new")
 
     }) # end of observe
-
+    
+    # HELP TOUR & MODALS --------------------------------------------------
+    ## Help modal (biases): -----------------------------------------------
+    
+    observe({
+      
+      shiny::showModal(
+        shiny::modalDialog(
+          title = h4(span("Speed & distance", class = "cl-sea"),
+                     "estimation:"),
+          
+          fluidRow(
+            style = paste("margin-right: 20px;",
+                          "margin-left: 20px;"),
+            
+            p("As straight-line displacements (SLDs) have known",
+              "limitations, here we use the",
+             span("Continuous-time Speed and Distance (CTSD)",
+                   class = "cl-sea"), "estimation method.",
+             "CTSD provides accurate, scale-insensitive estimates",
+             "of both speed and distance with reliable confidence",
+             "intervals."),
+            
+            h4(style = "margin-top: 30px;", "For more information:"),
+            
+            p(style = "font-family: var(--monosans);",
+              "- Noonan, M. J., Fleming, C. H., Akre, T. S.,",
+              "Drescher-Lehman, J., Gurarie, E., Harrison, A. L.,",
+              "Kays, R. & Calabrese, J. M. (2019). Scale-insensitive",
+              "estimation of speed and distance traveled from animal",
+              "tracking data. Movement Ecology, 7(1), 1-15.")
+            
+          ), # end of fluidRow
+          
+          footer = modalButton("Dismiss"),
+          size = "m")) # end of modal
+      
+    }) %>% # observe event, bound to:
+      bindEvent(input$sdHelp_method)
+    
     # MISC ----------------------------------------------------------------
 
     observe({

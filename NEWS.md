@@ -1,3 +1,24 @@
+# movedesign 0.2.0
+
+-   Second release of movedesign.
+
+## New features
+
+-   Now supports running multiple simulations within the same workflow.
+-   Expected errors will update to show the mean (and CIs if applicable) for multiple simulations.
+-   Can switch plots for each simulation (both for HR and trajectories).
+
+## Minor improvements
+
+-   Updated the tutorial.
+-   Updated installation vignette and documentation.
+
+## Bug fixes
+
+-   Fixed tables and blocks for multiple simulations.
+-   Added internal validation steps to stop invalid sampling parameters from crashing the app.
+
+
 # movedesign 0.1.1
 
 ## New features
@@ -20,6 +41,7 @@
 -   `extract_pars()` now works with all current movement models.
 -   `guess_time()` adjusted for short runs.
 -   `simulate_gps()` should now run properly when dur_unit is changed, and when dur is set to higher values.
+
 
 # movedesign 0.1.0
 

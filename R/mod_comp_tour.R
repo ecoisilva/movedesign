@@ -561,27 +561,25 @@ mod_comp_tour_server <- function(id, vals) {
           p(),
           fontawesome::fa(name = "radiation", fill = "#bdbdbd"),
           wrap_none(
-            span("Expected error", class = "cl-dgr-l"),
-            ", which is the ", span("relative error (in %) ",
-                                    class = "cl-dgr-l"),
-            "of the point estimate (and of the 95% CIs; ",
+            span("Relative error", class = "cl-dgr-l"),
+            ", which, for a single simulation", 
+            "is the ", span("error (in %)", class = "cl-dgr-l"),
+            " of the point estimate (and of the 95% CIs; ",
             "once again, low", HTML("&#x2014"),
             "high) in relation to the expected value (truth) ",
             "derived from the distribution.")
         )))
-
       
       element <- c(element, "#content_hr-areas")
       intro <- c(
         intro,
         HTML(paste(
-          "Similarly to the plot, you want the",
-          span("expected error", class = "cl-dgr"),
-          "to be low, and the CIs to 'hug' the point estimate",
+          "Similarly to the plot, you want the error to be",
+          wrap_none(span("low", class = "cl-sea-l"), end = ","),
+          "and the CIs to 'hug' the point estimate",
           "as much as possible. If not, the point estimate is highly",
           "uncertain."
         )))
-     
 
       element <- c(element, paste0(tab5, "hrBox_sizes"))
       intro <- c(
@@ -640,7 +638,8 @@ mod_comp_tour_server <- function(id, vals) {
                "'Run estimation' button to estimate speed & distance.")
         )))
 
-      element <- c(element, paste0(tab6, "sdPlot_path"))
+      # element <- c(element, paste0(tab6, "sdPlot_path"))
+      element <- c(element, "#sd_outputs")
       intro <- c(
         intro,
         HTML(paste(
@@ -657,7 +656,7 @@ mod_comp_tour_server <- function(id, vals) {
           "estimate and CIs, followed by the",
           fontawesome::fa(name = "radiation", fill = "#bdbdbd"),
           wrap_none(
-            span("Expected error", style = "color: #bdbdbd;"), ","),
+            span("Relative error", style = "color: #bdbdbd;"), ","),
           "for the current sampling design."
         )))
       
@@ -752,9 +751,7 @@ mod_comp_tour_server <- function(id, vals) {
         )))
       
       # element <- c(element, paste0(tab7, "repPlot_precision"))
-      # element <- c(element, "#content-report")
-      
-      element <- c(element, paste0(tab7, "repPlot_hr"))
+      element <- c(element, "#section-two_questions")
       intro <- c(
         intro,
         HTML(paste(
@@ -770,7 +767,7 @@ mod_comp_tour_server <- function(id, vals) {
           "range area up to 20-40%)."
         )))
       
-      element <- c(element, paste0(tab7, "repPlot_sd"))
+      element <- c(element, "#section-two_questions")
       intro <- c(
         intro,
         HTML(paste(

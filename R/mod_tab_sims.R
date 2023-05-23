@@ -378,15 +378,15 @@ mod_tab_sims_ui <- function(id) {
             solidHeader = FALSE,
             
             div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
-                
-                p(style = "text-align: justify;",
+                p(style = paste("text-align: justify;",
+                                "margin-top: 15px;"),
+                  
                   "This information will be added to the",
                   icon("box-archive", class = "cl-mdn"),
                   span("Report", class = "cl-mdn"), "tab,",
                   "so it can be reviewed at any point.",
-                  span("Note:", class = "cl-dgr"),
-                  "only the last simulation will be used",
-                  "for further analyses.")
+                  "Note that only the last set of parameters",
+                  "will be used for further analyses.")
                 
             ), # end of div (left)
             
@@ -394,14 +394,17 @@ mod_tab_sims_ui <- function(id) {
                 p(style = "padding-top: 5px;"),
                 reactable::reactableOutput(ns("simTable")),
                 
-                br(),
-                helpText(style = "padding: 0px 0px;",
-                         "The", span("movement speed",
-                                     style = "color: #000000;"),
-                         "value returned here",
-                         "assumes a Gaussian stochastic process for",
-                         "a faster computation, but the true value may",
-                         "not necessarily be normally distributed.")
+                br(), span(
+                  class = "help-block", 
+                  fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
+                  span("Note:", class = "help-block-note"), 
+                  
+                  "The", span("movement speed",
+                              style = "color: #000000;"),
+                  "value returned here",
+                  "assumes a Gaussian stochastic process for",
+                  "a faster computation, but the true value may",
+                  "not necessarily be normally distributed.")
                 
             ), # end of div (right)
             
@@ -858,7 +861,7 @@ mod_tab_sims_server <- function(id, vals) {
         ggplot2::geom_point(
           vals$data0, mapping = ggplot2::aes(
             x = x, y = y),
-          col = "grey60", size = 1.2) +
+          col = "grey75", size = 1.2) +
         
         ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(

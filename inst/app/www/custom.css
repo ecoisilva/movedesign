@@ -289,9 +289,7 @@ a {
   font-family: var(--monosans);
   letter-spacing: 0.5px;
   text-align: justify;
-  
-  color: var(--danger);
-  font-weight: bold;
+  color: var(--danger) !important;
 }
 
 label,

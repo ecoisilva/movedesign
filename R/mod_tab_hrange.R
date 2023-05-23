@@ -242,15 +242,19 @@ mod_tab_hrange_ui <- function(id) {
                     ggiraph::girafeOutput(
                       outputId = ns("hrPlot"),
                       width = "100%", height = "100%")
-                ),
-
+                    
+                ), # end of div()
+                
                 div(id = "content_hr-areas",
                     class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
                     p(class = "fluid-padding"),
                     
                     mod_blocks_ui(ns("hrBlock_est")),
-                    mod_blocks_ui(ns("hrBlock_err")))
-
+                    mod_blocks_ui(ns("hrBlock_err")),
+                    uiOutput(ns("hrUI_errLegend"))
+                    
+                ) # end of div()
+                
               ), # end of panels (1 out of 2)
 
               tabPanel(
@@ -305,8 +309,10 @@ mod_tab_hrange_ui <- function(id) {
                     uiOutput(ns("hrText_new")),
                     
                     mod_blocks_ui(ns("hrBlock_est_new")),
-                    mod_blocks_ui(ns("hrBlock_err_new")))
-
+                    mod_blocks_ui(ns("hrBlock_err_new"))
+                    
+                ) # end of div()
+                
               ) # end of panels (2 out of 2)
             ), # end of tabs
 
@@ -415,6 +421,7 @@ mod_tab_hrange_server <- function(id, vals) {
         
       } else {
         shinyjs::show(id = "hr_nsim")
+        
         shinyWidgets::updateSliderTextInput(
           session = session,
           inputId = "hr_nsim",
@@ -580,6 +587,53 @@ mod_tab_hrange_server <- function(id, vals) {
     }) %>% # end of observe,
       bindEvent(input$hr_truth_new)
     
+    ## Add note if CIs cannot be calculated: ------------------------------
+    
+    output$hrUI_errLegend <- renderUI({
+      req(vals$hrErrList,
+          vals$simList)
+      
+      ci <- suppressWarnings(bayestestR::ci(
+        vals$hrErrList$est, ci = .95, method = "HDI"))
+      lci <- ci$CI_low
+      uci <- ci$CI_high
+      
+      ui <- ""
+      if (length(vals$simList) > 1) {
+        if (is.na(lci) || is.na(uci))
+          ui <- tagList(
+            p(style = "margin-top: 35px;"),
+            span(class = "help-block",
+                 style = "text-align: center !important;",
+                 
+                 fontawesome::fa("circle-exclamation", fill = pal$dgr),
+                 span("Note:", class = "help-block-note"), 
+                 "Credible intervals (CIs) were too large or the number of",
+                 "simulations insufficient, returning ",
+                 wrap_none(span("NAs", class = "cl-dgr"), "."),
+                 "Run more simulations to obtain valid CIs."))
+      } else {
+        ui <- tagList(
+          p(style = "margin-top: 22px;"),
+          span(class = "help-block",
+               style = "text-align: center !important;",
+               
+               fontawesome::fa("circle-exclamation", fill = pal$dgr),
+               span("Note:", class = "help-block-note"), 
+               "This relative error is based on a single simulation,",
+               "and the error range is calculated from the 95%",
+               "confidence intervals [low\u2014high CI].",
+               "To obtain valid credible intervals, run more",
+               "simulations in the",
+               fontawesome::fa("stopwatch", fill = pal$sea),
+               span("Sampling design", class = "cl-sea"), "tab."))
+      }
+      
+      return(ui)
+      
+    }) %>% # end of renderUI, "hrUI_errLegend"
+      bindEvent(vals$hrErrList)
+    
     # ALERTS --------------------------------------------------------------
     
     ## If no initial data uploaded, selected or simulated:
@@ -592,11 +646,10 @@ mod_tab_hrange_server <- function(id, vals) {
           type = "error",
           title = "No data found",
           text = tagList(span(
-            "Please", wrap_none(
-              span("upload", class = "cl-dgr"), end = ","),
-            span("select", class = "cl-dgr"), "or",
-            span("simulate", class = "cl-dgr"), "data first",
-            "in the", icon("paw", class = "cl-mdn"),
+            "Please upload, select or simulate a",
+            span("movement dataset", class = "cl-dgr"),
+            "first in the",
+            icon("paw", class = "cl-mdn"),
             span("Species", class = "cl-mdn"), "tabs."
           )),
           html = TRUE,
@@ -673,6 +726,7 @@ mod_tab_hrange_server <- function(id, vals) {
         
         # Check if ids match:
         
+        req(vals$tmpid, vals$id) # to check
         if (vals$tmpid != vals$id)
           shinyalert::shinyalert(
             title = "Oops!",
@@ -772,7 +826,7 @@ mod_tab_hrange_server <- function(id, vals) {
                          msg_warning("in progress"), "."),
         detail = "Please wait for model selection to finish:")
       
-      oading_modal("Selecting movement model", exp_time = expt$range)
+      loading_modal("Selecting movement model", exp_time = expt)
       
       start_fit <- Sys.time()
       fit1 <- fitting_model()
@@ -986,12 +1040,21 @@ mod_tab_hrange_server <- function(id, vals) {
     estimating_hr <- reactive({
       
       hr <- list()
+      
       if (length(vals$simList) == 1) {
         hr[[1]] <- ctmm::akde(data = vals$data1, CTMM = vals$fit1)
+        vals$akdeList[[1]] <- hr[[1]]
         
       } else {
         
-        for (i in 1:length(vals$simList)) {
+        if (length(vals$akdeList) == 0) {
+          seq_for_est <- 1:length(vals$simList)
+        } else { 
+          n_sims <- length(vals$simList) - length(vals$akdeList)
+          seq_for_est <- (length(vals$akdeList) + 1):length(vals$simList)
+        }
+        
+        for (i in seq_for_est) {
           start_hr <- Sys.time()
           
           msg_log(
@@ -1002,6 +1065,7 @@ mod_tab_hrange_server <- function(id, vals) {
           
           hr[[i]] <- ctmm::akde(data = vals$simList[[i]],
                                 CTMM = vals$fitList[[i]])
+          vals$akdeList[[length(vals$akdeList) + 1]] <- hr[[i]]
           
           msg_log(
             style = 'warning',
@@ -1036,7 +1100,7 @@ mod_tab_hrange_server <- function(id, vals) {
       msg_log(
         style = "warning",
         message = paste0("Estimating ",
-                         msg_warning("home range"), ":"))
+                         msg_warning("home range"), "..."))
       
       loading_modal("Estimating home range")
       
@@ -1055,8 +1119,8 @@ mod_tab_hrange_server <- function(id, vals) {
       
       for (i in 1:length(vals$simList)) {
         
-        tmpsum <- summary(akde[[i]])
-        tmpnms <- rownames(summary(akde[[i]])$CI)
+        tmpsum <- summary(vals$akdeList[[i]])
+        tmpnms <- rownames(summary(vals$akdeList[[i]])$CI)
         tmpunit <- extract_units(tmpnms[grep('^area', tmpnms)])
         
         out_est <- c( 
@@ -1082,13 +1146,12 @@ mod_tab_hrange_server <- function(id, vals) {
       }
       
       # Last simulation run:
-      vals$akde <- akde[[length(vals$simList)]]
+      vals$akde <- akde[[length(akde)]]
       vals$hrErr <- data.frame(value = out_err)
       vals$hrEst <- data.frame(value = out_est, "unit" = tmpunit)
       
       # All simulations:
       vals$is_analyses <- TRUE
-      vals$akdeList <- akde
       vals$hrEstList <- out_estList
       vals$hrErrList <- out_errList
       
@@ -1107,8 +1170,6 @@ mod_tab_hrange_server <- function(id, vals) {
       time_hr <- difftime(Sys.time(), start, units = "sec")
       vals$hr$time[1] <- vals$hr$time[1] + time_hr[[1]]
       
-      shinyjs::show(id = "hrBox_misc")
-      
       msg_log(
         style = "success",
         message = paste0("Estimation ",
@@ -1116,6 +1177,17 @@ mod_tab_hrange_server <- function(id, vals) {
         run_time = vals$time_hr)
       
       vals$hr_completed <- TRUE
+      
+      # UI elements:
+      
+      shinyjs::show(id = "hrBox_misc")
+      tabs <- paste0("hrTabs_", tabnames)
+      panels <- paste0("hrPanel_", tabnames)
+      for (i in 1:length(tabnames))
+        updateTabsetPanel(
+          session,
+          inputId = paste0(tabs[i]),
+          selected = paste0("tab_hrange_1-", panels[i]))
       
       shinybusy::remove_modal_spinner()
       
@@ -1283,8 +1355,8 @@ mod_tab_hrange_server <- function(id, vals) {
       expt <- estimating_time_new()
       shinybusy::remove_modal_spinner()
       
-      loading_modal("Selecting new movement model",
-                    exp_time = expt$range)
+      loading_modal("Selecting new movement model", exp_time = expt)
+      
       vals$hr$fit <- fitting_model_new()
       time_sd <- difftime(Sys.time(), start_fit, units = "sec")
       
@@ -1369,7 +1441,9 @@ mod_tab_hrange_server <- function(id, vals) {
     
     output$hrPlot <- ggiraph::renderGirafe({
       req(vals$is_analyses, 
-          vals$simList, vals$akdeList, vals$hr_nsim)
+          vals$simList, vals$hr_nsim,
+          length(vals$akdeList) > 0)
+      req(length(vals$simList) == length(vals$akdeList))
       
       if (!is.null(input$hr_truth)) {
         show_truth <- ifelse(input$hr_truth, TRUE, FALSE)
@@ -1381,6 +1455,7 @@ mod_tab_hrange_server <- function(id, vals) {
         ext <- ctmm::extent(list(vals$simList[[vals$hr_nsim]],
                                  vals$akdeList[[vals$hr_nsim]]))
       } else {
+        req(vals$hr$data, vals$akde_new)
         ext <- ctmm::extent(list(vals$simList[[vals$hr_nsim]],
                                  vals$akdeList[[vals$hr_nsim]],
                                  vals$hr$data,
@@ -1459,7 +1534,7 @@ mod_tab_hrange_server <- function(id, vals) {
     hrRow <- function(seed,  
                       data, fit, 
                       area, error) {
-
+      
       out <- data.frame(
         seed = seed,
         data = "Initial",
@@ -1491,13 +1566,13 @@ mod_tab_hrange_server <- function(id, vals) {
     } # end of function, hrRow()
 
     observe({
-      req(vals$data1, vals$dev$N1, vals$hrErr)
+      req(vals$data1, vals$dev$N1, vals$hrErrList, input$add_hr_table)
 
       shinyjs::show(id = "hrBox_summary")
       vals$hr$tbl <- dplyr::distinct(vals$hr$tbl)
       
     }) %>% # end of observe
-      bindEvent(input$add_hr_table)
+      bindEvent(list(input$add_hr_table, vals$hrErrList))
 
     ## New sampling design: -----------------------------------------------
 
@@ -1544,7 +1619,7 @@ mod_tab_hrange_server <- function(id, vals) {
       vals$report_hr_yn <- TRUE
       
     }) %>% # end of observe
-      bindEvent(input$add_hr_table)
+      bindEvent(list(input$add_hr_table, vals$simList))
 
     ## Rendering output table: --------------------------------------------
 
@@ -1562,8 +1637,8 @@ mod_tab_hrange_server <- function(id, vals) {
         N1 = "N (area)",
         area = "Area",
         area_err = "Error",
-        area_err_min = "Error (min)",
-        area_err_max = "Error (max)")
+        area_err_min = "Error (95% LCI)",
+        area_err_max = "Error (95% UCI)")
 
       reactable::reactable(
         data = dt_hr,
@@ -1625,7 +1700,8 @@ mod_tab_hrange_server <- function(id, vals) {
                                           digits = 1))
         ))
 
-    }) # end of renderReactable, "hrTable"
+    }) %>% # end of renderReactable, "hrTable"
+      bindEvent(list(input$add_hr_table, vals$akdeList))
 
     # BLOCKS --------------------------------------------------------------
 
@@ -1717,7 +1793,7 @@ mod_tab_hrange_server <- function(id, vals) {
     }) # end of observe
 
     ## Outputs: -----------------------------------------------------------
-    ### Home range area: --------------------------------------------------
+    ### Home range area and error: ----------------------------------------
 
     observe({
       req(vals$akde, vals$hrEst, vals$hrErr, vals$simList)
@@ -1810,8 +1886,13 @@ mod_tab_hrange_server <- function(id, vals) {
 
       shiny::showModal(
         shiny::modalDialog(
-          title = h3("Home range:"),
-
+          title = h4(span("Home range", class = "cl-sea"),
+                     "estimation:"),
+          
+          fluidRow(
+            style = paste("margin-right: 20px;",
+                          "margin-left: 20px;"),
+            
           p("As animal movement",
             "is inherently", span("autocorrelated", class = "cl-sea-d"),
             "(locations are similar as a function of space and",
@@ -1820,6 +1901,23 @@ mod_tab_hrange_server <- function(id, vals) {
                  class = "cl-sea"),
             "are the most appropriate method for",
             span("home range", class = "cl-sea-d"), "estimation."),
+          
+          h4(style = "margin-top: 30px;", "For more information:"),
+          
+          p(style = "font-family: var(--monosans);",
+            "- Silva, I., Fleming, C. H., Noonan, M. J., Alston, J.,",
+            "Folta, C., Fagan, W. F., & Calabrese, J. M. (2022).",
+            "Autocorrelation‐informed home range estimation: A review",
+            "and practical guide. Methods in Ecology and Evolution,",
+            "13(3), 534-544."),
+          
+          p(style = "font-family: var(--monosans);",
+            "- Calabrese, J. M., Fleming, C. H., & Gurarie, E. (2016).",
+            "ctmm: An R package for analyzing animal relocation data",
+            "as a continuous‐time stochastic process. Methods in Ecology",
+            "and Evolution, 7(9), 1124-1132.")
+          
+          ), # end of fluidRow
 
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
@@ -1828,31 +1926,63 @@ mod_tab_hrange_server <- function(id, vals) {
       bindEvent(input$hrHelp_method)
 
     observe({
+      
+      out_sims <- ""
+      
       shiny::showModal(
         shiny::modalDialog(
-          title = h3("Explaining biases:"),
-
+          title = h4(
+            "How much", span("uncertainty", class = "cl-sea"),
+            "is associated with our estimate(s)?"),
+          
+          fluidRow(
+            style = paste("margin-right: 20px;",
+                          "margin-left: 20px;"),
+            
+          p("Estimating an home range with AKDEs",
+            "allows for the calculation of the 95% confidence",
+            "intervals on the area estimate.",
+            "Ideally, we want narrow confidence intervals."),
+          
+          p("However, the quality of these estimates and CIs",
+            "depend on the movement model chosen,",
+            "emphasizing the significance of visual analysis",
+            "and evaluation of the effective sample sizes."),
+          
+          p("Here, for a single simulation, we calculate the relative",
+            "error of both the",
+            span("point estimate", class = "cl-sea-d"), "and",
+            span("95% confidence intervals", class = "cl-sea-d"),
+            "in relation to the truth:"),
+          
           withMathJax(
-            paste0("$$\\small{\\text{Relative error (%)}",
+            paste0("$$\\small{\\text{Error (%)}",
                    " = \\frac{\\text{estimate}-\\text{truth}}",
                    "{\\text{truth}}\\times 100}$$")
           ),
-
-          p(class = "cl-mdn",
-            style = "text-align: center;",
-            "How much uncertainty is associated",
-            "with an estimate?"),
-
-          p("The", span("relative error (%)", class = "cl-dgr"),
-            "of an", span("home range estimate", class = "cl-sea-d"),
-            "decreases as",
+          
+          if (!is.null(vals$simList)) {
+            if (length(vals$simList) > 1) {
+              p("For multiple simulations, we calculate the",
+                span("mean", class = "cl-sea-d"), "and the",
+                span("95% credible intervals", class = "cl-sea-d"),
+                "of all point estimates.",
+                "Credible intervals allow for an easier interpretation:",
+                "for instance, the relative error of any simulation",
+                "has a 95% probability of falling within the reported",
+                "range (shown within brackets below the point estimate).")
+            }  
+          },
+          
+          p("This expected error decreases as",
             span("sampling duration", class = "cl-sea"),
             "increases, and is ultimately dependent on the",
             span("position autocorrelation",
                  wrap_none("(\u03C4", tags$sub("p"), ")"),
-                 "timescale.", class = "cl-sea-d"),
-          ),
-
+                 "timescale.", class = "cl-sea-d"))
+          
+          ), # end of fluidRow
+          
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
 

@@ -213,11 +213,11 @@ mod_tab_design_ui <- function(id) {
           ### Number of simulations: --------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Simulations to run:", class = "ttl-box"),
+            title = span("Simulations to run:", class = "ttl-box_solid"),
             id = ns("devBox_nsims"),
-            status = "info",
+            status = "primary",
             width = NULL,
-            solidHeader = FALSE,
+            solidHeader = TRUE,
             collapsible = FALSE,
             
             column(
@@ -231,15 +231,16 @@ mod_tab_design_ui <- function(id) {
                   maximumValue = 100,
                   value = 1,
                   decimalPlaces = 0,
-                  wheelStep = 1) #,
-                
-                # p(HTML("&nbsp;"), "Total number of simulations:") %>%
-                #   tagAppendAttributes(class = 'label_split'),
-                # fluidRow(
-                #   column(width = 12,
-                #          verbatimTextOutput(outputId = ns("nsims_total"))
-                #   )), p(style = "padding: 0px;")
-                
+                  wheelStep = 1),
+
+                p(style = "text-align: right !important;",
+                  HTML("&nbsp;"), "No. simulations (total):") %>%
+                  tagAppendAttributes(class = 'label_split'),
+                fluidRow(
+                  column(width = 12,
+                         verbatimTextOutput(outputId = ns("nsims_total"))
+                  )), p(style = "padding: 0px;")
+
               ) # end of fluidRow
             ), # end of column
             
@@ -249,9 +250,9 @@ mod_tab_design_ui <- function(id) {
               
               shiny::actionButton(
                 inputId = ns("devButton_repeat"),
-                label = "Repeat",
-                icon = icon("repeat"),
-                class = "btn-info",
+                icon = icon("bolt"),
+                label = "Run",
+                class = "btn-primary",
                 width = "110px")) # end of footer
             
           ), # end of box // devBox_nsims
@@ -373,8 +374,8 @@ mod_tab_design_ui <- function(id) {
               
               shiny::actionButton(
                 inputId = ns("devButton_save"),
-                label = span("Show", span("table", class = "cl-sea")),
                 icon = icon("bookmark"),
+                label = span("Show", span("table", class = "cl-sea")),
                 width = "110px")) # end of footer
             
           ) # end of box // devBox_sizes
@@ -515,14 +516,8 @@ mod_tab_design_ui <- function(id) {
                 width = NULL,
                 solidHeader = FALSE,
                 
-                reactable::reactableOutput(ns("devTable")) #,
-                # br(),
-                # div(style = "display:inline-block; float:right",
-                #     shiny::actionButton(
-                #       inputId = ns("devTable_clear"),
-                #       label = "Clear table",
-                #       icon =  icon("trash"),
-                #       width = "110px")), br()
+                reactable::reactableOutput(ns("devTable")),
+                uiOutput(ns("devUI_sumLegend"))
                 
               )) # end of box // devBox_summary
           
@@ -572,10 +567,6 @@ mod_tab_design_server <- function(id, vals) {
       n = NULL, N1 = NULL, N2 = NULL,
       tbl = NULL
     )
-    
-    observe({
-      vals$nsims <- input$nsims + 1
-    })
     
     ## Sampling parameters: -----------------------------------------------
     
@@ -688,17 +679,62 @@ mod_tab_design_server <- function(id, vals) {
     ## Sample sizes: ------------------------------------------------------
     
     observe({
-      req(vals$tau_p0, 
-          vals$tau_v0,
+      req(vals$which_question,
+          vals$tau_p0,
           vals$dur,
           vals$dti,
           input$est_type)
       
       n <- NULL
       N1 <- NULL
-      N2 <- NULL
       
       taup <- vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
+      
+      dur <- vals$dur$value %#% vals$dur$unit
+      dti <- vals$dti$value %#% vals$dti$unit
+      
+      t0 <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
+      n <- length(t0)
+      vals$dev$n <- n
+      
+      if (!is.null(input$device_loss)) {
+        req(input$device_loss)
+        n_loss <- round(n * (input$device_loss/100), 0)
+        n <- length(t0) - n_loss
+        vals$lost <- data.frame(perc = input$device_loss,
+                                n = n_loss)
+      }
+      
+      if (input$est_type == 1) {
+        vals$is_fitted <- "No"
+        
+        N1 <- dur / taup
+        N1 <- ifelse(N1 > n, n, N1)
+        
+      } else if (input$est_type == 2) {
+        if (!is.null(vals$fit1)) {
+          req(vals$fit1)
+          vals$is_fitted <- "Yes"
+          vals$dev$n <- nrow(vals$data1)
+          tmpnms <- names(summary(vals$fit1)$DOF)
+          N1 <- summary(vals$fit1)$DOF[grep('area', tmpnms)][[1]]
+        }
+      }
+      
+      vals$dev$N1 <- N1
+      
+    }) # end of observe
+    
+    observe({
+      req(vals$which_question,
+          vals$tau_v0,
+          vals$dur,
+          vals$dti,
+          input$est_type)
+      
+      n <- NULL
+      N2 <- NULL
+      
       tauv <- vals$tau_v0$value[2] %#% vals$tau_v0$unit[2]
       
       dur <- vals$dur$value %#% vals$dur$unit
@@ -719,9 +755,6 @@ mod_tab_design_server <- function(id, vals) {
       
       if (input$est_type == 1) {
         vals$is_fitted <- "No"
-        
-        N1 <- dur / taup
-        N1 <- ifelse(N1 > n, n, N1)
         N2 <- ifelse(dti > tauv,
                      ifelse(dti > 3 * tauv, 0,
                             (n) / (r)^r * (r)),
@@ -733,12 +766,10 @@ mod_tab_design_server <- function(id, vals) {
           vals$is_fitted <- "Yes"
           vals$dev$n <- nrow(vals$data1)
           tmpnms <- names(summary(vals$fit1)$DOF)
-          N1 <- summary(vals$fit1)$DOF[grep('area', tmpnms)][[1]]
           N2 <- summary(vals$fit1)$DOF[grep('speed', tmpnms)][[1]]
         }
       }
       
-      vals$dev$N1 <- N1
       vals$dev$N2 <- N2
       
     }) # end of observe
@@ -779,7 +810,10 @@ mod_tab_design_server <- function(id, vals) {
     observe({
       req(vals$active_tab == 'device')
       shinyjs::hide(id = "devBox_nsims")
-      vals$nsims <- 1
+      
+      shinyjs::enable("devButton_run")
+      shinyjs::disable("devButton_repeat")
+      
     }) %>% bindEvent(device_inputs())
     
     ## Reveal boxes: ------------------------------------------------------
@@ -1290,7 +1324,7 @@ mod_tab_design_server <- function(id, vals) {
             uiOutput(ns("devButton_gps"), inline = TRUE),
             HTML("&nbsp;"),
             shiny::actionButton(
-              inputId = ns("run_sim_new"),
+              inputId = ns("devButton_run"),
               icon =  icon("bolt"),
               label = "Run",
               width = "120px",
@@ -1305,7 +1339,7 @@ mod_tab_design_server <- function(id, vals) {
           #              uiOutput(ns("devButton_gps"), inline = TRUE),
           #              HTML("&nbsp;"),
           #              shiny::actionButton(
-          #                inputId = ns("run_sim_new"),
+          #                inputId = ns("devButton_run"),
           #                icon =  icon("bolt"),
           #                label = "Run",
           #                width = "80px",
@@ -1333,7 +1367,7 @@ mod_tab_design_server <- function(id, vals) {
             uiOutput(ns("devButton_vhf"), inline = TRUE),
             HTML("&nbsp;"),
             shiny::actionButton(
-              inputId = ns("run_sim_new"),
+              inputId = ns("devButton_run"),
               icon =  icon("bolt"),
               label = "Run",
               width = "120px",
@@ -1392,7 +1426,7 @@ mod_tab_design_server <- function(id, vals) {
             req(vals$tau_v0)
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", style = "help-block-note"), 
+              span("Note:", class = "help-block-note"), 
               "The secondary axis (lines) are",
               "the expected effective sample sizes (roughly estimated)",
               "\u2014", span("N[speed]", class = "cl-dgr"), "\u2014",
@@ -1443,12 +1477,40 @@ mod_tab_design_server <- function(id, vals) {
     })
     
     ## Render number of simulations: --------------------------------------
+
+    output$nsims_total <- renderText({
+      req(vals$simList)
+      # return(paste("Total no.:", length(vals$simList)))
+      return(length(vals$simList))
+      
+    }) # end of renderText, "nsims_total"
     
-    # output$nsims_total <- renderText({
-    #   req(vals$simList)
-    #   return(paste("Total no.:", length(vals$simList)))
-    #   
-    # }) # end of renderText, "nsims_total"
+    ## Add note to summary table: -----------------------------------------
+    
+    output$devUI_sumLegend <- renderUI({
+      req(nrow(vals$dev$tbl) > 1)
+      
+      n_diff <- vals$dev$tbl %>% 
+        dplyr::select(.data$dur, .data$dti) %>% 
+        dplyr::distinct() %>% nrow()
+      
+      ui <- ""
+      if (n_diff > 1) {
+        ui <- tagList(
+          p(style = "margin-top: 22px;"),
+          span(class = "help-block",
+               
+               fontawesome::fa("circle-exclamation", fill = pal$dgr),
+               span("Note:", class = "help-block-note"), 
+               "If multiple combinations of sampling parameters were",
+               "tested, only the last set selected will be used for",
+               "further analyses."))
+      }
+      
+      return(ui)
+      
+    }) %>% # end of renderUI, "devUI_sumLegend"
+      bindEvent(vals$dev$tbl)
     
     # ALERTS --------------------------------------------------------------
     
@@ -1745,7 +1807,7 @@ mod_tab_design_server <- function(id, vals) {
           size = "xs")
       
     }, priority = 0) %>% # end of observe,
-      bindEvent(input$run_sim_new)
+      bindEvent(input$devButton_run)
     
     # SIMULATIONS ---------------------------------------------------------
     ## Simulating GPS battery life: ---------------------------------------
@@ -1860,14 +1922,16 @@ mod_tab_design_server <- function(id, vals) {
     ### Run simulation (nsims = 1): ---------------------------------------
     
     observe({
-      req(vals$data0,
+      req(vals$which_question,
+          vals$data0,
           vals$fit0,
-          vals$tau_p0,
-          vals$tau_v0,
           vals$sigma0,
           vals$dur, 
           vals$dti,
           vals$dev$is_valid)
+      
+      if ("Home range" %in% vals$which_question) req(vals$tau_p0)
+      if ("Speed & distance" %in% vals$which_question) req(vals$tau_v0)
       
       shinyFeedback::showToast(
         type = "info",
@@ -1895,6 +1959,7 @@ mod_tab_design_server <- function(id, vals) {
       start <- Sys.time()
       data1 <- simulating_data()
       
+      vals$nsims <- 1
       vals$dev$n <- nrow(data1)
       vals$needs_fit <- TRUE
       vals$is_analyses <- NULL
@@ -1979,7 +2044,7 @@ mod_tab_design_server <- function(id, vals) {
       # } # end of if (), est_type
       
     }, priority = 1) %>% # end of observe,
-      bindEvent(input$run_sim_new)
+      bindEvent(input$devButton_run)
     
     observe({
       req(vals$dev$confirm_time)
@@ -2047,6 +2112,11 @@ mod_tab_design_server <- function(id, vals) {
         vals$fitList <- list(vals$fit1)
         vals$report_dev_yn <- TRUE
         
+        # (Re)start for every new set of sampling parameters:
+        vals$akdeList <- list()
+        vals$ctsdList <- list()
+        
+        shinyjs::disable("devButton_run")
         shinyjs::enable("devButton_save")
         shinyjs::show(id = "devBox_nsims")
         
@@ -2093,7 +2163,9 @@ mod_tab_design_server <- function(id, vals) {
           vals$dur, 
           vals$dti,
           vals$dev$is_valid,
-          input$nsims > 0)
+          input$nsims > 0,
+          vals$nsims >= 1,
+          vals$simList)
       
       shinybusy::show_modal_spinner(
         spin = "fading-circle",
@@ -2106,12 +2178,14 @@ mod_tab_design_server <- function(id, vals) {
         ))
       
       start <- Sys.time()
+      n_sims <- length(vals$simList) + input$nsims
       for (i in 1:input$nsims) {
         
         shinyFeedback::showToast(
           type = "info",
-          message = paste0("Simulating data ", i + 1, 
-                           " out of ", input$nsims + 1),
+          message = paste0(
+            "Simulating data ", length(vals$simList) + 1, 
+            " out of ", n_sims),
           .options = list(
             progressBar = FALSE,
             closeButton = TRUE,
@@ -2121,12 +2195,17 @@ mod_tab_design_server <- function(id, vals) {
         
         msg_log(
           style = "warning",
-          message = paste0("Sim no. ", i + 1, " ",
+          message = paste0("Sim no. ", length(vals$simList) + 1, " ",
                            msg_warning("in progress"), "..."))
         
         ## (Re)generate seed:
         set.seed(NULL)
-        vals$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
+        tmp <- round(stats::runif(1, min = 1, max = 10000), 0)
+        while (tmp %in% vals$seedList) {
+          tmp <- round(stats::runif(1, min = 1, max = 10000), 0)
+        }
+        vals$seed0 <- tmp
+        
         data1 <- simulating_data()
         vals$fullList[[length(vals$simList) + 1]] <- data1
         vals$seedList[[length(vals$seedList) + 1]] <- vals$seed0
@@ -2158,6 +2237,8 @@ mod_tab_design_server <- function(id, vals) {
         
       } # end of for loop
       
+      vals$nsims <- length(vals$simList)
+      
       vals$data1 <- data1
       vals$dev$n <- nrow(data1)
       vals$needs_fit <- TRUE
@@ -2177,10 +2258,11 @@ mod_tab_design_server <- function(id, vals) {
                     n = vals$nsims)
       
       start <- Sys.time()
+      no_sims <- length(vals$simList) - input$nsims
       for (i in 1:input$nsims) {
         msg_log(
           style = "warning",
-          message = paste0("Model fit for sim no. ", i + 1, " ",
+          message = paste0("Model fit for sim no. ", no_sims + 1, " ",
                            msg_warning("in progress"), ","),
           detail = "Please wait for model selection to finish:")
         
@@ -2198,11 +2280,11 @@ mod_tab_design_server <- function(id, vals) {
         vals$fit1 <- fit1
         
         vals$fitList[[length(vals$fitList) + 1]] <- vals$fit1
-        newrow <- devRow(seed = vals$seedList[[i + 1]],
+        newrow <- devRow(seed = vals$seedList[[i + no_sims]],
                          device = input$device_type,
                          dur = vals$dur, dti = vals$dti,
-                         data = vals$simList[[i + 1]], 
-                         fit = vals$fitList[[i + 1]])
+                         data = vals$simList[[i + no_sims]], 
+                         fit = vals$fitList[[i + no_sims]])
         vals$dev$tbl <<- rbind(vals$dev$tbl, newrow)
         
         msg_log(
@@ -2243,6 +2325,7 @@ mod_tab_design_server <- function(id, vals) {
     reg_selected <- reactive({
       if (input$device_type == "GPS") return(input$devPlot_gps_selected)
       if (input$device_type == "VHF") return(input$devPlot_vhf_selected)
+      vals$dev$is_valid <- FALSE
     })
     
     preparing_gps <- reactive({
@@ -2363,8 +2446,7 @@ mod_tab_design_server <- function(id, vals) {
       req(vals$active_tab == 'device',
           input$gps_dur,
           input$gps_dur_unit,
-          input$gps_dti_max,
-          input$device_log)
+          input$gps_dti_max)
       
       dti_scale <- dti_yn <- NULL
       device <- preparing_gps()
@@ -2808,7 +2890,6 @@ mod_tab_design_server <- function(id, vals) {
       out$n <- nrow(data)
       out$N1 <- extract_dof(fit, name = "area")
       out$N2 <- extract_dof(fit, name = "speed")
-      # out$fit <- vals$is_fitted
       
       return(out)
     }
@@ -2893,7 +2974,7 @@ mod_tab_design_server <- function(id, vals) {
     ## Additional information: --------------------------------------------
     
     # Export values for tests:
-    
+
     shiny::exportTestValues(
       data1 = simulating_data()
     )

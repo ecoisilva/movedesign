@@ -52,6 +52,7 @@ mod_blocks_server <- function(id,
              "species" = {
                
                out <- vals[[name]]
+               if (!is.numeric(out["est", 1])) return(NULL)
                
                if (type == "tau" || type == "speed") {
                  est <- fix_unit(out["est", 1], out$unit[1])
