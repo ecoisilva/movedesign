@@ -24,7 +24,7 @@ rlang::on_load(rlang::local_use_cli(inline = TRUE))
 
 # Global variables:
 utils::globalVariables(
-  c(".data", "group",
+  c(".data", "group", "seed",
     
     "x", "y",
     "long", "lat",

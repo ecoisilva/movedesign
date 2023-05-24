@@ -1907,14 +1907,14 @@ mod_tab_hrange_server <- function(id, vals) {
           p(style = "font-family: var(--monosans);",
             "- Silva, I., Fleming, C. H., Noonan, M. J., Alston, J.,",
             "Folta, C., Fagan, W. F., & Calabrese, J. M. (2022).",
-            "Autocorrelation‐informed home range estimation: A review",
+            "Autocorrelation-informed home range estimation: A review",
             "and practical guide. Methods in Ecology and Evolution,",
             "13(3), 534-544."),
           
           p(style = "font-family: var(--monosans);",
             "- Calabrese, J. M., Fleming, C. H., & Gurarie, E. (2016).",
             "ctmm: An R package for analyzing animal relocation data",
-            "as a continuous‐time stochastic process. Methods in Ecology",
+            "as a continuous-time stochastic process. Methods in Ecology",
             "and Evolution, 7(9), 1124-1132.")
           
           ), # end of fluidRow
