@@ -1453,13 +1453,15 @@ mod_tab_hrange_server <- function(id, vals) {
       
       if (is.null(vals$hr$data)) {
         ext <- ctmm::extent(list(vals$simList[[vals$hr_nsim]],
-                                 vals$akdeList[[vals$hr_nsim]]))
+                                 vals$akdeList[[vals$hr_nsim]],
+                                 truth))
       } else {
         req(vals$hr$data, vals$akde_new)
         ext <- ctmm::extent(list(vals$simList[[vals$hr_nsim]],
                                  vals$akdeList[[vals$hr_nsim]],
                                  vals$hr$data,
-                                 vals$akde_new))
+                                 vals$akde_new,
+                                 truth))
       }
       
       ud <- plotting_hr(

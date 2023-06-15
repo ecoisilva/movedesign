@@ -540,9 +540,8 @@ mod_tab_report_server <- function(id, vals) {
     # REPORT --------------------------------------------------------------
     
     observe({
-      ### reaching variable name limit, need to simplify
       req(vals$which_question,
-          vals$data_type, 
+          vals$data_type,
           vals$is_analyses,
           vals$simList)
       
@@ -563,31 +562,53 @@ mod_tab_report_server <- function(id, vals) {
         message = paste0("Building ",
                          msg_warning("report"), "..."),
         detail = paste("Current question(s):", questions))
+
+    }) %>% # end of observe,
+      bindEvent(input$build_report)
+    
+    observe({
+      ### reaching variable name limit, need to simplify
+      req(vals$which_question,
+          vals$data_type,
+          vals$is_analyses,
+          vals$simList)
+
+      if ("Home range" %in% vals$which_question) {
+        req(vals$hr_completed)
+      }
+
+      if ("Speed & distance" %in% vals$which_question) {
+        req(vals$sd_completed)
+        add_to <- ifelse(length(vals$which_question) > 1, ", ", "")
+      }
       
       boxnames <- c("analyses", "tables")
       for (i in 1:length(boxnames)) {
-        shinyjs::show(id = paste0("repBox_", boxnames[i])) 
+        shinyjs::show(id = paste0("repBox_", boxnames[i]))
       }
-      
+
       # Characteristic timescales:
-      
+
       tau_p <- vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
       tau_v <- ifelse(is.null(vals$tau_v0), 0,
                       vals$tau_v0$value[2] %#% vals$tau_v0$unit[2])
-      
+
       # Ideal sampling design:
-      
+
       ideal_dur <- fix_unit(tau_p * 30, "seconds", convert = TRUE)
       dur_unit <- ideal_dur$unit
       
-      ideal_dti <- ifelse(is.null(vals$tau_v0), Inf,
-        fix_unit(vals$tau_v0$value[2],
-                 vals$tau_v0$unit[2], convert = TRUE))
-      
+      if (is.null(vals$tau_v0)) {
+        ideal_dti <- data.frame(value = Inf, unit = "days")
+      } else {
+        ideal_dti <- fix_unit(vals$tau_v0$value[2],
+                              vals$tau_v0$unit[2], convert = TRUE)
+      }
+
       dti_unit <- ifelse(is.null(vals$tau_v0), "days", ideal_dti$unit)
-      
+
       # Current sampling design:
-      
+
       dur <- dur_unit %#% vals$dur$value %#% vals$dur$unit
       dur <- fix_unit(dur, dur_unit)
       dti <- dti_unit %#% vals$dti$value %#% vals$dti$unit
@@ -595,27 +616,27 @@ mod_tab_report_server <- function(id, vals) {
       
       vals$hr_col <- vals$ctsd_col <- data.frame(
         hex = pal$sea, css = "var(--sea)")
-      
+
       if (dur$value <= ideal_dur$value) {
         vals$hr_col$hex <- pal$dgr
         vals$hr_col$css <- "var(--danger)"
       }
-      
-      if (!is.infinite(ideal_dti)) {
-        
+
+      if (!is.infinite(ideal_dti$value)) {
+
         if (dti$value <= ideal_dti$value) {
           diff_dti <- tau_v / (vals$dti$value %#% vals$dti$unit)
         } else {
           diff_dti <- 1 / (tau_v / (vals$dti$value %#% vals$dti$unit))
         }
-        
+
         min_dti <- fix_unit(dti_unit %#% (tau_v * 3), dti_unit)
-        
+
         if (dti$value > 3 * ideal_dti$value) {
           vals$ctsd_col$hex <- pal$dgr
           vals$ctsd_col$css <- "var(--danger)"
         }
-        
+
         if ((dti$value %#% dti$unit) <= tau_v) {
           dti_text <- span(
             wrap_none("\u03C4", tags$sub("v"), "/",
@@ -626,9 +647,9 @@ mod_tab_report_server <- function(id, vals) {
             wrap_none("\u03C4", tags$sub("v")))
         }
       }
-      
+
       ## Reporting DATA: --------------------------------------------------
-      
+
       switch(vals$data_type,
              "selected" = {
                out_species <- span(
@@ -652,22 +673,22 @@ mod_tab_report_server <- function(id, vals) {
                  "dataset.")
              }
       ) # end of switch
-      
+
       vals$report$species <- p(
         out_species,
         "Please see the",
         icon("paw", class = "cl-sea"),
         span("Species", class = "cl-sea"),
         "parameters above for more details.")
-      
+
       ## Reporting DESIGN: ------------------------------------------------
-      
+
       ### For home range estimation:
-      
+
       if ("Home range" %in% vals$which_question) {
         req(vals$hr_HDI)
         N1 <- scales::label_comma(accuracy = 1)(vals$dev$N1)
-        
+
         out_regime <- out_reg_hr <-
           p("The ideal", span("sampling duration", class = "cl-sea"),
             "for", span("home range", class = "cl-grn"), "estimation",
@@ -682,15 +703,15 @@ mod_tab_report_server <- function(id, vals) {
             "\u2248", wrap_none(dur$value, " ", dur$unit, ","),
             "resulting in an effective sample size equivalent to",
             N1, "independent locations.")
-        
+
       } # end of "Home range"
-      
+
       ## Speed and distance estimation:
-      
+
       if ("Speed & distance" %in% vals$which_question) {
         req(vals$sd_HDI)
         N2 <- scales::label_comma(accuracy = 1)(vals$dev$N2)
-        
+
         out_regime <- out_reg_ctsd <-
           p("The ", span("sampling interval", class = "cl-sea"),
             "for", span("speed & distance", class = "cl-grn"),
@@ -709,47 +730,47 @@ mod_tab_report_server <- function(id, vals) {
                                 color = vals$ctsd_col[1], end = ","),
             "resulting in an effective sample size equivalent to",
             N2, "independently sampled velocities.")
-        
+
       } # end of "Speed & distance"
-      
+
       ### Both home range and speed & distance:
-      
+
       if (length(vals$which_question) > 1)
         out_regime <- tagList(out_reg_hr, out_reg_ctsd)
-      
+
       vals$report$regime <- out_regime
-      
+
       ## Reporting OUTPUTS: -----------------------------------------------
-      
+
       vals$report$analyses <- NULL
-      
+
       ## Home range estimation:
-      
+
       if ("Home range" %in% vals$which_question) {
         req(vals$hr_HDI, vals$hrErr)
-        
+
         hrCI <- c(round(vals$hr_HDI$CI_low * 100, 1),
                   round(vals$hr_HDI$CI * 100, 0),
                   round(vals$hr_HDI$CI_high * 100, 1))
-        
+
         txt_level <- ifelse(
           vals$hr_HDI$CI_high < .3 & vals$hr_HDI$CI_low > -.3,
           "and with low", "but with high")
-        
+
         opts_dur <- 2^seq(1, 12, by = 1)
         index_dur <- which.min(abs(
           opts_dur - ("days" %#% dur$value %#% dur$unit)))
         plotted_dur <- opts_dur[index_dur]
-        
+
         out_analyses <- NULL
-        
+
         if (dur$value >= ideal_dur$value) {
           vals$report$is_hr <- TRUE
           out_hr1 <- span(
             style = "font-weight: bold;",
             "Your current sampling duration is likely sufficient",
             "for home range estimation,", txt_level, "uncertainty.")
-          
+
         } else {
           vals$report$is_hr <- FALSE
           out_hr1 <- span(
@@ -757,7 +778,7 @@ mod_tab_report_server <- function(id, vals) {
             "Your current sampling duration may be insufficient",
             "for home range estimation.")
         }
-        
+
         out_hr2 <- span(
           "Keep in mind that, for a similar duration of",
           plotted_dur, "days, there is a",
@@ -765,12 +786,12 @@ mod_tab_report_server <- function(id, vals) {
           "probability that the relative error will lie between",
           wrap_none(hrCI[1], "%", css = "cl-blk"),
           "and", wrap_none(hrCI[2], "%", end = ".", css = "cl-blk"))
-        
+
         nsims <- ifelse(
-          length(vals$simList) == 1, 
+          length(vals$simList) == 1,
           "a single simulation",
           paste(length(vals$simList), "simulations"))
-        
+
         out_nsims <- span(
           "Your error estimate based on",
           span(style = "font-weight: bold;", nsims),
@@ -781,52 +802,52 @@ mod_tab_report_server <- function(id, vals) {
               round(vals$hrErr$value[[2]] * 100, 1),
               round(mean(vals$hrErrList$est, na.rm = TRUE) * 100, 1)),
             "%."))
-        
+
         out_analyses <- out_hr <- p(
           out_hr1,
           out_nsims,
           out_hr2)
-        
+
       } # end of 'Home range'
-      
+
       ## Speed and distance estimation:
-      
+
       if ("Speed & distance" %in% vals$which_question) {
-        
+
         req(!is.null(vals$is_ctsd))
         if (vals$is_ctsd) {
           req(vals$sd_HDI, vals$speedErr$value)
-          
+
           sdCI <- c(round(vals$sd_HDI$CI_low * 100, 1),
                     round(vals$sd_HDI$CI * 100, 0),
                     round(vals$sd_HDI$CI_high * 100, 1))
-          
+
           txt_level <- ifelse(
             vals$sd_HDI$CI_high < .3 &
               vals$sd_HDI$CI_low > -.3,
             "and with low", "but with high")
-          
+
           ctsd_err <- vals$speedErr$value[[2]]
         }
-        
+
         dti_options <- movedesign::sims_speed[[1]] %>%
           dplyr::select(dti, dti_notes) %>%
           unique()
-        
+
         index_dti <- which.min(
           abs(dti_options$dti - (dti$value %#% dti$unit)))
-        plotted_dti <- sub('^\\w+\\s\\w+\\s\\w+\\s', '', 
+        plotted_dti <- sub('^\\w+\\s\\w+\\s\\w+\\s', '',
                            dti_options[index_dti, 2])
-        
+
         if (vals$dev$N2 >= 30) {
-          
+
           vals$report$is_ctsd <- TRUE
           out_ctsd1 <- span(
             style = "font-weight: bold;",
             "Your current sampling interval is likely sufficient",
-            "for speed & distance estimation,", 
+            "for speed & distance estimation,",
             txt_level, "uncertainty.")
-          
+
         } else {
           if (vals$dev$N2 > 0) {
             vals$report$is_ctsd <- FALSE
@@ -834,7 +855,7 @@ mod_tab_report_server <- function(id, vals) {
               style = "font-weight: bold;",
               "Your current sampling interval may be insufficient",
               "for speed & distance estimation.")
-            
+
           } else {
             vals$report$is_ctsd <- FALSE
             out_ctsd1 <- span(
@@ -843,34 +864,34 @@ mod_tab_report_server <- function(id, vals) {
               "for speed & distance estimation.")
           }
         }
-        
+
         if (vals$is_ctsd) {
-          out_ctsd2 <- 
+          out_ctsd2 <-
             span("Keep in mind that, for a similar interval of",
-                 wrap_none(dti$value, " ", dti$unit, ","), 
+                 wrap_none(dti$value, " ", dti$unit, ","),
                  "there is a",
                  wrap_none(sdCI[2], "%", css = "cl-blk"),
                  "probability that the relative error will lie within",
-                 wrap_none(sdCI[1], "%", css = "cl-blk"), "and", 
+                 wrap_none(sdCI[1], "%", css = "cl-blk"), "and",
                  wrap_none(sdCI[3], "%", end = ".", css = "cl-blk"))
-          
+
           out_analyses <- out_ctsd <- p(
             out_ctsd1,
             "Your error estimate based on a",
-            span(style = "font-weight: bold;", "single"), 
+            span(style = "font-weight: bold;", "single"),
             "simulation was",
             wrap_none(round(ctsd_err * 100, 1), "%."),
             out_ctsd2)
-          
+
         } else {
           out_analyses <- out_ctsd <- p(out_ctsd1)
         }
-        
+
       } # end of "Speed & distance"
-      
+
       req(length(vals$which_question) == 1)
       vals$report$analyses <- out_analyses
-      
+
     }) %>% # end of observe,
       bindEvent(input$build_report)
     

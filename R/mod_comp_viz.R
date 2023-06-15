@@ -168,6 +168,7 @@ mod_comp_viz_server <- function(id, vals) {
     output$dataPlot_all <- ggiraph::renderGirafe({
       req(vals$dataList, vals$data_type != "simulated")
       
+      
       # if (length(vals$dataList) == 1)
       
       if (vals$data_type == "selected") {
@@ -201,9 +202,12 @@ mod_comp_viz_server <- function(id, vals) {
           newdat.all <- do.call(rbind.data.frame, data_df) }
       } else { newdat.all <- as_tele_df(vals$dataList) }
 
+      req(all(!is.na(newdat.all$x),
+              !is.na(newdat.all$y)))
+      
       yrange <- diff(range(newdat.all$y))
       xrange <- diff(range(newdat.all$x))
-
+      
       if (yrange < 1.5 * xrange) {
         ymin <- min(newdat.all$y) - yrange * .3
         ymax <- max(newdat.all$y) + yrange * .3
@@ -279,6 +283,9 @@ mod_comp_viz_server <- function(id, vals) {
           vals$input_x,
           vals$input_y,
           vals$input_t)
+      
+      req(all(!is.na(vals$data0$x),
+              !is.na(vals$data0$y)))
       
       newdat <- as.data.frame(vals$data0[[vals$input_x]])
       names(newdat) <- "x"

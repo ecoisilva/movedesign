@@ -548,7 +548,9 @@ mod_tab_data_upload_server <- function(id, vals) {
         species <- out_dataset$individual.taxon.canonical.name[1]
       }
       
-      out_dataset <- tryCatch(ctmm::as.telemetry(out_dataset),
+      parsedate::parse_date("1111-01-11") # checking
+      out_dataset <- tryCatch(
+        ctmm::as.telemetry(out_dataset, timeformat = "auto"),
                               error = function(e) e)
       
       if (inherits(out_dataset, "error")) {
@@ -598,6 +600,18 @@ mod_tab_data_upload_server <- function(id, vals) {
           message = paste0("Data pseudonymization ",
                            msg_success("completed"), "."),
           detail = "Origin location and time added.")
+      }
+      
+      newdat <- as_tele_df(out_dataset)
+      
+      if(all(is.na(newdat$x),
+             is.na(newdat$y))) {
+        msg_log(
+          style = "danger",
+          message = paste0("Coercion to telemetry object ",
+                           msg_danger("failed"), "."),
+          detail = "Check column names for coordinates.")
+        return(NULL)
       }
       
       shinyjs::show(id = "uploadBox_species")
@@ -670,11 +684,22 @@ mod_tab_data_upload_server <- function(id, vals) {
       bindCache(c(vals$id, vals$species_binom))
     
     fitting_model <- reactive({
-      
-      guess0 <- ctmm::ctmm.guess(vals$data0, interactive = FALSE)
-      inputList <- list(list(vals$data0, guess0))
-      
       vals$fit0 <- NULL
+      
+      guess0 <- tryCatch(
+        ctmm::ctmm.guess(vals$data0, interactive = FALSE),
+        error = function(e) e)
+      
+      if (inherits(guess0, "error")) {
+        msg_log(
+          style = "danger",
+          message = paste0(
+            "Parameter guesstimation ", msg_danger("failed"), "."),
+          detail = "Submitted file may be incorrectly formatted.")
+        return(NULL)
+      }
+      
+      inputList <- list(list(vals$data0, guess0))
       fit0 <- tryCatch(
         par.ctmm.select(inputList, parallel = vals$parallel),
         error = function(e) e)
@@ -896,8 +921,9 @@ mod_tab_data_upload_server <- function(id, vals) {
     
     observe({
       req(vals$which_question,
-          vals$data_type == "uploaded",
-          vals$data0, vals$fit0, vals$is_valid)
+          vals$data_type == "uploaded")
+      
+      req(vals$data0, vals$fit0, vals$is_valid)
       
       shinyjs::show(id = "uploadBox_parameters")
       shinyjs::show(id = "uploadBox_regime")
