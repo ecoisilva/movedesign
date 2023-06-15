@@ -929,6 +929,14 @@ mod_tab_data_upload_server <- function(id, vals) {
       shinyjs::show(id = "uploadBox_regime")
       shinyjs::show(id = "uploadBox_sizes")
       
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = tagList(
+          span("Extracting", style = "color: #797979;"),
+          wrap_none(span("parameters", class = "cl-sea"),
+                      span("...", style = "color: #797979;"))))
+      
       vals$sigma0 <- extract_sigma()
       vals$tau_p0 <- extract_pars(vals$fit0, name = "position")
       vals$tau_v0 <- extract_pars(vals$fit0, name = "velocity")
@@ -979,6 +987,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       shinyjs::hide(id = "uploadVar_t")
       
       shinyjs::show(id = "uploadBox_regime")
+      shinybusy::remove_modal_spinner()
       
     }) %>% # end of observe, then:
       bindEvent(input$uploadButton_extract)
