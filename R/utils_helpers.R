@@ -566,17 +566,23 @@ plotting_hr <- function(input1,
         size = 1)
     } +
     
-    ggplot2::scale_x_continuous( 
+    ggplot2::scale_x_continuous(
       labels = scales::comma,
-      limits = c(extent[1,1], extent[2,1])) +
+      limits = c(
+        extent$x[1] - abs(diff(range(extent$x))) * .01,
+        extent$x[2] + abs(diff(range(extent$x))) * .01)) +
     ggplot2::scale_y_continuous(
-      labels = scales::comma, 
-      limits = c(extent[1,2], extent[2,2])) +
+      labels = scales::comma,
+      limits = c(
+        extent$y[1] - abs(diff(range(extent$y))) * .01,
+        extent$y[2] + abs(diff(range(extent$y))) * .01)) +
     
     ggplot2::labs(x = "X coordinate", y = "Y coordinate") +
     ggplot2::coord_fixed() +
     theme_movedesign() +
     ggplot2::theme(legend.position = "none")
+  
+  return(p)
 }
 
 
@@ -705,8 +711,10 @@ loading_modal <- function(x,
                       "text-align: center;",
                       "margin-top: -40px;")
     
-    mean_time <- fix_unit(exp_time$mean * n, exp_time$unit, convert = T)
-    max_time <- fix_unit(exp_time$max * n, exp_time$unit, convert = T)
+    mean_time <- fix_unit(exp_time$mean * n, exp_time$unit,
+                          convert = TRUE)
+    max_time <- fix_unit(exp_time$max * n, exp_time$unit, 
+                         convert = TRUE)
     
     tmp <- max_time$unit %#% (
         ifelse(exp_time$min == 0, .001, exp_time$min) * n) %#%
@@ -973,7 +981,7 @@ create_modal <- function(var, id) {
   
   if (var == "sigma") {
     out_title <- shiny::h4(
-      span("location variance", class = "cl-sea"), "parameter:")
+      span("Location variance", class = "cl-sea"), "parameter:")
 
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",

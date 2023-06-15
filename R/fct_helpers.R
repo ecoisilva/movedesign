@@ -366,7 +366,7 @@ extract_pars <- function(obj = NULL,
     
     svf <- extract_svf(data, fraction = fraction)
     out <- c("low" = mean(svf$var_low95) %#% "km^2",
-             "est" = var.covm(obj$sigma, average = T),
+             "est" = var.covm(obj$sigma, average = TRUE),
              "high" = mean(svf$var_upp95) %#% "km^2")
     
     out <- data.frame(value = out, "unit" = "m^2")
