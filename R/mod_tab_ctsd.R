@@ -1186,7 +1186,7 @@ mod_tab_ctsd_server <- function(id, vals) {
         dt <- tauv * (err/10)^(1/3) # O(error/10) inst error
         t <- seq(0, tauv/err^2, dt) # O(error) est error
         dat <- ctmm::simulate(fit, t = t, seed = vals$seed0,
-                              precompute = F)
+                              precompute = FALSE)
         v <- sqrt(dat$vx^2 + dat$vy^2)
         
         w <- diff(t)

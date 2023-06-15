@@ -1870,9 +1870,9 @@ mod_tab_hrange_server <- function(id, vals) {
           steps = tour,
           nextLabel = "Next",
           prevLabel = "Previous",
-          showStepNumbers = F,
-          showButtons = T,
-          showBullets = T
+          showStepNumbers = FALSE,
+          showButtons = TRUE,
+          showBullets = TRUE
         ),
         events = list(onbeforechange =
                         rintrojs::readCallback('switchTabs')))

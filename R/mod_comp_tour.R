@@ -824,10 +824,10 @@ mod_comp_tour_server <- function(id, vals) {
       rintrojs::introjs(
         session = session,
         options = list(steps = tour,
-                       showStepNumbers = F,
-                       showButtons = T,
-                       showBullets = T,
-                       scrollToElement = T),
+                       showStepNumbers = FALSE,
+                       showButtons = TRUE,
+                       showBullets = TRUE,
+                       scrollToElement = TRUE),
         events = list(onbeforechange = 
                         rintrojs::readCallback("switchTabs")))
       

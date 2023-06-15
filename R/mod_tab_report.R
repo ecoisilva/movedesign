@@ -2838,7 +2838,7 @@ mod_tab_report_server <- function(id, vals) {
       }
       
       out <- fix_unit(vals$sigma0$value[2],
-                      vals$sigma0$unit[2], convert = T)
+                      vals$sigma0$unit[2], convert = TRUE)
       tmpdat$sigma <- paste(out$value, abbrv_unit(out$unit))
       
       if ("Home range" %in% vals$which_question) {

@@ -46,7 +46,7 @@ mod_comp_settings_ui <- function(id){
       #             choices = languages,
       #             selected = "EN",
       #             width = "80px",
-      #             selectize = T),
+      #             selectize = TRUE),
 
       tags$hr(style = "border-color: #2c3b41;"),
       shinyWidgets::prettyCheckbox(

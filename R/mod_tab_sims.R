@@ -1090,7 +1090,7 @@ mod_tab_sims_server <- function(id, vals) {
         abbrv_unit(vals$tau_v0$unit[2]))
       
       sig <- fix_unit(vals$sigma0$value[2],
-                      vals$sigma0$unit[2], convert = T)
+                      vals$sigma0$unit[2], convert = TRUE)
       out$sigma <- paste(sig$value, abbrv_unit(sig$unit))
       
       out$time_elapsed <- paste(
@@ -1364,9 +1364,9 @@ mod_tab_sims_server <- function(id, vals) {
           steps = tour_sims,
           nextLabel = "Next",
           prevLabel = "Previous",
-          showStepNumbers = F,
-          showButtons = T,
-          showBullets = T
+          showStepNumbers = FALSE,
+          showButtons = TRUE,
+          showBullets = TRUE
         ),
         events = list(onbeforechange =
                         rintrojs::readCallback("switchTabs")))
