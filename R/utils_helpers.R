@@ -1090,7 +1090,8 @@ newTabItem <- function(tabName = NULL, ...) {
 #'
 #' @noRd
 as_tele_df <- function(object) {
-  
+  if (class(object) != "list") object <- list(object)
+    
   data_df <- list()
   for (i in 1:length(object)) {
     tempdf <- object[[i]]

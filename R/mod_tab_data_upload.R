@@ -96,6 +96,20 @@ mod_tab_data_upload_ui <- function(id) {
               value = TRUE), br(),
             
             shinyWidgets::radioGroupButtons(
+              inputId = ns("file_dec"),
+              label = "Decimals",
+              choices = c("Period (.)" = ".",
+                          "Comma (,)" = ","),
+              selected = ".",
+              checkIcon = list(
+                yes = tags$i(class = "fa fa-check-square", 
+                             style = "color: steelblue"),
+                no = tags$i(class = "fa fa-square-o", 
+                            style = "color: steelblue")),
+              direction = "vertical",
+              width = "100%"),
+            
+            shinyWidgets::radioGroupButtons(
               inputId = ns("file_sep"),
               label = "Separator",
               choices = c("Comma (,)" = ",",
@@ -518,11 +532,22 @@ mod_tab_data_upload_server <- function(id, vals) {
     reading_file <- reactive({
       if (is.null(input$file_csv)) return("")
       
-      out_file <- tryCatch(read.csv(file = input$file_csv$datapath,
-                                    header = input$file_header,
-                                    sep = input$file_sep,
-                                    quote = input$file_quote),
-                           error = function(e) e)
+      if (input$file_dec == ".") {
+        out_file <- tryCatch(read.csv(
+          file = input$file_csv$datapath,
+          header = input$file_header,
+          sep = input$file_sep,
+          quote = input$file_quote),
+          error = function(e) e)
+      } else {
+        out_file <- tryCatch(read.table(
+          file = input$file_csv$datapath,
+          header = input$file_header,
+          sep = input$file_sep,
+          quote = input$file_quote,
+          dec = input$file_dec),
+          error = function(e) e)
+      }
       
       if (inherits(out_file, "error")) {
         msg_log(
@@ -548,7 +573,7 @@ mod_tab_data_upload_server <- function(id, vals) {
         species <- out_dataset$individual.taxon.canonical.name[1]
       }
       
-      parsedate::parse_date("1111-01-11") # checking
+      parsedate::parse_date("1111-11-11") # loading function
       out_dataset <- tryCatch(
         ctmm::as.telemetry(out_dataset, timeformat = "auto"),
                               error = function(e) e)
@@ -606,6 +631,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       
       if(all(is.na(newdat$x),
              is.na(newdat$y))) {
+      
         msg_log(
           style = "danger",
           message = paste0("Coercion to telemetry object ",
