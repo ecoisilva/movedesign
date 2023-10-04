@@ -763,10 +763,9 @@ mod_tab_sims_server <- function(id, vals) {
             HTML(paste0(span("movement model", class = "cl-sea"),
                         span(".", style = "color: #797979;"))),
             p("This may take a while...",
-              style = paste(# "background-color: #eaeaea;",
-                "color: #797979;",
-                "font-size: 16px;",
-                "text-align: center;")),
+              style = paste("color: #797979;",
+                            "font-size: 16px;",
+                            "text-align: center;")),
             p())
           
         ) # end of show_modal_spinner
@@ -951,7 +950,7 @@ mod_tab_sims_server <- function(id, vals) {
           
           value = 1 %#% "day",
           step = 15 %#% "minutes",
-          min = 15 %#% "minutes",
+          min = 30 %#% "minutes",
           max = 1 %#% "day",
           # animate = animationOptions(interval = 500),
           ticks = FALSE,
@@ -963,7 +962,6 @@ mod_tab_sims_server <- function(id, vals) {
       req(input$timeline)
       
       # Time elapsed:
-      
       dat <- data_animated()
       maxt <- 1 %#% "day"
       

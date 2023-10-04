@@ -61,18 +61,6 @@ mod_tab_about_ui <- function(id) {
              span("application", class = "cl-sea"), "work?"),
           p(),
           
-          # shinyWidgets::radioGroupButtons(
-          #   inputId = ns("which_tutorial"),
-          #   label = NULL,
-          #   choices = c("Case study 1 (faster)" = "fast",
-          #               "Case study 2 (slower)" = "slow"),
-          #   selected = character(0),
-          #   checkIcon = list(
-          #     yes = tags$i(class = "fa fa-check-square",
-          #                  style = "color: var(--sea);"),
-          #     no = tags$i(class = "fa fa-square-o",
-          #                 style = "color: var(--danger);"))),
-          
           mod_comp_tour_ui("tour_1"),
           
           p(), shinyWidgets::awesomeCheckbox(

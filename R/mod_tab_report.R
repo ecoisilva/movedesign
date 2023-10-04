@@ -1,6 +1,6 @@
 #' tab_report UI Function
 #'
-#' @description A shiny Module.
+#' @description Final report tab.
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'

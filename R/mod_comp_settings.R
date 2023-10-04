@@ -1,6 +1,6 @@
 #' comp_settings UI Function
 #'
-#' @description A shiny Module.
+#' @description Settings component.
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
@@ -14,21 +14,7 @@ mod_comp_settings_ui <- function(id){
     column(
       width = 12, align = "center",
       shiny::p(),
-
-      # tags$div(htmltools::tagAppendAttributes(
-      #   actionButton(
-      #     inputId = "fullscreen",
-      #     label = "Fullscreen",
-      #     width = "100%",
-      #     icon = icon("expand")
-      #   ),
-      #   onclick = "shinyjs.toggleFullScreen();")),
-      # p(),
-      # p(style = "text-align: justify; color: #ffffff;",
-      #   "(Only works in browser)."),
-      # 
-      # tags$hr(style = "border-color: #2c3b41;"),
-
+      
       shiny::downloadButton(
         outputId = ns("download_settings"),
         label = "Save settings",
@@ -36,7 +22,7 @@ mod_comp_settings_ui <- function(id){
         style = "width: 100%"),
       p(),
       uiOutput(ns("text_save")),
-
+      
       # tags$hr(style = "border-color: #2c3b41;"),
       # h4("Language:"),
       # uiOutput(ns("menu_language")),

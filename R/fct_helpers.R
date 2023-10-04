@@ -224,7 +224,7 @@ fix_unit <- function(input,
 
 #' Prepare movement model
 #'
-#' @description Prepare parameters for movement data simulation
+#' @description Prepare model for movement data simulation
 #' @keywords internal
 #'
 #' @param tau_p0 numeric, integer. position autocorrelation timescale.
@@ -263,7 +263,7 @@ prepare_mod <- function(tau_p,
     mod <- ctmm::ctmm(tau = taup,
                       isotropic = TRUE,
                       sigma = sig,
-                      mu = c(0,0))
+                      mu = c(0, 0))
     return(mod)
   }
     

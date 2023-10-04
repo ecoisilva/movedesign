@@ -511,10 +511,6 @@ sub { font-size: 90%; }
   margin-top: -5px;
 }
 
-.btn-group .btn-group+.btn-group {
-    margin-left: 5px;
-}
-
 .caution-button,
 .caution-button:focus {
   background-color: #e3362d;
@@ -765,6 +761,13 @@ shiny .irs-handle:hover {
 .open > .dropdown-menu {
   max-height: 185px !important;
 } */
+
+.awesome-checkbox label::before {
+  top: 1px;
+}
+.awesome-checkbox label::after {
+  top: 1px;
+}
 
 /* BOXES --------------------------------------------------------------- */
 
