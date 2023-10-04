@@ -1,6 +1,6 @@
 #' tab_data_upload UI Function
 #'
-#' @description A shiny Module.
+#' @description Upload data tab module.
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
@@ -42,8 +42,8 @@ mod_tab_data_upload_ui <- function(id) {
                 "as all subsequent steps will built upon these",
                 "parameters.",
                 
-                "Upload a dataset as a .csv file with at least",
-                "four variables:",
+                "Upload a dataset as a", span(".csv", class = "cl-sea"),
+                "file with at least four columns:",
                 wrap_none(span("animal ID", class = "cl-dgr"), ","),
                 span("x", class = "cl-dgr"), "and",
                 span("y", class = "cl-dgr"), "coordinates, and",
@@ -223,7 +223,7 @@ mod_tab_data_upload_ui <- function(id) {
           # Visualization: ------------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Data vizualization:", class = "ttl-box"),
+            title = span("Data visualization:", class = "ttl-box"),
             id = ns("uploadBox_viz"),
             width = NULL,
             solidHeader = FALSE,
@@ -313,11 +313,11 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$id <- input$id_uploaded
     }) %>% bindEvent(input$id_uploaded)
     
-    observe({
-      vals$id <- vals$table_selection
+    observe({ 
+      vals$id <- vals$tbl_selection
     })
-    observe({
-      vals$id <- vals$plot_selection
+    observe({ 
+      vals$id <- vals$plt_selection 
     })
     
     observe({
@@ -674,17 +674,19 @@ mod_tab_data_upload_server <- function(id, vals) {
           vals$dataList, vals$id)
       
       if (names(vals$dataList)[[1]] == "timestamp") {
-        df_subset <- vals$dataList
-      } else { df_subset <- vals$dataList[[vals$id]] }
+        out_data <- vals$dataList
+      } else { out_data <- vals$dataList[[vals$id]] }
+      vals$data0 <- out_data
       
-      vals$data0 <- df_subset
+      vals$svf <- extract_svf(out_data, fraction = 1)
       vals$is_valid <- FALSE
       
       shinyjs::show(id = "uploadVar_x")
       shinyjs::show(id = "uploadVar_y")
       shinyjs::show(id = "uploadVar_t")
       
-    }) # end of observe
+    }) %>% # end of observe,
+      bindEvent(vals$id)
     
     ## 2. Validate data: --------------------------------------------------
     
@@ -931,20 +933,6 @@ mod_tab_data_upload_server <- function(id, vals) {
     # PARAMETERS ----------------------------------------------------------
     ## Extract location variance, timescales, etc.: -----------------------
     
-    extract_sigma <- reactive({
-      if (is.null(vals$var_fraction)) frac <- .65
-      else frac <- vals$var_fraction
-      
-      svf <- extract_svf(vals$data0, fraction = frac)
-      vals$svf <- svf
-      
-      return(extract_pars(obj = vals$fit0, 
-                          name = "sigma", 
-                          data = vals$data0,
-                          fraction = frac))
-      
-    }) # end of reactive
-    
     observe({
       req(vals$which_question,
           vals$data_type == "uploaded")
@@ -963,10 +951,13 @@ mod_tab_data_upload_server <- function(id, vals) {
           wrap_none(span("parameters", class = "cl-sea"),
                       span("...", style = "color: #797979;"))))
       
-      vals$sigma0 <- extract_sigma()
+      vals$sigma0 <- extract_pars(data = vals$data0,
+                                  obj = vals$fit0, name = "sigma")
       vals$tau_p0 <- extract_pars(vals$fit0, name = "position")
       vals$tau_v0 <- extract_pars(vals$fit0, name = "velocity")
       vals$speed0 <- extract_pars(vals$fit0, name = "speed")
+      
+      vals$svf <- extract_svf(vals$data0, vals$fit0)
       
       vals$tmpsp <- vals$species_binom
       vals$tmpid <- vals$id
@@ -1142,7 +1133,8 @@ mod_tab_data_upload_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = TRUE)
       
-    }) # end of renderUI, "uplBlock_n" (absolute sample size)
+    }) %>% # end of renderUI, "uplBlock_n" (absolute sample size),
+      bindEvent(vals$fit0) # only update after extract
     
     observe({
       req(vals$fit0)

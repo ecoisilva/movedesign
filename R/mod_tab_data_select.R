@@ -69,24 +69,6 @@ mod_tab_data_select_ui <- function(id) {
             solidHeader = TRUE,
             collapsible = FALSE,
             
-            # shinyWidgets::pickerInput(
-            #   inputId = ns("sp_selected"),
-            #   label = NULL,
-            #   choices = ctmm_species,
-            #   choicesOpt = list(
-            #     subtext = c(
-            #       "Syncerus caffer",
-            #       "Pelecanus occidentalis",
-            #       "Nasua narica",
-            #       "Panthera onca",
-            #       "Chrysocyon brachyurus",
-            #       "Procapra gutturosa",
-            #       "Glyptemys insculpta"),
-            #     style = c(rep("font-style: italic;", 7))),
-            #   options = list(`live-search` = TRUE,
-            #                  title = "Pick a species"),
-            #   selected = NULL),
-            
             shiny::selectizeInput(
               inputId = ns("sp_selected"),
               label = NULL,
@@ -248,11 +230,11 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$id <- input$id_selected
     }) %>% bindEvent(input$id_selected)
     
-    observe({
-      vals$id <- vals$table_selection
+    observe({ 
+      vals$id <- vals$tbl_selection
     })
-    observe({
-      vals$id <- vals$plot_selection
+    observe({ 
+      vals$id <- vals$plt_selection
     })
     
     observe({
@@ -456,9 +438,13 @@ mod_tab_data_select_server <- function(id, vals) {
     
     # 1.2. Subset data based on individual selection:
     
-    data_selected <- reactive({
+    observe({
+      req(vals$active_tab == 'data_select', 
+          vals$dataList, vals$id)
       
       out_data <- dataset_selected()[[vals$id]]
+      vals$data0 <- out_data
+      
       vals$input_x <- ifelse(!is.null(out_data$"x"),
                              "x", "longitude")
       vals$input_y <- ifelse(!is.null(out_data$"y"),
@@ -466,8 +452,10 @@ mod_tab_data_select_server <- function(id, vals) {
       vals$input_t <- ifelse(!is.null(out_data$"timestamp"),
                              "timestamp", "t")
       
-      return(out_data)
-    })
+      vals$svf <- extract_svf(out_data, fraction = 1)
+      
+    }) %>% # end of observe,
+      bindEvent(vals$id)
     
     ## 2. Validate data: --------------------------------------------------
     
@@ -604,7 +592,6 @@ mod_tab_data_select_server <- function(id, vals) {
       }
       
       req(vals$id)
-      vals$data0 <- data_selected()
       vals$is_valid <- is_data_valid
       return(is_data_valid)
       
@@ -640,20 +627,6 @@ mod_tab_data_select_server <- function(id, vals) {
     # PARAMETERS ----------------------------------------------------------
     ## Extract location variance, timescales, etc.: -----------------------
     
-    extract_sigma <- reactive({
-      if (is.null(vals$var_fraction)) frac <- .65
-      else frac <- vals$var_fraction
-      
-      svf <- extract_svf(data_selected(), fraction = frac)
-      vals$svf <- svf
-      
-      return(extract_pars(obj = vals$fit0, 
-                          name = "sigma", 
-                          data = vals$data0,
-                          fraction = frac))
-      
-    }) # end of reactive
-    
     observe({
       req(vals$which_question,
           vals$data_type == "selected",
@@ -663,10 +636,13 @@ mod_tab_data_select_server <- function(id, vals) {
       shinyjs::show(id = "selectBox_regime")
       shinyjs::show(id = "selectBox_sizes")
       
-      vals$sigma0 <- extract_sigma()
+      vals$sigma0 <- extract_pars(data = vals$data0,
+                                  obj = fit_selected(), name = "sigma")
       vals$tau_p0 <- extract_pars(fit_selected(), name = "position")
       vals$tau_v0 <- extract_pars(fit_selected(), name = "velocity")
       vals$speed0 <- extract_pars(fit_selected(), name = "speed")
+      
+      vals$svf <- extract_svf(vals$data0, fit_selected())
       
       vals$tmpsp1 <- vals$species_common
       vals$tmpsp2 <- vals$species_binom
@@ -831,7 +807,8 @@ mod_tab_data_select_server <- function(id, vals) {
         rightBorder = FALSE,
         marginBottom = TRUE)
       
-    }) # end of renderUI, "uplBlock_n" (absolute sample size)
+    }) %>% # end of renderUI, "selBlock_n" (absolute sample size),
+      bindEvent(vals$fit0) # only update after extract
     
     observe({
       req(vals$fit0)

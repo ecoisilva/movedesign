@@ -39,7 +39,9 @@ app_server <- function(input, output, session) {
     tour_active = FALSE,
     alert_active = TRUE,
     overwrite_active = FALSE,
-    crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+    crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0",
+    
+    var_fraction = .5)
   
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 

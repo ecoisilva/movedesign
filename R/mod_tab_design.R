@@ -493,12 +493,13 @@ mod_tab_design_ui <- function(id) {
                     column(
                       width = 12, align = "center",
                       shiny::sliderInput(
-                        ns("dev_timeframe"),
+                        ns("dev_fraction"),
                         label = span(
                           paste("Proportion of",
                                 "variogram plotted (in %):")) %>%
                           tagAppendAttributes(class = 'label_split'),
-                        min = 0, max = 100, value = 65, step = 5,
+                        min = 0, max = 100, value = 50, step = 5,
+                        post = "%",
                         width = "85%")
                     ) # end of column
                     
@@ -2703,9 +2704,9 @@ mod_tab_design_server <- function(id, vals) {
     output$devPlot_svf <- ggiraph::renderGirafe({
       req(vals$data1)
       
-      frac <- input$dev_timeframe / 100
-      svf <- extract_svf(vals$data1, fraction = frac)
-      p <- plotting_svf(svf, fill = pal$dgr)
+      fraction <- input$dev_fraction / 100
+      svf <- extract_svf(vals$data1)
+      p <- plotting_svf(svf, fill = pal$dgr, fraction = fraction)
       
       ggiraph::girafe(
         ggobj = p,

@@ -358,16 +358,17 @@ calculate_ci <- function(data, level = 0.95) {
 #' @noRd
 extract_pars <- function(obj = NULL, 
                          data = NULL,
-                         name, fraction = .65) {
+                         name) {
+  if (missing(obj)) stop("`obj` argument not provided.")
   
   out <- unit <- NULL
   if (name == "sigma") { 
     if (missing(data)) stop("`data` argument not provided.")
     
-    svf <- extract_svf(data, fraction = fraction)
-    out <- c("low" = mean(svf$var_low95) %#% "km^2",
+    svf <- extract_svf(data, obj)
+    out <- c("low" = max(svf$fit$svf_lower) %#% svf$y_unit,
              "est" = var.covm(obj$sigma, average = TRUE),
-             "high" = mean(svf$var_upp95) %#% "km^2")
+             "high" = max(svf$fit$svf_upper) %#% svf$y_unit)
     
     out <- data.frame(value = out, "unit" = "m^2")
     return(out)
@@ -447,14 +448,16 @@ extract_dof <- function(obj, name) {
   return(out)
 }
 
-#' Extract semi-variance data
+#' Extract semi-variance data for ggplot2
 #'
 #' @description Extract semi-variance data
 #' @keywords internal
 #'
 #' @importFrom ctmm `%#%`
 #' @noRd
-extract_svf <- function(data, fraction = .65) {
+extract_svf <- function(data, fit = NULL,
+                        fraction = 1, level = .95,
+                        x_unit = "days", y_unit = "km^2") {
   
   CI.upper <- Vectorize(function(k, level) {
     stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
@@ -462,26 +465,63 @@ extract_svf <- function(data, fraction = .65) {
   CI.lower <- Vectorize(function(k, level) {
     stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
   
-  level <- 0.95
-  SVF <- ctmm::variogram(data = data) # CI = "Gauss"
-  vardat <- data.frame(SVF = SVF$SVF,
-                       DOF = SVF$DOF,
-                       lag = SVF$lag) %>%
+  if (is.null(fit)) {
+    VAR <- ctmm::variogram(data = data)
+  } else {
+    VAR <- ctmm::variogram(data = data, axes = fit$axes)
+  }
+  
+  x <- list(VAR)
+  max.lag <- sapply(x, function(v) dplyr::last(v$lag))
+  max.lag <- fraction * max(max.lag)
+  x <- lapply(x, function(y) { y[y$DOF >= 1, ] })
+  if (fraction < 1) {
+    x <- lapply(x, function(y) { y[y$lag <= max.lag, ] })
+  }
+  xlim <- c(0, max.lag)
+  ylim <- ctmm::extent(x, level = max(level))$y
+  lag <- x[[1]]$lag
+  lag[1] <- lag[2]/1000
+  
+  if (!is.null(fit)) {
+    fit$tau <- fit$tau[fit$tau > 0]
+    SVF <- ctmm:::svf.func(fit, moment = TRUE)
+    svf <- SVF$svf
+    DOF <- SVF$DOF
+    
+    if(any(diag(fit$COV) > 0)) {
+      SVF <- Vectorize(function(t) svf(t))(lag)
+      dof <- Vectorize(function(t) { DOF(t) })(lag)
+      svf.lower <- Vectorize(function(dof) CI.lower(dof, level) )(dof)
+      svf.upper <- Vectorize(function(dof) CI.upper(dof, level) )(dof)
+    }
+  }
+  
+  out <- data.frame(svf = VAR$SVF,
+                    dof = VAR$DOF,
+                    lag = VAR$lag) %>%
     dplyr::slice_min(lag, prop = fraction) %>%
-    dplyr::mutate(lag_days = lag/60/60/24)
-
-  vardat$lag_days <- (vardat$lag)/60/60/24
-  vardat$var_low95 <- "square kilometers" %#%
-    ( vardat$SVF * CI.lower(vardat$DOF, level) )
-  vardat$var_upp95 <- "square kilometers" %#%
-    ( vardat$SVF * CI.upper(vardat$DOF, level) )
-  vardat$var_low50 <- "square kilometers" %#%
-    ( vardat$SVF * CI.lower(vardat$DOF, .5) )
-  vardat$var_upp50 <- "square kilometers" %#%
-    ( vardat$SVF * CI.upper(vardat$DOF, .5) )
-  vardat$SVF <- "square kilometers" %#% vardat$SVF
-
-  return(vardat)
+    dplyr::mutate(lag = x_unit %#% lag)
+  
+  out$svf_lower <- y_unit %#% ( out$svf * CI.lower(out$dof, level) )
+  out$svf_upper <- y_unit %#% ( out$svf * CI.upper(out$dof, level) )
+  out$svf_low50 <- y_unit %#% ( out$svf * CI.lower(out$dof, .5) )
+  out$svf_upp50 <- y_unit %#% ( out$svf * CI.upper(out$dof, .5) )
+  out$svf <- y_unit %#% out$svf
+  
+  out_fit <- NULL
+  if (!is.null(fit)) {
+    out_fit <- data.frame(
+      svf = y_unit %#% sapply(lag, Vectorize(function(t) { svf(t) })),
+      lag = x_unit %#% lag,
+      svf_lower = SVF * (y_unit %#% svf.lower),
+      svf_upper = SVF * (y_unit %#% svf.upper))
+  }
+  
+  return(list(data = out,
+              fit = out_fit,
+              x_unit = x_unit,
+              y_unit = y_unit))
 }
 
 #' Simulate GPS battery life decay

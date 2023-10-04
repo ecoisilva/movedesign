@@ -12,39 +12,40 @@ mod_comp_viz_ui <- function(id) {
   tagList(
 
     tabsetPanel(
-      id = ns("dataTabs_viz"),
+      id = ns("vizTabs_viz"),
 
       tabPanel(
-        value = ns("dataPanel_all"),
+        value = ns("vizPanel_all"),
         title = tagList(
           icon("paw", class = "cl-sea"),
           span("Dataset", class = "ttl-panel")
         ),
 
-        p(),
+        p(style = "margin-top: 10px;"),
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-7",
-            reactable::reactableOutput(ns("dataTable_all"))
+            reactable::reactableOutput(ns("vizTable_all"))
         ),
 
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-5",
             ggiraph::girafeOutput(
-              outputId = ns("dataPlot_all"),
+              outputId = ns("vizPlot_all"),
               width = "100%", height = "100%")
         )
 
       ), # end of panels (1 out of 3)
 
       tabPanel(
-        value = ns("dataPanel_individual"),
+        value = ns("vizPanel_individual"),
         title = tagList(
           icon("filter", class = "cl-sea"),
           span("Selected individual", class = "ttl-panel")
         ),
 
-        p(),
+        p(style = "margin-top: 10px;"),
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
+            
             ggiraph::girafeOutput(
-              outputId = ns("dataPlot_id"),
+              outputId = ns("vizPlot_id"),
               width = "100%", height = "100%") %>%
               shinycssloaders::withSpinner(
                 type = getOption("spinner.type", default = 7),
@@ -53,23 +54,23 @@ mod_comp_viz_ui <- function(id) {
         ),
 
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
-            reactable::reactableOutput(ns("dataTable_id")),
-            uiOutput(ns("dataTable_showVars"))
+            reactable::reactableOutput(ns("vizTable_id")),
+            uiOutput(ns("vizTable_showVars"))
         )
 
       ), # end of panels (2 out of 3)
 
       tabPanel(
-        value = ns("dataPanel_svf"),
+        value = ns("vizPanel_svf"),
         title = tagList(
           icon("chart-line", class = "cl-sea"),
           span("Variogram", class = "ttl-panel")
         ),
-
-        br(),
+        
+        p(),
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-8",
             ggiraph::girafeOutput(
-              outputId = ns("dataPlot_svf"),
+              outputId = ns("vizPlot_svf"),
               width = "100%", height = "100%")),
 
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
@@ -77,11 +78,20 @@ mod_comp_viz_ui <- function(id) {
               width = 12, align = "center",
               p(),
               shiny::sliderInput(
-                ns("dataVar_timeframe"),
-                label = span(paste("Proportion of the",
-                                   "variogram plotted (in %):")),
-                min = 0, max = 100, value = 65, step = 5,
-                width = "90%")
+                ns("viz_fraction"),
+                label = span(paste("Proportion of",
+                                   "variogram plotted:")),
+                min = 0, max = 100, value = 50, step = 5,
+                post = "%",
+                width = "90%"),
+              p(),
+              shinyWidgets::awesomeCheckbox(
+                inputId = ns("add_svf_fit"),
+                label = span(
+                  "Add", span("model fit", class = "cl-sea"),
+                  "to variogram"),
+                value = FALSE),
+              p()
             ))
 
       ) # end of panels (1 out of 3)
@@ -97,27 +107,41 @@ mod_comp_viz_server <- function(id, vals) {
   moduleServer( id, function(input, output, session) {
     ns <- session$ns
     pal <- load_pal()
-
+    
+    # DYNAMIC UI ELEMENTS -------------------------------------------------
+    
+    observe({
+      req(vals$active_tab, vals$is_valid)
+      req(vals$active_tab == 'data_select' ||
+         vals$active_tab == 'data_upload')
+        
+      shinyjs::hide(id = "add_svf_fit")
+      if (!is.null(vals$fit0) && !is.null(vals$svf$fit)) 
+        shinyjs::show(id = "add_svf_fit")
+      
+    }) # end of observe
+    
     observe({
       req(vals$is_valid)
-
+      
       tabselected <- NULL
       
-      if (vals$is_valid && vals$active_tab == 'data_upload') {
-        tabselected <- "comp_viz_uploaded-dataPanel_individual"
-      }
-      if (vals$is_valid && vals$active_tab == 'data_select') {
-        tabselected <- "comp_viz_selected-dataPanel_individual"
-      }
+      if (vals$is_valid && vals$active_tab == 'data_upload')
+        tabselected <- "comp_viz_uploaded-vizPanel_individual"
+      
+      if (vals$is_valid && vals$active_tab == 'data_select')
+        tabselected <- "comp_viz_selected-vizPanel_individual"
       
       updateTabsetPanel(
         session,
-        inputId = "dataTabs_viz",
+        inputId = "vizTabs_viz",
         selected = tabselected)
-
-    }) %>% bindEvent(vals$is_valid)
-
-    # SUMMARIZE DATA ----------------------------------------------------
+      
+    }) %>% # end of observe,
+      bindEvent(vals$is_valid)
+    
+    # MAIN REACTIVE VALUES ------------------------------------------------
+    ## Summarize data: ----------------------------------------------------
 
     data_summary <- reactive({
       req(vals$dataList)
@@ -140,7 +164,7 @@ mod_comp_viz_server <- function(id, vals) {
       
     })
 
-    output$dataTable_showVars <- renderUI({
+    output$vizTable_showVars <- renderUI({
       req(vals$input_x,
           vals$input_y,
           vals$input_t)
@@ -160,12 +184,12 @@ mod_comp_viz_server <- function(id, vals) {
           `selected-text-format` = "count > 3"
         ), multiple = TRUE)
 
-    }) # end of renderUI // dataTable_showVars
+    }) # end of renderUI // vizTable_showVars
 
     # PLOTS -------------------------------------------------------------
     ## Rendering all data (xy): -----------------------------------------
 
-    output$dataPlot_all <- ggiraph::renderGirafe({
+    output$vizPlot_all <- ggiraph::renderGirafe({
       req(vals$dataList, vals$data_type != "simulated")
       
       
@@ -270,15 +294,15 @@ mod_comp_viz_server <- function(id, vals) {
 
     observe({
       req(vals$dataList,
-          input$dataPlot_all_selected)
+          input$vizPlot_all_selected)
       
-      vals$plot_selection <- names(vals$dataList)[
-        match(input$dataPlot_all_selected, names(vals$dataList))]
+      vals$plt_selection <- names(vals$dataList)[
+        match(input$vizPlot_all_selected, names(vals$dataList))]
     })
 
     ## Rendering individual data (xy): ----------------------------------
 
-    output$dataPlot_id <- ggiraph::renderGirafe({
+    output$vizPlot_id <- ggiraph::renderGirafe({
       req(vals$data0,
           vals$input_x,
           vals$input_y,
@@ -381,32 +405,32 @@ mod_comp_viz_server <- function(id, vals) {
                         "stroke:#1279BF;",
                         "cursor:pointer;"))))
 
-    }) # end of renderGirafe // dataPlot_id
+    }) # end of renderGirafe // vizPlot_id
 
     ## Rendering variogram (svf): ---------------------------------------
 
-    output$dataPlot_svf <- ggiraph::renderGirafe({
+    output$vizPlot_svf <- ggiraph::renderGirafe({
       req(vals$svf, vals$data_type != "simulated")
-
-      svf <- vals$svf %>%
-        dplyr::slice_min(lag, prop = input$dataVar_timeframe / 100)
-      vals$var_fraction <- input$dataVar_timeframe
-
-      p <- plotting_svf(svf, fill = pal$dgr)
+      
+      p <- plotting_svf(vals$svf, fill = pal$dgr, 
+                        add_fit = ifelse(is.null(input$add_svf_fit),
+                                         FALSE, input$add_svf_fit),
+                        fraction = input$viz_fraction / 100)
+      
       ggiraph::girafe(
         ggobj = p,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
-          ggiraph::opts_hover(css = paste("fill:#ffbf00;",
-                                          "stroke:#ffbf00;"))
+          ggiraph::opts_hover(css = paste("fill: #ffbf00;",
+                                          "stroke: #ffbf00;"))
         ))
-
-    }) # end of renderGirafe // dataPlot_svf
-
+      
+    }) # end of renderGirafe // vizPlot_svf
+    
     # TABLES ------------------------------------------------------------
     ## Table for summary of all individuals: ----------------------------
 
-    output$dataTable_all <- reactable::renderReactable({
+    output$vizTable_all <- reactable::renderReactable({
 
       reactable::reactable(
         data_summary(),
@@ -431,15 +455,15 @@ mod_comp_viz_server <- function(id, vals) {
     })
 
     observe({
-      state <- req(reactable::getReactableState("dataTable_all"))
+      state <- req(reactable::getReactableState("vizTable_all"))
       state <- names(vals$dataList)[state$selected]
       
-      vals$table_selection <- state
+      vals$tbl_selection <- state
     })
 
     ## Table for selected individual data: ------------------------------
     
-    output$dataTable_id <- reactable::renderReactable({
+    output$vizTable_id <- reactable::renderReactable({
       req(vals$data0, input$show_vars)
 
       tmpdat <- NULL
@@ -487,7 +511,7 @@ mod_comp_viz_server <- function(id, vals) {
                                           digits = 3)))
       )
 
-    }) # end of renderDataTable // dataTable_id
+    }) # end of rendervizTable // vizTable_id
 
   }) # moduleServer
 }

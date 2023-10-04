@@ -23,7 +23,6 @@ msg_warning <- crayon::make_style("#ffbf00")
 #' Parameter blocks
 #'
 #' @description Display parameters.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
@@ -51,7 +50,6 @@ parBlock <- function(icon = NULL,
 #' Sample size blocks
 #'
 #' @description Display sample sizes.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
@@ -105,7 +103,6 @@ sampleBlock <- function(number = NULL,
 #' Relative error blocks
 #'
 #' @description Display relative errors.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
@@ -187,7 +184,6 @@ errorBlock <- function(icon = NULL,
 #' Parameter blocks
 #'
 #' @description Display parameters.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
@@ -234,7 +230,6 @@ staticBlock <- function(text,
 #' Extract units.
 #'
 #' @description Extracting units from ctmm summaries.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
@@ -279,7 +274,6 @@ help_text <- function(title, subtitle, content) {
 #' Add helper tip.
 #'
 #' @description Add helper tip to inputs.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @importFrom dplyr `%>%`
@@ -297,7 +291,6 @@ help_tip <- function(input, text, placement = "bottom") {
 #' Create message logs
 #'
 #' @description Create message logs to show throughout app run.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @importFrom crayon make_style
@@ -362,7 +355,6 @@ msg_log <- function(..., detail,
 #' Create message steps
 #'
 #' @description Create message logs
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
@@ -408,7 +400,6 @@ reset_reactiveValues <- function(vals) {
 #' Add help modal
 #'
 #' @description Add help modal to inputs
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @importFrom dplyr `%>%`
@@ -496,13 +487,13 @@ plotting_hr <- function(input1,
   show_col <- ifelse(show_both, "#00484a", "white")
   show_alpha <- ifelse(show_both, 0.3, 0)
   
-  extent[1,1] <- min(extent[1,1], min(truth$x), min(data$x))
-  extent[2,1] <- max(extent[2,1], max(truth$x), max(data$x))
-  extent[1,2] <- min(extent[1,2], min(truth$y), min(data$y))
-  extent[2,2] <- max(extent[2,2], max(truth$y), max(data$y))
+  extent[1,"x"] <- min(extent[1,"x"], min(truth$x), min(data$x))
+  extent[2,"x"] <- max(extent[2,"x"], max(truth$x), max(data$x))
+  extent[1,"y"] <- min(extent[1,"y"], min(truth$y), min(data$y))
+  extent[2,"y"] <- max(extent[2,"y"], max(truth$y), max(data$y))
   
-  extent[,1] <- extent[,1] + diff(range(extent[,1])) * c(-.03, .03)
-  extent[,2] <- extent[,2] + diff(range(extent[,2])) * c(-.03, .03)
+  extent[,"x"] <- extent[,"x"] + diff(range(extent[,"x"])) * c(-.01, .01)
+  extent[,"y"] <- extent[,"y"] + diff(range(extent[,"y"])) * c(-.01, .01)
   
   ud_lci <- ctmm::SpatialPolygonsDataFrame.UD(
     ud, level.UD = .95)@polygons[[1]]
@@ -594,32 +585,66 @@ plotting_hr <- function(input1,
 #'
 #' @importFrom dplyr `%>%`
 #' @noRd
-plotting_svf <- function(data, fill) {
-
-  p <- data %>%
-    ggplot2::ggplot() +
+plotting_svf <- function(data, fill,
+                         fraction = .5,
+                         add_fit = FALSE,
+                         x_unit = "days", y_unit = "km^2") {
+  
+  if (y_unit == "km^2") y_lab <- expression("Semi-variance"~"("*km^{"2"}*")")
+  if (y_unit == "m^2") y_lab <- expression("Semi-variance"~"("*m^{"2"}*")")
+  if (y_unit == "hectares") y_lab <- "Semi-variance (ha)"
+  
+  if (!is.null(data$fit)) {
+    fit <- data$fit %>% dplyr::slice_min(lag, prop = fraction)
+  } else { add_fit <- FALSE }
+  
+  data <- data$data %>% dplyr::slice_min(lag, prop = fraction)
+  
+  p <- ggplot2::ggplot() +
     ggplot2::geom_ribbon(
-      ggplot2::aes_string(x = "lag_days",
-                          ymin = "var_low95",
-                          ymax = "var_upp95"),
+      data = data,
+      mapping = ggplot2::aes(x = lag,
+                             ymin = svf_lower,
+                             ymax = svf_upper),
       fill = "grey50",
       alpha = 0.25) +
     ggplot2::geom_ribbon(
-      ggplot2::aes_string(x = "lag_days",
-                          ymin = "var_low50",
-                          ymax = "var_upp50"),
-      fill = fill,
+      data = data,
+      mapping = ggplot2::aes(x = lag,
+                             ymin = svf_low50,
+                             ymax = svf_upp50),
+      fill = "grey50",
       alpha = 0.25) +
     ggplot2::geom_line(
-      ggplot2::aes_string(x = "lag_days",
-                          y = "SVF"), size = 0.5) +
+      data = data,
+      mapping = ggplot2::aes(x = lag,
+                             y = svf),
+      linewidth = 0.5) +
+    
+    { if (add_fit) 
+      ggplot2::geom_line(
+        data = fit,
+        mapping = ggplot2::aes(x = lag,
+                               y = svf),
+        color = fill, linetype = "dashed")
+    } +
+    
+    { if (add_fit) 
+      ggplot2::geom_ribbon(
+        data = fit, 
+        mapping = ggplot2::aes(x = lag,
+                               ymin = svf_lower,
+                               ymax = svf_upper),
+        fill = fill, alpha = 0.25)
+    } +
+    
     ggplot2::labs(
       x = "Time lag (in days)",
-      y = expression("Semi-variance"~"("*km^{"2"}*")")) +
+      y = y_lab) +
     theme_movedesign()
-
+  
   return(p)
-
+  
 }
 
 
@@ -1165,6 +1190,7 @@ pseudonymize <- function(data,
   return(data)
 }
 
+
 #' Extract location variance from ctmm.
 #'
 #' @description Extract total variance or average variance
@@ -1185,8 +1211,6 @@ var.covm <- function(sigma, average = FALSE) {
   
   return(sigma)
 }
-
-
 
 
 #' Fall back function from ctmmweb
