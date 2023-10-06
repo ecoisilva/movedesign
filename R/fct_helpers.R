@@ -233,6 +233,7 @@ fix_unit <- function(input,
 #' @param tau_v0_units character vector of tau v units.
 #' @param sigma0 numeric, integer. semi-variance or sigma.
 #' @param tau_p0_units character vector of sigma units.
+#' @param mu numeric vector of length 2 in the format c(x, y).
 #'
 #' @importFrom ctmm `%#%`
 #' @noRd
@@ -241,7 +242,8 @@ prepare_mod <- function(tau_p,
                         tau_v,
                         tau_v_unit = NULL,
                         sigma,
-                        sigma_unit = NULL) {
+                        sigma_unit = NULL,
+                        mu = NULL) {
   
   if (missing(tau_p)) stop("tau_p is required.")
   if (missing(tau_p_unit)) {
@@ -259,11 +261,13 @@ prepare_mod <- function(tau_p,
     sig <- sigma$value %#% sigma$unit
   } else { sig <- sigma %#% sigma_unit }
   
+  if (is.null(mu)) mu <- c(0, 0) else mu <- c(mu[1], mu[2])
+
   if (is.null(tau_v)) {
     mod <- ctmm::ctmm(tau = taup,
                       isotropic = TRUE,
                       sigma = sig,
-                      mu = c(0, 0))
+                      mu = mu)
     return(mod)
   }
     
@@ -275,12 +279,12 @@ prepare_mod <- function(tau_p,
     tauv <- tau_v$value %#% tau_v$unit
   } else { tauv <- tau_v %#% tau_v_unit }
   
-  
   # Generate movement model:
+  
   mod <- ctmm::ctmm(tau = c(taup, tauv),
                     isotropic = TRUE,
                     sigma = sig,
-                    mu = c(0,0))
+                    mu = mu)
   return(mod)
 }
 
@@ -356,65 +360,89 @@ calculate_ci <- function(data, level = 0.95) {
 #'
 #' @importFrom ctmm `%#%`
 #' @noRd
-extract_pars <- function(obj = NULL, 
-                         data = NULL,
-                         name) {
-  if (missing(obj)) stop("`obj` argument not provided.")
+extract_pars <- function(obj, data = NULL,
+                         name, si_units = FALSE) {
+  
+  out <- NULL
+  unit <- NA
+  if (missing(obj)) 
+    stop("`obj` argument not provided.")
+  if (name == "sigma" && missing(data))
+    stop("`data` argument not provided.")  
+  if (class(obj)[1] != "list" && class(obj[[1]])[1] != "ctmm") {
+    data <- list(data)
+    obj <- list(obj)
+  }
+  
+  out <- list()
+  out <- lapply(seq_along(obj), function(x) {
+    sum.obj <- summary(obj[[x]], units = !si_units)
+    nms.obj <- rownames(sum.obj$CI)
+    
+    if (name == "sigma") {
+      name <- "area"
+      svf <- extract_svf(data[[x]], obj[[x]])
+      tmp <- c(max(svf$fit$svf_lower) %#% svf$y_unit,
+               var.covm(obj[[x]]$sigma, average = TRUE),
+               max(svf$fit$svf_upper) %#% svf$y_unit)
+      unit <- "m^2"
+    }
+    
+    # Special cases of movement processes (IID):
+    if (length(grep(name, nms.obj)) == 0) {
+      tmp <- c(NA, NA, NA) # IID model, no parameter found
+    } else { # (OUΩ and OUf):
+      if (length(obj[[x]]$tau) == 2 &&
+          all(obj[[x]]$tau[1] == obj[[x]]$tau[2]))
+        name <- ifelse("decay" %in% nms.obj, "decay", "\u03C4")
+      tmp <- sum.obj$CI[grep(name, nms.obj), ]
+    }
+    
+    unit <- extract_units(nms.obj[grep(name, nms.obj)])
+    if (si_units && !all(is.na(tmp))) {
+      tmp <- unit %#% tmp
+    }
+    
+    return(data.frame(value = tmp, unit = unit,
+                      row.names = c("low", "est", "high")))
+  })
+  
+  if (length(out) == 1) out <- out[[1]]
+  return(out)
+}
+
+#' Extract sampling parameters.
+#'
+#' @description Extracting sampling parameters from ctmm summaries.
+#' @return The return value, if any, from executing the utility.
+#' @keywords internal
+#'
+#' @importFrom ctmm `%#%`
+#' @noRd
+extract_sampling <- function(obj, name) {
   
   out <- unit <- NULL
-  if (name == "sigma") { 
-    if (missing(data)) stop("`data` argument not provided.")
-    
-    svf <- extract_svf(data, obj)
-    out <- c("low" = max(svf$fit$svf_lower) %#% svf$y_unit,
-             "est" = var.covm(obj$sigma, average = TRUE),
-             "high" = max(svf$fit$svf_upper) %#% svf$y_unit)
-    
-    out <- data.frame(value = out, "unit" = "m^2")
-    return(out)
-  }
+  if (missing(obj)) stop("`obj` argument not provided.")
+  if (class(obj)[1] != "list" && class(obj[[1]])[1] != "ctmm")
+    obj <- list(obj)
   
-  if (inherits(obj, "telemetry")) {
-    nms.dat <- suppressWarnings(names(summary(obj)))
-    
-    unit <- extract_units(nms.dat[grep(name, nms.dat)])
-    value <- suppressWarnings(as.numeric(
-      summary(obj)[grep(name, nms.dat)]))
-    
-    out <- data.frame(value = value, "unit" = unit)
-    return(out)
-  }
-  
-  if (inherits(obj, "ctmm")) {
-    sum.fit <- summary(obj)
-    nms.fit <- rownames(sum.fit$CI)
-    
-    # Special cases of movement processes:
-    if (length(obj$tau) == 2 && (obj$tau[1] == obj$tau[2])) {
-      # OUf:
-      name <- "\u03C4"
-      out <- sum.fit$CI[grep(name, nms.fit), ]
-      unit <- extract_units(nms.fit[grep(name, nms.fit)])
+  out <- list()
+  if (inherits(obj[[1]], "telemetry")) {
+    i <- 1
+    for (i in seq_along(obj)) {
+      sum.obj <- summary(obj[[i]])
+      nms.obj <- suppressWarnings(names(sum.obj))
       
-      if (length(grep("decay", nms.fit)) != 0) {
-        # OUΩ:
-        out <- out[grep("decay", rownames(out)), ]
-        unit <- extract_units(nms.fit[grep("decay", nms.fit)])
-      }
+      unit <- extract_units(nms.obj[grep(name, nms.obj)])
+      tmp <- suppressWarnings(as.numeric(sum.obj[grep(name, nms.obj)]))
       
-      out <- data.frame(value = out, "unit" = unit)
-      return(out)
+      out[[i]] <- data.frame(
+        value = tmp, 
+        unit = extract_units(nms.obj[grep(name, nms.obj)]))
     }
-    
-    # All other cases:
-    if (length(grep(name, nms.fit)) != 0) {
-      unit <- extract_units(nms.fit[grep(name, nms.fit)])
-      out <- sum.fit$CI[grep(name, nms.fit), ]
-      out <- data.frame(value = out, "unit" = unit)
-      return(out)
-    }
-  }
+  } else stop("as.telemetry() obj required.")
   
+  if (length(out) == 1) out <- out[[1]]
   return(out)
 }
 
@@ -465,64 +493,80 @@ extract_svf <- function(data, fit = NULL,
   CI.lower <- Vectorize(function(k, level) {
     stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
   
-  if (is.null(fit)) {
-    VAR <- ctmm::variogram(data = data)
-  } else {
-    VAR <- ctmm::variogram(data = data, axes = fit$axes)
+  out <- list()
+  if (class(data)[1] != "list" && class(data[[1]])[1] != "ctmm") {
+    data <- list(data)
+    fit <- list(fit)
   }
   
-  x <- list(VAR)
-  max.lag <- sapply(x, function(v) dplyr::last(v$lag))
-  max.lag <- fraction * max(max.lag)
-  x <- lapply(x, function(y) { y[y$DOF >= 1, ] })
-  if (fraction < 1) {
-    x <- lapply(x, function(y) { y[y$lag <= max.lag, ] })
-  }
-  xlim <- c(0, max.lag)
-  ylim <- ctmm::extent(x, level = max(level))$y
-  lag <- x[[1]]$lag
-  lag[1] <- lag[2]/1000
-  
-  if (!is.null(fit)) {
-    fit$tau <- fit$tau[fit$tau > 0]
-    SVF <- ctmm:::svf.func(fit, moment = TRUE)
-    svf <- SVF$svf
-    DOF <- SVF$DOF
+  x <- 1
+  out <- lapply(seq_along(data), function(x) {
     
-    if(any(diag(fit$COV) > 0)) {
-      SVF <- Vectorize(function(t) svf(t))(lag)
-      dof <- Vectorize(function(t) { DOF(t) })(lag)
-      svf.lower <- Vectorize(function(dof) CI.lower(dof, level) )(dof)
-      svf.upper <- Vectorize(function(dof) CI.upper(dof, level) )(dof)
+    if (is.null(fit[[x]])) {
+      VAR <- ctmm::variogram(data = data[[x]])
+    } else {
+      VAR <- ctmm::variogram(data = data[[x]], axes = fit[[x]]$axes)
     }
-  }
+    
+    V <- list(VAR)
+    max.lag <- sapply(V, function(v) dplyr::last(v$lag))
+    max.lag <- fraction * max(max.lag)
+    V <- lapply(V, function(y) { y[y$DOF >= 1, ] })
+    if (fraction < 1) {
+      V <- lapply(V, function(y) { y[y$lag <= max.lag, ] })
+    }
+    xlim <- c(0, max.lag)
+    ylim <- ctmm::extent(V, level = max(level))$y
+    lag <- V[[1]]$lag
+    lag[1] <- lag[2]/1000
+    
+    if (!is.null(fit[[x]])) {
+      fit[[x]]$tau <- fit[[x]]$tau[fit[[x]]$tau > 0]
+      SVF <- ctmm:::svf.func(fit[[x]], moment = TRUE)
+      svf <- SVF$svf
+      DOF <- SVF$DOF
+      
+      if(any(diag(fit[[x]]$COV) > 0)) {
+        SVF <- Vectorize(function(t) svf(t))(lag)
+        dof <- Vectorize(function(t) { DOF(t) })(lag)
+        svf.lower <- Vectorize(function(dof) CI.lower(dof, level) )(dof)
+        svf.upper <- Vectorize(function(dof) CI.upper(dof, level) )(dof)
+      }
+    }
+    
+    VAR <- data.frame(svf = VAR$SVF,
+                      dof = VAR$DOF,
+                      lag = VAR$lag) %>%
+      dplyr::slice_min(lag, prop = fraction) %>%
+      dplyr::mutate(lag = x_unit %#% lag)
+    
+    VAR$svf_lower <- y_unit %#% ( VAR$svf * CI.lower(VAR$dof, level) )
+    VAR$svf_upper <- y_unit %#% ( VAR$svf * CI.upper(VAR$dof, level) )
+    VAR$svf_low50 <- y_unit %#% ( VAR$svf * CI.lower(VAR$dof, .5) )
+    VAR$svf_upp50 <- y_unit %#% ( VAR$svf * CI.upper(VAR$dof, .5) )
+    VAR$svf <- y_unit %#% VAR$svf
+    
+    FIT <- NULL
+    if (!is.null(fit[[x]])) {
+      FIT <- data.frame(
+        svf = y_unit %#% sapply(lag, Vectorize(function(t) { svf(t) })),
+        lag = x_unit %#% lag,
+        svf_lower = SVF * (y_unit %#% svf.lower),
+        svf_upper = SVF * (y_unit %#% svf.upper))
+    }
+    
+    return(list(data = VAR,
+                fit = FIT,
+                x_unit = x_unit,
+                y_unit = y_unit))
+    
+  }) # end of lapply
   
-  out <- data.frame(svf = VAR$SVF,
-                    dof = VAR$DOF,
-                    lag = VAR$lag) %>%
-    dplyr::slice_min(lag, prop = fraction) %>%
-    dplyr::mutate(lag = x_unit %#% lag)
+  if (length(out) == 1) out <- out[[1]]
+  return(out)
   
-  out$svf_lower <- y_unit %#% ( out$svf * CI.lower(out$dof, level) )
-  out$svf_upper <- y_unit %#% ( out$svf * CI.upper(out$dof, level) )
-  out$svf_low50 <- y_unit %#% ( out$svf * CI.lower(out$dof, .5) )
-  out$svf_upp50 <- y_unit %#% ( out$svf * CI.upper(out$dof, .5) )
-  out$svf <- y_unit %#% out$svf
-  
-  out_fit <- NULL
-  if (!is.null(fit)) {
-    out_fit <- data.frame(
-      svf = y_unit %#% sapply(lag, Vectorize(function(t) { svf(t) })),
-      lag = x_unit %#% lag,
-      svf_lower = SVF * (y_unit %#% svf.lower),
-      svf_upper = SVF * (y_unit %#% svf.upper))
-  }
-  
-  return(list(data = out,
-              fit = out_fit,
-              x_unit = x_unit,
-              y_unit = y_unit))
 }
+
 
 #' Simulate GPS battery life decay
 #'
@@ -785,7 +829,7 @@ guess_time <- function(data,
     if (tauv$value[2] == 0) return(outputs)
     
     dti <- data[[2,"t"]] - data[[1,"t"]]
-    dur <- extract_pars(data, name = "period")
+    dur <- extract_sampling(data, name = "period")
     tauv <- tauv$value[2] %#% tauv$unit[2]
     N <- summary(fit)$DOF["speed"]
     

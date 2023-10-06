@@ -23,6 +23,7 @@ Imports:
     fontawesome,
     ggiraph,
     ggplot2,
+    ggpubr,
     golem (>= 0.3.2),
     parallel,
     parsedate,
@@ -43,6 +44,7 @@ Imports:
     shinyWidgets,
     stats,
     stringr,
+    tidyr,
     utils,
     viridis
 Suggests: 

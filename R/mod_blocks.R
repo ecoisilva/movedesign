@@ -97,7 +97,7 @@ mod_blocks_server <- function(id,
                  subtitle <- "between fixes"
                }
                
-               tmpvalue <- extract_pars(data, name = tmpname)
+               tmpvalue <- extract_sampling(data, name = tmpname)
                tmpvalue <- fix_unit(tmpvalue$value, tmpvalue$unit)
                value <- paste(tmpvalue$value, tmpvalue$unit)
                perc <- NULL

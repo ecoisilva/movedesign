@@ -238,13 +238,20 @@ mod_tab_data_select_server <- function(id, vals) {
     })
     
     observe({
-      req(input$sp_selected != "")
-      
-      shiny::updateSelectizeInput(
-        session,
-        inputId = "id_selected",
-        label = NULL,
-        choices = names(dataset_selected()))
+      if (input$sp_selected != "") {
+        shiny::updateSelectizeInput(
+          session,
+          inputId = "id_selected",
+          label = NULL,
+          choices = names(dataset_selected()))
+      } else {
+        shiny::updateSelectizeInput(
+          session,
+          inputId = "id_selected",
+          label = NULL,
+          choices = names(dataset_selected()),
+          selected = "")
+      }
       
     }) %>% # end of observe,
       bindEvent(input$sp_selected)
@@ -424,6 +431,9 @@ mod_tab_data_select_server <- function(id, vals) {
       
       vals$species <- input$sp_selected
       vals$dataList <- out_dataset
+      vals$svfList <- extract_svf(out_dataset, fraction = 1)
+      vals$fit0 <- NULL
+      
       vals$data_type <- "selected"
 
       index <- rownames(vals$ctmm) %>% match(x = input$sp_selected)
@@ -636,12 +646,13 @@ mod_tab_data_select_server <- function(id, vals) {
       shinyjs::show(id = "selectBox_regime")
       shinyjs::show(id = "selectBox_sizes")
       
-      vals$sigma0 <- extract_pars(data = vals$data0,
-                                  obj = fit_selected(), name = "sigma")
-      vals$tau_p0 <- extract_pars(fit_selected(), name = "position")
-      vals$tau_v0 <- extract_pars(fit_selected(), name = "velocity")
-      vals$speed0 <- extract_pars(fit_selected(), name = "speed")
+      fit0 <- fit_selected()
+      vals$sigma0 <- extract_pars(data = vals$data0, obj = fit0, "sigma")
+      vals$tau_p0 <- extract_pars(obj = fit0, name = "position")
+      vals$tau_v0 <- extract_pars(obj = fit0, name = "velocity")
+      vals$speed0 <- extract_pars(obj = fit0, name = "speed")
       
+      vals$mu0 <- fit0$mu
       vals$svf <- extract_svf(vals$data0, fit_selected())
       
       vals$tmpsp1 <- vals$species_common
@@ -773,7 +784,7 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectInfo_dur <- shiny::renderUI({
       req(vals$data0)
       
-      dur <- extract_pars(vals$data0, name = "period")
+      dur <- extract_sampling(vals$data0, name = "period")
       out <- fix_unit(dur$value, dur$unit)
       
       parBlock(header = "Sampling duration",
@@ -784,7 +795,7 @@ mod_tab_data_select_server <- function(id, vals) {
     output$selectInfo_dti <- shiny::renderUI({
       req(vals$data0)
       
-      dti <- extract_pars(vals$data0, name = "interval")
+      dti <- extract_sampling(vals$data0, name = "interval")
       out <- fix_unit(dti$value, dti$unit)
       
       parBlock(header = "Sampling interval",

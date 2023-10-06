@@ -3211,7 +3211,7 @@ mod_tab_report_server <- function(id, vals) {
     output$repBlock_dti <- renderUI({
       req(vals$data1)
       
-      dti <- extract_pars(vals$data1, name = "interval")
+      dti <- extract_sampling(vals$data1, name = "interval")
       out <- fix_unit(dti, convert = TRUE)
       
       parBlock(

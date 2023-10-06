@@ -79,17 +79,16 @@ mod_comp_viz_ui <- function(id) {
               p(),
               shiny::sliderInput(
                 ns("viz_fraction"),
-                label = span(paste("Proportion of",
-                                   "variogram plotted:")),
+                label = "Proportion of variogram plotted:",
                 min = 0, max = 100, value = 50, step = 5,
                 post = "%",
                 width = "90%"),
               p(),
               shinyWidgets::awesomeCheckbox(
-                inputId = ns("add_svf_fit"),
+                inputId = ns("viz_add_fit"),
                 label = span(
                   "Add", span("model fit", class = "cl-sea"),
-                  "to variogram"),
+                  "to variogram", icon("wrench")),
                 value = FALSE),
               p()
             ))
@@ -115,9 +114,9 @@ mod_comp_viz_server <- function(id, vals) {
       req(vals$active_tab == 'data_select' ||
          vals$active_tab == 'data_upload')
         
-      shinyjs::hide(id = "add_svf_fit")
+      shinyjs::hide(id = "viz_add_fit")
       if (!is.null(vals$fit0) && !is.null(vals$svf$fit)) 
-        shinyjs::show(id = "add_svf_fit")
+        shinyjs::show(id = "viz_add_fit")
       
     }) # end of observe
     
@@ -386,18 +385,9 @@ mod_comp_viz_server <- function(id, vals) {
         # width_svg = 7.5, height_svg = 5,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
-          ggiraph::opts_zoom(max = 5),
           ggiraph::opts_selection(type = "none"),
-          # ggiraph::opts_selection(
-          #   type = "single",
-          #   css = paste("fill:#dd4b39;",
-          #               "stroke:#eb5644;",
-          #               "r:5pt;")),
-          # ggiraph::opts_hover_inv(css = "opacity:0.4;"),
+          ggiraph::opts_toolbar(saveaspng = FALSE),
           ggiraph::opts_tooltip(
-            # css = paste("background-color:gray;",
-            #             "color:white;padding:2px;",
-            #             "border-radius:2px;"),
             opacity = 1,
             use_fill = TRUE),
           ggiraph::opts_hover(
@@ -410,16 +400,25 @@ mod_comp_viz_server <- function(id, vals) {
     ## Rendering variogram (svf): ---------------------------------------
 
     output$vizPlot_svf <- ggiraph::renderGirafe({
-      req(vals$svf, vals$data_type != "simulated")
+      req(vals$svfList, vals$data_type != "simulated")
       
-      p <- plotting_svf(vals$svf, fill = pal$dgr, 
-                        add_fit = ifelse(is.null(input$add_svf_fit),
-                                         FALSE, input$add_svf_fit),
+      svf <- vals$svfList
+      if (!is.null(vals$id))
+        if (length(vals$id) > 0) {
+          req(vals$svf)
+          svf <- vals$svf
+        }
+      
+      p <- plotting_svf(svf, fill = pal$dgr, 
+                        add_fit = ifelse(is.null(input$viz_add_fit),
+                                         FALSE, input$viz_add_fit),
                         fraction = input$viz_fraction / 100)
       
       ggiraph::girafe(
-        ggobj = p,
+        ggobj = ggpubr::ggarrange(plotlist = p),
         options = list(
+          ggiraph::opts_selection(type = "none"),
+          ggiraph::opts_toolbar(saveaspng = FALSE),
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_hover(css = paste("fill: #ffbf00;",
                                           "stroke: #ffbf00;"))

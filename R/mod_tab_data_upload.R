@@ -651,6 +651,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       }
       
       vals$dataList <- dataList
+      vals$svfList <- extract_svf(dataList, fraction = 1)
       vals$data_type <- "uploaded"
       vals$id <- NULL
       
@@ -957,6 +958,7 @@ mod_tab_data_upload_server <- function(id, vals) {
       vals$tau_v0 <- extract_pars(vals$fit0, name = "velocity")
       vals$speed0 <- extract_pars(vals$fit0, name = "speed")
       
+      vals$mu0 <- vals$fit0$mu
       vals$svf <- extract_svf(vals$data0, vals$fit0)
       
       vals$tmpsp <- vals$species_binom
@@ -1099,7 +1101,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     output$uplBlock_dur <- shiny::renderUI({
       req(vals$data0)
       
-      dur <- extract_pars(vals$data0, name = "period")
+      dur <- extract_sampling(vals$data0, name = "period")
       out <- fix_unit(dur$value, dur$unit)
       
       parBlock(header = "Sampling duration",
@@ -1110,7 +1112,7 @@ mod_tab_data_upload_server <- function(id, vals) {
     output$uplBlock_dti <- shiny::renderUI({
       req(vals$data0)
       
-      dti <- extract_pars(vals$data0, name = "interval")
+      dti <- extract_sampling(vals$data0, name = "interval")
       out <- fix_unit(dti$value, dti$unit)
       
       parBlock(header = "Sampling interval",

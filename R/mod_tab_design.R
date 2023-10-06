@@ -495,12 +495,19 @@ mod_tab_design_ui <- function(id) {
                       shiny::sliderInput(
                         ns("dev_fraction"),
                         label = span(
-                          paste("Proportion of",
-                                "variogram plotted (in %):")) %>%
+                          "Proportion of variogram plotted:") %>%
                           tagAppendAttributes(class = 'label_split'),
                         min = 0, max = 100, value = 50, step = 5,
                         post = "%",
-                        width = "85%")
+                        width = "85%"),
+                      p(),
+                      shinyWidgets::awesomeCheckbox(
+                        inputId = ns("dev_add_fit"),
+                        label = span(
+                          "Add", span("model fit", class = "cl-sea"),
+                          "to variogram", icon("wrench")),
+                        value = FALSE)
+                      
                     ) # end of column
                     
                   ) # end of panels (3 out of 3)
@@ -1873,12 +1880,13 @@ mod_tab_design_server <- function(id, vals) {
       } else {
         if (vals$fit0$isotropic == TRUE) { fit <- vals$fit0
         } else fit <- vals$ctmm_mod <- prepare_mod(
-          tau_p = vals$tau_p0$value[2], 
-          tau_p_unit = vals$tau_p0$unit[2], 
-          tau_v = vals$tau_v0$value[2], 
-          tau_v_unit = vals$tau_v0$unit[2], 
-          sigma = vals$sigma0$value[2], 
-          sigma_unit = vals$sigma0$unit[2])
+          tau_p = vals$tau_p0$value[2],
+          tau_p_unit = vals$tau_p0$unit[2],
+          tau_v = vals$tau_v0$value[2],
+          tau_v_unit = vals$tau_v0$unit[2],
+          sigma = vals$sigma0$value[2],
+          sigma_unit = vals$sigma0$unit[2],
+          mu = vals$mu0)
       }
       
       sim <- ctmm::simulate(dat, fit, t = t_new, seed = vals$seed0)
@@ -2607,6 +2615,7 @@ mod_tab_design_server <- function(id, vals) {
               "r: 4pt;",
               "fill: #2c3b41;",
               "stroke: #2c3b41;")),
+          # ggiraph::opts_hover_inv(css = "opacity:0.4;"),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
 
     }) %>% # end of renderGirafe, "devPlot_gps",
@@ -2689,35 +2698,37 @@ mod_tab_design_server <- function(id, vals) {
         width_svg = 6, height_svg = 6,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .1),
-          ggiraph::opts_zoom(max = 5),
+          ggiraph::opts_selection(type = "none"),
+          ggiraph::opts_toolbar(saveaspng = FALSE),
           ggiraph::opts_tooltip(use_fill = TRUE),
           ggiraph::opts_hover(
             css = paste("fill:#1279BF;",
                         "stroke:#1279BF;",
-                        "cursor:pointer;")),
-          ggiraph::opts_toolbar(saveaspng = FALSE)))
+                        "cursor:pointer;"))))
       
     }) # end of renderGirafe, "devPlot_id"
     
     ## Plotting variogram (svf): ------------------------------------------
     
     output$devPlot_svf <- ggiraph::renderGirafe({
-      req(vals$data1)
+      req(vals$data1, vals$fit1)
       
-      fraction <- input$dev_fraction / 100
-      svf <- extract_svf(vals$data1)
-      p <- plotting_svf(svf, fill = pal$dgr, fraction = fraction)
+      p <- plotting_svf(extract_svf(vals$data1, vals$fit1),
+                        fill = pal$dgr,
+                        add_fit = ifelse(is.null(input$dev_add_fit),
+                                         FALSE, input$dev_add_fit),
+                        fraction = input$dev_fraction / 100)
       
       ggiraph::girafe(
-        ggobj = p,
+        ggobj = ggpubr::ggarrange(plotlist = p),
         width_svg = 6, height_svg = 4,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .1),
-          ggiraph::opts_zoom(max = 5),
+          ggiraph::opts_selection(type = "none"),
+          ggiraph::opts_toolbar(saveaspng = FALSE),
           ggiraph::opts_hover(
             css = paste("fill: #ffbf00;",
-                        "stroke: #ffbf00;")),
-          ggiraph::opts_toolbar(saveaspng = FALSE)))
+                        "stroke: #ffbf00;"))))
       
     }) # end of renderGirafe, "devPlot_svf"
     

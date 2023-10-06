@@ -420,6 +420,7 @@ help_modal <- function(input, file) {
 #' @keywords internal
 #' 
 #' @importFrom ggplot2 %+replace%
+#' @importFrom dplyr `%>%`
 #'
 #' @param ft_size Base font size.
 #' @noRd
@@ -445,7 +446,8 @@ theme_movedesign <- function(ft_size = 13) {
       axis.title.x = ggplot2::element_text(
         family = font, hjust = 1, vjust = -1),
       axis.title.y = ggplot2::element_text(
-        family = font, angle = 90, vjust = 2))
+        family = font, angle = 90, vjust = 2)) %>% 
+    suppressWarnings()
 }
 
 
@@ -589,61 +591,74 @@ plotting_svf <- function(data, fill,
                          fraction = .5,
                          add_fit = FALSE,
                          x_unit = "days", y_unit = "km^2") {
+  out <- list()
+  if (class(data[[1]])[1] != "list") data <- list(data)
+  n <- length(data)
   
-  if (y_unit == "km^2") y_lab <- expression("Semi-variance"~"("*km^{"2"}*")")
-  if (y_unit == "m^2") y_lab <- expression("Semi-variance"~"("*m^{"2"}*")")
+  if (y_unit == "km^2") y_lab <- 
+      expression("Semi-variance"~"("*km^{"2"}*")")
+  if (y_unit == "m^2") y_lab <- 
+      expression("Semi-variance"~"("*m^{"2"}*")")
   if (y_unit == "hectares") y_lab <- "Semi-variance (ha)"
   
-  if (!is.null(data$fit)) {
-    fit <- data$fit %>% dplyr::slice_min(lag, prop = fraction)
-  } else { add_fit <- FALSE }
-  
-  data <- data$data %>% dplyr::slice_min(lag, prop = fraction)
-  
-  p <- ggplot2::ggplot() +
-    ggplot2::geom_ribbon(
-      data = data,
-      mapping = ggplot2::aes(x = lag,
-                             ymin = svf_lower,
-                             ymax = svf_upper),
-      fill = "grey50",
-      alpha = 0.25) +
-    ggplot2::geom_ribbon(
-      data = data,
-      mapping = ggplot2::aes(x = lag,
-                             ymin = svf_low50,
-                             ymax = svf_upp50),
-      fill = "grey50",
-      alpha = 0.25) +
-    ggplot2::geom_line(
-      data = data,
-      mapping = ggplot2::aes(x = lag,
-                             y = svf),
-      linewidth = 0.5) +
+  out <- lapply(seq_along(data), function(x) {
+    if (!is.null(data[[x]]$fit))
+      fit <- data[[x]]$fit %>% dplyr::slice_min(lag, prop = fraction)
+    else add_fit <- FALSE
     
-    { if (add_fit) 
-      ggplot2::geom_line(
-        data = fit,
-        mapping = ggplot2::aes(x = lag,
-                               y = svf),
-        color = fill, linetype = "dashed")
-    } +
+    svf <- data[[x]]$data %>% 
+      dplyr::slice_min(lag, prop = fraction)
     
-    { if (add_fit) 
+    ft_size <- ifelse(n == 1, 13, ifelse(n >= 10, 6, 11))
+    
+    p <- ggplot2::ggplot() +
       ggplot2::geom_ribbon(
-        data = fit, 
+        data = svf,
         mapping = ggplot2::aes(x = lag,
                                ymin = svf_lower,
                                ymax = svf_upper),
-        fill = fill, alpha = 0.25)
-    } +
+        fill = "grey50",
+        alpha = 0.25) +
+      ggplot2::geom_ribbon(
+        data = svf,
+        mapping = ggplot2::aes(x = lag,
+                               ymin = svf_low50,
+                               ymax = svf_upp50),
+        fill = "grey40",
+        alpha = 0.25) +
+      ggplot2::geom_line(
+        data = svf,
+        mapping = ggplot2::aes(x = lag,
+                               y = svf),
+        linewidth = 0.5) +
+      
+      { if (add_fit) 
+        ggplot2::geom_line(
+          data = fit,
+          mapping = ggplot2::aes(x = lag,
+                                 y = svf),
+          color = fill, linetype = "dashed")
+      } +
+      
+      { if (add_fit) 
+        ggplot2::geom_ribbon(
+          data = fit, 
+          mapping = ggplot2::aes(x = lag,
+                                 ymin = svf_lower,
+                                 ymax = svf_upper),
+          fill = fill, alpha = 0.2)
+      } +
+      
+      ggplot2::labs(
+        x = "Time lag (in days)",
+        y = y_lab) +
+      theme_movedesign(ft_size = ft_size)
     
-    ggplot2::labs(
-      x = "Time lag (in days)",
-      y = y_lab) +
-    theme_movedesign()
+    return(p)
+    
+  })
   
-  return(p)
+  return(out)
   
 }
 

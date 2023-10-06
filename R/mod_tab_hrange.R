@@ -125,26 +125,6 @@ mod_tab_hrange_ui <- function(id) {
                   icon = icon("code-compare"),
                   class = "btn-info",
                   width = "100%")
-              
-              # splitLayout(
-              #   cellWidths = c("29%", "1%", "70%"),
-              #   cellArgs = list(style = "align: center;"),
-              # 
-              #   shiny::actionButton(
-              #     inputId = ns("hrHelp_regime"),
-              #     label = NULL,
-              #     width = "100%",
-              #     icon = icon("circle-question"),
-              #     class = "btn-warning"),
-              #   br(),
-              #   shiny::actionButton(
-              #     inputId = ns("hrButton_compare"),
-              #     label = "Modify",
-              #     icon = icon("code-compare"),
-              #     class = "btn-info",
-              #     width = "100%")
-              # 
-              # ) # end of splitLayout
 
             ) # end of column (footer)
           ), # end of box // hrBox_regime
@@ -975,10 +955,15 @@ mod_tab_hrange_server <- function(id, vals) {
             
             uiOutput(ns("hrUI_compare_n")),
             
-            p(span("Proceed with caution!", class = "cl-dgr"),
-              "Longer sampling durations + lower sampling",
-              "intervals will add run time to simulation, model",
-              "fitting, and estimation functions."),
+            p(span(class = "help-block",
+                   style = "text-align: center !important;",
+                   
+                   fontawesome::fa("circle-exclamation", fill = pal$dgr),
+                   span("Note:", class = "help-block-note"),
+                   "Longer sampling durations + lower sampling",
+                   "intervals will add run time to simulation, model",
+                   "fitting, and estimation functions. Proceed with",
+                   wrap_none(span("caution", class = "cl-dgr"), ".")))
             
           ), # end of fluidRow
           
@@ -1001,20 +986,14 @@ mod_tab_hrange_server <- function(id, vals) {
     # Calculate and create true home range:
     estimating_truth <- reactive({
       
-      # mean_x <- mean(vals$data1$x)
-      # mean_y <- mean(vals$data1$y)
-      # if (!is.null(vals$hr$data)) {
-      #   mean_x <- mean(c(vals$data1$x, vals$hr$data$x))
-      #   mean_y <- mean(c(vals$data1$y, vals$hr$data$y))
-      # }
-      
       # t_new <- seq(0, 2000 %#% "days", by = 1 %#% "day")[-1]
       # dat_full <- ctmm::simulate(
       #   vals$data1, vals$fit0, t = t_new, seed = vals$seed0)
       # mean_x <- mean(c(dat_full$x))
       # mean_y <- mean(c(dat_full$y))
       
-      mean_x <- mean_y <- 0
+      mean_x <- vals$mu0[1]
+      mean_y <- vals$mu0[2]
       sig <- vals$sigma0$value[2] %#% vals$sigma0$unit[2]
       area <- -2 * log(0.05) * pi * sig
       radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
@@ -1025,11 +1004,6 @@ mod_tab_hrange_server <- function(id, vals) {
         mean_x, function(x) x + radius_x * cos(truth$angle)))
       truth$y <- unlist(lapply(
         mean_y, function(x) x + radius_y * sin(truth$angle)))
-      
-      # xy <- truth %>% dplyr::select(long, lat)
-      # truth <- sp::SpatialPointsDataFrame(
-      #   coords = xy, data = truth,
-      #   proj4string = sp::CRS(vals$crs))
       
       return(list(area = area, data = truth))
       

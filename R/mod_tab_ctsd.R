@@ -1137,10 +1137,15 @@ mod_tab_ctsd_server <- function(id, vals) {
             
             uiOutput(ns("sdUI_compare_n")),
             
-            p(span("Proceed with caution!", class = "cl-dgr"),
-              "Longer sampling durations + lower sampling",
-              "intervals will add run time to simulation, model",
-              "fitting, and estimation functions."),
+            p(span(class = "help-block",
+                   style = "text-align: center !important;",
+                   
+                   fontawesome::fa("circle-exclamation", fill = pal$dgr),
+                   span("Note:", class = "help-block-note"),
+                   "Longer sampling durations + lower sampling",
+                   "intervals will add run time to simulation, model",
+                   "fitting, and estimation functions. Proceed with",
+                   wrap_none(span("caution", class = "cl-dgr"), ".")))
             
           ), # end of fluidRow
           
@@ -2216,13 +2221,13 @@ mod_tab_ctsd_server <- function(id, vals) {
         { if ("initial" %in% datasets)
           ggplot2::geom_hline(
             yintercept = preparing_speed()[["yline"]], 
-            linewidth = 1.5, linetype = "dashed",
+            linewidth = 1.1, linetype = "dashed",
             col = pal$sea) } +
         
         { if (!is.null(vals$ctsd_new) && "new" %in% datasets)
           ggplot2::geom_hline(
             yintercept = preparing_speed()[["yline_new"]],
-            linewidth = 1.5, linetype = "dashed",
+            linewidth = 1.1, linetype = "dashed",
             col = pal$dgr)  } +
         
         ggplot2::labs(
