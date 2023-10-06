@@ -394,23 +394,10 @@ sub { font-size: 90%; }
 
 /* INPUTS & BUTTONS --------------------------------------------------- */
 
-.btn-default {
-  color: var(--grey-700);
-  background-color: var(--grey-100);
-}
-
-/*
-.btn-default.active,
-.btn-default:active, .open > 
-.dropdown-toggle.btn-default {
-    background-color: #d0d0d0;
-} */
-
 .btn {
   font-family: var(--monosans);
   font-size: 15px;
   letter-spacing: 0.5px;
-  /* text-align: right; */
 
   border-radius: 0;
   border: none;
@@ -427,6 +414,11 @@ sub { font-size: 90%; }
   background-color: var(--midnight);
   color: var(--sea);
   border-radius: 0;
+}
+
+.btn-default {
+  color: var(--grey-700);
+  background-color: var(--grey-100);
 }
 
 .btn-primary {
@@ -497,11 +489,28 @@ sub { font-size: 90%; }
   background-color: var(--midnight);
 }
 
-
 .btn-success {
   color: var(--grey-700);
   background-color: #343332;
 }
+
+/* Custom class 'btn-nobg': */
+.btn-nobg .btn {
+  padding: 0px;
+  margin: -3px;
+}
+.btn-nobg .btn-default,
+.btn-nobg .btn-default.active {
+  background-color: white !important;
+}
+.btn-nobg .btn.active, 
+.btn-nobg .btn:active {
+  box-shadow: none !important;
+}
+.btn-nobg .btn:hover {
+  color: #000 !important;
+}
+
 
 .btn-box-tool {
   padding: 5px;
@@ -510,6 +519,11 @@ sub { font-size: 90%; }
   color: #97a0b3;
   margin-top: -5px;
 }
+
+.btn-group-vertical > .btn-group {
+  border: 2px solid #fff;
+}
+
 
 .caution-button,
 .caution-button:focus {
