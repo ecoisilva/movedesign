@@ -1,6 +1,6 @@
 Package: movedesign
 Title: Study design of movement ecology studies
-Version: 0.2.1
+Version: 0.2.2
 Authors@R: 
     person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"),
            comment = c(ORCID = "0000-0003-4850-6193"))
@@ -29,7 +29,6 @@ Imports:
     parsedate,
     plyr,
     reactable,
-    rgdal,
     rintrojs,
     rlang,
     scales,
@@ -44,6 +43,7 @@ Imports:
     shinyWidgets,
     stats,
     stringr,
+    terra,
     tidyr,
     utils,
     viridis
