@@ -216,8 +216,8 @@ app_server <- function(input, output, session) {
   # Analyses tabs:
   mod_tab_hrange_server("tab_hrange_1", rv = rv)
   mod_tab_ctsd_server("tab_ctsd_1", rv = rv)
-  mod_tab_traj_server("tab_traj_1", rv = rv)
-  mod_tab_meta_server("tab_meta_1", rv = rv)
+  # mod_tab_traj_server("tab_traj_1", rv = rv)
+  # mod_tab_meta_server("tab_meta_1", rv = rv)
   
   # Report tab:
   mod_tab_report_server("tab_report_1", rv = rv)
