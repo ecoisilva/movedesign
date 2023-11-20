@@ -22,14 +22,14 @@ mod_comp_tour_ui <- function(id) {
 #' comp_tour Server Functions
 #'
 #' @noRd
-mod_comp_tour_server <- function(id, vals) {
+mod_comp_tour_server <- function(id, rv) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     pal <- load_pal()
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
-    vals$tour <- reactiveValues()
+    rv$tour <- reactiveValues()
     
     text_device <- reactive({
       
@@ -84,10 +84,8 @@ mod_comp_tour_server <- function(id, vals) {
     
     # Build tours: --------------------------------------------------------
 
-    build_mainTour <- function(ns, vals) {
-      
+    build_mainTour <- function(ns, rv) {
       action_bell <- wrap_none("(", fontawesome::fa("bell"), ")")
-      
       element <- intro <- character(0)
       
       element <- c(element, "#Tour_start")
@@ -220,7 +218,7 @@ mod_comp_tour_server <- function(id, vals) {
             "Do not select or click any other options yet.")
         )))
 
-      element <- c(element, "#comp_viz_selected-dataTabs_viz")
+      element <- c(element, "#comp_viz_selected-vizTabs_data")
       intro <- c(
         intro,
         HTML(paste(
@@ -235,7 +233,7 @@ mod_comp_tour_server <- function(id, vals) {
           "for that particular individual."
         )))
 
-      element <- c(element, "#comp_viz_selected-dataTable_all")
+      element <- c(element, "#comp_viz_selected-vizTable_all")
       intro <- c(
         intro,
         HTML(paste(
@@ -302,7 +300,7 @@ mod_comp_tour_server <- function(id, vals) {
           "later on."
         )))
 
-      element <- c(element, paste0(tab3, "selectUI_parameters"))
+      element <- c(element, paste0(tab3, "selectBox_pars"))
       intro <- c(
         intro,
         HTML(paste(
@@ -811,16 +809,16 @@ mod_comp_tour_server <- function(id, vals) {
     # Allow dynamic UI actions if tour is active:
 
     observe({
-      req(vals$active_tab)
-      if (vals$active_tab == 'about') vals$tour_active <- FALSE
+      req(rv$active_tab)
+      if (rv$active_tab == 'about') rv$tour_active <- FALSE
     })
 
     # If 'guided tour' button is clicked:
 
     observe({
-      vals$tour_active <- TRUE
+      rv$tour_active <- TRUE
       
-      tour <- build_mainTour(ns, vals)
+      tour <- build_mainTour(ns, rv)
       rintrojs::introjs(
         session = session,
         options = list(steps = tour,

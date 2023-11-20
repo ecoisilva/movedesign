@@ -13,8 +13,14 @@ mod_comp_settings_ui <- function(id){
 
     column(
       width = 12, align = "center",
-      shiny::p(),
+      p(),
+      actionButton(ns("browser"),
+                   icon = shiny::icon("screwdriver-wrench"),
+                   label = "Browser console",
+                   style = "width: 100%"),
+      tags$script("$('#browser').hide();"),
       
+      p(),
       shiny::downloadButton(
         outputId = ns("download_settings"),
         label = "Save settings",
@@ -52,12 +58,16 @@ mod_comp_settings_ui <- function(id){
 #' comp_settings Server Functions
 #'
 #' @noRd
-mod_comp_settings_server <- function(id, vals) {
+mod_comp_settings_server <- function(id, rv) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     observe({
-      vals$parallel <- input$parallel
+      browser()
+    }) %>% bindEvent(input$browser)
+    
+    observe({
+      rv$parallel <- input$parallel
     }) %>% bindEvent(input$parallel)
 
     # observe({
@@ -69,7 +79,7 @@ mod_comp_settings_server <- function(id, vals) {
     output$text_save <- renderUI({
       
       out_text <- "Save all stored values to your local environment."
-      if (is.null(vals$data0)) {
+      if (is.null(rv$data0)) {
         out_text <- paste(
           "Return here after running any analyses to save",
           "all stored values to your local environment.")
@@ -88,10 +98,10 @@ mod_comp_settings_server <- function(id, vals) {
         paste0("movedesign-settings_", Sys.Date(), ".rds")
       },
       content = function(file) {
-        if (is.null(vals$data0)) {
+        if (is.null(rv$data0)) {
           shiny::showNotification(
             "No data to save", type = "error", duration = 8)
-        } else { saveRDS(reactiveValuesToList(vals), file = file) }
+        } else { saveRDS(reactiveValuesToList(rv), file = file) }
         
       } # end of content
     ) # end of output, "download_settings"
