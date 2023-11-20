@@ -10,10 +10,14 @@
  --sea: #009da0;
  --sea-med: #007d80;
  --sea-dark: #006669;
-
+ 
  --tree: #77b131;
  --tree-dark: #508016;
-
+ 
+ --jungle-light: #a3ba00;
+ --jungle: #8ca000; 
+ --jungle-dark: #6b8e23;
+ 
  --danger-light: #ff7766;
  --danger: #dd4b39;
  --danger-dark: #cc1b34;
@@ -45,6 +49,8 @@
 .cl-sea { color: var(--sea) !important; }
 .cl-sea-l { color: var(--sea-light) !important; }
 .cl-sea-d { color: var(--sea-dark) !important; }
+
+.cl-jgl { color: var(--jungle) !important; }
 
 .cl-grn { color: var(--tree) !important; }
 .cl-grn-d { color: var(--tree-dark) !important; }
@@ -174,10 +180,14 @@ body {
 }
 .skin-black .sidebar-menu .treeview-menu > li > a {
   color: var(--sea-med);
+  padding-left: 10px;
 }
-.treeview-menu > li > a > .fa,
-.treeview-menu > li > a > .glyphicon, .treeview-menu > li > a > .icon {
+.sidebar-menu > li > a > .fas {
+    margin-right: 0.3rem;
+}
+.treeview-menu > li > a > .fas {
     margin-left: 6px;
+    margin-right: 0.3rem;
 }
 
 .skin-black .sidebar-menu .treeview-menu > li > a:hover,
@@ -339,6 +349,14 @@ pre {
   margin-bottom: 0px;
 }
 
+
+/* Custom class 'pre-main': */
+pre .pre-main {
+  color: #fff;
+  background-color: var(--night);
+  border: 1px solid #000;
+}
+
 pre.shiny-text-output {
   white-space: pre-wrap;
   word-break: keep-all;
@@ -393,6 +411,26 @@ sub { font-size: 90%; }
 }
 
 /* INPUTS & BUTTONS --------------------------------------------------- */
+
+select[multiple], select[size] {
+  font-family: var(--monosans);
+  padding: 6px;
+  background-color: var(--grey-000) !important;
+  border: 0;
+  border-radius: 0;
+  min-inline-size: 100% !important;
+  min-height: 100px;
+}
+
+.chooser-container { 
+  display: inline-block;
+} 
+.chooser-left-container {
+  min-inline-size: 100% !important;
+}
+.chooser-right-container { 
+  min-inline-size: 100% !important;
+}
 
 .btn {
   font-family: var(--monosans);
@@ -492,6 +530,24 @@ sub { font-size: 90%; }
 .btn-success {
   color: var(--grey-700);
   background-color: #343332;
+}
+
+/* Custom class 'btn-sims': */
+.btn-sims {
+  color: #fff;
+  background-color: var(--jungle);
+}
+.btn-sims:hover {
+  color: #fff;
+  background-color: var(--jungle-dark);
+}
+.btn-sims:focus {
+  color: var(--grey-700);
+  background-color: var(--grey-000);
+}
+.btn-sims:active, .btn-sims:active:focus {
+  color: var(--jungle-light);
+  background-color: var(--midnight);
 }
 
 /* Custom class 'btn-nobg': */
@@ -705,6 +761,7 @@ shiny .irs-handle:hover {
   background-color: var(--sea);
 }
 
+
 .irs--shiny .irs-line {
   border-radius: 0;
   background-color: var(--grey-000);
@@ -727,6 +784,19 @@ shiny .irs-handle:hover {
   font-size: 12px;
   letter-spacing: 0.5px;
 }
+
+/* Custom class 'sims-irs': */
+.sims-irs .irs--shiny .irs-to,
+.sims-irs .irs--shiny .irs-single,
+.sims-irs .irs--shiny .irs-from {
+  background-color: var(--jungle) !important;
+}
+.sims-irs .irs--shiny .irs-bar {
+  background: var(--jungle);
+  border-top: 1px solid var(--jungle) !important;
+  border-bottom: 1px solid var(--jungle) !important;
+}
+
 
 
 .timelineinput .irs-from,
@@ -832,6 +902,14 @@ shiny .irs-handle:hover {
   background-color: var(--danger);
 }
 
+.box.box-solid.box-warning > .box-header {
+  color: #fff;
+  background-color: var(--jungle);
+}
+.box.box-warning {
+  border-top-color: var(--jungle);
+}
+
 .box.box-solid.box-info > .box-header {
   color: #fff;
   background-color: var(--sea);
@@ -923,30 +1001,32 @@ font-size: 12px;
 
 /* BLOCKS -------------------------------------------------------------- */
 
-.sampleblock {
+.sizeblock {
   font-family: var(--monosans);
   display: block;
   margin: 10px 0;
   text-align: center;
   line-height: 1;
 }
-.sampleblock > .sampleblock-text {
+.sizeblock > .sizeblock-text {
   font-size: 14px;
   line-height: 16px;
   font-weight: 100;
   letter-spacing: 0.5px;
   text-transform: none;
 }
-.sampleblock > .sampleblock-header {
+.sizeblock > .sizeblock-header {
   font-size: 30px;
   line-height: 29px;
   font-weight: 100;
   letter-spacing: 1px;
 }
-.sampleblock > .sampleblock-percentage {
+.sizeblock > .sizeblock-percentage {
+  display: block;
   font-size: 15px;
   font-weight: 100;
   letter-spacing: 1px;
+  line-height: 1.25;
 }
 
 .parblock {
@@ -1323,6 +1403,14 @@ font-size: 12px;
   font-size: 15px;
 }
 
+/* Custom class (no user selection in multi-select tables) */
+.no_selection .rt-select-input {
+  visibility: hidden !important;
+}
+.no_selection .rt-select {
+  visibility: hidden !important;
+}
+
 .rt-table {
   line-height: 1;
   color: var(--grey-800);
@@ -1395,6 +1483,9 @@ table.dataTable.display tbody td {
   z-index: 9999999999;
   border: 2px solid #dfdfdf;
 }
+.sweet-alert.alert-size-s {
+  width: 423px;
+}
 
 .sweet-alert button {
   font-family: var(--monosans) !important;
@@ -1434,6 +1525,7 @@ table.dataTable.display tbody td {
   background-color: var(--sea) !important;
 }
 
+.modal_error.sweet-alert h2,
 .modal_warning.sweet-alert h2 {
   font-size: 24px !important;
   color: var(--danger) !important;
@@ -1475,9 +1567,10 @@ footer {
   color: var(--sea);
 }
 
+/*
 .fas {
   margin-right: 0.2em;
-}
+} */
 
 /* EQUATIONS ----------------------------------------------------------- */
 
