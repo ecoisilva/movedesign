@@ -1318,6 +1318,82 @@ as_tele_dt <- function(object) {
 }
 
 
+#' Chooser input
+#'
+#' @noRd
+#'
+chooserInput <- function(inputId, 
+                         leftLabel, rightLabel,
+                         leftChoices, rightChoices,
+                         size = 5, multiple = FALSE,
+                         width = 100) {
+  
+  leftChoices <- lapply(leftChoices, tags$option)
+  rightChoices <- lapply(rightChoices, tags$option)
+  
+  if (multiple) multiple <- "multiple"
+  else multiple <- NULL
+  
+  class <- paste("shiny-input-select form-control")
+  
+  tagList(
+    singleton(tags$head(
+      tags$script(src = "chooser-binding.js"))),
+    
+    div(id = inputId, # class = "chooser",
+        class = "chooser form-group shiny-input-container",
+        fluidRow(
+          style = paste("display: flex;",
+                        "justify-content: space-evenly;",
+                        "align-items: center !important;",
+                        "padding: 10px;"),
+          column(
+            width = 5, align = "center",
+            div(class = "chooser-container chooser-left-container",
+                tags$label(leftLabel,
+                           style = "font-size: 17px;",
+                           class = "cl-jgl"),
+                tags$br(),
+                tags$select(class = paste("left", class),
+                            size = size, 
+                            multiple = multiple,
+                            leftChoices))
+          ),
+          column(
+            width = 2, align = "center",
+            fluidRow(
+              style = "display: inherit;",
+              p(style = "margin-top: 20px;"),
+              style = paste("display: inline;",
+                            "position: relative;",
+                            "top: 50%;"),
+              icon("circle-right", class = "right-arrow fa-2x cl-jgl"),
+              p(),
+              icon("circle-left", class = "left-arrow fa-2x cl-jgl"))
+          ),
+          column(
+            width = 5, align = "center",
+            div(class = "chooser-container chooser-right-container",
+                tags$label(rightLabel,
+                           style = "font-size: 17px;",
+                           class = "cl-jgl"),
+                tags$br(),
+                tags$select(class = paste("right", class),
+                            size = size, 
+                            multiple = multiple,
+                            rightChoices))
+          )
+        )) # end of div
+  ) # end of tagList
+}
+
+shiny::registerInputHandler("shinyjsexamples.chooser", 
+                            function(data, ...) {
+  if (is.null(data)) NULL
+  else list(A = as.character(data$left),
+            B = as.character(data$right))
+}, force = TRUE)
+
 
 # ctmmweb functions: ------------------------------------------------------
 

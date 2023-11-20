@@ -109,24 +109,69 @@ mod_tab_about_ui <- function(id) {
                     yes = tags$i(class = "fa fa-check-square",
                                  style = "color: var(--sea);"),
                     no = tags$i(class = "fa fa-square-o",
-                                style = "color: var(--danger);"))),
+                                style = "color: var(--danger);")),
+                  individual = TRUE),
 
                 ### Research question(s) ----------------------------------
 
                 shinyWidgets::checkboxGroupButtons(
                   inputId = ns("which_question"),
-                  label = span("Research question:",
+                  label = span("Research questions:",
                                style = "font-size: 16px;"),
                   choices = c("Home range",
                               "Speed & distance"),
+                              # "Trajectory"),
                   selected = character(0),
                   checkIcon = list(
                     yes = tags$i(class = "fa fa-check-square",
                                  style = "color: var(--sea);"),
                     no = tags$i(class = "fa fa-square-o",
-                                style = "color: var(--danger);"))),
-                br()
-
+                                style = "color: var(--danger);")),
+                  individual = TRUE),
+                
+                # div(class = "btn-nobg",
+                # shinyWidgets::radioGroupButtons(
+                #   inputId = ns("which_m"),
+                #   label = span("Devices deployed:",
+                #                style = "font-size: 16px;"),
+                #   choiceNames = c(
+                #     tagList(span(em(
+                #       '"I have a specific number in mind."'))), 
+                #     tagList(span(em(
+                #       '"I want to determine the',
+                #       span("optimal", class = "cl-sea"),
+                #       'number of devices."')))),
+                #   choiceValues = list("set_m", "get_m"),
+                #   selected = character(0),
+                #   checkIcon = list(
+                #     yes = tags$i(class = "fa fa-check-square",
+                #                  style = "color: var(--sea);"),
+                #     no = tags$i(class = "fa fa-square-o",
+                #                 style = "color: var(--danger);")),
+                #   direction = "vertical")),
+                # 
+                # div(class = "btn-nobg",
+                # shinyWidgets::radioGroupButtons(
+                #   inputId = ns("which_meta"),
+                #   label = span("Target:",
+                #                style = "font-size: 16px;"),
+                #   choiceNames = c(
+                #     tagList(span(
+                #       "Mean of",
+                #       span("sampled population", 
+                #            class = "cl-sea"))), 
+                #     tagList(span(
+                #       "Compare", span("two", class = "cl-sea"),
+                #       "sampled populations"))),
+                #   choiceValues = list("mean", "compare"),
+                #   selected = character(0),
+                #   checkIcon = list(
+                #     yes = tags$i(class = "fa fa-check-square",
+                #                  style = "color: var(--sea);"),
+                #     no = tags$i(class = "fa fa-square-o",
+                #                 style = "color: var(--danger);")),
+                #   direction = "vertical"))
+                
             ) # end of div
           ) # end of fluidRow
 
@@ -206,33 +251,62 @@ mod_tab_about_ui <- function(id) {
 #' tab_about Server Functions
 #'
 #' @noRd
-mod_tab_about_server <- function(id, vals) {
+mod_tab_about_server <- function(id, rv) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-
-    # Store values: -------------------------------------------------------
-
-    observe({
-      vals$which_data <- input$which_data
-      vals$which_question <- input$which_question
-    }, label = "o-about_questions")
-
-    observe({
-      vals$overwrite_active <- input$overwrite_active
-    }, label = "o-about_overwrite")
+    
+    # MAIN REACTIVE VALUES ------------------------------------------------
     
     observe({
-      shinyWidgets::updateCheckboxGroupButtons(
-        session = session,
-        inputId = "which_question",
-        selected = vals$which_question)
-    }, label = "o-about_update")
+      rv$which_data <- input$which_data
+      rv$which_question <- input$which_question
+    }, label = "o-about_questions")
+    
+    observe({
+      rv$which_meta <- input$which_meta
+    }, label = "o-about_meta")
+    
+    
+    observe({
+      rv$overwrite_active <- input$overwrite_active
+    }, label = "o-about_overwrite")
+    
+    # DYNAMIC UI ELEMENTS -------------------------------------------------
+    
+    # observe({
+    #   shinyWidgets::updateCheckboxGroupButtons(
+    #     session = session,
+    #     inputId = "which_question",
+    #     selected = rv$which_question)
+    # }, label = "o-about_update")
+    
+    observe({
+      req(input$which_meta)
+      
+      if (!is.null(input$which_meta) &&
+          is.null(input$which_question)) {
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Missing estimate",
+          text = tagList(span(
+            "Meta-analyses requires you to pick a",
+            "target estimate (e.g.,",
+            wrap_none(span("home range", class = "cl-dgr"), ", ",
+                      span("speed and distance", class = "cl-dgr"),
+            ").")
+          )),
+          html = TRUE,
+          size = "xs")
+      }
+    }) # end of observe
+    
     
     # SETTINGS ------------------------------------------------------------
     ## Generating seed: ---------------------------------------------------
     
     observe({
-      req(vals$active_tab == 'about')
+      req(rv$active_tab == 'about')
       
       if (input$overwrite_active) {
         req(input$overwrite_active)
@@ -241,11 +315,11 @@ mod_tab_about_server <- function(id, vals) {
           style = "warning",
           message = paste0("Seed is now ", msg_warning("fixed"), "."),
           detail = "Not recommended outside of tutorials.")
-        vals$seed0 <- 100
+        rv$seed0 <- 100
         
       } else {
         seed <- round(stats::runif(1, min = 1, max = 999999), 0)
-        vals$seed0 <- seed
+        rv$seed0 <- seed
       }
       
     }, label = "o-about_generate_seed") # end of observe
@@ -257,17 +331,17 @@ mod_tab_about_server <- function(id, vals) {
       validate(need(input$restore_state, message = FALSE))
       restored_vals <- readRDS(
         file = paste(input$restore_state$datapath))
-      vals$restored_vals <- restored_vals
+      rv$restored_vals <- restored_vals
 
       shiny::showModal(
         shiny::modalDialog(
           title = "Previous parameters restored!",
 
           p("Data status:"),
-          p("Type:", vals$restored_vals$"data_type"),
+          p("Type:", rv$restored_vals$"data_type"),
 
           p("Parameters:"),
-          p("Seed:", vals$restored_vals$"seed0"),
+          p("Seed:", rv$restored_vals$"seed0"),
 
           footer = tagList(
             modalButton("Dismiss")

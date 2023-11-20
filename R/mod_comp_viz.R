@@ -12,7 +12,7 @@ mod_comp_viz_ui <- function(id) {
   tagList(
 
     tabsetPanel(
-      id = ns("vizTabs_viz"),
+      id = ns("vizTabs_data"),
 
       tabPanel(
         value = ns("vizPanel_all"),
@@ -32,17 +32,40 @@ mod_comp_viz_ui <- function(id) {
               width = "100%", height = "100%")
         )
 
-      ), # end of panels (1 out of 3)
+      ), # end of panels (1 out of 4)
+      
+      tabPanel(
+        value = ns("vizPanel_groups"),
+        title = tagList(
+          icon("object-ungroup", class = "cl-jgl"),
+          span("Groups", class = "ttl-panel cl-jgl")
+        ),
+        div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
+            p(style = "margin-top: 10px;"),
+            uiOutput(ns("select_groups")))
+        
+      ), # end of panels (2 out of 4)
 
       tabPanel(
         value = ns("vizPanel_individual"),
         title = tagList(
           icon("filter", class = "cl-sea"),
-          span("Selected individual", class = "ttl-panel")
+          span("Individual", class = "ttl-panel")
         ),
 
         p(style = "margin-top: 10px;"),
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
+            
+            shiny::selectizeInput(
+              inputId = ns("vizInput_id"),
+              label = "Individual ID:",
+              choices = "",
+              selected = NULL,
+              multiple = FALSE,
+              options = list(
+                placeholder = "Pick an individual",
+                onInitialize = I('function() { this.setValue(""); }'))
+            ),
             
             ggiraph::girafeOutput(
               outputId = ns("vizPlot_id"),
@@ -58,7 +81,7 @@ mod_comp_viz_ui <- function(id) {
             uiOutput(ns("vizTable_showVars"))
         )
 
-      ), # end of panels (2 out of 3)
+      ), # end of panels (3 out of 4)
 
       tabPanel(
         value = ns("vizPanel_svf"),
@@ -78,14 +101,14 @@ mod_comp_viz_ui <- function(id) {
               width = 12, align = "center",
               p(),
               shiny::sliderInput(
-                ns("viz_fraction"),
+                ns("vizInput_fraction"),
                 label = "Proportion of variogram plotted:",
                 min = 0, max = 100, value = 50, step = 5,
                 post = "%",
-                width = "90%"),
+                width = "100%"),
               p(),
               shinyWidgets::awesomeCheckbox(
-                inputId = ns("viz_add_fit"),
+                inputId = ns("vizInput_add_fit"),
                 label = span(
                   "Add", span("model fit", class = "cl-sea"),
                   "to variogram", icon("wrench")),
@@ -102,154 +125,201 @@ mod_comp_viz_ui <- function(id) {
 #' comp_viz Server Functions
 #'
 #' @noRd
-mod_comp_viz_server <- function(id, vals) {
-  moduleServer( id, function(input, output, session) {
+mod_comp_viz_server <- function(id, rv) {
+  moduleServer(id, function(input, output, session) {
     ns <- session$ns
     pal <- load_pal()
     
-    # DYNAMIC UI ELEMENTS -------------------------------------------------
+    # MAIN REACTIVE VALUES ------------------------------------------------
+    
+    id_debounced <- reactive({
+      state <- reactable::getReactableState("vizTable_all")
+      if (is.null(state$selected)) return(NULL)
+      
+      req(state$selected)
+      id <- names(rv$datList)[state$selected]
+      if (identical(id, character(0)) || any(is.na(id))) return(NULL)
+      else return(id)
+    }) %>% debounce(1000)
     
     observe({
-      req(vals$active_tab, vals$is_valid)
-      req(vals$active_tab == 'data_select' ||
-         vals$active_tab == 'data_upload')
-        
-      shinyjs::hide(id = "viz_add_fit")
-      if (!is.null(vals$fit0) && !is.null(vals$svf$fit)) 
-        shinyjs::show(id = "viz_add_fit")
+      req(rv$datList, rv$data_type != "simulated")
+      if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
+      if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
+      
+      rv$id <- id_debounced()
+      rv$status <- FALSE
       
     }) # end of observe
     
     observe({
-      req(vals$is_valid)
-      
-      tabselected <- NULL
-      
-      if (vals$is_valid && vals$active_tab == 'data_upload')
-        tabselected <- "comp_viz_uploaded-vizPanel_individual"
-      
-      if (vals$is_valid && vals$active_tab == 'data_select')
-        tabselected <- "comp_viz_selected-vizPanel_individual"
-      
-      updateTabsetPanel(
-        session,
-        inputId = "vizTabs_viz",
-        selected = tabselected)
-      
-    }) %>% # end of observe,
-      bindEvent(vals$is_valid)
-    
-    # MAIN REACTIVE VALUES ------------------------------------------------
-    ## Summarize data: ----------------------------------------------------
-
-    data_summary <- reactive({
-      req(vals$dataList)
-      
-      dfList <- as_tele_list(isolate(vals$dataList))
-      sumdfList <- summary(dfList)
-      
-      for (i in 1:length(dfList)) {
-        sumdfList$n[i] <- nrow(dfList[[i]])
-      }
-      
-      sum_col1 <- grep("period", names(sumdfList))
-      sum_col2 <- grep("interval", names(sumdfList))
-      sumdfList[,sum_col1] <- round(sumdfList[sum_col1], 1)
-      sumdfList[,sum_col2] <- round(sumdfList[sum_col2], 1)
-      sumdfList <- sumdfList %>% 
-        dplyr::select(-longitude, -latitude)
-      
-      return(sumdfList)
-      
+      if (length(req(input$set_groups)$A) != 0 &&
+          length(req(input$set_groups)$B) != 0)
+        rv$groups <- input$set_groups
+      else rv$groups <- NULL
     })
-
+    
+    ## Summarize data: ----------------------------------------------------
+    
     output$vizTable_showVars <- renderUI({
-      req(vals$input_x,
-          vals$input_y,
-          vals$input_t)
-
+      req(rv$input_x,
+          rv$input_y,
+          rv$input_t,
+          rv$datList,
+          input$vizInput_id)
+      
       shinyWidgets::pickerInput(
         inputId = ns("show_vars"),
         width = "100%",
         label = span("Columns to show above:",
                      class = "txt-label"),
-        choices = names(vals$data0),
-        selected = c(vals$input_x,
-                     vals$input_y,
-                     vals$input_t),
+        choices = names(rv$datList[[input$vizInput_id]]),
+        selected = c(rv$input_x,
+                     rv$input_y,
+                     rv$input_t),
         options = list(
           `actions-box` = TRUE,
           size = 10,
           `selected-text-format` = "count > 3"
         ), multiple = TRUE)
-
+      
     }) # end of renderUI // vizTable_showVars
-
+    
+    ## Select individuals for groups: -------------------------------------
+    
+    observe({
+      hideTab(inputId = "vizTabs_data",
+              target = ns("vizPanel_groups"))
+      if (req(rv$which_meta) == "compare")
+        showTab(inputId = "vizTabs_data",
+                target = ns("vizPanel_groups"))
+    }) # end of observe
+    
+    observe({
+      if (length(req(rv$datList)) >= 2)
+        shinyjs::show(id = "select_groups")
+      else shinyjs::hide(id = "select_groups")
+      
+    }) # end of observe
+    
+    output$select_groups <- renderUI({
+      req(rv$datList)
+      m <- length(rv$datList)
+      
+      set_id <- names(rv$datList)
+      # if (!is.null(rv$id)) set_id <- rv$id
+      
+      ui <- chooserInput(ns("set_groups"), 
+                         leftLabel = "Group A", 
+                         rightLabel = "Group B",
+                         
+                         leftChoices = set_id, 
+                         rightChoices = c(), 
+                         
+                         size = 4, 
+                         multiple = TRUE)
+      
+      # , column(
+      #   align = "center", width = 12,
+      #   verbatimTextOutput(ns("selection")))
+      
+    }) # end of renderUI, "select_groups"
+    
+    # DYNAMIC UI ELEMENTS -------------------------------------------------
+    
+    observe({
+      req(rv$active_tab, rv$is_valid)
+      req(rv$active_tab == 'data_select' ||
+         rv$active_tab == 'data_upload')
+        
+      shinyjs::hide(id = "vizInput_add_fit")
+      if (!is.null(rv$fitList) && !is.null(rv$svfList[[1]]$fit)) 
+        shinyjs::show(id = "vizInput_add_fit")
+      
+    }) # end of observe
+    
+    observe({
+      req(rv$is_valid,
+          rv$datList, rv$id)
+      
+      tabselected <- NULL
+      
+      if (rv$is_valid && length(rv$datList[rv$id]) > 1) {
+        if (rv$active_tab == 'data_upload')
+          tabselected <- "comp_viz_uploaded-vizPanel_individual"
+        
+        if (rv$active_tab == 'data_select')
+          tabselected <- "comp_viz_selected-vizPanel_individual"
+      }
+      
+      req(tabselected)
+      updateTabsetPanel(
+        session,
+        inputId = "vizTabs_data",
+        selected = tabselected)
+      
+    }) %>% # end of observe,
+      bindEvent(rv$is_valid)
+    
+    observe({
+      req(rv$datList)
+      
+      shiny::updateSelectizeInput(
+          session,
+          inputId = "vizInput_id",
+          label = "Individual ID:",
+          choices = names(rv$datList),
+          selected = names(rv$datList)[[1]])
+      
+    }) %>% # end of observe,
+      bindEvent(rv$datList)
+    
+    observe({
+      req(rv$active_tab == 'data_upload' ||
+          rv$active_tab == 'data_select')
+      
+      if (length(rv$id) == 1) shinyjs::hide(id = "vizInput_id")
+      else shinyjs::show(id = "vizInput_id")
+    }) %>% # end of observe,
+      bindEvent(rv$id)
+    
     # PLOTS -------------------------------------------------------------
     ## Rendering all data (xy): -----------------------------------------
 
+    observe({
+      rv$status <- TRUE
+    }) %>% bindEvent(input$vizPlot_all_selected)
+    
     output$vizPlot_all <- ggiraph::renderGirafe({
-      req(vals$dataList, vals$data_type != "simulated")
-      
-      
-      # if (length(vals$dataList) == 1)
-      
-      if (vals$data_type == "selected") {
-        
-        # to address compatibility of the pelican dataset:
-        if (vals$species != "pelican") {
-          newdat.all <- as_tele_df(vals$dataList)
-        } else {
-          data_df <- list()
-          for (i in 1:length(vals$dataList)) {
-            tmp <- vals$dataList[i]
-            if (names(vals$dataList)[i] == "gps") {
-              tmp <- tmp@.Data[1] %>% as.data.frame
-              tmp <- tmp %>%
-                dplyr::select('gps.timestamp',
-                              'gps.x',
-                              'gps.y')
-            }
-            if (names(vals$dataList)[i] == "argos") {
-              tmp <- tmp@.Data[1] %>% as.data.frame
-              tmp <- tmp %>%
-                dplyr::select('argos.timestamp',
-                              'argos.x',
-                              'argos.y')
-            }
-            colnames(tmp) <- c("timestamp", "x", "y")
-            tmp$name <- rep(names(vals$dataList)[i], nrow(tmp))
-            data_df[[i]] <- tmp
-          }
-          
-          newdat.all <- do.call(rbind.data.frame, data_df) }
-      } else { newdat.all <- as_tele_df(vals$dataList) }
+      if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
+      if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
 
+      req(rv$datList)
+        
+      datList <- rv$datList
+      newdat.all <- telemetry_as_df(datList)
+      
       req(all(!is.na(newdat.all$x),
               !is.na(newdat.all$y)))
-      
+
       yrange <- diff(range(newdat.all$y))
       xrange <- diff(range(newdat.all$x))
+
+      yrange_factor <- ifelse(yrange < 1.5 * xrange, 0.3,
+                              ifelse(yrange < 2 * xrange, 0.5, 0))
+      xrange_factor <- ifelse(xrange < 2 * yrange, 0.5, 0)
+
+      ymin <- min(newdat.all$y) - yrange * yrange_factor
+      ymax <- max(newdat.all$y) + yrange * yrange_factor
+      xmin <- min(newdat.all$x) - xrange * xrange_factor
+      xmax <- max(newdat.all$x) + xrange * xrange_factor
+
+      id <- NULL
+      if (!is.null(rv$id)) {
+        if (length(rv$id) > 1) id <- rv$id
+        else { if (rv$id != "") id <- rv$id }
+      }
       
-      if (yrange < 1.5 * xrange) {
-        ymin <- min(newdat.all$y) - yrange * .3
-        ymax <- max(newdat.all$y) + yrange * .3
-      } else if (yrange < 2 * xrange) {
-        ymin <- min(newdat.all$y) - yrange * .5
-        ymax <- max(newdat.all$y) + yrange * .5
-      } else {
-        ymin <- min(newdat.all$y)
-        ymax <- max(newdat.all$y)
-      }
-
-      if (xrange < 2 * yrange) {
-        xmin <- min(newdat.all$x) - xrange * .5
-        xmax <- max(newdat.all$x) + xrange * .5
-      } else {
-        xmin <- min(newdat.all$x)
-        xmax <- max(newdat.all$x)
-      }
-
       p.all <- ggplot2::ggplot() +
         ggiraph::geom_point_interactive(
           data = newdat.all,
@@ -260,7 +330,6 @@ mod_comp_viz_server <- function(id, vals) {
           size = 1.2) +
         ggplot2::labs(x = "x coordinate",
                       y = "y coordinate") +
-        # ggplot2::coord_fixed() +
 
         ggplot2::scale_x_continuous(
           labels = scales::comma,
@@ -272,81 +341,67 @@ mod_comp_viz_server <- function(id, vals) {
 
         theme_movedesign() +
         ggplot2::theme(legend.position = "none")
-
+      
       ggiraph::girafe(
         ggobj = p.all,
-        # width_svg = 6, height_svg = 5,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_zoom(max = 5),
           ggiraph::opts_hover(
-            css = paste("fill:#ffbf00;",
-                        "stroke:#ffbf00;")),
+            css = paste("fill: #06c6ca;",
+                        "stroke: #06c6ca;")),
           ggiraph::opts_selection(
-            selected = vals$id,
-            type = "single",
-            css = paste("fill:#dd4b39;",
-                        "stroke:#eb5644;")))
-      )
-
-    }) # end of renderGirafe
-
-    observe({
-      req(vals$dataList,
-          input$vizPlot_all_selected)
+            selected = id,
+            type = "multiple",
+            css = paste("alpha: .5;",
+                        "fill: #009da0;",
+                        "stroke: #009da0;"))))
       
-      vals$plt_selection <- names(vals$dataList)[
-        match(input$vizPlot_all_selected, names(vals$dataList))]
-    })
-
+    }) # end of renderGirafe
+    
     ## Rendering individual data (xy): ----------------------------------
 
     output$vizPlot_id <- ggiraph::renderGirafe({
-      req(vals$data0,
-          vals$input_x,
-          vals$input_y,
-          vals$input_t)
+      if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
+      if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
       
-      req(all(!is.na(vals$data0$x),
-              !is.na(vals$data0$y)))
+      req(rv$datList,
+          rv$input_x,
+          rv$input_y,
+          rv$input_t)
       
-      newdat <- as.data.frame(vals$data0[[vals$input_x]])
-      names(newdat) <- "x"
-      newdat$y <- vals$data0[[vals$input_y]]
-      newdat$time <- vals$data0[[vals$input_t]]
-
-      newdat$time <- as.POSIXct(
-        newdat$time, format = "%Y-%m-%d %H:%M:%S")
-
+      set_id <- 1
+      if (!is.null(rv$id)) {
+        if (length(rv$id) == 1) set_id <- rv$id
+      } else set_id <- input$vizInput_id
+      
+      dat <- rv$datList[[set_id]]
+      req(all(!is.na(dat$x), !is.na(dat$y), !is.null(dat$timestamp)))
+      
+      newdat <- data.frame(x = dat[[rv$input_x]],
+                           y = dat[[rv$input_y]],
+                           t = dat[[rv$input_t]]) %>% 
+        dplyr::mutate(t = as.POSIXct(t, format = "%Y-%m-%d %H:%M:%S"))
+      
       yrange <- diff(range(newdat$y))
       xrange <- diff(range(newdat$x))
-
-      if (yrange < 1.5 * xrange) {
-        ymin <- min(newdat$y) - yrange * .3
-        ymax <- max(newdat$y) + yrange * .3
-      } else if (yrange < 2 * xrange) {
-        ymin <- min(newdat$y) - yrange * .5
-        ymax <- max(newdat$y) + yrange * .5
-      } else {
-        ymin <- min(newdat$y)
-        ymax <- max(newdat$y)
-      }
-
-      if (xrange < 2 * yrange) {
-        xmin <- min(newdat$x) - xrange * .5
-        xmax <- max(newdat$x) + xrange * .5
-      } else {
-        xmin <- min(newdat$x)
-        xmax <- max(newdat$x)
-      }
+      
+      yrange_factor <- ifelse(yrange < 1.5 * xrange, 0.3,
+                              ifelse(yrange < 2 * xrange, 0.5, 0))
+      xrange_factor <- ifelse(xrange < 2 * yrange, 0.5, 0)
+      
+      ymin <- min(newdat$y) - yrange * yrange_factor
+      ymax <- max(newdat$y) + yrange * yrange_factor
+      xmin <- min(newdat$x) - xrange * xrange_factor
+      xmax <- max(newdat$x) + xrange * xrange_factor
+      
+      rv$status <- TRUE
       
       p <- ggplot2::ggplot(
         data = newdat, 
         ggplot2::aes(
           x = x, y = y,
-          color = time,
-          tooltip = time,
-          data_id = time)) +
+          color = t, tooltip = t, data_id = t)) +
 
         ggplot2::geom_path(alpha = .9) +
         ggiraph::geom_point_interactive(size = 1.2) +
@@ -364,8 +419,8 @@ mod_comp_viz_server <- function(id, vals) {
         viridis::scale_color_viridis(
           name = "Tracking time:",
           option = "D", trans = "time",
-          breaks = c(min(newdat$time),
-                     max(newdat$time)),
+          breaks = c(min(newdat$t),
+                     max(newdat$t)),
           labels = c("Start", "End")) +
 
         theme_movedesign() +
@@ -382,7 +437,7 @@ mod_comp_viz_server <- function(id, vals) {
       
       ggiraph::girafe(
         ggobj = p,
-        # width_svg = 7.5, height_svg = 5,
+        width_svg = 5.5, height_svg = 5,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_selection(type = "none"),
@@ -391,31 +446,35 @@ mod_comp_viz_server <- function(id, vals) {
             opacity = 1,
             use_fill = TRUE),
           ggiraph::opts_hover(
-            css = paste("fill:#1279BF;",
-                        "stroke:#1279BF;",
-                        "cursor:pointer;"))))
-
+            css = paste("fill: #1279BF;",
+                        "stroke: #1279BF;",
+                        "cursor: pointer;"))))
+      
     }) # end of renderGirafe // vizPlot_id
 
     ## Rendering variogram (svf): ---------------------------------------
 
     output$vizPlot_svf <- ggiraph::renderGirafe({
-      req(vals$svfList, vals$data_type != "simulated")
+      if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
+      if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
+      req(rv$svfList)
       
-      svf <- vals$svfList
-      if (!is.null(vals$id))
-        if (length(vals$id) > 0) {
-          req(vals$svf)
-          svf <- vals$svf
-        }
+      svf <- rv$svfList
       
-      p <- plotting_svf(svf, fill = pal$dgr, 
-                        add_fit = ifelse(is.null(input$viz_add_fit),
-                                         FALSE, input$viz_add_fit),
-                        fraction = input$viz_fraction / 100)
+      if (!is.null(rv$id)) {
+        if (length(rv$id) == 0) svf <- svf
+        else if (length(rv$id) == 1) svf <- svf[1]
+        else svf <- svf[rv$id]
+      }
+      
+      p <- plotting_svf(
+        svf, fill = pal$dgr, 
+        add_fit = ifelse(is.null(input$vizInput_add_fit),
+                         FALSE, input$vizInput_add_fit),
+        fraction = input$vizInput_fraction / 100)
       
       ggiraph::girafe(
-        ggobj = ggpubr::ggarrange(plotlist = p),
+        ggobj = suppressWarnings(ggpubr::ggarrange(plotlist = p)),
         options = list(
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
@@ -430,18 +489,42 @@ mod_comp_viz_server <- function(id, vals) {
     ## Table for summary of all individuals: ----------------------------
 
     output$vizTable_all <- reactable::renderReactable({
-
+      req(rv$datList)
+      if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
+      if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
+      
+      id <- NULL
+      if (!is.null(rv$id)) {
+        req(all(!is.na(rv$id)))
+        if (length(rv$id) > 1) id <- match(rv$id, names(rv$datList))
+        else { if (rv$id != "") id <- match(rv$id, names(rv$datList)) }
+      }
+      
+      if (rv$status && !is.null(input$vizPlot_all_selected)) {
+        id <- match(input$vizPlot_all_selected, names(rv$datList))
+      } else if (is.null(input$vizPlot_all_selected))
+        id <- NULL
+      
+      out_sum <- summary(rv$datList)
+      out_sum$n <- sapply(rv$datList, function(x) nrow(x))
+      
+      sum_col1 <- grep("period", names(out_sum))
+      sum_col2 <- grep("interval", names(out_sum))
+      out_sum[, sum_col1] <- round(out_sum[sum_col1], 1)
+      out_sum[, sum_col2] <- round(out_sum[sum_col2], 1)
+      out_sum <- dplyr::select(out_sum, -longitude, -latitude)
+      
+      if (anyNA(id)) id <- NULL
       reactable::reactable(
-        data_summary(),
-        selection = "single",
+        out_sum,
         onClick = "select",
+        selection = "multiple",
         searchable = TRUE,
         highlight = TRUE,
         compact = FALSE,
         striped = TRUE,
-
-        defaultSelected = match(vals$id,
-                                names(isolate(vals$dataList))),
+        
+        defaultSelected = id,
         defaultColDef =
           reactable::colDef(
             headerClass = "rtable_header", align = "left"),
@@ -451,26 +534,35 @@ mod_comp_viz_server <- function(id, vals) {
             format = reactable::colFormat(digits = 3)),
           latitude = reactable::colDef(
             format = reactable::colFormat(digits = 3))))
-    })
-
-    observe({
-      state <- req(reactable::getReactableState("vizTable_all"))
-      state <- names(vals$dataList)[state$selected]
       
-      vals$tbl_selection <- state
-    })
-
+    }) # end of renderReactable
+    
     ## Table for selected individual data: ------------------------------
     
     output$vizTable_id <- reactable::renderReactable({
-      req(vals$data0, input$show_vars)
-
+      if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
+      if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
+      req(rv$datList, input$show_vars)
+      req(!anyNA(names(rv$datList)))
+      
+      set_id <- 1
+      if (!is.null(rv$id)) {
+        if (length(rv$id) == 1) set_id <- rv$id
+      } else set_id <- input$vizInput_id
+      
+      req(rv$datList[set_id][[1]])
       tmpdat <- NULL
-      tmpdat <- as_tele_dt(list(vals$data0))
+      tmpdat <- as_tele_dt(rv$datList[set_id])
+      
       tmpdat <- tmpdat %>% dplyr::select(input$show_vars)
       if (!is.null(tmpdat$timestamp)) {
+        tmpdat$timestamp <- as.POSIXct(
+          strptime(tmpdat$timestamp, format = "%Y-%m-%d %H:%M"))
         tmpdat$timestamp <- as.character(tmpdat$timestamp)
       } else { NULL }
+      
+      format_column <- reactable::colFormat(separators = TRUE,
+                                            digits = 3)
 
       reactable::reactable(
         tmpdat,
@@ -489,25 +581,16 @@ mod_comp_viz_server <- function(id, vals) {
             headerClass = "rtable_header", align = "right"),
 
         columns = list(
-          timestamp = reactable::colDef(
-            minWidth = 150,
-            format = reactable::colFormat(datetime = TRUE)),
+          timestamp = reactable::colDef(minWidth = 150),
+          # format = reactable::colFormat(datetime = TRUE)),
           x = reactable::colDef(
-            minWidth = 90,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 3)),
+            minWidth = 90, format = format_column),
           y = reactable::colDef(
-            minWidth = 90,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 3)),
+            minWidth = 90, format = format_column),
           longitude = reactable::colDef(
-            minWidth = 90,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 3)),
+            minWidth = 90, format = format_column),
           latitude = reactable::colDef(
-            minWidth = 90,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 3)))
+            minWidth = 90, format = format_column))
       )
 
     }) # end of rendervizTable // vizTable_id
