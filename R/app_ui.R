@@ -38,7 +38,7 @@ app_ui <- function(request) {
 
         controlbarIcon = icon("gears"),
         shinydashboard::dropdownMenu(
-
+          
           shinydashboardPlus::messageItem(
             from = "GitHub",
             message = "Documentation, source, & citation",
@@ -131,23 +131,33 @@ app_ui <- function(request) {
           newTabItem(
             tabName = "sims",
             mod_tab_sims_ui("tab_sims_1")),
-
+          
           # Tab 4 'Device'
           newTabItem(
             tabName = "device",
             mod_tab_design_ui("tab_design_1")),
           
-          # Tab 5 'Home range estimation'
+          # Tab 5.1 'Home range estimation'
           newTabItem(
             tabName = "hr",
             mod_tab_hrange_ui("tab_hrange_1")),
 
-          # Tab 6 'CTSD estimation'
+          # Tab 5.2 'CTSD estimation'
           newTabItem(
             tabName = "ctsd",
             mod_tab_ctsd_ui("tab_ctsd_1")),
+          
+          # Tab 5.3 'Trajectory estimation'
+          newTabItem(
+            tabName = "meta",
+            mod_tab_meta_ui("tab_meta_1")),
 
-          # Tab 7 'Report'
+          # Tab 5.4 'Meta-analyses'
+          newTabItem(
+            tabName = "traj",
+            mod_tab_traj_ui("tab_traj_1")),
+          
+          # Tab 6 'Report'
           newTabItem(
             tabName = "report",
             mod_tab_report_ui("tab_report_1"))
