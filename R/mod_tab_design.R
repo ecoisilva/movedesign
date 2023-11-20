@@ -132,7 +132,7 @@ mod_tab_design_ui <- function(id) {
                 
                 shinyWidgets::autonumericInput(
                   inputId = ns("device_max"),
-                  label = span("Device storage max:",
+                  label = span("Device storage (max):",
                                style = "align: left !important;"),
                   currencySymbol = " locations",
                   currencySymbolPlacement = "s",
@@ -210,53 +210,6 @@ mod_tab_design_ui <- function(id) {
             
           ), # end of box // devBox_vhf_device
           
-          ### Number of simulations: --------------------------------------
-          
-          shinydashboardPlus::box(
-            title = span("Simulations to run:", class = "ttl-box_solid"),
-            id = ns("devBox_nsims"),
-            status = "primary",
-            width = NULL,
-            solidHeader = TRUE,
-            collapsible = FALSE,
-            
-            column(
-              width = 12, align = "left",
-              
-              fluidRow(
-                shinyWidgets::autonumericInput(
-                  inputId = ns("nsims"),
-                  label = NULL,
-                  minimumValue = 1,
-                  maximumValue = 100,
-                  value = 1,
-                  decimalPlaces = 0,
-                  wheelStep = 1),
-
-                p(style = "text-align: right !important;",
-                  HTML("&nbsp;"), "No. simulations (total):") %>%
-                  tagAppendAttributes(class = 'label_split'),
-                fluidRow(
-                  column(width = 12,
-                         verbatimTextOutput(outputId = ns("nsims_total"))
-                  )), p(style = "padding: 0px;")
-
-              ) # end of fluidRow
-            ), # end of column
-            
-            footer = column(
-              width = 12, align = "right",
-              style = "padding-left: 0px; padding-right: 0px;",
-              
-              shiny::actionButton(
-                inputId = ns("devButton_repeat"),
-                icon = icon("bolt"),
-                label = "Run",
-                class = "btn-primary",
-                width = "110px")) # end of footer
-            
-          ), # end of box // devBox_nsims
-          
           ### Limitations: ------------------------------------------------
           
           shinydashboardPlus::box(
@@ -268,7 +221,7 @@ mod_tab_design_ui <- function(id) {
               cellWidths = c("92%", "15px"),
               
               p(HTML("&nbsp;"),
-                "Simulate % data loss:") %>%
+                "Simulate data loss (%):") %>%
                 tagAppendAttributes(class = 'label_split'),
               
               actionButton(
@@ -285,8 +238,8 @@ mod_tab_design_ui <- function(id) {
             shinyWidgets::sliderTextInput(
               inputId = ns("device_loss"),
               label = NULL,
-              choices = c(0, 5, seq(10, 100, by = 10)),
-              from_min = 0, from_max = 90, selected = 0,
+              choices = seq(0, 100, by = 1),
+              from_min = 0, from_max = 95, selected = 0,
               grid = FALSE,
               post = "%",
               width = "100%"),
@@ -324,32 +277,32 @@ mod_tab_design_ui <- function(id) {
               currencySymbol = " meter(s)",
               currencySymbolPlacement = "s",
               decimalPlaces = 0,
-              minimumValue = 0, # 1
-              value = 10,
+              minimumValue = 0,
+              value = 0,
               wheelStep = 1)
             
           ), # end of box // devBox_error
           
           ### Other settings: ---------------------------------------------
           
-          shinydashboardPlus::box(
-            id = ns("devBox_type"),
-            width = NULL,
-            headerBorder = FALSE,
-            
-            shinyWidgets::pickerInput(
-              ns("est_type"),
-              label = "Sample sizes are:",
-              choices = c("Approximated" = 1,
-                          "From model fit" = 2),
-              choicesOpt = list(
-                subtext = c("(faster, less precise)",
-                            "(slower, more precise)")),
-              selected = 2),
-            
-            uiOutput(ns("devText_sizes"))
-            
-          ), # end of box // devBox_submit
+          # shinydashboardPlus::box(
+          #   id = ns("devBox_type"),
+          #   width = NULL,
+          #   headerBorder = FALSE,
+          #   
+          #   shinyWidgets::pickerInput(
+          #     ns("est_type"),
+          #     label = "Sample sizes are:",
+          #     choices = c("Approximated" = 1,
+          #                 "From model fit" = 2),
+          #     choicesOpt = list(
+          #       subtext = c("(faster, less precise)",
+          #                   "(slower, more precise)")),
+          #     selected = 2),
+          #   
+          #   uiOutput(ns("devText_sizes"))
+          #   
+          # ), # end of box // devBox_submit
           
           # Sample sizes: -------------------------------------------------
           
@@ -362,21 +315,42 @@ mod_tab_design_ui <- function(id) {
             
             fluidRow(
               column(width = 12, uiOutput(ns("devBlock_n"))),
-              column(width = 12, uiOutput(ns("devBlock_Narea"))),
-              column(width = 12, uiOutput(ns("devBlock_Nspeed"))),
+              column(width = 12, mod_blocks_ui(ns("devBlock_Narea"))),
+              column(width = 12, mod_blocks_ui(ns("devBlock_Nspeed")))
+              
             ), # end of fluidRow
             
             br(),
             
-            footer = column(
-              width = 12, align = "right",
-              style = "padding-left: 0px; padding-right: 0px;",
+            footer = tagList(
+              column(
+                width = 12, align = "center",
+                style = "padding-left: 5px; padding-right: 5px;",
+                
+                shinyWidgets::pickerInput(
+                  ns("est_type"),
+                  label = "Sample sizes are:",
+                  choices = c("Approximated" = 1,
+                              "From model fit" = 2),
+                  choicesOpt = list(
+                    subtext = c("(faster, less precise)",
+                                "(slower, more precise)")),
+                  selected = 2, 
+                  width = "100%"),
+                
+                uiOutput(ns("devText_sizes"))
+                
+              )) # end of footer
               
-              shiny::actionButton(
-                inputId = ns("devButton_save"),
-                icon = icon("bookmark"),
-                label = span("Show", span("table", class = "cl-sea")),
-                width = "110px")) # end of footer
+            # footer = column(
+            #   width = 12, align = "right",
+            #   style = "padding-left: 0px; padding-right: 0px;",
+            #   
+            #   shiny::actionButton(
+            #     inputId = ns("devButton_save"),
+            #     icon = icon("bookmark"),
+            #     label = span("Show", span("table", class = "cl-sea")),
+            #     width = "110px")) # end of footer
             
           ) # end of box // devBox_sizes
           
@@ -414,8 +388,8 @@ mod_tab_design_ui <- function(id) {
                            icon = icon("location-dot"),
                            
                            splitLayout(
-                             uiOutput(ns("devBlock_dur")),
-                             uiOutput(ns("devBlock_dti")))
+                             mod_blocks_ui(ns("devBlock_dur")),
+                             mod_blocks_ui(ns("devBlock_dti")))
                            
                   ) # end of panel (2 out of 2)
                   
@@ -462,6 +436,12 @@ mod_tab_design_ui <- function(id) {
                       span("Data", class = "ttl-panel")),
                     
                     br(),
+                    # div(class = "sims-irs",
+                    #     shinyWidgets::sliderTextInput(
+                    #       inputId = ns("dev_nsim"),
+                    #       label = "Show simulation no.:",
+                    #       choices = seq(1, 100, by = 1))),
+                    # p(),
                     
                     ggiraph::girafeOutput(
                       outputId = ns("devPlot_id"),
@@ -557,18 +537,18 @@ mod_tab_design_ui <- function(id) {
     
   ) # end of tagList
 }
-    
+
 #' tab_design Server Functions
 #'
 #' @noRd
-mod_tab_design_server <- function(id, vals) {
+mod_tab_design_server <- function(id, rv) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     pal <- load_pal()
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
-    vals$dev <- reactiveValues(
+    rv$dev <- reactiveValues(
       is_valid = FALSE,
       type = NULL,
       dur = NULL, dti = NULL,
@@ -582,15 +562,15 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({ # GPS duration
       req(input$gps_dur, input$gps_dur_unit)
-      vals$dev$dur <- data.frame(
+      rv$dev$dur <- data.frame(
         value = input$gps_dur, unit = input$gps_dur_unit)
       
-    }) %>% # end of observe,
+    }) %>% # end of observe
       bindEvent(input$gps_dur)
     
     observe({ # GPS interval
       req(input$gps_dti, input$gps_dti_unit)
-      vals$dev$dti <- data.frame(
+      rv$dev$dti <- data.frame(
         value = input$gps_dti, unit = input$gps_dti_unit)
       
     }) %>% # end of observe,
@@ -598,7 +578,7 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({ # VHF duration
       req(input$vhf_dur, input$vhf_dur_unit)
-      vals$dev$dur <- data.frame(
+      rv$dev$dur <- data.frame(
         value = input$vhf_dur, unit = input$vhf_dur_unit)
       
     }) %>% # end of observe,
@@ -606,7 +586,7 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({ # VHF interval
       req(input$vhf_dti, input$vhf_dti_unit)
-      vals$dev$dti <- data.frame(
+      rv$dev$dti <- data.frame(
         value = input$vhf_dti, unit = input$vhf_dti_unit)
       
     }) %>% # end of observe,
@@ -617,8 +597,8 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({
       req(input$device_type)
-      vals$dur <- NULL
-      vals$dti <- NULL
+      rv$dur <- NULL
+      rv$dti <- NULL
       
       # GPS:
       if (input$device_type == "GPS") {
@@ -626,7 +606,7 @@ mod_tab_design_server <- function(id, vals) {
         
         if (input$gps_from_plot &&
             !is.null(input$devPlot_gps_selected)) {
-          req(vals$gps,
+          req(rv$gps,
               input$gps_dur,
               input$gps_dur_unit)
           
@@ -635,50 +615,50 @@ mod_tab_design_server <- function(id, vals) {
                    input$gps_dur_unit > 2 %#% "days", 
                  "Duration cannot be less than 2 days."))
           
-          gps <- vals$gps
-          vals$dur <- data.frame(
+          gps <- rv$gps
+          rv$dur <- data.frame(
             value = round("days" %#% gps[reg_selected(), ]$dur_sec, 1),
             unit = "days")
           
           tmpdti_notes <- gps[reg_selected(), ]$dti_notes
           tmpdti_unit <- sub('^.* ([[:alnum:]]+)$', '\\1', tmpdti_notes)
-          vals$dti <- data.frame(
+          rv$dti <- data.frame(
             value = tmpdti_unit %#% gps[reg_selected(), ]$dti,
             unit = tmpdti_unit)
-
-        } else {
-          req(vals$dev$dur, vals$dev$dti)
           
-          vals$dur <- data.frame(value = vals$dev$dur$value,
-                                 unit = vals$dev$dur$unit)
-          vals$dti <- data.frame(value = vals$dev$dti$value,
-                                 unit = vals$dev$dti$unit)
+        } else {
+          req(rv$dev$dur, rv$dev$dti)
+          
+          rv$dur <- data.frame(value = rv$dev$dur$value,
+                               unit = rv$dev$dur$unit)
+          rv$dti <- data.frame(value = rv$dev$dti$value,
+                               unit = rv$dev$dti$unit)
         }
         
       } else if (input$device_type == "VHF") {
         
         if (!is.null(input$devPlot_vhf_selected)) {
-          req(vals$vhf,
+          req(rv$vhf,
               input$vhf_dti,
               input$vhf_dti_unit)
           
-          vals$dur <- data.frame(
-            value = vals$vhf[reg_selected(), ]$dur,
-            unit = vals$vhf[reg_selected(), ]$dur_unit)
+          rv$dur <- data.frame(
+            value = rv$vhf[reg_selected(), ]$dur,
+            unit = rv$vhf[reg_selected(), ]$dur_unit)
           
-          vals$dti <- data.frame(
+          rv$dti <- data.frame(
             value = input$vhf_dti,
             unit = input$vhf_dti_unit)
           
         } else {
-          req(vals$dev$dur, vals$dev$dti)
+          req(rv$dev$dur, rv$dev$dti)
           
-          vals$dur <- data.frame(
-            value = vals$dev$dur$value,
-            unit = vals$dev$dur$unit)
-          vals$dti <- data.frame(
-            value = vals$dev$dti$value,
-            unit = vals$dev$dti$unit)
+          rv$dur <- data.frame(
+            value = rv$dev$dur$value,
+            unit = rv$dev$dur$unit)
+          rv$dti <- data.frame(
+            value = rv$dev$dti$value,
+            unit = rv$dev$dti$unit)
         }
         
       } # end of if ()
@@ -687,120 +667,129 @@ mod_tab_design_server <- function(id, vals) {
     ## Sample sizes: ------------------------------------------------------
     
     observe({
-      req(vals$which_question,
-          vals$tau_p0,
-          vals$dur,
-          vals$dti,
+      req(rv$active_tab == 'device',
+          rv$which_question,
+          rv$tau_p0,
+          rv$dur,
+          rv$dti,
           input$est_type)
       
       n <- NULL
       N1 <- NULL
       
-      taup <- vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
+      taup <- rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
       
-      dur <- vals$dur$value %#% vals$dur$unit
-      dti <- vals$dti$value %#% vals$dti$unit
+      dur <- rv$dur$value %#% rv$dur$unit
+      dti <- rv$dti$value %#% rv$dti$unit
       
       t0 <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       n <- length(t0)
-      vals$dev$n <- n
+      rv$dev$n <- list(n)
       
       if (!is.null(input$device_loss)) {
         req(input$device_loss)
         n_loss <- round(n * (input$device_loss/100), 0)
         n <- length(t0) - n_loss
-        vals$lost <- data.frame(perc = input$device_loss,
-                                n = n_loss)
+        rv$lost <- data.frame(perc = input$device_loss,
+                              n = n_loss)
       }
       
       if (input$est_type == 1) {
-        vals$is_fitted <- "No"
+        rv$is_fitted <- "No"
+        N1 <- min(dur/taup, n)
         
-        N1 <- dur / taup
-        N1 <- ifelse(N1 > n, n, N1)
+      } else if (input$est_type == 2 && !is.null(rv$simfitList)) {
+        req(rv$simList, rv$simfitList)
+        rv$is_fitted <- "Yes"
         
-      } else if (input$est_type == 2) {
-        if (!is.null(vals$fit1)) {
-          req(vals$fit1)
-          vals$is_fitted <- "Yes"
-          vals$dev$n <- nrow(vals$data1)
-          tmpnms <- names(summary(vals$fit1)$DOF)
-          N1 <- summary(vals$fit1)$DOF[grep('area', tmpnms)][[1]]
-        }
+        rv$dev$n <- lapply(seq_along(rv$simList), function(x)
+          n <- nrow(rv$simList[[x]]))
+        
+        N1 <- lapply(seq_along(rv$simList), function(x) {
+          n <- nrow(rv$simList[[x]])
+          tmpnms <- names(summary(rv$simfitList[[x]])$DOF)
+          N1 <- summary(rv$simfitList[[x]])$DOF[grep('area', tmpnms)][[1]]
+          return(N1)
+        })
       }
       
-      vals$dev$N1 <- N1
+      rv$dev$N1 <- N1
       
     }) # end of observe
     
     observe({
-      req(vals$which_question,
-          vals$tau_v0,
-          vals$dur,
-          vals$dti,
+      req(rv$active_tab == 'device',
+          rv$which_question,
+          rv$tau_v0,
+          rv$dur,
+          rv$dti,
           input$est_type)
       
       n <- NULL
       N2 <- NULL
       
-      tauv <- vals$tau_v0$value[2] %#% vals$tau_v0$unit[2]
+      tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
       
-      dur <- vals$dur$value %#% vals$dur$unit
-      dti <- vals$dti$value %#% vals$dti$unit
+      dur <- rv$dur$value %#% rv$dur$unit
+      dti <- rv$dti$value %#% rv$dti$unit
       
       t0 <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       n <- length(t0)
-      vals$dev$n <- n
+      rv$dev$n <- list(n)
       
       if (!is.null(input$device_loss)) {
         req(input$device_loss)
         n_loss <- round(n * (input$device_loss/100), 0)
         n <- length(t0) - n_loss
-        vals$lost <- data.frame(perc = input$device_loss,
-                                n = n_loss)
+        rv$lost <- data.frame(perc = input$device_loss,
+                              n = n_loss)
       }
+      
       r <- dti / tauv
       
       if (input$est_type == 1) {
-        vals$is_fitted <- "No"
+        rv$is_fitted <- "No"
         N2 <- ifelse(dti > tauv,
                      ifelse(dti > 3 * tauv, 0,
                             (n) / (r)^r * (r)),
                      (n) / tauv * dti)
         
-      } else if (input$est_type == 2) {
-        if (!is.null(vals$fit1)) {
-          req(vals$fit1)
-          vals$is_fitted <- "Yes"
-          vals$dev$n <- nrow(vals$data1)
-          tmpnms <- names(summary(vals$fit1)$DOF)
-          N2 <- summary(vals$fit1)$DOF[grep('speed', tmpnms)][[1]]
-        }
+      } else if (input$est_type == 2 && !is.null(rv$simfitList)) {
+        req(rv$simList, rv$simfitList)
+        rv$is_fitted <- "Yes"
+        
+        rv$dev$n <- lapply(seq_along(rv$simList), function(x)
+          n <- nrow(rv$simList[[x]]))
+        
+        N2 <- lapply(seq_along(rv$simList), function(x) {
+          n <- nrow(rv$simList[[x]])
+          tmpnms <- names(summary(rv$simfitList[[x]])$DOF)
+          N2 <- summary(rv$simfitList[[x]])$DOF[grep('speed', tmpnms)][[1]]
+          return(N2)
+        })
       }
       
-      vals$dev$N2 <- N2
+      rv$dev$N2 <- N2
       
     }) # end of observe
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at start: --------------------------------------------
-
+    
     boxnames <- c("gps_device", "vhf_device", "type",
-                  "nsims",
                   "loss",
                   "sampling",
                   "sims",
                   "sizes",
                   "summary",
                   "misc")
-
+    
     for (i in 1:length(boxnames)) {
       shinyjs::hide(id = paste0("devBox_", boxnames[i]))
     }
     
     shinyjs::hide(id = "which_limits")
     shinyjs::hide(id = "min_frq")
-    shinyjs::disable("devButton_repeat")
     
     device_inputs <- reactive({
       list(input$gps_dur,
@@ -816,47 +805,44 @@ mod_tab_design_server <- function(id, vals) {
     })
     
     observe({
-      req(vals$active_tab == 'device')
-      shinyjs::hide(id = "devBox_nsims")
-      
+      req(rv$active_tab == 'device')
       shinyjs::enable("devButton_run")
-      shinyjs::disable("devButton_repeat")
-      
     }) %>% bindEvent(device_inputs())
     
     ## Reveal boxes: ------------------------------------------------------
-
+    
     observe({ ### Reveal species & device parameters box:
-      req(vals$active_tab == 'device')
-
-      if (!is.null(vals$tau_p0) & !is.null(vals$tau_v0)) {
+      req(rv$active_tab == 'device')
+      
+      if (!is.null(rv$tau_p0) & !is.null(rv$tau_v0)) {
         shinyjs::show(id = "devBox_pars")
       } else { shinyjs::hide(id = "devBox_pars") }
       
     }) # end of observe
     
     observe({ ### Reveal sample sizes box:
-
-      if (vals$dev$is_valid) {
+      
+      if (rv$dev$is_valid) {
         shinyjs::show(id = "devBox_sizes")
       } else { shinyjs::hide(id = "devBox_sizes") }
-
+      
     }) %>% # end of observe,
-      bindEvent(vals$dev$is_valid)
+      bindEvent(rv$dev$is_valid)
     
     observe({ ## Reveal summary box:
-
-      if (!is.null(vals$dev$tbl)) {
+      
+      if (!is.null(rv$dev$tbl)) {
         shinyjs::show(id = "devBox_summary")
       } else { shinyjs::hide(id = "devBox_summary") }
-
-    }) %>% # end of observe,
-      bindEvent(input$devButton_save)
-
+      
+    }) # %>% # end of observe,
+      # bindEvent(input$devButton_save)
+    
     ## Update device settings: --------------------------------------------
     
     observe({
       req(input$device_type)
+      rv$device_type <- input$device_type
       
       shinyjs::show(id = "devBox_sampling")
       shinyjs::show(id = "which_limits")
@@ -874,7 +860,7 @@ mod_tab_design_server <- function(id, vals) {
         stop(paste0("No handler for ", input$device_type, "."))
       ) # end of switch
       
-      # vals$dev$type <- input$device_type
+      # rv$dev$type <- input$device_type
       
     }) %>% # end of observe,
       bindEvent(input$device_type)
@@ -883,7 +869,7 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({
       req(input$device_type)
-
+      
       opt_limits <- NULL
       switch(
         input$device_type,
@@ -898,32 +884,32 @@ mod_tab_design_server <- function(id, vals) {
         },
         stop(paste0("No handler for ", input$device_type, "."))
       ) # end of switch
-
+      
       shinyWidgets::updateCheckboxGroupButtons(
         session = session,
         inputId = "which_limits",
         choices = opt_limits,
         checkIcon = list(yes = icon("ok", lib = "glyphicon"),
                          no = icon("remove", lib = "glyphicon")))
-
+      
     }) %>% # end of observe,
       bindEvent(input$device_type)
     
     observe({
-      vals$which_limits <- input$which_limits
-
+      rv$which_limits <- input$which_limits
+      
       if ("loss" %in% input$which_limits) {
         shinyjs::show(id = "devBox_loss")
       } else { shinyjs::hide(id = "devBox_loss") }
-
+      
       if ("error" %in% input$which_limits) {
         shinyjs::show(id = "devBox_error")
       } else { shinyjs::hide(id = "devBox_error") }
-
+      
       if ("max" %in% input$which_limits) {
         shinyjs::show(id = "device_max")
       } else { shinyjs::hide(id = "device_max") }
-
+      
     }) %>% # end of observe,
       bindEvent(input$which_limits)
     
@@ -932,14 +918,14 @@ mod_tab_design_server <- function(id, vals) {
         shinyjs::hide(id = "devBox_loss")
         shinyjs::hide(id = "devBox_error")
         shinyjs::hide(id = "device_max") }
-
+      
     }) # end of observe
-
+    
     ## Render validate buttons: -------------------------------------------
     
     output$devButton_gps <- renderUI({
-
-      if (vals$dev$is_valid) {
+      
+      if (rv$dev$is_valid) {
         shiny::actionButton(
           inputId = ns("validate_gps"),
           icon =  icon("circle-check"),
@@ -954,12 +940,12 @@ mod_tab_design_server <- function(id, vals) {
           width = "100px",
           class = "btn-danger")
       }
-
+      
     }) # end of renderUI // devButton_gps
     
     output$devButton_vhf <- renderUI({
       
-      if (vals$dev$is_valid) {
+      if (rv$dev$is_valid) {
         shiny::actionButton(
           inputId = ns("validate_vhf"),
           icon =  icon("circle-check"),
@@ -980,18 +966,18 @@ mod_tab_design_server <- function(id, vals) {
     ## Render regime text: ------------------------------------------------
     
     writing_regime <- reactive({
-      req(vals$dur, vals$dti)
+      req(rv$dur, rv$dti)
       
-      out_dur <- fix_unit(vals$dur$value, vals$dur$unit, convert = TRUE)
-      out_dti <- fix_unit(vals$dti$value, vals$dti$unit)
+      out_dur <- fix_unit(rv$dur$value, rv$dur$unit, convert = TRUE)
+      out_dti <- fix_unit(rv$dti$value, rv$dti$unit)
       
       dur <- out_dur$value
       dur_unit <- out_dur$unit
-
+      
       dti <- out_dti$value
       dti_unit <- out_dti$unit
       
-      dur_day <- fix_unit(vals$dur$value, vals$dur$unit)
+      dur_day <- fix_unit(rv$dur$value, rv$dur$unit)
       if (grepl("day", dur_unit)) {
         txt_dur <- wrap_none(
           dur_day$value, " ", dur_day$unit,
@@ -1054,9 +1040,9 @@ mod_tab_design_server <- function(id, vals) {
                "for a duration of", txt_dur)
       
       return(out)
-
+      
     }) # end of reactive, writing_regime()
-
+    
     output$devText <- renderUI(writing_regime())
     
     ## Update GPS inputs: -------------------------------------------------
@@ -1114,10 +1100,10 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({
       req(input$gps_dur,
-          input$gps_dur_unit != vals$dev$dur$unit)
+          input$gps_dur_unit != rv$dev$dur$unit)
       
       new_dur <- sigdigits(
-        input$gps_dur_unit %#% input$gps_dur %#% vals$dev$dur$unit, 3)
+        input$gps_dur_unit %#% input$gps_dur %#% rv$dev$dur$unit, 3)
       
       shinyWidgets::updateAutonumericInput(
         session = session,
@@ -1130,10 +1116,10 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({
       req(input$gps_dti,
-          input$gps_dti_unit != vals$dev$dti$unit)
+          input$gps_dti_unit != rv$dev$dti$unit)
       
       new_dti <- sigdigits(
-        input$gps_dti_unit %#% input$gps_dti %#% vals$dev$dti$unit, 3)
+        input$gps_dti_unit %#% input$gps_dti %#% rv$dev$dti$unit, 3)
       
       shinyWidgets::updateAutonumericInput(
         session = session,
@@ -1146,10 +1132,10 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({
       req(input$vhf_dur,
-          input$vhf_dur_unit != vals$dev$dur$unit)
+          input$vhf_dur_unit != rv$dev$dur$unit)
       
       new_dur <- sigdigits(
-        input$vhf_dur_unit %#% input$vhf_dur %#% vals$dev$dur$unit, 3)
+        input$vhf_dur_unit %#% input$vhf_dur %#% rv$dev$dur$unit, 3)
       
       shinyWidgets::updateAutonumericInput(
         session = session,
@@ -1162,10 +1148,10 @@ mod_tab_design_server <- function(id, vals) {
     
     observe({
       req(input$vhf_dti,
-          input$vhf_dti_unit != vals$dev$dti$unit)
+          input$vhf_dti_unit != rv$dev$dti$unit)
       
       new_dti <- sigdigits(
-        input$vhf_dti_unit %#% input$vhf_dti %#% vals$dev$dti$unit, 3)
+        input$vhf_dti_unit %#% input$vhf_dti %#% rv$dev$dti$unit, 3)
       
       shinyWidgets::updateAutonumericInput(
         session = session,
@@ -1365,7 +1351,7 @@ mod_tab_design_server <- function(id, vals) {
           #   
           # ) # end of tagList (footer)
         },
-      
+        
         VHF = { ### VHF transmitter:
           
           tagList(column(
@@ -1402,9 +1388,9 @@ mod_tab_design_server <- function(id, vals) {
     ## Change sample size text: -------------------------------------------
     
     output$devPlotLegend <- renderUI({
-      req(vals$which_question, input$gps_from_plot)
-      if (length(vals$which_question) > 1) {
-        req(vals$tau_p0, vals$tau_v0)
+      req(rv$which_question, input$gps_from_plot)
+      if (length(rv$which_question) > 1) {
+        req(rv$tau_p0, rv$tau_v0)
         
         ui <- tagList(
           fontawesome::fa("circle-exclamation", fill = pal$dgr),
@@ -1419,9 +1405,9 @@ mod_tab_design_server <- function(id, vals) {
       } else {
         
         switch(
-          vals$which_question,
+          rv$which_question,
           "Home range" = {
-            req(vals$tau_p0)
+            req(rv$tau_p0)
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
@@ -1431,7 +1417,7 @@ mod_tab_design_server <- function(id, vals) {
               "for each sampling design; true N may differ.")
           },
           "Speed & distance" = {
-            req(vals$tau_v0)
+            req(rv$tau_v0)
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
@@ -1441,7 +1427,7 @@ mod_tab_design_server <- function(id, vals) {
               "for each sampling design; true N may differ.")
           },
           stop(paste0("No handler for ",
-                      vals$which_question, "."))
+                      rv$which_question, "."))
         )
       }
       
@@ -1478,27 +1464,18 @@ mod_tab_design_server <- function(id, vals) {
           "button to recalculate them.")
       }
     }) # end of reactive, info_sizes
-
+    
     output$devText_sizes <- renderUI({
       req(input$est_type)
       info_sizes()
     })
     
-    ## Render number of simulations: --------------------------------------
-
-    output$nsims_total <- renderText({
-      req(vals$simList)
-      # return(paste("Total no.:", length(vals$simList)))
-      return(length(vals$simList))
-      
-    }) # end of renderText, "nsims_total"
-    
     ## Add note to summary table: -----------------------------------------
     
     output$devUI_sumLegend <- renderUI({
-      req(nrow(vals$dev$tbl) > 1)
+      req(nrow(rv$dev$tbl) > 1)
       
-      n_diff <- vals$dev$tbl %>% 
+      n_diff <- rv$dev$tbl %>% 
         dplyr::select(.data$dur, .data$dti) %>% 
         dplyr::distinct() %>% nrow()
       
@@ -1518,29 +1495,29 @@ mod_tab_design_server <- function(id, vals) {
       return(ui)
       
     }) %>% # end of renderUI, "devUI_sumLegend"
-      bindEvent(vals$dev$tbl)
+      bindEvent(rv$dev$tbl)
     
     # ALERTS --------------------------------------------------------------
     
     # Alert if GPS input values are not valid:
     
     observe({
-      req(vals$active_tab == 'device',
+      req(rv$active_tab == 'device',
           input$device_type == "GPS",
-          vals$dev$dur,
-          vals$alert_active)
+          rv$dev$dur,
+          rv$alert_active)
       
       min_dur <- ifelse(
-        vals$dev$dur$value == 0,
-        TRUE, vals$dev$dur$value %#% 
-          vals$dev$dur$unit <= 2 %#% "days")
+        rv$dev$dur$value == 0,
+        TRUE, rv$dev$dur$value %#% 
+          rv$dev$dur$unit <= 2 %#% "days")
       
       max_dur <- ifelse(
-        vals$dev$dur$value == 0,
-        TRUE, vals$dev$dur$value %#%
-          vals$dev$dur$unit > 10 %#% "years")
-
-       if ((min_dur || max_dur) && vals$alert_active) {
+        rv$dev$dur$value == 0,
+        TRUE, rv$dev$dur$value %#%
+          rv$dev$dur$unit > 10 %#% "years")
+      
+      if ((min_dur || max_dur) && rv$alert_active) {
         shinyalert::shinyalert(
           type = "warning",
           title = "Invalid battery life",
@@ -1554,7 +1531,7 @@ mod_tab_design_server <- function(id, vals) {
             wrap_none("GPS battery life", css = "cl-blk",
                       end = "."))),
           callbackR = function(x) {
-            vals$alert_active <- x
+            rv$alert_active <- x
           },
           html = TRUE,
           showCancelButton = TRUE,
@@ -1571,11 +1548,11 @@ mod_tab_design_server <- function(id, vals) {
     # Alert if research question(s)/data are NOT available:
     
     observe({
-      req(vals$active_tab == 'device')
+      req(rv$active_tab == 'device')
       next_step <- TRUE
-  
+      
       # Check if questions were set:
-      if (is.null(vals$which_question)) {
+      if (is.null(rv$which_question)) {
         next_step <- FALSE
         shinyalert::shinyalert(
           title = "No research goal selected",
@@ -1591,7 +1568,7 @@ mod_tab_design_server <- function(id, vals) {
       # Check if there is data:
       req(next_step)
       
-      if (is.null(vals$data0))
+      if (is.null(rv$datList))
         shinyalert::shinyalert(
           type = "error",
           title = "No data found",
@@ -1605,7 +1582,7 @@ mod_tab_design_server <- function(id, vals) {
           )),
           html = TRUE,
           size = "xs")
-        
+      
     }) # end of observe
     
     # Alert if user did NOT select fix rate before validation:
@@ -1615,7 +1592,7 @@ mod_tab_design_server <- function(id, vals) {
       
       # Check if inputs were selected:
       
-      vals$dev$is_valid <- FALSE
+      rv$dev$is_valid <- FALSE
       if ((!input$gps_from_plot && is.null(input$gps_dti)) ||
           (input$gps_from_plot && is.null(input$devPlot_gps_selected))
       ) {
@@ -1635,9 +1612,9 @@ mod_tab_design_server <- function(id, vals) {
         
         
       } else {
-        req(vals$dur, vals$dti)
+        req(rv$dur, rv$dti)
         
-        dur <- vals$dur$value %#% vals$dur$unit
+        dur <- rv$dur$value %#% rv$dur$unit
         
         if (dur < (1 %#% "days")) {
           
@@ -1652,16 +1629,16 @@ mod_tab_design_server <- function(id, vals) {
             confirmButtonText = "Proceed",
             cancelButtonText = "Cancel",
             callbackR = function(x) {
-              vals$dev$is_valid <- x },
+              rv$dev$is_valid <- x },
             html = TRUE,
             size = "xs")
           
         } else {
           
-          vals$dev$is_valid <- TRUE
-          vals$is_analyses <- FALSE
+          rv$dev$is_valid <- TRUE
+          rv$is_analyses <- FALSE
           
-        } # end of if (vals$dur < 1 %#% "days")
+        } # end of if (rv$dur < 1 %#% "days")
       }
       
       
@@ -1671,36 +1648,36 @@ mod_tab_design_server <- function(id, vals) {
     # Alert if number of locations is higher than GPS allows:
     
     observe({
-      req(vals$dev$is_valid,
-          vals$dev$n,
-          vals$which_limits,
+      req(rv$dev$is_valid,
+          rv$dev$n,
+          rv$which_limits,
           input$device_max)
       
       # Check GPS storage limit (if selected):
       
-      if (("max" %in% vals$which_limits) &&
-          vals$dev$n > vals$storage) {
+      if (("max" %in% rv$which_limits) &&
+          rv$dev$n > rv$storage) {
         
         shinyalert::shinyalert(
           title = "Not enough GPS storage",
           type = "warning",
           text = tagList(span(
             "GPS storage limit",
-            wrap_none("(", scales::label_comma()(vals$storage),
+            wrap_none("(", scales::label_comma()(rv$storage),
                       " locations)"),
             "is lower than the absolute sample size",
-            wrap_none("(", scales::label_comma()(vals$dev$n),
+            wrap_none("(", scales::label_comma()(rv$dev$n),
                       " locations).")
           )),
           html = TRUE,
           size = "xs")
         
-        vals$dev$is_valid <- FALSE
+        rv$dev$is_valid <- FALSE
         
       } else {
         
-        vals$dev$is_valid <- TRUE
-        vals$is_analyses <- FALSE
+        rv$dev$is_valid <- TRUE
+        rv$is_analyses <- FALSE
         
       } # end of storage limit if () statement
       
@@ -1732,9 +1709,9 @@ mod_tab_design_server <- function(id, vals) {
         
         
       } else {
-        req(vals$dur, vals$dti)
+        req(rv$dur, rv$dti)
         
-        dur <- vals$dur$value %#% vals$dur$unit
+        dur <- rv$dur$value %#% rv$dur$unit
         
         if (dur < (1 %#% "days")) {
           
@@ -1749,16 +1726,16 @@ mod_tab_design_server <- function(id, vals) {
             confirmButtonText = "Proceed",
             cancelButtonText = "Cancel",
             callbackR = function(x) {
-              vals$dev$is_valid <- x },
+              rv$dev$is_valid <- x },
             html = TRUE,
             size = "xs")
           
         } else {
           
-          vals$dev$is_valid <- TRUE
-          vals$is_analyses <- FALSE
+          rv$dev$is_valid <- TRUE
+          rv$is_analyses <- FALSE
           
-        } # end of if (vals$dur < 1 %#% "days")
+        } # end of if (rv$dur < 1 %#% "days")
       }
       
     }) %>% # end of observer,
@@ -1787,20 +1764,20 @@ mod_tab_design_server <- function(id, vals) {
         )
       )
       
-    }) %>% bindEvent(req(vals$dev$is_valid))
+    }) %>% bindEvent(req(rv$dev$is_valid))
     
     ## Sample sizes... ----------------------------------------------------
     
     observe({
-      req(vals$dev$n)
+      req(rv$dev$n[[1]])
       
-      if (vals$dev$n > 20000)
+      if (rv$dev$n[[1]] > 20000)
         shinyalert::shinyalert(
           inputId = "alert_n_small",
           title = "Warning",
           text = tagList(span(
             "You are about to simulate a dataset with over",
-            scales::label_comma()(vals$dev$n), "locations.",
+            scales::label_comma()(rv$dev$n[[1]]), "locations.",
             "This can take a considerable amount of time to run",
             "on certain devices (several hours or days).",
             "Do you wish to proceed?"
@@ -1810,7 +1787,7 @@ mod_tab_design_server <- function(id, vals) {
           confirmButtonText = "Proceed",
           cancelButtonText = "Cancel",
           callbackR = function(x) {
-            vals$dev$is_valid <- x },
+            rv$dev$is_valid <- x },
           html = TRUE,
           size = "xs")
       
@@ -1821,11 +1798,11 @@ mod_tab_design_server <- function(id, vals) {
     ## Simulating GPS battery life: ---------------------------------------
     
     simulating_gps <- reactive({
-      req(vals$dev$dur,
+      req(rv$dev$dur,
           input$gps_dti_max,
-          vals$seed0)
+          rv$seed0)
       
-      dur <- vals$dev$dur$value %#% vals$dev$dur$unit
+      dur <- rv$dev$dur$value %#% rv$dev$dur$unit
       req(dur > 2 %#% "days")
       
       if ((dur) < 10 %#% "days") {
@@ -1834,12 +1811,12 @@ mod_tab_design_server <- function(id, vals) {
       
       dat <- simulate_gps(
         data = movedesign::fixrates,
-        b_max = vals$dev$dur$value,
-        b_unit = vals$dev$dur$unit,
+        b_max = rv$dev$dur$value,
+        b_unit = rv$dev$dur$unit,
         cutoff = input_cutoff,
         dti_max = input$gps_dti_max,
-        seed = vals$seed0,
-        set_seed = vals$overwrite_active)
+        seed = rv$seed0,
+        set_seed = rv$overwrite_active)
       
       if (all(dat$dur_sec == 0)) return(NULL)
       
@@ -1862,85 +1839,117 @@ mod_tab_design_server <- function(id, vals) {
     # bindCache(list(input$gps_dur,
     #                input$gps_dur_unit,
     #                input$gps_dti_max,
-    #                vals$seed0))
+    #                rv$seed0))
     
     ## Simulating new conditional data: -----------------------------------
-   
+    
     ### Prepare parameters:
     
     simulating_data <- reactive({
       
-      dat <- vals$data0
-      dur <- vals$dur$value %#% vals$dur$unit
-      dti <- vals$dti$value %#% vals$dti$unit
+      dur <- rv$dur$value %#% rv$dur$unit
+      dti <- rv$dti$value %#% rv$dti$unit
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
-      if (vals$data_type == "simulated") {
-        fit <- vals$ctmm_mod 
+      if (rv$data_type == "simulated") {
+        fit <- rv$modList[[1]]
       } else {
-        if (vals$fit0$isotropic == TRUE) { fit <- vals$fit0
-        } else fit <- vals$ctmm_mod <- prepare_mod(
-          tau_p = vals$tau_p0$value[2],
-          tau_p_unit = vals$tau_p0$unit[2],
-          tau_v = vals$tau_v0$value[2],
-          tau_v_unit = vals$tau_v0$unit[2],
-          sigma = vals$sigma0$value[2],
-          sigma_unit = vals$sigma0$unit[2],
-          mu = vals$mu0)
+        if (rv$indvar) {
+          # TODO fix for isotropic/anisotropic
+          fit <- mean(rv$fitList[rv$id]) %>% 
+            suppressMessages() %>% 
+            suppressWarnings() %>% 
+            quiet()
+          # TODO change to tryCatch
+          fit <- emulate(fit, seed = rv$seed0, fast = TRUE)
+        } else {
+          # TODO fix no propagation of uncertainty
+          # (possible if fix for anisotropic is included)
+          fit <- prepare_mod(
+            tau_p = rv$tau_p0[2, ],
+            tau_v = rv$tau_v0[2, ],
+            sigma = rv$sigma0[2, ],
+            mu = rv$mu0)
+        }
+        rv$modList <- list(fit)
       }
       
-      sim <- ctmm::simulate(dat, fit, t = t_new, seed = vals$seed0)
+      fit$mu[[1, "x"]] <- 0
+      fit$mu[[1, "y"]] <- 0 # recenter to 0,0
+      
+      sim <- ctmm::simulate(fit, t = t_new, seed = rv$seed0)
       sim <- pseudonymize(sim)
-      return(sim)
+      return(list(sim))
       
     }) %>% # end of reactive, simulating_data()
-      bindCache(c(vals$species, 
-                  vals$id,
-                  vals$dur, 
-                  vals$dti,
-                  vals$seed0))
+      bindCache(c(rv$species,
+                  rv$id,
+                  rv$dur, 
+                  rv$dti,
+                  rv$seed0))
     
     estimating_time <- reactive({
       
       loading_modal("Calculating run time")
-      out_time <- guess_time(vals$data1, parallel = vals$parallel)
+      out_time <- guess_time(rv$simList, parallel = rv$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out_time)
       
     }) %>% # end of reactive, estimating_time()
-      bindCache(c(vals$tau_p0, 
-                  vals$tau_v0,
-                  vals$dur, 
-                  vals$dti))
+      bindCache(c(rv$tau_p0, 
+                  rv$tau_v0,
+                  rv$dur, 
+                  rv$dti))
     
-    fitting_model <- reactive({
+    fitting_ctmm <- reactive({
       
-      guess1 <- ctmm::ctmm.guess(vals$data1, interactive = FALSE)
-      inputList <- list(list(vals$data1, guess1))
-      out_fit <- par.ctmm.select(inputList, parallel = vals$parallel)
-      return(out_fit)
+      simList <- rv$simList
+      guessList <- tryCatch(
+        lapply(seq_along(simList), function (x)
+          ctmm::ctmm.guess(simList[[x]],
+                           interactive = FALSE)),
+        error = function(e) e)
       
-    }) %>% # end of reactive, fitting_model()
-      bindCache(vals$data0,
-                vals$data1,
-                vals$dur,
-                vals$dti,
-                vals$seed0)
-
+      if (inherits(guessList, "error")) {
+        msg_log(
+          style = "danger",
+          message = paste0(
+            "Parameter guesstimation ", msg_danger("failed"), "."))
+        return(NULL)
+      }
+      
+      # out <- tryCatch(
+      #   par.ctmm.select(simList, guessList, parallel = rv$parallel),
+      #   error = function(e) e)
+      
+      #TODO DEV
+      out <- tryCatch(
+        par.ctmm.fit(simList, guessList, parallel = rv$parallel),
+        error = function(e) e)
+      
+      return(list(out))
+      
+    }) %>% # end of reactive, fitting_ctmm()
+      bindCache(rv$datList,
+                rv$simList,
+                rv$dur,
+                rv$dti,
+                rv$seed0)
+    
     ### Run simulation (nsims = 1): ---------------------------------------
     
     observe({
-      req(vals$which_question,
-          vals$data0,
-          vals$fit0,
-          vals$sigma0,
-          vals$dur, 
-          vals$dti,
-          vals$dev$is_valid)
+      req(rv$which_question,
+          rv$datList,
+          rv$fitList,
+          rv$sigma0,
+          rv$dur, 
+          rv$dti,
+          rv$dev$is_valid)
       
-      if ("Home range" %in% vals$which_question) req(vals$tau_p0)
-      if ("Speed & distance" %in% vals$which_question) req(vals$tau_v0)
+      if ("Home range" %in% rv$which_question) req(rv$tau_p0)
+      if ("Speed & distance" %in% rv$which_question) req(rv$tau_v0)
       
       shinyFeedback::showToast(
         type = "info",
@@ -1966,43 +1975,46 @@ mod_tab_design_server <- function(id, vals) {
       )
       
       start <- Sys.time()
-      data1 <- simulating_data()
+      simList <- simulating_data()
+      rv$seedList <- list(rv$seed0)
       
-      vals$nsims <- 1
-      vals$dev$n <- nrow(data1)
-      vals$needs_fit <- TRUE
-      vals$is_analyses <- NULL
-      vals$hr_completed <- FALSE
-      vals$sd_completed <- FALSE
+      rv$nsims <- 1
+      rv$simList <- simList
+      rv$dev$n <- list(nrow(simList[[1]]))
       
-      vals$fullList <- list(data1)
-      vals$seedList <- list(vals$seed0)
+      rv$needs_fit <- TRUE
+      rv$is_analyses <- NULL
+      rv$hr_completed <- FALSE
+      rv$sd_completed <- FALSE
       
       # If there is data loss:
-      
-      if (!is.null(input$device_loss)) {
-        if (input$device_loss > 0) {
-          to_keep <- round(nrow(data1) * (1 - vals$lost$perc/100))
-          to_keep_vec <- sort(sample(1:nrow(data1), to_keep))
-          data1 <- data1[to_keep_vec,]
-        }
-      } # end of input$device_loss
+
+      if (!is.null(input$device_loss))
+        if (req(input$device_loss) > 0) {
+          to_keep <- round(sapply(simList, function(x)
+            nrow(x) * (1 - rv$lost$perc/100)))
+          
+          simList <- lapply(simList, function(x) {
+            to_keep_vec <- sort(sample(1:nrow(x),
+                                       to_keep, replace = TRUE))
+            x[to_keep_vec, ] })
+          
+        } # end of input$device_loss
       
       # If there are errors associated with each location:
       
-      if (!is.null(input$device_error)) {
-        if (input$device_error > 0) {
-          error_x <- stats::rnorm(nrow(data1), mean = 0,
-                                  sd = input$device_error)
-          error_y <- stats::rnorm(nrow(data1), mean = 0,
-                                  sd = input$device_error)
-          data1[c(2,3)] <- data1[c(2,3)] + c(error_x, error_y)
-          vals$error <- input$device_error
-        }
-      } # end of input$device_error
-      
-      vals$data1 <- data1
-      vals$simList <- list(data1)
+      if (!is.null(input$device_error))
+        if (req(input$device_error) > 0) {
+          rv$error <- input$device_error
+          simList <- lapply(simList, function(x) {
+            error_x <- stats::rnorm(nrow(x), mean = 0,
+                                    sd = input$device_error)
+            error_y <- stats::rnorm(nrow(x), mean = 0,
+                                    sd = input$device_error)
+            x[c("x", "y")] <- x[c("x", "y")] + c(error_x, error_y)
+            return(x) })
+          
+        } # end of input$device_error
       
       msg_log(
         style = "success",
@@ -2011,27 +2023,19 @@ mod_tab_design_server <- function(id, vals) {
         run_time = difftime(Sys.time(), start, units = "sec"))
       
       shinybusy::remove_modal_spinner()
-      
-      # if (input$est_type == 1) {
-      #   
-      #   vals$needs_fit <- TRUE
-      #   
-      # } else {
-      
-      req(vals$data1)
-      shinybusy::remove_modal_spinner()
+      req(rv$simList)
       
       expt <- estimating_time()
-      vals$expt <- expt
+      rv$expt <- expt
       
-      vals$dev$confirm_time <- NULL
+      rv$dev$confirm_time <- NULL
       if ((as.numeric(expt$max) %#% expt$unit) > 900) {
         
         shinyalert::shinyalert(
           className = "modal_warning",
           title = "Do you wish to proceed?",
           callbackR = function(x) {
-            vals$dev$confirm_time <- x
+            rv$dev$confirm_time <- x
           },
           text = tagList(span(
             "Expected run time for the next phase", br(),
@@ -2046,24 +2050,16 @@ mod_tab_design_server <- function(id, vals) {
           confirmButtonText = "Proceed",
           html = TRUE
         )
-      } else { 
-        vals$dev$confirm_time <- TRUE
-        shinyjs::enable("devButton_repeat")
-      }
-      # } # end of if (), est_type
+      } else rv$dev$confirm_time <- TRUE
       
     }, priority = 1) %>% # end of observe,
       bindEvent(input$devButton_run)
     
     observe({
-      req(vals$dev$confirm_time)
+      req(rv$dev$confirm_time)
       
       shinyjs::show(id = "devBox_sims")
       
-      # if (input$est_type == 1) {
-      #   vals$needs_fit <- TRUE
-      # } else {
-        
       msg_log(
         style = "warning",
         message = paste0("Model fit ",
@@ -2085,7 +2081,7 @@ mod_tab_design_server <- function(id, vals) {
                           "color: #797979;",
                           "font-size: 16px;",
                           "text-align: center;")), br(),
-          p(vals$expt$range,
+          p(rv$expt$range,
             style = paste("background-color: #eaeaea;",
                           "color: #009da0;",
                           "font-size: 16px;",
@@ -2096,43 +2092,40 @@ mod_tab_design_server <- function(id, vals) {
       ) # end of modal
       
       start <- Sys.time()
-      fit1 <- fitting_model()
-      time_fit1 <- difftime(Sys.time(), start, units = "secs")
+      fitList <- fitting_ctmm()
+      time_fit <- difftime(Sys.time(), start, units = "secs")
       
-      if (!is.null(fit1)) {
+      if (!is.null(fitList)) {
         msg_log(
           style = 'success',
           message = paste0("Model fit ",
                            msg_success("completed"), "."),
-          run_time = time_fit1)
+          run_time = time_fit)
         
-        vals$guess <- NULL
-        vals$needs_fit <- FALSE
-        vals$fit1 <- fit1
+        rv$needs_fit <- FALSE
+        rv$simfitList <- fitList
         
-        vals$dev$tbl <<- rbind(
-          vals$dev$tbl, 
-          devRow(seed = vals$seed0,
+        rv$dev$tbl <<- rbind(
+          rv$dev$tbl, 
+          devRow(seed = rv$seed0,
                  device = input$device_type,
-                 dur = vals$dur, dti = vals$dti,
-                 data = vals$data1, fit = vals$fit1)
+                 dur = rv$dur, dti = rv$dti,
+                 data = rv$simList[[1]], 
+                 fit = rv$simfitList[[1]])
         )
         
-        vals$fitList <- list(vals$fit1)
-        vals$report_dev_yn <- TRUE
+        rv$report_dev_yn <- TRUE
         
         # (Re)start for every new set of sampling parameters:
-        vals$akdeList <- list()
-        vals$ctsdList <- list()
+        rv$akdeList <- list()
+        rv$ctsdList <- list()
         
         shinyjs::disable("devButton_run")
         shinyjs::enable("devButton_save")
-        shinyjs::show(id = "devBox_nsims")
         
-      } # end of if (), !is.null(fit1)
-      # } # end of if (), est_type
+      } # end of if (), !is.null(fitList)
       
-      if (!vals$tour_active) {
+      if (!rv$tour_active) {
         shinyalert::shinyalert(
           className = "modal_success",
           type = "success",
@@ -2162,171 +2155,7 @@ mod_tab_design_server <- function(id, vals) {
       shinybusy::remove_modal_spinner()
       
     }) %>% # end of observe,
-      bindEvent(vals$dev$confirm_time)
-    
-    ### Run simulations (nsims > 1): --------------------------------------
-    
-    observe({
-      req(vals$data0,
-          vals$fit0,
-          vals$dur, 
-          vals$dti,
-          vals$dev$is_valid,
-          input$nsims > 0,
-          vals$nsims >= 1,
-          vals$simList)
-      
-      shinybusy::show_modal_spinner(
-        spin = "fading-circle",
-        color = "var(--sea)",
-        text = tagList(span(
-          style = "font-size: 18px;",
-          span("Simulating multiple", style = "color: #797979;"),
-          wrap_none(span("datasets", class = "cl-sea"),
-                      span("...", style = "color: #797979;")))
-        ))
-      
-      start <- Sys.time()
-      n_sims <- length(vals$simList) + input$nsims
-      for (i in 1:input$nsims) {
-        
-        shinyFeedback::showToast(
-          type = "info",
-          message = paste0(
-            "Simulating data ", length(vals$simList) + 1, 
-            " out of ", n_sims),
-          .options = list(
-            progressBar = FALSE,
-            closeButton = TRUE,
-            preventDuplicates = TRUE,
-            positionClass = "toast-bottom-right")
-        )
-        
-        msg_log(
-          style = "warning",
-          message = paste0("Sim no. ", length(vals$simList) + 1, " ",
-                           msg_warning("in progress"), "..."))
-        
-        ## (Re)generate seed:
-        set.seed(NULL)
-        tmp <- round(stats::runif(1, min = 1, max = 10000), 0)
-        while (tmp %in% vals$seedList) {
-          tmp <- round(stats::runif(1, min = 1, max = 10000), 0)
-        }
-        vals$seed0 <- tmp
-        
-        data1 <- simulating_data()
-        vals$fullList[[length(vals$simList) + 1]] <- data1
-        vals$seedList[[length(vals$seedList) + 1]] <- vals$seed0
-        
-        # If there is data loss:
-        
-        if (!is.null(input$device_loss)) {
-          if (input$device_loss > 0) {
-            to_keep <- round(nrow(data1) * (1 - vals$lost$perc/100))
-            to_keep_vec <- sort(sample(1:nrow(data1), to_keep))
-            data1 <- data1[to_keep_vec,]
-          }
-        } # end of input$device_loss
-        
-        # If there are errors associated with each location:
-        
-        if (!is.null(input$device_error)) {
-          if (input$device_error > 0) {
-            error_x <- stats::rnorm(nrow(data1), mean = 0,
-                                    sd = input$device_error)
-            error_y <- stats::rnorm(nrow(data1), mean = 0,
-                                    sd = input$device_error)
-            data1[c(2,3)] <- data1[c(2,3)] + c(error_x, error_y)
-            vals$error <- input$device_error
-          }
-        } # end of input$device_error
-        
-        vals$simList[[length(vals$simList) + 1]] <- data1
-        
-      } # end of for loop
-      
-      vals$nsims <- length(vals$simList)
-      
-      vals$data1 <- data1
-      vals$dev$n <- nrow(data1)
-      vals$needs_fit <- TRUE
-      vals$is_analyses <- NULL
-      vals$hr_completed <- FALSE
-      vals$sd_completed <- FALSE
-      
-      msg_log(
-        style = "success",
-        message = paste0("Simulations ",
-                         msg_success("completed"), "."),
-        run_time = difftime(Sys.time(), start, units = "sec"))
-      shinybusy::remove_modal_spinner()
-      
-      loading_modal("Selecting movement model", type = "fit",
-                    exp_time = vals$expt,
-                    n = vals$nsims)
-      
-      start <- Sys.time()
-      no_sims <- length(vals$simList) - input$nsims
-      for (i in 1:input$nsims) {
-        msg_log(
-          style = "warning",
-          message = paste0("Model fit for sim no. ", no_sims + 1, " ",
-                           msg_warning("in progress"), ","),
-          detail = "Please wait for model selection to finish:")
-        
-        start_i <- Sys.time()
-        # fit1 <- fitting_model()
-        
-        guess1 <- ctmm::ctmm.guess(vals$simList[[i]], interactive = FALSE)
-        inputList <- list(list(vals$simList[[i]], guess1))
-        fit1 <- par.ctmm.select(inputList, parallel = vals$parallel)
-        
-        time_i <- difftime(Sys.time(), start_i, units = "secs")
-        
-        vals$guess <- NULL
-        vals$needs_fit <- FALSE
-        vals$fit1 <- fit1
-        
-        vals$fitList[[length(vals$fitList) + 1]] <- vals$fit1
-        newrow <- devRow(seed = vals$seedList[[i + no_sims]],
-                         device = input$device_type,
-                         dur = vals$dur, dti = vals$dti,
-                         data = vals$simList[[i + no_sims]], 
-                         fit = vals$fitList[[i + no_sims]])
-        vals$dev$tbl <<- rbind(vals$dev$tbl, newrow)
-        
-        msg_log(
-          style = 'warning',
-          message = paste0("Model fit for sim no. ", i + 1, " ",
-                           msg_success("completed"), "..."),
-          run_time = time_i)
-      }
-      
-      time_fits <- difftime(Sys.time(), start_i, units = "secs")
-      msg_log(
-        style = 'success',
-        message = paste0("All model fits ",
-                         msg_success("completed"), "."),
-        run_time = time_fits)
-      
-      shinyFeedback::showToast(
-        type = "success",
-        message = "Simulations completed!",
-        .options = list(
-          timeOut = 3000,
-          extendedTimeOut = 3500,
-          progressBar = FALSE,
-          closeButton = TRUE,
-          preventDuplicates = TRUE,
-          positionClass = "toast-bottom-right"
-        )
-      )
-      
-      shinybusy::remove_modal_spinner()
-      
-    }, label = "o-dev_repeat_sims") %>% # end of observer
-      bindEvent(input$devButton_repeat)
+      bindEvent(rv$dev$confirm_time)
     
     # PLOTS ---------------------------------------------------------------
     ## Plotting GPS battery life: -----------------------------------------
@@ -2334,7 +2163,7 @@ mod_tab_design_server <- function(id, vals) {
     reg_selected <- reactive({
       if (input$device_type == "GPS") return(input$devPlot_gps_selected)
       if (input$device_type == "VHF") return(input$devPlot_vhf_selected)
-      vals$dev$is_valid <- FALSE
+      rv$dev$is_valid <- FALSE
     })
     
     preparing_gps <- reactive({
@@ -2347,14 +2176,14 @@ mod_tab_design_server <- function(id, vals) {
       gps_sim <- simulating_gps()
       
       req(gps_sim)
-      vals$gps <- gps_sim
+      rv$gps <- gps_sim
       
       if (!("N" %in% gps_sim$cutoff)) {
         pal_values <- pal$dgr
       } else { pal_values <- c(pal$mdn, pal$dgr) }
       
-      gps_sim$dur <- vals$dev$dur$unit %#% gps_sim$dur_sec
-      dur_unit <- vals$dev$dur$unit
+      gps_sim$dur <- rv$dev$dur$unit %#% gps_sim$dur_sec
+      dur_unit <- rv$dev$dur$unit
       
       ymax <- max(gps_sim$dur) + diff(range(gps_sim$dur)) * .2
       
@@ -2372,16 +2201,16 @@ mod_tab_design_server <- function(id, vals) {
       a0 <- b0 * (ylim.prim[1] - ylim.sec[1])
       add_n <- TRUE
       
-      if (!is.null(vals$which_question)) {
+      if (!is.null(rv$which_question)) {
         
         add_N1 <- FALSE
         add_N2 <- FALSE
         
-        if ("Home range" %in% vals$which_question &&
-            !is.null(vals$tau_p0)) {
+        if ("Home range" %in% rv$which_question &&
+            !is.null(rv$tau_p0)) {
           
-          req(vals$is_valid)
-          taup <- vals$tau_p0$value[2] %#% vals$tau_p0$unit[2]
+          req(rv$is_valid)
+          taup <- rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
           gps_sim$N_area <- gps_sim$dur_sec / taup
           
           ylim.prim <- c(0, max(gps_sim$dur))
@@ -2393,11 +2222,11 @@ mod_tab_design_server <- function(id, vals) {
           
         } # end of N1
         
-        if ("Speed & distance" %in% vals$which_question &&
-            !is.null(vals$tau_v0)) {
+        if ("Speed & distance" %in% rv$which_question &&
+            !is.null(rv$tau_v0)) {
           
-          req(vals$is_valid)
-          tauv <- vals$tau_v0$value[2] %#% vals$tau_v0$unit[2]
+          req(rv$is_valid)
+          tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
           gps_sim$N_speed <- NA
           
           for (i in 1:nrow(gps_sim)) {
@@ -2405,7 +2234,7 @@ mod_tab_design_server <- function(id, vals) {
             r <- dti / tauv
             
             n <- gps_sim$n[i]
-            n_loss <- ifelse(is.null(vals$lost$n), 0, vals$lost$n)
+            n_loss <- ifelse(is.null(rv$lost$n), 0, rv$lost$n)
             
             N2 <- ifelse(
               dti > tauv,
@@ -2426,10 +2255,10 @@ mod_tab_design_server <- function(id, vals) {
           
         } # end of N2
         
-        if (length(vals$which_question) > 1 &&
-            !is.null(vals$tau_v0) &&
-            !is.null(vals$tau_v0)) {
-          req(vals$is_valid)
+        if (length(rv$which_question) > 1 &&
+            !is.null(rv$tau_v0) &&
+            !is.null(rv$tau_v0)) {
+          req(rv$is_valid)
           
           ylim.prim <- c(0, max(gps_sim$dur))
           ylim.sec <- c(0, max(gps_sim$N_speed))
@@ -2438,7 +2267,7 @@ mod_tab_design_server <- function(id, vals) {
           
         } # end of both N1 and N2
         
-      } # end of !is.null(vals$which_question)
+      } # end of !is.null(rv$which_question)
       
       return(list(
         gps = gps_sim,
@@ -2452,7 +2281,7 @@ mod_tab_design_server <- function(id, vals) {
     }) # end of reactive, preparing_gps()
     
     output$devPlot_gps <- ggiraph::renderGirafe({
-      req(vals$active_tab == 'device',
+      req(rv$active_tab == 'device',
           input$gps_dur,
           input$gps_dur_unit,
           input$gps_dti_max)
@@ -2460,19 +2289,19 @@ mod_tab_design_server <- function(id, vals) {
       dti_scale <- dti_yn <- NULL
       device <- preparing_gps()
       device$gps$x <- log(device$gps$dti)
-
+      
       x_label <- "Log of sampling interval (time between fixes)"
       pos <- c(0.25, 0.85)
       p_x <- ggplot2::geom_vline(
         xintercept = min(device$gps$x),
         alpha = 0)
-
+      
       ymax <- max(device$gps$dur) +
         diff(range(device$gps$dur)) * .2
-
+      
       if (!is.null(input$device_log)) {
         if (!input$device_log) {
-
+          
           device$gps$x <- device$gps$dti
           x_label <- "Sampling interval (time between fixes)"
           pos <- c(0.75, 0.85)
@@ -2482,7 +2311,7 @@ mod_tab_design_server <- function(id, vals) {
             size = 0.2)
         }
       }
-
+      
       x_scale <- data.frame(
         brks = device$gps %>%
           dplyr::filter(dti_yn == "Y") %>%
@@ -2490,13 +2319,13 @@ mod_tab_design_server <- function(id, vals) {
         lbls = device$gps %>%
           dplyr::filter(dti_yn == "Y") %>%
           dplyr::pull(dti_scale))
-
+      
       p_x_scale <- ggplot2::scale_x_continuous(
         breaks = x_scale$brks,
         labels = x_scale$lbls,
         guide = ggplot2::guide_axis(check.overlap = TRUE,
                                     n.dodge = 2))
-
+      
       if (device$add_N1) {
         pN1 <- ggplot2::geom_line(
           data = device$gps,
@@ -2517,7 +2346,7 @@ mod_tab_design_server <- function(id, vals) {
             group = 1),
           size = 3, alpha = .2)
       }
-
+      
       p <- ggplot2::ggplot(
         device$gps, ggplot2::aes(
           x = .data$x,
@@ -2525,17 +2354,17 @@ mod_tab_design_server <- function(id, vals) {
           fill = .data$cutoff,
           tooltip = .data$dti_notes,
           data_id = as.numeric(.data$id))) +
-
+        
         p_x +
-
+        
         ggplot2::geom_hline(
           yintercept = 0,
           color = "grey80",
           size = 0.2) +
-
+        
         { if (device$add_N1) pN1 } +
         { if (device$add_N2) pN2 } +
-
+        
         { if (device$add_N1 & !device$add_N2) {
           ggplot2::scale_y_continuous(
             sec.axis = ggplot2::sec_axis(
@@ -2562,7 +2391,7 @@ mod_tab_design_server <- function(id, vals) {
             labels = scales::comma,
             limits = c(0, ymax)) }
         } +
-
+        
         ggiraph::geom_point_interactive(shape = 21, size = 2) +
         p_x_scale +
         
@@ -2573,11 +2402,11 @@ mod_tab_design_server <- function(id, vals) {
                      bquote(N[speed])),
           breaks = c("Narea", "Nspeed"),
           values = c(pal$sea, pal$grn)) +
-
+        
         ggplot2::labs(
           x = x_label,
           y = paste0("Durations (in ", input$gps_dur_unit, ")")) +
-
+        
         theme_movedesign() +
         ggplot2::guides(fill = "none") +
         ggplot2::theme(
@@ -2586,11 +2415,11 @@ mod_tab_design_server <- function(id, vals) {
           axis.title.y.right = ggplot2::element_text(angle = 90))
       
       # preselected <- character(0)
-      # if (vals$tour_active) {
+      # if (rv$tour_active) {
       #   tmp <- match("1 fix every 2 hours", device$gps$dti_notes)
       #   preselected <- as.character(tmp)
       # }
-
+      
       ggiraph::girafe(
         ggobj = p,
         width_svg = 5, height_svg = 4,
@@ -2617,25 +2446,27 @@ mod_tab_design_server <- function(id, vals) {
               "stroke: #2c3b41;")),
           # ggiraph::opts_hover_inv(css = "opacity:0.4;"),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
-
+      
     }) %>% # end of renderGirafe, "devPlot_gps",
       bindEvent(input$gps_dur,
                 input$gps_dur_unit,
                 input$gps_dti_max,
                 input$device_log,
-                vals$which_question,
-                vals$overwrite_seed)
+                rv$which_question,
+                rv$overwrite_seed) %>% 
+      debounce(250)
     
     ## Plotting new simulated data plot (xy): -----------------------------
     
     output$devPlot_id <- ggiraph::renderGirafe({
-      req(vals$data0, vals$data1)
+      req(rv$datList, rv$id, rv$simList) # input$dev_nsim
       
-      newdat <- vals$data1
-      if (vals$data_type == "simulated") {
-        dat <- vals$data0[which(vals$data0$t <= max(newdat$t)), ]
+      newdat <- rv$simList[[1]] 
+      if (rv$data_type == "simulated") {
+        dat <- rv$datList[[1]]
+        dat <- dat[which(dat$t <= max(newdat$t)), ]
       } else {
-        dat <- vals$data0
+        dat <- as_tele_dt(rv$datList[rv$id])
       }
       
       ymin <- min(
@@ -2647,10 +2478,11 @@ mod_tab_design_server <- function(id, vals) {
         max(dat$y) + diff(range(dat$y)) * .2)
       
       p <- ggplot2::ggplot() +
-        ggplot2::geom_path(
+        ggplot2::geom_point(
           dat, mapping = ggplot2::aes(
-            x = x, y = y),
-          col = "grey90", size = 1.4) +
+            x = x, y = y, fill = id), 
+          color = "grey90", shape = 21, size = 1.4) +
+        ggplot2::scale_fill_grey(start = .4) +
         
         ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(
@@ -2683,6 +2515,7 @@ mod_tab_design_server <- function(id, vals) {
         
         theme_movedesign() +
         ggplot2::guides(
+          fill = "none",
           color = ggplot2::guide_colorbar(
             title.hjust = 4, title.vjust = 1.02)) +
         ggplot2::theme(
@@ -2711,24 +2544,25 @@ mod_tab_design_server <- function(id, vals) {
     ## Plotting variogram (svf): ------------------------------------------
     
     output$devPlot_svf <- ggiraph::renderGirafe({
-      req(vals$data1, vals$fit1)
+      req(rv$simList, rv$simfitList)
       
-      p <- plotting_svf(extract_svf(vals$data1, vals$fit1),
+      rv$simsvfList <- extract_svf(rv$simList, rv$simfitList, fraction = 1)
+      
+      p <- plotting_svf(rv$simsvfList,
                         fill = pal$dgr,
                         add_fit = ifelse(is.null(input$dev_add_fit),
                                          FALSE, input$dev_add_fit),
                         fraction = input$dev_fraction / 100)
       
       ggiraph::girafe(
-        ggobj = ggpubr::ggarrange(plotlist = p),
-        width_svg = 6, height_svg = 4,
+        ggobj = suppressWarnings(ggpubr::ggarrange(plotlist = p)),
         options = list(
-          ggiraph::opts_sizing(rescale = TRUE, width = .1),
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
-          ggiraph::opts_hover(
-            css = paste("fill: #ffbf00;",
-                        "stroke: #ffbf00;"))))
+          ggiraph::opts_sizing(rescale = TRUE, width = .5),
+          ggiraph::opts_hover(css = paste("fill: #ffbf00;",
+                                          "stroke: #ffbf00;"))
+        ))
       
     }) # end of renderGirafe, "devPlot_svf"
     
@@ -2736,12 +2570,11 @@ mod_tab_design_server <- function(id, vals) {
     ## Species parameters: ------------------------------------------------
     
     observe({
-      req(vals$tau_p0)
+      req(rv$tau_p0)
       
       mod_blocks_server(
         id = "devBlock_taup", 
-        vals = vals, data = vals$data0, fit = vals$fit0,
-        type = "tau", name = "tau_p0",
+        rv = rv, type = "tau", name = "tau_p0",
         input_name = list(
           chr = "dev_taup0",
           html = wrap_none("Position autocorrelation ",
@@ -2750,12 +2583,11 @@ mod_tab_design_server <- function(id, vals) {
     }) # end of observe
     
     observe({
-      req(vals$tau_v0)
+      req(rv$tau_v0)
       
       mod_blocks_server(
         id = "devBlock_tauv",
-        vals = vals, data = vals$data0, fit = vals$fit0,
-        type = "tau", name = "tau_v0",
+        rv = rv, type = "tau", name = "tau_v0",
         input_name = list(
           chr = "dev_tauv0",
           html = wrap_none("Velocity autocorrelation ",
@@ -2765,162 +2597,96 @@ mod_tab_design_server <- function(id, vals) {
     
     ## Tracking regime: -------------------------------------------------
     
-    output$devBlock_dur <- renderUI({
-      req(vals$dur)
+    observe({
+      req(rv$active_tab == 'device')
+      req(rv$datList, rv$id)
       
-      out <- fix_unit(vals$dur$value, vals$dur$unit, convert = TRUE)
-      if (grepl("month", out$unit)) {
-        out_new <- convert_to(out, new_unit = "days")
-        txt <- paste0("(or ", out_new[1], " ", out_new[2], ")")
-      } else if (grepl("year", out$unit)) {
-        out_new <- convert_to(out, new_unit = "months")
-        txt <- paste0("(or ", out_new[1], " ", out_new[2], ")")
-      } else if (grepl("days", out$unit)) {
-        out <- fix_unit(vals$dur$value, vals$dur$unit)
-        txt <- NULL
-      } else {
-        txt <- NULL
-      }
+      mod_blocks_server(
+        id = "devBlock_dur",
+        rv = rv, data = rv$datList[rv$id],
+        type = "dur")
       
-      parBlock(
-        header = "Sampling duration",
-        value = paste(out[1], out[2]),
-        subtitle = txt)
+      mod_blocks_server(
+        id = "devBlock_dti", 
+        rv = rv, data = rv$datList[rv$id],
+        type = "dti")
       
-    }) # end of renderUI // devBlock_dur
-    
-    output$devBlock_dti <- renderUI({
-      req(vals$dti)
-      
-      out <- fix_unit(vals$dti$value, vals$dti$unit, convert = TRUE)
-      
-      parBlock(
-        header = "Sampling interval",
-        value = paste(out[1], out[2]),
-        subtitle = "between fixes")
-      
-    }) # end of renderUI // devBlock_dti
+    }) # end of observe
     
     ## Sample sizes: ----------------------------------------------------
     
     output$devBlock_n <- renderUI({
-      req(vals$dev$n)
+      req(rv$simList, rv$dev$n[[1]])
       
-      n <- vals$dev$n
+      n <- rv$dev$n[[1]]
       
-      number_n <- ""
+      perc_n <- NULL
       icon_n <- FALSE
-      
-      if (!is.null(vals$lost$perc)) {
-        if (vals$lost$perc > 0) {
-          number_n <- paste0("-", vals$lost$perc, "%")
-          icon_n <- TRUE
-        }
+      if (req(rv$lost$perc) > 0) {
+        perc_n <- span(paste0("-", rv$lost$perc, "%"))
+        icon_n <- TRUE
       }
       
-      sampleBlock(
-        number = span(number_n),
-        numberIcon = icon_n,
-        header = n,
-        line1 = "Absolute sample size",
-        line2 = "(n)",
+      sizeBlock(
+        type = "n",
+        percentage = perc_n,
+        icon = icon_n,
+        value = n,
         rightBorder = FALSE,
         marginBottom = TRUE)
       
     }) # end of renderUI // devBlock_n
     
-    output$devBlock_Narea <- renderUI({
-      req(vals$dev$N1)
+    observe({
+      req(rv$active_tab == 'device', rv$dev$n, rv$dev$N1)
       
-      diff1 <- paste0("-", round((100 - ((
-        vals$dev$N1 * 100)/vals$dev$n)), 1), "%")
+      mod_blocks_server(
+        id = "devBlock_Narea", 
+        rv = rv, n = rv$dev$n, N = rv$dev$N1,
+        type = "N", name = "area")
       
-      sampleBlock(
-        number = span(diff1),
-        numberIcon = TRUE,
-        header = round(vals$dev$N1, 1),
-        line1 = "Effective sample size",
-        line2 = HTML(paste0("(N", tags$sub("area"), ")")),
-        rightBorder = FALSE,
-        marginBottom = FALSE)
-      
-    }) # end of renderUI // devBlock_Narea
+    }) # end of observe
     
-    output$devBlock_Nspeed <- renderUI({
-      req(vals$dev$N2)
+    observe({
+      req(rv$active_tab == 'device', rv$dev$n, rv$dev$N2)
       
-      diff2 <- paste0("-", round((100 - ((
-        vals$dev$N2 * 100)/vals$dev$n)), 1), "%")
+      mod_blocks_server(
+        id = "devBlock_Nspeed", 
+        rv = rv, n = rv$dev$n, N = rv$dev$N2,
+        type = "N", name = "speed")
       
-      sampleBlock(
-        number = span(diff2),
-        numberIcon = TRUE,
-        header = round(vals$dev$N2, 1),
-        line1 = "Effective sample size",
-        line2 = HTML(paste0("(N", tags$sub("speed"), ")")),
-        rightBorder = FALSE,
-        marginBottom = FALSE)
-      
-    }) # end of renderUI // devBlock_Nspeed
+    }) # end of observe
+    
     
     ## Data loss: -------------------------------------------------------
     
     output$devBlock_loss <- renderUI({
-      req(vals$lost$n, input$device_loss > 0)
+      req(rv$lost$n, input$device_loss > 0)
       
       parBlock(
         header = "Fixes lost:",
-        value = vals$lost$n)
+        value = rv$lost$n)
       
     }) # end of renderUI // devBlock_loss
-
-    # TABLES --------------------------------------------------------------
-    # Listing multiple sampling designs: ----------------------------------
     
-    devRow <- function(seed, device, 
-                       dur, dti,
-                       data, fit) {
-      
-      out <- data.frame(
-        seed = seed,
-        device = NA,
-        dur = NA,
-        dti = NA,
-        n = NA,
-        N1 = NA,
-        N2 = NA)
-      # fit = NA)
-      
-      out$device <- device
-      
-      dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
-      dti <- fix_unit(dti$value, dti$unit)
-      
-      out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
-      out$dti <- paste(dti[1], abbrv_unit(dti[,2]))
-      
-      out$n <- nrow(data)
-      out$N1 <- extract_dof(fit, name = "area")
-      out$N2 <- extract_dof(fit, name = "speed")
-      
-      return(out)
-    }
+    # TABLES --------------------------------------------------------------
+    ## Listing multiple sampling designs: ---------------------------------
     
     observe({
-      req(vals$seed0,
-          vals$dur, vals$dti,
-          vals$data1, vals$fit1)
+      req(rv$seed0,
+          rv$dur, rv$dti,
+          rv$simList, rv$simfitList)
       
       shinyjs::show(id = "devBox_summary")
-      vals$dev$tbl <- dplyr::distinct(vals$dev$tbl)
+      rv$dev$tbl <- dplyr::distinct(rv$dev$tbl)
       
-    }) %>% # end of observe,
-      bindEvent(input$devButton_save)
+    }) # %>% # end of observe,
+      # bindEvent(input$devButton_save)
     
     output$devTable <- reactable::renderReactable({
-      req(vals$dev$tbl)
+      req(rv$dev$tbl)
       
-      dt_dev <- vals$dev$tbl[, -1]
+      dt_dev <- rv$dev$tbl[, -1]
       nms <- list(
         device = "Type",
         dur = "Duration",
@@ -2979,23 +2745,23 @@ mod_tab_design_server <- function(id, vals) {
     }) # end of renderReactable, "devTable"
     
     # observe({
-    #   vals$dev$tbl <- NULL
+    #   rv$dev$tbl <- NULL
     # }) %>% # end of observe,
     #   bindEvent(input$devTable_clear)
     
     ## Additional information: --------------------------------------------
     
-    # Export values for tests:
-
-    shiny::exportTestValues(
-      data1 = simulating_data()
-    )
+    # # Export values for tests:
+    # 
+    # shiny::exportTestValues(
+    #   simList = simulating_data()
+    # )
     
   }) # end of moduleServer
 }
-    
+
 ## To be copied in the UI
 # mod_tab_design_ui("tab_design_1")
-    
+
 ## To be copied in the server
 # mod_tab_design_server("tab_design_1")

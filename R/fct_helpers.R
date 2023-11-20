@@ -22,16 +22,21 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
   all_units <- c("year", "month", "week",
                  "day", "hour", "minute", "second",
                  "kilometer", "meter", "km", "m",
-                 "km^2", "m^2", "ha",
+                 "km^2", "m^2","hm^2", "ha", 
+                 "km\u00B2", "m\u00B2", "hm\u00B2",
                  "square kilometer", "square meter", "hectare",
                  "kilometers/hour", "meters/second",
                  "kilometers/day" , "meters/day",
                  "km/h", "m/s",
                  "km/day", "m/day")
-
-  x <- gsub("(.)s$", "\\1", unit)
+  
+  if (unit == "km\u00B2") unit <- "km^2"
+  if (unit == "m\u00B2") unit <- "m^2"
+  if (unit == "hm\u00B2" || unit == "hm^2") unit <- "hectare"
+  
+  x <- ifelse(unit == "m/s", "m/s", gsub("(.)s$", "\\1", unit))
   var <- all_units[pmatch(x, all_units, duplicates.ok = TRUE)]
-
+  
   if (any(is.na(var)))
     stop("Invalid unit: ", paste(x[is.na(var)], collapse = ", "),
          call. = FALSE)
@@ -52,8 +57,8 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
     out <- ifelse(ui_only, "km\u00B2", "km^2")
   if (x == "square meter" || x == "m^2") 
     out <- ifelse(ui_only, "m\u00B2", "m^2")
-  if (x == "hectare") out <- "ha"
-
+  if (x == "hectare" || x == "hm^2") out <- "ha"
+  
   if (x == "kilometers/hour") out <- "km/h"
   if (x == "meters/second") out <- "m/s"
   if (x == "kilometers/day") out <- "km/day"
@@ -102,11 +107,20 @@ fix_unit <- function(input,
   if (!is.numeric(value)) stop("'value' must be numeric.") 
   if (!is.character(unit)) stop("`unit` must be a character string.")
   
+  for (x in seq_along(unit)) {
+    if (unit[x] == "km\u00B2") unit[x] <- "km^2"
+    if (unit[x] == "m\u00B2") unit[x] <- "m^2"
+    if (unit[x] == "hm\u00B2") unit[x] <- "hm^2"
+  }
+  
   units_tm <- c("year", "month", "week",
-                "day", "hour", "minute", "second")
+                "yr", "mon", "wk",
+                "day", "hour", "minute", "second",
+                "d", "hr", "min", "sec")
   units_sp <- c("kilometer", "meter", "km", "m")
   units_ar <- c("square kilometer", "square meter", "hectare",
-                "km^2", "m^2", "ha")
+                "km^2", "m^2", "hm^2", "ha")
+  
   units_vl <- c("kilometers/day", "kilometer/day", "km/day",
                 "kilometers/hour", "kilometer/hour", "km/h",
                 "meters/second", "meter/second", "m/s")
@@ -237,12 +251,9 @@ fix_unit <- function(input,
 #'
 #' @importFrom ctmm `%#%`
 #' @noRd
-prepare_mod <- function(tau_p,
-                        tau_p_unit = NULL,
-                        tau_v,
-                        tau_v_unit = NULL,
-                        sigma,
-                        sigma_unit = NULL,
+prepare_mod <- function(tau_p, tau_p_unit = NULL,
+                        tau_v, tau_v_unit = NULL,
+                        sigma, sigma_unit = NULL,
                         mu = NULL) {
   
   if (missing(tau_p)) stop("tau_p is required.")
@@ -328,7 +339,7 @@ simulate_data <- function(data = NULL,
   dat <- pseudonymize(dat)
   dat$index <- 1:nrow(dat)
 
-  return(dat)
+  return(list(dat))
 }
 
 
@@ -354,24 +365,51 @@ calculate_ci <- function(data, level = 0.95) {
 
 #' Extract parameters.
 #'
-#' @description Extracting parameter values and units from ctmm summaries.
-#' @return The return value, if any, from executing the utility.
+#' @description Extracting values and units from ctmm summaries.
 #' @keywords internal
 #'
 #' @importFrom ctmm `%#%`
 #' @noRd
-extract_pars <- function(obj, data = NULL,
-                         name, si_units = FALSE) {
+extract_pars <- function(
+    obj, data = NULL,
+    name = c("position", "velocity", "sigma", "speed"),
+    si_units = FALSE,
+    meta = FALSE) {
   
-  out <- NULL
+  name <- match.arg(name)
+  
   unit <- NA
+  out <- NULL
   if (missing(obj)) 
     stop("`obj` argument not provided.")
   if (name == "sigma" && missing(data))
     stop("`data` argument not provided.")  
   if (class(obj)[1] != "list" && class(obj[[1]])[1] != "ctmm") {
-    data <- list(data)
+    if (!is.null(data)) data <- list(data)
     obj <- list(obj)
+  }
+  
+  if (name == "position" || name == "velocity")
+    var <- paste("tau", name) else
+      if (name == "sigma") var <- "area" else
+        if (name == "speed") var <- name
+  
+  if (meta && length(obj) > 1) {
+    capture_meta(obj, 
+                 variable = var,
+                 units = !si_units, 
+                 verbose = FALSE, 
+                 plot = FALSE) -> out
+    if (is.null(out)) return(NULL)
+    
+    unit <- extract_units(rownames(out$meta)[1])
+    tmp <- c(out$meta[1, 1],
+             out$meta[1, 2],
+             out$meta[1, 3])
+    if (name == "sigma") tmp <- tmp / -2 / log(0.05) / pi
+    
+    return(list(data.frame(value = tmp, unit = unit,
+                           row.names = c("low", "est", "high"))))
   }
   
   out <- list()
@@ -386,30 +424,38 @@ extract_pars <- function(obj, data = NULL,
                var.covm(obj[[x]]$sigma, average = TRUE),
                max(svf$fit$svf_upper) %#% svf$y_unit)
       unit <- "m^2"
+      
+      return(data.frame(value = tmp, unit = unit,
+                        row.names = c("low", "est", "high")))
     }
     
-    # Special cases of movement processes (IID):
-    if (length(grep(name, nms.obj)) == 0) {
-      tmp <- c(NA, NA, NA) # IID model, no parameter found
-    } else { # (OUΩ and OUf):
-      if (length(obj[[x]]$tau) == 2 &&
-          all(obj[[x]]$tau[1] == obj[[x]]$tau[2]))
-        name <- ifelse("decay" %in% nms.obj, "decay", "\u03C4")
-      tmp <- sum.obj$CI[grep(name, nms.obj), ]
-    }
-    
+    # Special cases of movement processes:
+    tmp <- sum.obj$CI[grep(name, nms.obj), ]
+    if (!is.null(nrow(tmp))) 
+      if (nrow(tmp) > 1) 
+        tmp <- subset(tmp, !grepl("^CoV", row.names(tmp)))[1,]
     unit <- extract_units(nms.obj[grep(name, nms.obj)])
-    if (si_units && !all(is.na(tmp))) {
-      tmp <- unit %#% tmp
+    
+    if (length(obj[[x]]$tau) == 2 &&
+        all(obj[[x]]$tau[1] == obj[[x]]$tau[2])) { # (OUΩ and OUf):
+      tmp_name <- ifelse(any(grepl("decay", nms.obj)), "decay", "\u03C4")
+      tmp <- sum.obj$CI[grep(tmp_name, nms.obj), ]
+      unit <- extract_units(nms.obj[grep(tmp_name, nms.obj)])
     }
+    
+    if (length(tmp) == 0) return(NULL)
+    if (si_units && !all(is.na(tmp))) tmp <- unit %#% tmp
     
     return(data.frame(value = tmp, unit = unit,
                       row.names = c("low", "est", "high")))
   })
   
-  if (length(out) == 1) out <- out[[1]]
+  names(out) <- names(obj)
+  out[sapply(out, is.null)] <- NULL
+  if (length(out) == 0) return(NULL)
   return(out)
 }
+
 
 #' Extract sampling parameters.
 #'
@@ -442,7 +488,6 @@ extract_sampling <- function(obj, name) {
     }
   } else stop("as.telemetry() obj required.")
   
-  if (length(out) == 1) out <- out[[1]]
   return(out)
 }
 
@@ -450,31 +495,36 @@ extract_sampling <- function(obj, name) {
 #' Extract DOF
 #'
 #' @description Extracting DOF values and units from ctmm summaries.
-#' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
 #' @noRd
-extract_dof <- function(obj, name) {
+extract_dof <- function(
+    obj,
+    name = c("mean", "speed", "area", "diffusion")) {
   
-  name_list <- c("mean", "speed", "area", "diffusion")
+  name <- match.arg(name)
   
-  if (!(name %in% name_list)) {
-    stop("`par` argument is not valid.")
+  out <- NULL
+  if (missing(obj)) stop("`obj` argument not provided.")
+  if (class(obj)[1] != "list" && class(obj[[1]])[1] != "ctmm") {
+    if (!is.null(data)) data <- list(data)
+    obj <- list(obj)
   }
   
-  if (inherits(obj, "ctmm")) {
-    sum.fit <- summary(obj)
-    nms.fit <- names(sum.fit$DOF)
+  x <- 1
+  out <- list()
+  out <- lapply(seq_along(obj), function(x) {
+    sum.obj <- summary(obj[[x]])
+    nms.obj <- names(sum.obj$DOF)
     
-    out <- sum.fit$DOF[grep(name, nms.fit)][[1]]
-    if (is.na(out)) out <- NULL
-    
-  } else {
-    stop("`object` argument is not a `ctmm` movement model.")
-  }
+    out_tmp <- sum.obj$DOF[grep(name, nms.obj)][[1]]
+    if (is.na(out_tmp)) out_tmp <- NULL
+    return(out_tmp)
+  })
   
   return(out)
 }
+
 
 #' Extract semi-variance data for ggplot2
 #'
@@ -487,6 +537,7 @@ extract_svf <- function(data, fit = NULL,
                         fraction = 1, level = .95,
                         x_unit = "days", y_unit = "km^2") {
   
+  single <- class(data)[1] != "list" && class(data[[1]])[1] != "ctmm"
   CI.upper <- Vectorize(function(k, level) {
     stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
   
@@ -494,7 +545,8 @@ extract_svf <- function(data, fit = NULL,
     stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
   
   out <- list()
-  if (class(data)[1] != "list" && class(data[[1]])[1] != "ctmm") {
+  nms <- names(data)
+  if (single) {
     data <- list(data)
     fit <- list(fit)
   }
@@ -562,6 +614,7 @@ extract_svf <- function(data, fit = NULL,
     
   }) # end of lapply
   
+  if (!single) names(out) <- nms
   if (length(out) == 1) out <- out[[1]]
   return(out)
   
@@ -777,14 +830,16 @@ update_f <- function(x, init) {
 #' @importFrom ctmm `%#%`
 #' @importFrom dplyr `%>%`
 #' @noRd
-#'
-guess_time <- function(data, 
-                       seed,
+#' 
+guess_time <- function(data,
                        type = "fit",
                        fit = NULL,
-                       with_truth = FALSE,
+                       seed = NULL,
                        trace = FALSE,
                        parallel = TRUE) {
+  
+  set_id <- 1 # only run first dataset
+  data <- data[[set_id]] 
   
   if (!type %in% c("fit", "speed"))
     stop("type =", type, " is not supported.", call. = FALSE)
@@ -809,7 +864,7 @@ guess_time <- function(data,
     
     start <- Sys.time()
     guess <- ctmm::ctmm.guess(data[1:200, ], interactive = FALSE)
-    fit <- par.ctmm.select(list(list(data[1:200, ], guess)),
+    fit <- par.ctmm.select(list(data[1:200, ]), list(guess),
                            trace = FALSE, parallel = TRUE)
     total_time <- difftime(Sys.time(), start, units = "sec")[[1]]
     expt <- expt_unit %#% (total_time * nrow(data) / 200)
@@ -822,14 +877,18 @@ guess_time <- function(data,
   } # end of if (type == "fit")
   
   if (type == "speed") {
-    if (missing(fit)) stop("ctmm `fit` object not provided.")
+    if (!is.null(seed)) set.seed(seed[[set_id]])
+    if (missing(fit)) {
+      stop("ctmm `fit` object not provided.")
+    } else { fit <- fit[[set_id]] }
+    
     if (is.null(summary(fit)$DOF["speed"])) return(outputs)
-    tauv <- extract_pars(fit, name = "velocity")
+    tauv <- extract_pars(fit, name = "velocity")[[1]]
     if (is.null(tauv)) return(outputs)
     if (tauv$value[2] == 0) return(outputs)
     
-    dti <- data[[2,"t"]] - data[[1,"t"]]
-    dur <- extract_sampling(data, name = "period")
+    dti <- data[[2, "t"]] - data[[1, "t"]]
+    dur <- extract_sampling(data, name = "period")[[1]]
     tauv <- tauv$value[2] %#% tauv$unit[2]
     N <- summary(fit)$DOF["speed"]
     
@@ -847,30 +906,27 @@ guess_time <- function(data,
         if (N <= 5) y_max <- y_max * 3
       } else { y_max <- y }
 
-      expt_min <- round_any(expt_unit %#% y, 1, f = ceiling)
-      expt <- round_any(expt_unit %#% y, 1, f = ceiling)
+      expt <- expt_min <- ceiling(expt_unit %#% y)
       expt_max <- ifelse(
         N > 30,
         round_any(expt_unit %#% y_max, 2, f = ceiling),
         round_any(expt_unit %#% y_max, 3, f = ceiling))
       
     } else {
-      if (tauv/dti < 10 && tauv/dti >= 1)
+      if (tauv/dti < 10)
         y <- y_max <- exp(-3.28912 + 1.01494 * x1 + 0.01953 * x1 * x2)
       if (tauv/dti >= 10)
         y <- y_max <- exp(-2.0056285 + 0.9462089 * x1 + 0.0023285 * x1 * x2)
       if (N < 15) y_max <- y_max + y_max * 2
       
       y <- expt_unit %#% y
-      expt_min <- ceiling(y * 2) / 2 
+      expt_min <- ceiling(y * 2) / 2
       expt <- round_any(y, 1, f = ceiling)
       expt_max <- round_any(y_max, 1, f = ceiling)
     }
+    
+    set.seed(NULL)
   } # end of if (type == "speed")
-  
-  if (with_truth) expt <- expt + 1
-  if (with_truth) expt_min <- expt_min
-  if (with_truth) expt_max <- expt_max + 2
   
   if (expt <= 1) {
     range <- paste("\u2264", "1", expt_unit)
@@ -946,3 +1002,170 @@ convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
 }
 
 
+#' Capture meta() output
+#'
+#' @description Capture all outputs from the ctmm::meta() function.
+#' @keywords internal
+#'
+#' @importFrom ctmm `%#%`
+#' @importFrom dplyr `%>%`
+#' @noRd
+#'
+capture_meta <- function(x, 
+                         variable = "area",
+                         sort = TRUE, 
+                         units = FALSE,
+                         verbose = TRUE,
+                         plot = TRUE) {
+  
+  if (variable == "tau position" || variable == "tau velocity") {
+    x.new <- lapply(seq_along(x), function(i) {
+      if (variable == "tau position") E <- x[[i]]$tau[1]
+      if (variable == "tau velocity") E <- x[[i]]$tau[2]
+      if (is.null(E)) out <- NULL
+      else if (is.na(E)) out <- NULL
+      else out <- x[[i]]
+    })
+    names(x.new) <- names(x)
+    x <- x.new
+    rm(x.new)
+    
+    x[sapply(x, is.null)] <- NULL
+    if (length(x) == 0) return(NULL)
+  }
+  
+  is_grouped <- class(x)[1] == "list" && class(x[[1]])[1] == "list" && 
+    !(length(names(x[[1]])) == 2 && 
+        all(names(x[[1]]) == c("DOF", "CI")))
+  
+  num_groups <- ifelse(is_grouped, length(x), 1)
+  num_out <- ifelse(is_grouped, length(x) + 1, 1)
+  
+  out <- tryCatch({
+    ctmm::meta(x, 
+               variable = variable,
+               units = FALSE, 
+               verbose = FALSE, 
+               plot = FALSE) %>% 
+      suppressMessages() %>% 
+      suppressWarnings() %>% 
+      quiet()
+  }, error = function(e) {
+    message(paste(
+      "Population-level mean", variable, "could not be extracted."))
+    return(NULL)
+  })
+  if (is.null(out)) return(NULL)
+  
+  out <- capture.output(
+    ctmm::meta(x, 
+               variable = variable,
+               units = FALSE, 
+               verbose = FALSE, 
+               plot = FALSE)
+  ) %>% quiet()
+  
+  i <- 1
+  num_row <- 2
+  out_mods <- out_logs <- list()
+  for (i in seq_len(num_out)) {
+    
+    if (i == 1) num_row <- 2 
+    else num_row <- num_row + 3
+    
+    mods <- c("inverse-Gaussian", "Dirac-d")
+    extract_meta_mods <- function(y) {
+      model <- ifelse(
+        startsWith(y, "Dirac"), "Dirac-d", "inverse-Gaussian")
+      delta_AICc <- unlist(
+        stringr::str_extract_all(y, '\\d+([.,]\\d+)?'))
+      list("model" = model, "delta_AICc" = as.numeric(delta_AICc))
+    }
+    
+    tmp_out <- extract_meta_mods(out[num_row]) %>% list()
+    tmp_out[[2]] <- extract_meta_mods(out[num_row + 1])
+    
+    out_mods[[i]] <- as.data.frame(do.call(rbind, tmp_out))
+    out_logs[[i]] <- ifelse(
+      startsWith(out[num_row], "Dirac"),
+      "no pop. variance detected",
+      "pop. variance detected")
+    
+  } # end of loop [i]
+  
+  if (num_out == 1) {
+    
+    return(list(meta = ctmm::meta(x, 
+                                  variable = variable,
+                                  units = units, 
+                                  verbose = verbose, 
+                                  plot = plot) %>% quiet(),
+                mods = out_mods[[1]],
+                logs = out_logs[[1]],
+                names = names(x)))
+    
+  } else {
+    
+    best_mods <- c("Sub-population", "Joint population")
+    extract_meta_best_mods <- function(y) {
+      model <- ifelse(
+        startsWith(y, "Sub-population"), 
+        "Sub-population", "Joint population")
+      delta_AICc <- unlist(
+        stringr::str_extract_all(y, '\\d+([.,]\\d+)?'))
+      list("model" = model, "delta_AICc" = as.numeric(delta_AICc))
+    }
+    
+    out_mods[[length(out_mods) + 1]] <- data.frame(
+      do.call(rbind, list(
+        extract_meta_best_mods(out[num_row + 3]),
+        extract_meta_best_mods(out[num_row + 3 + 1])
+      )))
+    
+    if (diff(do.call(c, out_mods[[
+      length(out_mods)]]$delta_AICc)) <= 2) {
+      sub_detected <- FALSE
+    } else {
+      sub_detected <- ifelse(
+        startsWith(out[num_row + 3], "Sub-population"),
+        TRUE, FALSE)
+    }
+    
+    out_logs[[length(out_logs) + 1]] <- ifelse(
+      sub_detected,
+      "subpop detected",
+      "no subpop detected")
+    
+    names(out_mods) <- names(out_logs) <- c(
+      paste("Sub-population", 1:num_groups),
+      "Joint population",
+      "Joint population versus sub-populations (best models)")
+    
+    return(list(meta = ctmm::meta(x, 
+                                  units = units, 
+                                  verbose = verbose, 
+                                  plot = plot) %>% quiet(),
+                mods = out_mods,
+                logs = out_logs,
+                names = names(x)))
+  }
+}
+
+extract_ratios <- function(x, rev = TRUE) {
+  if (is.null(names(x$meta))) stop("No subgroups evaluated.")
+  if (length(x$names) != 2) stop("Only two groups accepted.")
+  
+  if (rev) {
+    xy <- c(1, 2)
+    nm <- paste0(names(x$meta)[1], "/", names(x$meta)[2])
+  } else {
+    xy <- c(2, 1)
+    nm <- paste0(names(x$meta)[2], "/", names(x$meta)[1])
+  }
+  
+  x <- x$meta$`mean ratio`
+  return(data.frame(name = nm,
+                    lower = x[xy[1], xy[2], "low"],
+                    est = x[xy[1], xy[2], "est"],
+                    upper = x[xy[1], xy[2], "high"]))
+}

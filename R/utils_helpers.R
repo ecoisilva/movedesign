@@ -1,4 +1,13 @@
 
+#' Quiet functions
+#' 
+#' @noRd
+quiet <- function(x) {
+  sink(tempfile())
+  on.exit(sink())
+  invisible(force(x))
+}
+
 #' Negate %in%
 #' 
 #' @noRd
@@ -53,51 +62,85 @@ parBlock <- function(icon = NULL,
 #' @keywords internal
 #'
 #' @noRd
-sampleBlock <- function(number = NULL,
-                        numberIcon = FALSE,
-                        header = NULL,
-                        line1 = NULL,
-                        line2 = NULL,
-                        rightBorder = TRUE,
-                        marginBottom = FALSE,
-                        alt = FALSE) {
-
-  cl <- "sampleblock"
+sizeBlock <- function(type = c("n", "N_area", "N_speed"),
+                      percentage = NULL,
+                      icon = FALSE,
+                      value = NULL,
+                      intervals = NULL,
+                      rightBorder = TRUE,
+                      marginBottom = FALSE) {
+  
+  type <- match.arg(type)
+  
+  if (is.null(intervals)) {
+    line1 <- dplyr::case_when(
+      type == "n" ~ "Absolute sample size",
+      TRUE ~ "Effective sample size")
+    line2 <- dplyr::case_when(
+      type == "n" ~ "n",
+      type == "N_area" ~ "area",
+      type == "N_speed" ~ "speed")
+    if (startsWith(type, "N"))
+      line2 <- HTML(paste0("(N", tags$sub(line2), ")"))
+  } else {
+    line1 <- intervals
+    line2 <- dplyr::case_when(
+      type == "n" ~ "Absolute sample size (n)",
+      type == "N_area" ~ "area",
+      type == "N_speed" ~ "speed")
+    if (startsWith(type, "N"))
+      line2 <- HTML(paste0("Effective sample size (N", 
+                           tags$sub(line2), ")"))
+  }
+  
+  cl <- "sizeblock"
   if (isTRUE(rightBorder))
     cl <- paste0(cl, " border-right")
   if (isTRUE(marginBottom))
     cl <- paste0(cl, " margin-bottom")
-  numcl <- "samplebox-percentage"
-
-  if (!is.null(header)) {
-
-    if (as.numeric(header) <= 5) {
-      numberColor <- "color: var(--danger) !important;"
-      if (numberIcon) { numberIcon <- icon("angles-down")
-      } else { numberIcon <- HTML("&nbsp;") }
-    } else { if (as.numeric(header) >= 30) {
-      numberColor <- "color: var(--sea) !important;"
-      header <- scales::label_comma(accuracy = 1)(header)
-      if (numberIcon) { numberIcon <- icon("angle-down")
-      } else { numberIcon <- HTML("&nbsp;") }
+  
+  if (!is.null(value)) {
+    
+    if (as.numeric(value) <= 5) {
+      percentageColor <- "color: var(--danger) !important;"
+      if (icon) { icon <- icon("angles-down")
+      } else { icon <- HTML("&nbsp;") }
+    } else { if (as.numeric(value) >= 30) {
+      percentageColor <- "color: var(--sea) !important;"
+      value <- scales::label_comma(accuracy = 1)(value)
+      if (icon) { icon <- icon("angle-down")
+      } else { icon <- HTML("&nbsp;") }
     } else {
-      numberColor <- "color: var(--gold) !important;"
-      if (numberIcon) { numberIcon <- icon("angle-down")
-      } else { numberIcon <- HTML("&nbsp;") }
+      percentageColor <- "color: var(--gold) !important;"
+      if (icon) { icon <- icon("angle-down")
+      } else { icon <- HTML("&nbsp;") }
     }}
   }
-
-  shiny::tags$div(
-    class = cl,
-
-    shiny::tags$span(
-      class = numcl, number,
-      if (!is.null(numberIcon)) numberIcon, br(),
-      style = numberColor),
-    shiny::tags$span(class = "sampleblock-header", header,
-                     style = numberColor),
-    shiny::tags$span(class = "sampleblock-text", br(), line1),
-    shiny::tags$span(class = "sampleblock-text", br(), line2))
+  
+  if (is.null(intervals)) {
+    shiny::tags$div(
+      class = cl,
+      
+      shiny::tags$span(
+        class = "sizeblock-percentage", percentage,
+        if (!is.null(icon)) icon, br(), style = percentageColor),
+      shiny::tags$span(class = "sizeblock-header", value,
+                       style = percentageColor),
+      shiny::tags$span(class = "sizeblock-text", br(), line1),
+      shiny::tags$span(class = "sizeblock-text", br(), line2))
+  } else {
+    shiny::tags$div(
+      class = cl,
+      
+      shiny::tags$span(class = "sizeblock-text", br(), line2),
+      br(),
+      shiny::tags$span(
+        class = "sizeblock-percentage", percentage,
+        if (!is.null(icon)) icon, br(), style = percentageColor),
+      shiny::tags$span(class = "sizeblock-header", value,
+                       style = percentageColor),
+      shiny::tags$span(class = "sizeblock-text", br(), line1))
+  }
 }
 
 #' Relative error blocks
@@ -233,7 +276,18 @@ staticBlock <- function(text,
 #' @keywords internal
 #'
 #' @noRd
-extract_units <- function(input) {
+extract_units <- function(input, name = NULL) {
+  
+  # if (class(input)[1] != "list" && class(input[[1]])[1] != "ctmm") {
+  #   input <- summary(input)
+  # } else {
+  #   input <- summary(input[[1]])
+  # }
+  #   
+  # if (inherits(input, "data.frame")) {
+  #   tmp <- rownames(input)
+  #   input <- tmp[grep(name, tmp)]
+  # }
   
   tryCatch(
     expr = {
@@ -242,11 +296,8 @@ extract_units <- function(input) {
         stringr::str_extract_all(input,
                                  "\\(([^()]+)\\)")[[1]])
       return(string)
-    },
-    error = function(e) {
-      print(sprintf("An error occurred in extract_units at %s : %s",
-                    Sys.time(), e))
-    })
+      
+    }, error = function(e) return(NULL))
 }
 
 #' Add helper text.
@@ -379,21 +430,36 @@ msg_step <- function(current, total, style) {
 #' @keywords internal
 #'
 #' @noRd
-reset_reactiveValues <- function(vals) {
+reset_reactiveValues <- function(rv) {
 
-  vals$is_valid <- FALSE
+  rv$is_valid <- FALSE
 
-  if (!is.null(vals$species)) vals$species <- NULL
-  if (!is.null(vals$id)) vals$id <- NULL
-  if (!is.null(vals$data_type)) vals$data_type <- NULL
-  if (!is.null(vals$data0)) vals$data0 <- NULL
-  if (!is.null(vals$dataList)) vals$dataList <- NULL
+  if (!is.null(isolate(rv$species))) rv$species <- NULL
+  if (!is.null(isolate(rv$id))) rv$id <- NULL
   
-  if (!is.null(vals$tmpid)) vals$tmpid <- NULL
-  if (!is.null(vals$fit0)) vals$fit0 <- NULL
+  if (!is.null(isolate(rv$sigma0))) rv$sigma0 <- NULL
+  if (!is.null(isolate(rv$tau_p0))) rv$tau_p0 <- NULL
+  if (!is.null(isolate(rv$tau_v0))) rv$tau_v0 <- NULL
+  if (!is.null(isolate(rv$speed0))) rv$speed0 <- NULL
+  if (!is.null(isolate(rv$mu0))) rv$mu0 <- NULL
   
-  if (!is.null(vals$hr)) vals$hr <- NULL
-  if (!is.null(vals$sd)) vals$sd <- NULL
+  if (!is.null(isolate(rv$tmp$id))) rv$tmp$id <- NULL
+  if (!is.null(isolate(rv$tmp$sp))) rv$tmp$sp <- NULL
+  if (!is.null(isolate(rv$tmp$sp_common))) rv$tmp$sp_common <- NULL
+  
+  if (!is.null(isolate(rv$data_type))) rv$data_type <- NULL
+  if (!is.null(isolate(rv$datList))) rv$datList <- NULL
+  if (!is.null(isolate(rv$fitList))) rv$fitList <- NULL
+  if (!is.null(isolate(rv$simdatList))) rv$simdatList <- NULL
+  if (!is.null(isolate(rv$simfitList))) rv$simfitList <- NULL
+  
+  if (!is.null(isolate(rv$hr$datList))) rv$hr$datList <- NULL
+  if (!is.null(isolate(rv$hr$fitList))) rv$hr$fitList <- NULL
+  if (!is.null(isolate(rv$sd$datList))) rv$sd$datList <- NULL
+  if (!is.null(isolate(rv$sd$fitList))) rv$sd$fitList <- NULL
+  
+  if (!is.null(isolate(rv$hr))) rv$hr <- NULL
+  if (!is.null(isolate(rv$sd))) rv$sd <- NULL
   
 }
 
@@ -480,9 +546,13 @@ plotting_hr <- function(input1,
   
   if (to_plot == "initial") {
     ud <- input1[["ud"]]
+    if (!inherits(input1[["ud"]], "UD"))
+      stop("'ud' element is not UD class.")
     pal <- c("#007d80", "#00484a")
   } else if (to_plot == "modified") {
     ud <- input2[["ud"]]
+    if (!inherits(input2[["ud"]], "UD"))
+      stop("'ud' element is not UD class.")
     pal <- c("#dd4b39", "#cc1b34")
   }
   
@@ -497,33 +567,24 @@ plotting_hr <- function(input1,
   extent[,"x"] <- extent[,"x"] + diff(range(extent[,"x"])) * c(-.01, .01)
   extent[,"y"] <- extent[,"y"] + diff(range(extent[,"y"])) * c(-.01, .01)
   
-  ud_lci <- ctmm::SpatialPolygonsDataFrame.UD(
-    ud, level.UD = .95)@polygons[[1]]
-  ud_est <- ctmm::SpatialPolygonsDataFrame.UD(
-    ud, level.UD = .95)@polygons[[2]]
-  ud_uci <- ctmm::SpatialPolygonsDataFrame.UD(
-    ud, level.UD = .95)@polygons[[3]]
-  pol_ud <- list(lci = ud_lci, est = ud_est, uci = ud_uci)
+  ud <- ctmm::as.sf(ud, level = .95, level.UD = .95)
   
   if ("uci" %in% contours) {
-    p1 <- ggplot2::geom_polygon(
-      data = pol_ud[["uci"]],
-      mapping = ggplot2::aes(x = long, y = lat, group = group),
+    p1 <- ggplot2::geom_sf(
+      data = ud[3, ],
       fill = color, color = color, 
       linetype = "dotted", alpha = .2)
   }
   
   if ("est" %in% contours) {
-    p2 <- ggplot2::geom_polygon(
-      data = pol_ud[["est"]],
-      mapping = ggplot2::aes(x = long, y = lat, group = group),
+    p2 <- ggplot2::geom_sf(
+      data = ud[2, ],
       fill = pal[1], color = color, alpha = .1)
   }
   
   if ("lci" %in% contours) {
-    p3 <- ggplot2::geom_polygon(
-      data = pol_ud[["lci"]],
-      mapping = ggplot2::aes(x = long, y = lat, group = group),
+    p3 <- ggplot2::geom_sf(
+      data = ud[1, ],
       fill = color, color = pal[2], 
       linetype = "dotted", alpha = .2)
   }
@@ -571,7 +632,6 @@ plotting_hr <- function(input1,
         extent$y[2] + abs(diff(range(extent$y))) * .01)) +
     
     ggplot2::labs(x = "X coordinate", y = "Y coordinate") +
-    ggplot2::coord_fixed() +
     theme_movedesign() +
     ggplot2::theme(legend.position = "none")
   
@@ -593,7 +653,7 @@ plotting_svf <- function(data, fill,
                          x_unit = "days", y_unit = "km^2") {
   out <- list()
   if (class(data[[1]])[1] != "list") data <- list(data)
-  n <- length(data)
+  m <- length(data)
   
   if (y_unit == "km^2") y_lab <- 
       expression("Semi-variance"~"("*km^{"2"}*")")
@@ -602,14 +662,15 @@ plotting_svf <- function(data, fill,
   if (y_unit == "hectares") y_lab <- "Semi-variance (ha)"
   
   out <- lapply(seq_along(data), function(x) {
-    if (!is.null(data[[x]]$fit))
+    if (is.null(data[[x]]$fit)) {
+      svf <- data[[x]]$data %>% dplyr::slice_min(lag, prop = fraction)
+      add_fit <- FALSE
+    } else {
       fit <- data[[x]]$fit %>% dplyr::slice_min(lag, prop = fraction)
-    else add_fit <- FALSE
-    
-    svf <- data[[x]]$data %>% 
-      dplyr::slice_min(lag, prop = fraction)
-    
-    ft_size <- ifelse(n == 1, 13, ifelse(n >= 10, 6, 11))
+      svf <- data[[x]]$data[data[[x]]$data$lag <= max(fit$lag), ]
+    }
+      
+    ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
     
     p <- ggplot2::ggplot() +
       ggplot2::geom_ribbon(
@@ -637,7 +698,7 @@ plotting_svf <- function(data, fill,
           data = fit,
           mapping = ggplot2::aes(x = lag,
                                  y = svf),
-          color = fill, linetype = "dashed")
+          color = fill, linetype = "dashed") 
       } +
       
       { if (add_fit) 
@@ -725,8 +786,8 @@ loading_modal <- function(x,
     stop("`unit` argument must be a character string.")
   
   x <- stringr::str_split(x, " ")[[1]]
-  n_words <- length(x)
-  if (n_words > 2) x[2] <- paste(x[2:n_words], collapse = " ")
+  num_words <- length(x)
+  if (num_words > 2) x[2] <- paste(x[2:num_words], collapse = " ")
   
   n <- ifelse(is.null(n), 1, n)
   
@@ -1054,7 +1115,21 @@ create_modal <- function(var, id) {
 
     ) # end of fluidRow
   } # end of tauv
-
+  
+  # if (var == "speed") {
+  #   out_title <- shiny::h4(
+  #     span("Movement speed", class = "cl-sea"), "parameter:")
+  #   
+  #   out_body <- fluidRow(
+  #     style = paste("margin-right: 20px;",
+  #                   "margin-left: 20px;"),
+  #     
+  #     
+  #     p("WIP")
+  #     
+  #   ) # end of fluidRow
+  # } # end of speed
+  
   if (var == "loss") {
     out_title <- shiny::h4(
       span("Missing data", class = "cl-sea"), "bias:")
@@ -1089,7 +1164,7 @@ create_modal <- function(var, id) {
     ) # end of fluidRow
 
   } # end of error
-
+  
   out <- bsplus::bs_modal(
     id = paste0("modal_", var, "_", id),
     title = out_title,
@@ -1129,18 +1204,17 @@ newTabItem <- function(tabName = NULL, ...) {
 #' @keywords internal
 #'
 #' @noRd
-as_tele_df <- function(object) {
-  if (class(object) != "list") object <- list(object)
-    
-  data_df <- list()
-  for (i in 1:length(object)) {
-    tempdf <- object[[i]]
-    tempdf$id <- names(object)[i]
-    data_df[[i]] <- tempdf
-  }
-  data_df <- do.call(rbind.data.frame, data_df)
+telemetry_as_df <- function(object) {
+  if (!is.list(object)) object <- list(object)
   
-  return(data_df)
+  out_df <- lapply(seq_along(object), function(x) {
+    df <- cbind(object[[x]], id = names(object)[x])
+    df[, c("timestamp", "longitude", "latitude", "t", "x", "y", "id")]
+  })
+  
+  out_df <- do.call(rbind.data.frame, out_df)
+  head(out_df)
+  return(out_df)
 }
 
 
@@ -1177,11 +1251,12 @@ pseudonymize <- function(data,
     names(data) <- attr(data[[1]],'info')$identity
   }
   
-  if (is.null(proj)) {
-    proj <- paste0("+proj=aeqd +lon_0=", center[1], " +lat_0=", 
-                   center[2], " +datum=", datum)
-  }
-  for (i in 1:length(data)) {
+  if (is.null(proj))
+    proj <- paste0("+proj=aeqd +lon_0=", center[1],
+                   " +lat_0=", center[2], 
+                   " +datum=", datum)
+  
+  for (i in seq_along(data)) {
     
     axes <- c("x", "y")
     if (all(axes %in% names(data[[i]]))) {
@@ -1190,18 +1265,16 @@ pseudonymize <- function(data,
       xy <- numeric(0)
     }
     
-    xy <- suppressWarnings(
-      rgdal::project(xy, proj, inv = TRUE))
+    xy <- terra::project(xy, from = proj,to = "+proj=longlat +datum=WGS84")
     data[[i]]$longitude <- xy[, 1]
     data[[i]]$latitude <- xy[, 2]
     attr(data[[i]], "info")$projection <- proj
-    data[[i]]$timestamp <- as.POSIXct(data[[i]]$t, tz = tz, 
-                                      origin = origin)
+    
+    data[[i]]$timestamp <- as.POSIXct(data[[i]]$t, tz = tz, origin = origin)
     attr(data[[i]], "info")$timezone <- tz
   }
-  if (DROP) {
-    data <- data[[1]]
-  }
+  
+  if (DROP) data <- data[[1]]
   return(data)
 }
 
@@ -1228,35 +1301,15 @@ var.covm <- function(sigma, average = FALSE) {
 }
 
 
-#' Fall back function from ctmmweb
-#'
-#' @description General fall back function to deal with errors
-#' @keywords internal
-#'
-#' @noRd
-#'
-fall_back <- function(f1, f1_args_list, f2, f2_args_list, msg) {
-  res <- try(do.call(f1, f1_args_list))
-  if (inherits(res, "try-error")) {
-    cat(crayon::white$bgBlack(msg), "\n")
-    res <- do.call(f2, f2_args_list)
-  }
-  return(res)
-}
-
-
 #' Check if error function from ctmmweb
 #'
 #' @noRd
 #'
 has_error <- function(result) {
-  if (inherits(result, "try-error")) {
-    TRUE
-  } else {
-    sapply(result, function(x) {
-      inherits(x, "try-error")
-    })
-  }
+  if (inherits(result, "try-error")) return(TRUE)
+  else return(sapply(result, function(x) {
+    inherits(x, "try-error")
+  }))
 }
 
 #' Coerce telemetry object to list
@@ -1311,10 +1364,42 @@ as_tele_dt <- function(object) {
   data.table::setkey(data_dt, row_no)
   any_dup <- anyDuplicated(data_dt, by = c("id", "row_name"))
   if (any_dup != 0) {
-    message("duplicated row name found within same individual:\n")
+    message("Duplicated row name found within same individual:")
     print(data_dt[any_dup, .(id, row_name)])
+    return(NULL)
   }
   return(data_dt)
+}
+
+devRow <- function(seed, 
+                   device, 
+                   dur, 
+                   dti,
+                   data,
+                   fit) {
+  
+  out <- data.frame(
+    seed = seed,
+    device = NA,
+    dur = NA,
+    dti = NA,
+    n = NA,
+    N1 = NA,
+    N2 = NA)
+  
+  out$device <- device
+  
+  dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
+  dti <- fix_unit(dti$value, dti$unit)
+  
+  out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
+  out$dti <- paste(dti[1], abbrv_unit(dti[,2]))
+  
+  out$n <- nrow(data)
+  out$N1 <- extract_dof(fit, name = "area")[[1]]
+  out$N2 <- extract_dof(fit, name = "speed")[[1]]
+  
+  return(out)
 }
 
 
@@ -1395,201 +1480,281 @@ shiny::registerInputHandler("shinyjsexamples.chooser",
 }, force = TRUE)
 
 
-# ctmmweb functions: ------------------------------------------------------
-
 #' Parallel lapply
 #'
-#' @description Parallel lapply from ctmmweb.
+#' @description Parallel lapply adapted from ctmmweb.
 #'
-#' @param input Input list, with two sub-items: telemetry object and CTMM object.
-#' @param parallel True/false. Uses a single core when FALSE.
+#' @param obj Input list of two lists (telemetry and CTMM objects).
+#' @param fun the function to be applied to each element of `obj`.
+#' @param cores integer. Number of cores.
+#' @param parallel logical. Uses a single core when FALSE.
 #' @keywords internal
 #'
 #' @noRd
 #'
-par.lapply <- function(lst,
+par.lapply <- function(obj,
                        fun, 
                        cores = NULL,
                        parallel = TRUE,
                        win_init = expression({
                          requireNamespace("ctmm", quietly = TRUE)})) {
+  
+  num_cores <- parallel::detectCores(logical = FALSE)
+  
   if (parallel) {
-    if (!is.null(cores) && cores > 0) {
+    if (!is.null(cores) && cores > 0)
       cluster_size <- cores
-    }
-    if (!is.null(cores) && cores < 0) {
-      cluster_size <- max(parallel::detectCores(logical = FALSE) + 
-                            cores, 1)
-    }
+    
+    if (!is.null(cores) && cores < 0)
+      cluster_size <- max(num_cores + cores, 1)
+    
     sysinfo <- Sys.info()
     tryCatch({
       if (sysinfo["sysname"] == "Windows") {
-        if (is.null(cores)) {
-          cluster_size <- min(length(lst), parallel::detectCores(logical = FALSE) * 
-                                2)
-        }
-        cat(crayon::inverse("running parallel in SOCKET cluster of", 
-                            cluster_size, "\n"))
+        if (is.null(cores))
+          cluster_size <- min(length(obj), num_cores * 2)
+        
+        message(
+          " Running parallel in SOCKET cluster of ",
+          cluster_size, "...")
+        
         cl <- parallel::makeCluster(cluster_size, outfile = "")
         parallel::clusterExport(cl, c("win_init"), envir = environment())
         parallel::clusterEvalQ(cl, eval(win_init))
-        res <- parallel::parLapplyLB(cl, lst, fun)
+        out <- parallel::parLapplyLB(cl = cl, X = obj, fun = fun)
         parallel::stopCluster(cl)
+        # message(" ... done!")
+        
+      } else {
+        if (is.null(cores))
+          cluster_size <- min(length(obj), num_cores * 4)
+        
+        message(
+          " Running parallel with mclapply cluster of ",
+          cluster_size, "...")
+        
+        out <- parallel::mclapply(obj, fun, mc.cores = cluster_size)
+        # message(" ... done!")
       }
-      else {
-        if (is.null(cores)) {
-          cluster_size <- min(length(lst), 
-                              parallel::detectCores(logical = FALSE) * 4)
-        }
-        cat(crayon::inverse("running parallel with mclapply in cluster of", 
-                            cluster_size, "\n"))
-        res <- parallel::mclapply(lst, fun, mc.cores = cluster_size)
-      }
+      
     }, error = function(e) {
-      cat(crayon::bgRed$white("Parallel Error, try restart R session\n"))
-      cat(e)
-    })
+      cat(crayon::bgRed$white(
+        "Parallel error, try restarting R session.\n"))
+      print(e)
+      
+    }) # end of tryCatch
+    
   } else {
-    res <- lapply(lst, fun)
+    out <- lapply(obj, fun)
   }
-  return(res)
+  
+  return(out)
 }
 
 #' Parallel model selection
 #'
-#' @description Parallel model selection, ctmm.select(), from ctmmweb.
+#' @description Parallel model selection, adapted from ctmmweb.
 #'
-#' @param input Input list, with two sub-items: telemetry object and CTMM object.
+#' @param data telemetry object from as.telemetry().
+#' @param guess ctmm object from ctmm.guess().
 #' @param parallel True/false. Uses a single core when FALSE.
 #' @keywords internal
 #'
 #' @noRd
 #'
-par.ctmm.select <- function(input, cores = NULL,
+par.ctmm.select <- function(data,
+                            guess,
+                            cores = NULL,
                             trace = TRUE,
                             parallel = TRUE) {
   
-  try_models <- function(input, trace) {
+  if (class(data)[1] != "list" && class(data[[1]])[1] != "ctmm") {
+    stop("'input' must be a list of ctmm objects.")
+  } else {
+    if (length(data) != length(guess)) 
+      stop("'data' and 'guess' must be same length.")
+    
+    input <- lapply(seq_along(data),
+                    function(x) list(data[[x]], 
+                                     guess[[x]]))
+  }
+  
+  # if (parallel && length(data) > 1)
+  #   message("No. of cores detected: ",
+  #           parallel::detectCores(logical = FALSE))
+  
+  fall_back <- function(f1, f1_args_list, f2, f2_args_list, msg) {
+    out <- try(do.call(f1, f1_args_list))
+    if (inherits(out, "try-error")) {
+      cat(crayon::white$bgBlack(msg), "\n")
+      out <- do.call(f2, f2_args_list)
+    }
+    return(out)
+  }
+  
+  try_select <- function(input) {
+    
     fall_back(ctmm::ctmm.select,
               list(input[[1]],
                    CTMM = input[[2]],
                    control = list(method = "pNewton",
-                                  cores = internal_cores),
-                   trace = trace),
+                                  cores = internal_cores)),
               ctmm::ctmm.select,
               list(input[[1]],
                    CTMM = input[[2]],
-                   control = list(cores = internal_cores),
-                   trace = trace),
+                   control = list(cores = internal_cores)),
               paste0("ctmm.select() failed with pNewton,",
                      "switching to Nelder-Mead."))
   }
   
   if (length(input) == 1) {
     # Process one individual on multiple cores:
-    
-    # message("No. of cores: ", parallel::detectCores(logical = FALSE))
-    
     internal_cores <- if (parallel) -1 else 1
-    res <- try(try_models(input[[1]],
+    out <- try(try_select(input[[1]],
                           trace = trace))
     
   } else {
+    # Process multiple individuals:
     internal_cores <- 1
-    res <- try(par.lapply(input,
-                          try_models,
-                          cores,
-                          parallel))
+    out <- try(par.lapply(input,
+                          try_select,
+                          cores = cores,
+                          parallel = parallel))
   }
   
-  if (any(has_error(res))) {
-    cat(crayon::bgYellow$red("Error in model selection\n"))
+  if (any(has_error(out))) {
+    message("Error in model selection")
+    stop(out)
   }
   
-  return(res)
+  return(out)
 }
 
 
 #' Parallel model fit
 #'
-#' @description Parallel model selection, ctmm.fit().
+#' @description Parallel model fit, adapted from ctmmweb.
 #'
-#' @param input Input list, with two sub-items: telemetry object and CTMM object.
+#' @param data telemetry object from as.telemetry().
+#' @param guess ctmm object from ctmm.guess().
 #' @param parallel True/false. Uses a single core when FALSE.
 #' @keywords internal
 #'
 #' @noRd
 #'
-par.ctmm.fit <- function(input,
+par.ctmm.fit <- function(data,
+                         guess,
                          cores = NULL,
                          parallel = TRUE) {
   
-  try_models <- function(input) {
-    ctmm::ctmm.fit(input[[1]],
+  # if (parallel && length(data) > 1)
+  #   message("No. of cores detected: ",
+  #           parallel::detectCores(logical = FALSE))
+  
+  input <- lapply(seq_along(data),
+                  function(x) list(data[[x]], guess[[x]]))
+  
+  fall_back <- function(f1, f1_args_list, f2, f2_args_list, msg) {
+    out <- try(do.call(f1, f1_args_list))
+    if (inherits(out, "try-error")) {
+      cat(crayon::white$bgBlack(msg), "\n")
+      out <- do.call(f2, f2_args_list)
+    }
+    return(out)
+  }
+  
+  try_fit <- function(input) {
+    fall_back(ctmm::ctmm.fit,
+              list(input[[1]],
                    CTMM = input[[2]],
                    method = "pHREML",
-                   control = list(cores = internal_cores))
+                   control = list(cores = internal_cores)),
+              ctmm::ctmm.fit,
+              list(input[[1]],
+                   CTMM = input[[2]],
+                   method = "ML",
+                   control = list(cores = internal_cores)),
+              paste0("ctmm.fit() failed with pHREML,",
+                     "switching to ML."))
   }
   
   if (length(input) == 1) {
     # Process one individual on multiple cores:
     internal_cores <- if (parallel) -1 else 1
-    res <- try(try_models(input[[1]]))
+    out <- try(try_fit(input[[1]]))
     
   } else {
     # Process multiple animals on multiple cores:
     internal_cores <- 1
-    res <- try(par.lapply(input,
-                          try_models,
-                          cores,
-                          parallel))
+    out <- try(par.lapply(input,
+                          try_fit,
+                          cores = cores,
+                          parallel = parallel))
   }
   
-  if (any(has_error(res))) {
-    cat(crayon::bgYellow$red("Error in model fit\n"))
-  }
-  return(res)
+  if (any(has_error(out))) message("Error in model fit")
+  return(out)
 }
 
 
-#' Calculate speed in parallel
+#' Parallel speed estimation
 #'
-#' @param input Telemetry and model list.
+#' @param input Telemetry and model list, adapted from ctmmweb.
 #' @inheritParams par_lapply
 #'
 #' @noRd
 #'
-par.speed <- function(input,
+par.speed <- function(data,
+                      fit,
                       cores = NULL,
                       trace = TRUE,
                       parallel = TRUE,
                       seed = NULL) {
   
-  set.seed(seed)
-  ctmm.speed <- function(input, seed = NULL) {
-    ctmm::speed(input[[1]],
-                input[[2]],
-                cores = internal_cores,
-                trace = trace)
+  if (class(fit)[1] != "list" && class(fit[[1]])[1] != "ctmm") {
+    stop("'input' must be a list of ctmm objects.")
+  } else {
+    if (length(data) != length(fit)) 
+      stop("'data' and 'fit' must be same length.")
+    input <- lapply(seq_along(data),
+                    function(x) list(data[[x]], 
+                                     fit[[x]],
+                                     seed[[x]]))
+  }
+  
+  try_speed <- function(input) {
+    set.seed(input[[3]])
+    out <- tryCatch({
+      ctmm::speed(input[[1]],
+                  input[[2]],
+                  cores = internal_cores,
+                  trace = trace)
+    }, error = function(e) return(NULL))
+    return(out)
   }
   
   if (length(input) == 1) {
+    # Process one individual on multiple cores:
     internal_cores <- if (parallel) -1 else 1
-    out_speed <- try(ctmm.speed(input[[1]], seed = seed))
+    out_speed <- try(try_speed(input[[1]]))
     
   } else {
+    # Process multiple animals on multiple cores:
     internal_cores <- 1
-    out_speed <- par.lapply(input, ctmm.speed, 
-                            internal_cores, 
-                            parallel)
+    out_speed <- par.lapply(input,
+                            try_speed, 
+                            cores = cores,
+                            parallel = parallel)
   }
   
   if (any(has_error(out_speed))) {
     msg_log(
-        style = "danger",
-        message = paste0("Speed estimation ", msg_danger("failed"), "."),
-        detail = "May be due to low sample size.")
+      style = "danger",
+      message = paste0("Speed estimation ",
+                       msg_danger("failed"), ".")) #,
+    # detail = "May be due to low sample size.")
   }
+  
   set.seed(NULL)
   return(out_speed)
 }
@@ -1611,3 +1776,4 @@ align_lists <- function(...) {
   if (length(out_lists) == 0) out_lists <- NULL
   return(out_lists)
 }
+

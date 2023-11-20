@@ -326,7 +326,8 @@ mod_tab_sims_ui <- function(id) {
                       "You can add all parameters",
                       "to a table for easy comparisons.",
                       "Click the",
-                      fontawesome::fa("bookmark", fill = "var(--midgnight"),
+                      fontawesome::fa("bookmark",
+                                      fill = "var(--midgnight"),
                       span("Add to table", class = "cl-mdn"),
                       "button below after each run.")
                 )
@@ -469,7 +470,7 @@ mod_tab_sims_ui <- function(id) {
 #' tab_sims Server Functions
 #'
 #' @noRd
-mod_tab_sims_server <- function(id, vals) {
+mod_tab_sims_server <- function(id, rv) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     pal <- load_pal()
@@ -517,8 +518,8 @@ mod_tab_sims_server <- function(id, vals) {
     ## Reset values from import or select data tabs:
     
     observe({
-      req(vals$active_tab == 'sims')
-      reset_reactiveValues(vals) # reset vals between data tabs
+      req(rv$active_tab == 'sims')
+      reset_reactiveValues(rv) # reset rv between data tabs
       
     }) %>% # end of observe,
       bindEvent(input$generateSeed)
@@ -548,11 +549,11 @@ mod_tab_sims_server <- function(id, vals) {
     ## Convert values/units: ----------------------------------------------
     
     observe({
-      req(input$tau_p0_units != vals$tau_p0$unit[2])
+      req(input$tau_p0_units != rv$tau_p0$unit[2])
       
       new_tau_p0 <- sigdigits(
         input$tau_p0_units %#%
-          vals$tau_p0$value[2] %#% vals$tau_p0$unit[2], 3)
+          rv$tau_p0$value[2] %#% rv$tau_p0$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -563,11 +564,11 @@ mod_tab_sims_server <- function(id, vals) {
     }) %>% bindEvent(input$tau_p0_units)
     
     observe({
-      req(input$tau_v0_units != vals$tau_v0$unit[2])
+      req(input$tau_v0_units != rv$tau_v0$unit[2])
       
       new_tau_v0 <- sigdigits(
         input$tau_v0_units %#%
-          vals$tau_v0$value[2] %#% vals$tau_v0$unit[2], 3)
+          rv$tau_v0$value[2] %#% rv$tau_v0$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -578,11 +579,11 @@ mod_tab_sims_server <- function(id, vals) {
     }) %>% bindEvent(input$tau_v0_units)
     
     observe({
-      req(input$sigma0_units != vals$sigma0$unit[2])
+      req(input$sigma0_units != rv$sigma0$unit[2])
       
       new_sigma0 <- sigdigits(
         input$sigma0_units %#%
-          vals$sigma0$value[2] %#% vals$sigma0$unit[2], 3)
+          rv$sigma0$value[2] %#% rv$sigma0$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -596,38 +597,40 @@ mod_tab_sims_server <- function(id, vals) {
     ## Generate random seed: ----------------------------------------------
     
     observe({
-      vals$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
+      rv$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
     }) %>% bindEvent(to_rerun(), ignoreInit = TRUE)
     
     output$seedvalue <- renderPrint({
-      req(vals$seed0)
-      return(vals$seed0)
+      req(rv$seed0)
+      return(rv$seed0)
     })
     
     ## Prepare model and run simulation: ----------------------------------
     
     observe({
-      req(vals$active_tab == 'sims')
+      req(rv$active_tab == 'sims')
       
-      vals$tau_p0 <- data.frame(value = c(NA, input$tau_p0, NA),
+      rv$tau_p0 <- data.frame(value = c(NA, input$tau_p0, NA),
                                 unit = rep(input$tau_p0_units, 3))
-      rownames(vals$tau_p0) <- c("low", "est", "high")
+      rownames(rv$tau_p0) <- c("low", "est", "high")
       
-      vals$tau_v0 <- data.frame(value = c(NA, input$tau_v0, NA),
+      rv$tau_v0 <- data.frame(value = c(NA, input$tau_v0, NA),
                                 unit = rep(input$tau_v0_units, 3))
-      rownames(vals$tau_v0) <- c("low", "est", "high")
+      rownames(rv$tau_v0) <- c("low", "est", "high")
       
-      vals$sigma0 <- data.frame(value = c(NA, input$sigma0, NA),
+      rv$sigma0 <- data.frame(value = c(NA, input$sigma0, NA),
                                 unit = rep(input$sigma0_units, 3))
-      rownames(vals$sigma0) <- c("low", "est", "high")
+      rownames(rv$sigma0) <- c("low", "est", "high")
       
-      vals$is_run <- FALSE
+      rv$mu0 <- array(0, dim = 2, dimnames = list(c("x", "y")))
+      
+      rv$is_run <- FALSE
       
     }) %>% bindEvent(saved_pars())
     
-    sim0 <- reactive({
+    create_simulation <- reactive({
       
-      vals$ctmm_mod <- prepare_mod(
+      mod <- prepare_mod(
         tau_p = input$tau_p0, tau_p_unit = input$tau_p0_units,
         tau_v = input$tau_v0, tau_v_unit = input$tau_v0_units,
         sigma = input$sigma0, sigma_unit = input$sigma0_units)
@@ -635,7 +638,7 @@ mod_tab_sims_server <- function(id, vals) {
       tmp_taup <- "days" %#% input$tau_p0 %#% input$tau_p0_units
       tmp_tauv <- input$tau_v0 %#% input$tau_v0_units
       
-      vals$dur0 <- dplyr::case_when(
+      rv$dur0 <- dplyr::case_when(
         tmp_taup >= ("days" %#% tmp_tauv) ~ 
           ifelse(tmp_taup > 1,
                  round(tmp_taup * 20, 1), 20),
@@ -643,40 +646,64 @@ mod_tab_sims_server <- function(id, vals) {
           ifelse(("days" %#% tmp_tauv) > 1,
                  round("days" %#% tmp_tauv * 20, 1), 20)
       )
-      vals$dur0_units <- "days"
+      rv$dur0_units <- "days"
 
-      vals$dti0 <- dplyr::case_when(
+      rv$dti0 <- dplyr::case_when(
         tmp_tauv <= 120 ~ 1,
         tmp_tauv <= 3600 ~ round("minutes" %#% tmp_tauv/4, 0),
         tmp_tauv <= 86400 ~ 1,
         tmp_tauv <= 10 %#% "days" ~ 2,
         TRUE ~ 12)
-      vals$dti0_units <- dplyr::case_when(
+      rv$dti0_units <- dplyr::case_when(
         tmp_tauv <= 3600 ~ "minutes",
         TRUE ~ "hours")
       
-      simulate_data(
-        mod = vals$ctmm_mod,
-        dur = vals$dur0, dur_units = vals$dur0_units,
-        dti = vals$dti0, dti_units = vals$dti0_units,
-        seed = vals$seed0)
+      out <- simulate_data(
+        mod = mod,
+        dur = rv$dur0, dur_units = rv$dur0_units,
+        dti = rv$dti0, dti_units = rv$dti0_units,
+        seed = rv$seed0)
       
-    }) %>% # end of reactive, sim0()
+      mod <- list(mod)
+      names(out) <- c("Animal_1")
+      names(mod) <- c("Animal_1")
+      rv$modList <- mod
+      
+      return(out)
+      
+    }) %>% # end of reactive, create_simulation()
       bindCache(input$tau_p0,
                 input$tau_p0_units,
                 input$tau_v0,
                 input$tau_v0_units,
                 input$sigma0,
                 input$sigma0_units,
-                vals$seed0, cache = "app")
+                rv$seed0, cache = "app")
     
-    fit0 <- reactive({
-      req(vals$data0, vals$ctmm_mod)
+    fitting_ctmm <- reactive({
+      req(rv$datList, rv$modList)
       
-      inputList <- list(list(vals$data0, vals$ctmm_mod))
-      fit <- par.ctmm.fit(inputList, parallel = TRUE)
+      datList <- rv$datList
+      modList <- rv$modList
       
-      return(fit)
+      out <- tryCatch(
+        par.ctmm.fit(datList, modList, parallel = rv$parallel),
+        error = function(e) e)
+      out
+      
+      if (inherits(out, "error")) {
+        msg_log(
+          style = "danger",
+          message = paste0(
+            "Model fit ", msg_danger("failed"), "."),
+          detail = "Check simulation parameters.")
+        return(NULL)
+      }
+      
+      if (class(out)[1] != "list" && class(out[[1]])[1] != "ctmm")
+        out <- list(out)
+      names(out) <- names(datList)
+      return(out)
       
     }) %>%
       bindCache(input$tau_p0,
@@ -685,12 +712,12 @@ mod_tab_sims_server <- function(id, vals) {
                 input$tau_v0_units,
                 input$sigma0,
                 input$sigma0_units,
-                vals$seed0, cache = "app")
+                rv$seed0, cache = "app")
     
     observe({
-      req(vals$active_tab == 'sims')
+      req(rv$active_tab == 'sims')
       
-      if (!is.null(vals$seed0)) {
+      if (!is.null(rv$seed0)) {
         
         validate(
           need(input$tau_p0 != '', "Select a value."),
@@ -727,18 +754,18 @@ mod_tab_sims_server <- function(id, vals) {
         ) # end of show_modal_spinner
         
         start_sim <- Sys.time()
-        vals$data0 <- sim0()
+        rv$datList <- create_simulation()
         
         # Store relevant values:
-        vals$data_type <- "simulated"
-        vals$species_binom <- vals$species <- "Simulated"
-        vals$id <- vals$tmpid <- as.character(vals$seed0)
-  
-        vals$is_run <- TRUE
+        rv$data_type <- "simulated"
+        rv$species_binom <- rv$species <- "Simulated"
+        rv$id <- rv$tmp$id <- names(rv$datList)
+        
+        rv$is_run <- TRUE
         
         # Reset analyses from previous runs (if needed):
-        vals$hr <- NULL
-        vals$sd <- NULL
+        rv$hr <- NULL
+        rv$sd <- NULL
         
         time_sim0 <- difftime(Sys.time(), start_sim, units = "secs")
 
@@ -748,7 +775,7 @@ mod_tab_sims_server <- function(id, vals) {
                            msg_success("completed"), "."),
           run_time = time_sim0)
         
-        vals$is_valid <- TRUE
+        rv$is_valid <- TRUE
         shinybusy::remove_modal_spinner()
         
         ### Run model fit: ------------------------------------------------
@@ -770,8 +797,7 @@ mod_tab_sims_server <- function(id, vals) {
           
         ) # end of show_modal_spinner
         
-        vals$guess <- NULL
-        vals$needs_fit <- FALSE
+        rv$needs_fit <- FALSE
         
         msg_log(
           style = "warning",
@@ -779,16 +805,16 @@ mod_tab_sims_server <- function(id, vals) {
                            " movement model."),
           detail = "Please wait for model fit to finish.")
         
-        vals$fit0 <- fit0()
+        rv$fitList <- fitting_ctmm()
         
-        vals$time_sims <- difftime(Sys.time(), start_sim,
+        rv$time_sims <- difftime(Sys.time(), start_sim,
                                    units = "mins")
         
         msg_log(
           style = "success",
           message = paste0("Model fitting ",
                            msg_success("completed"), "."),
-          run_time = vals$time_sims)
+          run_time = rv$time_sims)
         
         shinyjs::enable("simButton_save")
         shinyjs::show(id = "simBox_misc")
@@ -819,46 +845,48 @@ mod_tab_sims_server <- function(id, vals) {
     ## Rendering simulated data plot (xy): --------------------------------
     
     output$simPlot_id <- ggiraph::renderGirafe({
-      req(vals$data0, vals$is_run, vals$data_type == "simulated")
+      req(rv$datList, rv$is_run, rv$data_type == "simulated")
       
       tmp_taup <- input$tau_p0 %#% input$tau_p0_units
       tmp_tauv <- input$tau_v0 %#% input$tau_v0_units
       
       if (tmp_taup > tmp_tauv) { 
-        tau <- vals$tau_p0 
+        tau <- rv$tau_p0 
         tau_html <- "\u03C4\u209A"
       } else { 
-        tau <- vals$tau_v0 
+        tau <- rv$tau_v0 
         tau_html <- "\u03C4\u1D65"
       }
       
-      newdat <- vals$data0
+      newdat <- rv$datList[[1]]
       newdat <- newdat[which(newdat$t <= (
         tau$value[2] %#% tau$unit[2])), ]
       
       out_tau <- fix_unit(tau$value[2], tau$unit[2])
-      out_dur <- fix_unit(vals$dur0, vals$dur0_units)
+      out_dur <- fix_unit(rv$dur0, rv$dur0_units)
       subtitle <- paste(
         "Highlighting one", tau_html, "cycle",
         paste0("(\u2248 ", out_tau[1], " ", out_tau[2], ")"),
         "out of ", out_dur[1], out_dur[2])
       
       # newdat <- newdat[which(newdat$t <= (1 %#% "day")), ]
-      # out_dur <- fix_unit(vals$dur0, vals$dur0_units)
+      # out_dur <- fix_unit(rv$dur0, rv$dur0_units)
       # subtitle <- paste(
       #   "Highlighting 1 day",
       #   "out of ", out_dur[1], out_dur[2])
       
-      ymin <- min(vals$data0$y) - diff(range(vals$data0$y)) * .2
-      ymax <- max(vals$data0$y) + diff(range(vals$data0$y)) * .2
+      ymin <- min(rv$datList[[1]]$y) -
+        diff(range(rv$datList[[1]]$y)) * .2
+      ymax <- max(rv$datList[[1]]$y) + 
+        diff(range(rv$datList[[1]]$y)) * .2
       
       p <- ggplot2::ggplot() +
         ggplot2::geom_path(
-          vals$data0, mapping = ggplot2::aes(
+          rv$datList[[1]], mapping = ggplot2::aes(
             x = x, y = y),
           col = "grey90", linewidth = 1) +
         ggplot2::geom_point(
-          vals$data0, mapping = ggplot2::aes(
+          rv$datList[[1]], mapping = ggplot2::aes(
             x = x, y = y),
           col = "grey75", size = 1.2) +
         
@@ -922,9 +950,10 @@ mod_tab_sims_server <- function(id, vals) {
     ## Preparing data for animation plot: ---------------------------------
     
     data_animated <- reactive({
-      req(vals$data0, vals$fit0, vals$data_type == "simulated")
+      req(rv$datList, rv$fitList, rv$data_type == "simulated")
       
-      dat <- ctmm::simulate(vals$data0, CTMM = vals$fit0,
+      dat <- ctmm::simulate(rv$datList[[1]], 
+                            CTMM = rv$fitList[[1]],
                             dt = 15 %#% "minutes")
       
       t_origin <- "1111-10-31 23:06:32"
@@ -937,15 +966,15 @@ mod_tab_sims_server <- function(id, vals) {
     ## Rendering route (xyt), for 1-day of data: --------------------------
     
     output$simInput_timeline <- renderUI({
-      req(vals$data0, vals$is_run, vals$data_type == "simulated")
+      req(rv$datList, rv$is_run, rv$data_type == "simulated")
       
       tags$div(
         class = "timelineinput",
         sliderInput(
           inputId = ns("timeline"),
           label = p("Rendering one full day,",
-                    paste0(vals$dti0, "-", 
-                           abbrv_unit(vals$dti0_units), 
+                    paste0(rv$dti0, "-", 
+                           abbrv_unit(rv$dti0_units), 
                            " steps:")),
           
           value = 1 %#% "day",
@@ -965,7 +994,8 @@ mod_tab_sims_server <- function(id, vals) {
       dat <- data_animated()
       maxt <- 1 %#% "day"
       
-      datfull <- vals$data0[which(vals$data0$t <= maxt), ]
+      datfull <- rv$datList[[1]]
+      datfull <- datfull[which(datfull$t <= maxt), ]
       nday <- format(max(dat$timestamp), "%d")
       
       subtitle <- paste("Day", nday,
@@ -1077,24 +1107,24 @@ mod_tab_sims_server <- function(id, vals) {
         mdist = NA,
         speed = NA)
       
-      out$seed <- vals$seed0
+      out$seed <- rv$seed0
       
       out$taup <- paste(
-        scales::label_comma(accuracy = .1)(vals$tau_p0$value[2]),
-        abbrv_unit(vals$tau_p0$unit[2]))
+        scales::label_comma(accuracy = .1)(rv$tau_p0$value[2]),
+        abbrv_unit(rv$tau_p0$unit[2]))
       
       out$tauv <- paste(
-        scales::label_comma(accuracy = .1)(vals$tau_v0$value[2]),
-        abbrv_unit(vals$tau_v0$unit[2]))
+        scales::label_comma(accuracy = .1)(rv$tau_v0$value[2]),
+        abbrv_unit(rv$tau_v0$unit[2]))
       
-      sig <- fix_unit(vals$sigma0$value[2],
-                      vals$sigma0$unit[2], convert = TRUE)
+      sig <- fix_unit(rv$sigma0$value[2],
+                      rv$sigma0$unit[2], convert = TRUE)
       out$sigma <- paste(sig$value, abbrv_unit(sig$unit))
       
       out$time_elapsed <- paste(
-        round("days" %#% max(vals$data0$t), 0), "days")
+        round("days" %#% max(rv$datList[[1]]$t), 0), "days")
       
-      distances <- measure_distance(vals$data0)
+      distances <- measure_distance(rv$datList[[1]])
       tdist <- sum(distances, na.rm = TRUE)
       mdist <- mean(distances)
       
@@ -1109,8 +1139,8 @@ mod_tab_sims_server <- function(id, vals) {
       out$mdist <- paste(scales::label_comma(
         accuracy = .1)(mdist), "m")
       
-      tmpnames <- rownames(summary(vals$fit0)$CI)
-      speed <- summary(vals$fit0)$CI[
+      tmpnames <- rownames(summary(rv$fitList[[1]])$CI)
+      speed <- summary(rv$fitList[[1]])$CI[
         grep("speed", tmpnames), 2]
       
       speedunits <- tmpnames[grep("speed", tmpnames)] %>%
@@ -1124,20 +1154,21 @@ mod_tab_sims_server <- function(id, vals) {
     }) %>% bindEvent(to_run())
     
     observe({
+      req(rv$fitList)
       shinyjs::show(id = "simBox_summary")
       shinyjs::disable("simButton_save")
       
-      vals$dt_sims <<- rbind(vals$dt_sims, simRow())
-      vals$dt_sims <- dplyr::distinct(vals$dt_sims)
-      vals$report_sims_yn <- TRUE
+      rv$dt_sims <<- rbind(rv$dt_sims, simRow())
+      rv$dt_sims <- dplyr::distinct(rv$dt_sims)
+      rv$report_sims_yn <- TRUE
       
     }) %>% # end of observe
       bindEvent(input$simButton_save)
     
     output$simTable <- reactable::renderReactable({
-      req(vals$dt_sims)
+      req(rv$dt_sims)
       
-      dt_sims <- vals$dt_sims[, -1]
+      dt_sims <- rv$dt_sims[, -1]
       
       columnNames <- list(
         taup = "\u03C4\u209A",
@@ -1189,13 +1220,13 @@ mod_tab_sims_server <- function(id, vals) {
     }) # end of renderDataTable // simTable
     
     observe({
-      vals$dt_sims <- NULL
+      rv$dt_sims <- NULL
     }) %>% # end of observe,
       bindEvent(input$simTable_clear)
     
     # HELP TOUR & MODALS: -------------------------------------------------
     
-    build_simsTour <- function(ns, vals) {
+    build_simsTour <- function(ns, rv) {
       
       element <- intro <- character(0)
       tabinfo <- paste0("#tab_sims_1", "-")
@@ -1354,7 +1385,7 @@ mod_tab_sims_server <- function(id, vals) {
     } # end of sims tour
     
     observe({
-      tour_sims <- build_simsTour(ns, vals)
+      tour_sims <- build_simsTour(ns, rv)
       
       rintrojs::introjs(
         session = session,
@@ -1381,82 +1412,84 @@ mod_tab_sims_server <- function(id, vals) {
       updateNumericInput(
         session = session,
         inputId = "tau_p0",
-        value = vals$restored_vals$"tau_p0")
+        value = rv$restored_vals$"tau_p0")
       
       updateSelectInput(
         session = session,
         inputId = "tau_p0_units",
-        selected = vals$restored_vals$"tau_p0_units")
+        selected = rv$restored_vals$"tau_p0_units")
       
       updateNumericInput(
         session,
         inputId = "tau_v0",
-        value = vals$restored_vals$"tau_v0")
+        value = rv$restored_vals$"tau_v0")
       
       updateSelectInput(
         session = session,
         inputId = "tau_v0_units",
-        selected = vals$restored_vals$"tau_v0_units")
+        selected = rv$restored_vals$"tau_v0_units")
       
       updateNumericInput(
         session,
         inputId = ns("sigma0"),
-        value = vals$restored_vals$"sigma0")
+        value = rv$restored_vals$"sigma0")
       
       updateSelectInput(
         session = session,
         inputId = "sigma0_units",
-        selected = vals$restored_vals$"sigma0_units")
+        selected = rv$restored_vals$"sigma0_units")
       
-      vals$tau_p0 <- vals$restored_vals$"tau_p0"
-      vals$tau_v0 <- vals$restored_vals$"tau_v0"
-      vals$sigma0 <- vals$restored_vals$"sigma0"
+      rv$tau_p0 <- rv$restored_vals$"tau_p0"
+      rv$tau_v0 <- rv$restored_vals$"tau_v0"
+      rv$sigma0 <- rv$restored_vals$"sigma0"
       
-      vals$seed0 <- vals$restored_vals$"seed0"
+      rv$seed0 <- rv$restored_vals$"seed0"
       
-      vals$dur0 <- vals$restored_vals$"dur0"
-      vals$dur0_units <- vals$restored_vals$"dur0_units"
-      vals$dti0 <- vals$restored_vals$"dti0"
-      vals$dti0_units <- vals$restored_vals$"dti0_units"
+      rv$dur0 <- rv$restored_vals$"dur0"
+      rv$dur0_units <- rv$restored_vals$"dur0_units"
+      rv$dti0 <- rv$restored_vals$"dti0"
+      rv$dti0_units <- rv$restored_vals$"dti0_units"
       
       # Data and model fit:
       
-      vals$data_type <- vals$restored_vals$"data_type"
-      vals$data0 <- vals$restored_vals$"data0"
-      vals$fit0 <- vals$restored_vals$"fit0"
+      rv$data_type <- rv$restored_vals$"data_type"
+      rv$datList <- rv$restored_vals$"datList"
+      rv$fitList <- rv$restored_vals$"fitList"
       
       # Validation parameters:
       
-      vals$is_run <- vals$restored_vals$"is_run"
+      rv$is_run <- rv$restored_vals$"is_run"
       
-    }) %>% bindEvent(vals$restored_vals)
+    }) %>% bindEvent(rv$restored_vals)
     
     # observe({
-    #   vals$seed0 <- vals$restored_vals$"seed0"
-    # }) %>% bindEvent(vals$restored_vals, once = TRUE)
+    #   rv$seed0 <- rv$restored_vals$"seed0"
+    # }) %>% bindEvent(rv$restored_vals, once = TRUE)
     
     ## Additional information: --------------------------------------------
     
     # Export values for tests:
     
-    shiny::exportTestValues(
-      data0 = vals$data0
-    )
+    # shiny::exportTestValues(
+    #   datList = rv$datList
+    # )
     
     # Save information for report if table is not requested:
     
     observe({
-      req(vals$active_tab == 'sims', vals$data_type == "simulated")
-      vals$report_sims_yn <- FALSE
-      vals$report_sims <- simRow()
+      req(rv$active_tab == 'sims', 
+          rv$data_type == "simulated",
+          rv$fitList)
+      rv$report_sims_yn <- FALSE
+      rv$report_sims <- simRow()
     })
     
     # Display time elapsed:
     
     output$console_sims <- renderText({
-      req(vals$time_sims)
+      req(rv$time_sims)
       paste0("The simulation took approximately ",
-             round(vals$time_sims, 1), " minutes.")
+             round(rv$time_sims, 1), " minutes.")
     })
     
   }) # end of moduleServer

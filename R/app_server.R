@@ -26,14 +26,26 @@ app_server <- function(input, output, session) {
     "gazelle" = "Procapra gutturosa",
     "turtle" = "Glyptemys insculpta")
   
-  vals <- reactiveValues(
+  rv <- reactiveValues(
     nsims = 1,
+    species = NULL,
+    id = NULL,
+    data_type = NULL,
+    group = NULL,
+    
     ctmm = data.frame(cbind(species, species_binom)),
     dev = NULL,
     pars = NULL,
     hr = NULL,
     ctsd = NULL,
     report = NULL,
+    tmp = NULL,
+    status = FALSE,
+    set_analysis = NULL,
+    
+    ctsdList = NULL,
+    akdeList = NULL,
+    indvar = FALSE,
     
     time = c(0,0),
     tour_active = FALSE,
@@ -49,37 +61,25 @@ app_server <- function(input, output, session) {
     x$children[[1]]$attribs$onclick = "event.stopPropagation()"
     x
   }
-
+  
   ## Render sidebar menu: -------------------------------------------------
-
+  
   output$side_menu <- shinydashboard::renderMenu({
-
-    # title, icon
-    info_upload <- c("Import data", "file-csv")
-    info_select <- c("Select data", "file-circle-plus")
-    info_sims <- c("Simulate data", "file-pen")
-    info_regs <- c("Sampling design", "stopwatch")
-    info_hr <- c("Home range", "map-location-dot")
-    info_ctsd <- c("Speed & distance", "gauge-high")
-
-    upload_title <- info_upload[1]
-    upload_icon <- shiny::icon(info_upload[2])
-
-    select_title <- info_select[1]
-    select_icon <- shiny::icon(info_select[2])
-
-    sims_title <- info_sims[1]
-    sims_icon <- shiny::icon(info_sims[2])
-
-    regs_title <- info_regs[1]
-    regs_icon <- shiny::icon(info_regs[2])
-
-    hr_title <- info_hr[1]
-    hr_icon <- shiny::icon(info_hr[2])
-
-    ctsd_title <- info_ctsd[1]
-    ctsd_icon <- shiny::icon(info_ctsd[2])
-
+    
+    info <- list(
+      upload = c(title = "Import data", icon = "file-csv"),
+      select = c(title = "Select data", icon = "file-circle-plus"),
+      sims = c(title = "Simulate data", icon = "file-pen"),
+      
+      design = c(title = "Sampling design", icon = "stopwatch"),
+      # sample = c(title = "No. individuals", icon = "bugs"),
+      
+      hr = c(title = "Home range", icon = "map-location-dot"),
+      ctsd = c(title = "Speed & distance", icon = "gauge-high"),
+      traj = c(title = "Trajectory", icon = "route"),
+      meta = c(title = "Meta-analyses", icon = "layer-group")
+    )
+    
     shinydashboard::sidebarMenu(
       id = "tabs",
 
@@ -99,26 +99,26 @@ app_server <- function(input, output, session) {
           icon = shiny::icon("paw"),
           startExpanded = TRUE,
 
-          if (is.null(vals$which_data) ||
-             vals$which_data == "Upload") {
+          if (is.null(rv$which_data) ||
+             rv$which_data == "Upload") {
             shinydashboard::menuSubItem(
               tabName = "data_upload",
-              text = upload_title,
-              icon = upload_icon) },
+              text = info$upload[["title"]],
+              icon = shiny::icon(info$upload[["icon"]])) },
 
-          if (is.null(vals$which_data) ||
-             vals$which_data == "Select") {
+          if (is.null(rv$which_data) ||
+             rv$which_data == "Select") {
             shinydashboard::menuSubItem(
               tabName = "data_select",
-              text = select_title,
-              icon = select_icon) },
+              text = info$select[["title"]],
+              icon = shiny::icon(info$select[["icon"]])) },
 
-          if (is.null(vals$which_data) ||
-             vals$which_data == "Simulate") {
+          if (is.null(rv$which_data) ||
+             rv$which_data == "Simulate") {
             shinydashboard::menuSubItem(
               tabName = "sims",
-              text = sims_title,
-              icon = sims_icon) }
+              text = info$sims[["title"]],
+              icon = shiny::icon(info$sims[["icon"]])) }
         )),
 
       # Tab 4: Device
@@ -132,8 +132,13 @@ app_server <- function(input, output, session) {
 
           shinydashboard::menuSubItem(
             tabName = "device",
-            text = regs_title,
-            icon = regs_icon)
+            text = info$design[["title"]],
+            icon = shiny::icon(info$design[["icon"]])) #,
+          
+          # shinydashboard::menuSubItem(
+          #   tabName = "sample",
+          #   text = info$sample[["title"]],
+          #   icon = shiny::icon(info$sample[["icon"]]))
         )),
 
       # Tab 5 and 6: Analyses
@@ -145,22 +150,36 @@ app_server <- function(input, output, session) {
           icon = shiny::icon("compass-drafting"),
           startExpanded = TRUE,
 
-          if (is.null(vals$which_question) ||
-              "Home range" %in% vals$which_question) {
+          if (is.null(rv$which_question) ||
+              "Home range" %in% rv$which_question) {
             shinydashboard::menuSubItem(
               tabName = "hr",
-              text = hr_title,
-              icon = hr_icon) },
+              text = info$hr[["title"]],
+              icon = shiny::icon(info$hr[["icon"]])) },
 
-          if (is.null(vals$which_question) ||
-              "Speed & distance" %in% vals$which_question) {
+          if (is.null(rv$which_question) ||
+              "Speed & distance" %in% rv$which_question) {
             shinydashboard::menuSubItem(
               tabName = "ctsd",
-              text = ctsd_title,
-              icon = ctsd_icon) }
+              text = info$ctsd[["title"]],
+              icon = shiny::icon(info$ctsd[["icon"]])) },
+          
+          # if (is.null(rv$which_question) ||
+          #     "Trajectory" %in% rv$which_question) {
+          #   shinydashboard::menuSubItem(
+          #     tabName = "traj",
+          #     text = info$traj[["title"]],
+          #     icon = shiny::icon(info$traj[["icon"]])) },
+          # 
+          #   shinydashboard::menuSubItem(
+          #     tabName = "meta",
+          #     text = info$meta[["title"]],
+          #     icon = shiny::icon(info$meta[["icon"]]))
+          
+          NULL
         )),
-
-      # Tab 7: Report
+      
+      # Tab 8: Report
       shinydashboard::menuItem(
         text = "Report",
         tabName = "report",
@@ -177,46 +196,59 @@ app_server <- function(input, output, session) {
   }) # end of renderMenu
 
   observe({
-    vals$active_tab <- input$tabs
+    rv$active_tab <- input$tabs
   }) %>% bindEvent(input$tabs)
   
   # Tabs: -----------------------------------------------------------------
 
-  # About this app:
-  mod_tab_about_server("tab_about_1", vals = vals)
+  # About/workflow:
+  mod_tab_about_server("tab_about_1", rv = rv)
 
   # Data tabs:
-  mod_tab_data_upload_server("tab_data_upload_1", vals = vals)
-  mod_tab_data_select_server("tab_data_select_1", vals = vals)
-  mod_tab_sims_server("tab_sims_1", vals = vals)
+  # mod_comp_data_server("comp_data", rv = rv)
+  mod_tab_data_upload_server("tab_data_upload_1", rv = rv)
+  mod_tab_data_select_server("tab_data_select_1", rv = rv)
+  mod_tab_sims_server("tab_sims_1", rv = rv)
 
   # Device tab:
-  mod_tab_design_server("tab_design_1", vals = vals)
+  mod_tab_design_server("tab_design_1", rv = rv)
   
   # Analyses tabs:
-  mod_tab_hrange_server("tab_hrange_1", vals = vals)
-  mod_tab_ctsd_server("tab_ctsd_1", vals = vals)
-
+  mod_tab_hrange_server("tab_hrange_1", rv = rv)
+  mod_tab_ctsd_server("tab_ctsd_1", rv = rv)
+  mod_tab_traj_server("tab_traj_1", rv = rv)
+  mod_tab_meta_server("tab_meta_1", rv = rv)
+  
   # Report tab:
-  mod_tab_report_server("tab_report_1", vals = vals)
+  mod_tab_report_server("tab_report_1", rv = rv)
   
   # Misc: -----------------------------------------------------------------
 
+  # Number of individuals/devices deployed:
+  mod_comp_m_server("comp_m_in_hr", rv = rv, set_analysis = "hr")
+  mod_comp_m_server("comp_m_in_ctsd", rv = rv, set_analysis = "ctsd")
+  
+  # Parameters:
+  mod_comp_pars_server("comp_pars_uploaded", rv = rv, set_type = "upload")
+  mod_comp_pars_server("comp_pars_selected", rv = rv, set_type = "select")
+  
   # Data viz:
-  mod_comp_viz_server("comp_viz_uploaded", vals = vals)
-  mod_comp_viz_server("comp_viz_selected", vals = vals)
+  mod_comp_viz_server("comp_viz_uploaded", rv = rv)
+  mod_comp_viz_server("comp_viz_selected", rv = rv)
 
   # Header and control tabs:
-  mod_comp_settings_server("comp_settings_1", vals = vals)
+  mod_comp_settings_server("comp_settings_1", rv = rv)
 
   # Interactive tour:
-  mod_comp_tour_server("tour_1", vals = vals)
+  mod_comp_tour_server("tour_1", rv = rv)
+  
+  # Alerts:
+  mod_comp_alerts_server("comp_alerts_1", rv = rv)
 
   # -----------------------------------------------------------------------
 
-  # Overall table theme:
+  # Table theme:
   options(reactable.theme = reactable::reactableTheme(
-    borderColor = "#c7c7c7",
     rowSelectedStyle = list(
       backgroundColor = "#eee",
       boxShadow = "inset 2px 0 0 0 #009da0")

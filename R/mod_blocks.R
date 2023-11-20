@@ -1,6 +1,6 @@
 #' blocks UI Function
 #'
-#' @description A shiny Module.
+#' @description Create UI blocks.
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
@@ -18,40 +18,50 @@ mod_blocks_ui <- function(id) {
 #'
 #' @noRd 
 mod_blocks_server <- function(id,
-                              vals, 
+                              rv, 
                               type,
-                              name = NULL, 
+                              name = NULL,
+                              
+                              n = NULL,
+                              N = NULL,
+                              
                               data = NULL,
                               fit = NULL,
                               input_name = NULL, 
                               input_modal = NULL,
-                              class = NULL) {
+                              class = NULL,
+                              options = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     # REACTIVES -----------------------------------------------------------
     
-    check_type <- reactive({
+    get_block_type <- reactive({
       
-      dplyr::case_when(
+      out <- dplyr::case_when(
         type %in% c("tau", "sigma", "speed") ~ "species",
         type %in% c("dur", "dti") ~ "design",
-        type %in% c("n", "N") ~ "metrics",
-        type %in% c("hr", "ctsd", "dist") ~ "outputs"
-        
+        type %in% c("n", "N", "m") ~ "metrics",
+        type %in% c("hr", "ctsd", "dist") ~ "outputs",
+        TRUE ~ NA
       ) # end of case_when
       
-    }) # end of reactive, check_type()
+      if (is.na(out)) return(NULL)
+      else return(out)
+      
+    }) # end of reactive, get_block_type()
     
     prepare_outputs <- reactive({
       
-      block_type <- check_type()
+      perc <- subtitle <- NULL
+      block_type <- get_block_type()
+      
       switch(block_type,
              
              # Timescale, spatial parameters and velocity:
              "species" = {
                
-               out <- vals[[name]]
+               out <- rv[[name]]
                if (!is.numeric(out["est", 1])) return(NULL)
                
                if (type == "tau" || type == "speed") {
@@ -61,7 +71,6 @@ mod_blocks_server <- function(id,
                }
                
                if (type == "sigma") {
-                 
                  out <- fix_unit(out, convert = TRUE, ui = TRUE)
                  lci <- out[1,1]
                  est <- out[2, ]
@@ -77,99 +86,117 @@ mod_blocks_server <- function(id,
                    scales::label_comma(.1)(est$value), est$unit))
                }
                
-               subtitle <- NULL
                if (!is.na(lci) && !is.na(uci)) {
                  subtitle <- paste(ifelse(lci == 0, "0", lci), 
                                    "\u2014", uci)
                }
-               perc <- NULL
                
              }, # end of type == "species"
              
              # Tracking regime:
              "design" = {
                
-               if (type == "dur") {
-                 tmpname <- "period" 
-                 subtitle <- NULL
-               } else if (type == "dti") {
-                 tmpname <- "interval"
-                 subtitle <- "between fixes"
-               }
+               subtitle <- NULL
+               if (type == "dur") name <- "period" 
+               if (type == "dti") name <- "interval"
                
-               tmpvalue <- extract_sampling(data, name = tmpname)
-               tmpvalue <- fix_unit(tmpvalue$value, tmpvalue$unit)
-               value <- paste(tmpvalue$value, tmpvalue$unit)
-               perc <- NULL
+               out <- extract_sampling(data, name = name)
+               if (length(out) > 1) out <- do.call(rbind, out)
+               else out <- out[[1]]
+               
+               unit <- fix_unit(mean(out$value), out$unit[1])$unit
+               out <- c("mean" = fix_unit(mean(out$value), unit)$value,
+                        "min" = fix_unit(min(out$value), unit)$value,
+                        "max" = fix_unit(max(out$value), unit)$value)
+               
+               if (length(data) != 1) 
+                 subtitle <- span(ifelse(out[2] == 0, "0", out[2]), 
+                                  "\u2014", out[3], br())
+               if (out[2] == out[3]) subtitle <- NULL
+               
+               value <- paste(out["mean"], unit)
                
              }, # end of type == "design"
              
              # Sample sizes:
              "metrics" = {
                
-               N <- extract_dof(fit, name = name)
-               n <- nrow(data)
+               if (!is.null(n) && !is.null(N)) {
+                 m <- length(n)
+                 n <- unlist(n)
+                 value <- unlist(N)
+               } else {
+                 req(data)
+                 m <- length(data)
+                 n <- sapply(data, nrow)
+                 if (type == "n") value <- n
+                 if (type == "N") {
+                   req(fit)
+                   value <- extract_dof(fit, name = name)
+                   value <- unlist(value)
+                 }
+               }
                
-               value <- round(N, 1)
-               perc <- paste0(
-                 "-", round((100 - ((N * 100) / n)), 1), "%")
-               subtitle <- HTML(paste0("(N", tags$sub(name), ")"))
+               if (m > 1) {
+                 min_value <- ifelse(
+                   min(value) == 0, "0", 
+                   scales::label_comma(accuracy = 1)(min(value)))
+                 subtitle <- span(
+                   min_value, "\u2014", 
+                   scales::label_comma(accuracy = 1)(max(value)))
+               }
+               
+               value <- round(mean(value), 1)
+               if (type == "N") perc <- paste0(
+                 "-", round((100 - ((mean(value) * 100) /
+                                      mean(n))), 1), "%")
+               
                
              }, # end of type == "metrics"
              
              # Outputs from analyses:
              "outputs" = {
                
-               out <- vals[[name]]
+               out <- rv[[name]]
+               is_multiple <- !is.data.frame(out)
                
                if (grepl("Est", name)) {
                  
-                 if (grepl("List", name)) {
-                   out <- data.frame(
+                 out <- data.frame(
                      value = colMeans(out[,2:4]) %>% as.vector(),
                      unit = out$unit[1])
-                 }
-
                  out <- fix_unit(out, ui = TRUE, convert = TRUE)
                  
                  if (type == "ctsd")
                    out$unit[2] <- abbrv_unit(out$unit[2])
                  
-                 if ((out$value[2] %% 1) * 10 == 0) {
-                   value <- scales::label_comma(1)(out$value[2])
-                 } else {
-                   value <- scales::label_comma(.1)(out$value[2])
-                 }
-                 
+                 c <- ifelse((out$value[2] %% 1) * 10 == 0, .1, 1)
+                 value <- scales::label_comma(c)(out$value[2])
                  value <- paste(value, out$unit[2])
+                 
                  subtitle <- paste(
                    scales::label_comma(.1)(out$value[1]),
                    "\u2014", scales::label_comma(.1)(out$value[3]))
                
-               } # end of Est
+               } # end of outputs (estimate)
                
                if (grepl("Err", name)) {
                  
-                 subtitle <- NULL
-                 if (grepl("List", name)) {
-                   
-                   est <- mean(vals[[name]]$est, na.rm = TRUE)
-                   # ci <- calculate_ci(vals[[name]]$est, level = 0.95)
-                   # lci <- ci$CI_low
-                   # uci <- ci$CI_high
-                   
-                   # Credible intervals:
-                   ci <- suppressWarnings(bayestestR::ci(
-                     vals[[name]]$est, ci = .95, method = "HDI"))
-                   lci <- ci$CI_low
-                   uci <- ci$CI_high
-                  
-                   value <- c(lci, est, uci)
-                 } else { value <- out$value }
+                 est <- mean(rv[[name]]$est, na.rm = TRUE)
                  
-               } # end of Err
-               
-               perc <- NULL
+                 # ci <- calculate_ci(rv[[name]]$est, level = 0.95)
+                 # lci <- ci$CI_low
+                 # uci <- ci$CI_high
+                 
+                 # Credible intervals:
+                 ci <- suppressWarnings(bayestestR::ci(
+                   rv[[name]]$est, ci = .95, method = "HDI"))
+                 lci <- ci$CI_low
+                 uci <- ci$CI_high
+                 
+                 value <- c(lci, est, uci)
+                 
+               } # end of outputs (error)
                
              }, # end of type == "metrics"
              
@@ -188,8 +215,10 @@ mod_blocks_server <- function(id,
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     output$block <- shiny::renderUI({
-      req(vals$nsims)
-      block_type <- check_type()
+      
+      out_block <- NULL
+      block_type <- get_block_type()
+      req(block_type)
       
       ## Species parameters: ----------------------------------------------
       
@@ -227,16 +256,29 @@ mod_blocks_server <- function(id,
       if (block_type == "design") {
         req(data)
         
-        value <- prepare_outputs()[["value"]]
-        subtitle <- prepare_outputs()[["subtitle"]]
+        out <- prepare_outputs()
+        value <- out[["value"]]
+        subtitle <- out[["subtitle"]]
         
         if (!is.null(class)) {
           value <- span(value, class = class)
-          subtitle <- span(subtitle, class = class)
+          if (!is.null(subtitle))
+            subtitle <- span(subtitle, class = class)
+        }
+        
+        if (type == "dur") {
+          header <- "Sampling duration"
+        }
+        
+        if (type == "dti") {
+          header <- "Sampling interval"
+          if (!is.null(subtitle))
+            subtitle <- span(subtitle, "between fixes")
+          else subtitle <- span("between fixes")
         }
         
         out_block <- parBlock(
-          header = input_name,
+          header = header,
           value = value,
           subtitle = subtitle)
         
@@ -245,16 +287,19 @@ mod_blocks_server <- function(id,
       ## Sample sizes: ----------------------------------------------------
       
       if (block_type == "metrics") {
-        req(data, fit)
         
-        out_block <- sampleBlock(
-          number = prepare_outputs()[["perc"]],
-          numberIcon = TRUE,
-          header = prepare_outputs()[["value"]],
-          line1 = "Effective sample size",
-          line2 = prepare_outputs()[["subtitle"]],
-          rightBorder = FALSE,
-          marginBottom = FALSE)
+        if (is.null(options))
+          options <- list(rightBorder = FALSE,
+                          marginBottom = FALSE)
+        
+        out_block <- sizeBlock(
+          type = ifelse(type == "n", type, paste0(type, "_", name)),
+          percentage = prepare_outputs()[["perc"]],
+          icon = ifelse(type == "n", FALSE, TRUE),
+          value = prepare_outputs()[["value"]],
+          interval = prepare_outputs()[["subtitle"]],
+          rightBorder = options[["rightBorder"]],
+          marginBottom = options[["rightBorder"]])
         
       } # end of block_type == "metrics"
       
