@@ -72,11 +72,9 @@ app_server <- function(input, output, session) {
       sims = c(title = "Simulate data", icon = "file-pen"),
       
       design = c(title = "Sampling design", icon = "stopwatch"),
-      # sample = c(title = "No. individuals", icon = "bugs"),
       
       hr = c(title = "Home range", icon = "map-location-dot"),
       ctsd = c(title = "Speed & distance", icon = "gauge-high"),
-      traj = c(title = "Trajectory", icon = "route"),
       meta = c(title = "Meta-analyses", icon = "layer-group")
     )
     
@@ -133,12 +131,7 @@ app_server <- function(input, output, session) {
           shinydashboard::menuSubItem(
             tabName = "device",
             text = info$design[["title"]],
-            icon = shiny::icon(info$design[["icon"]])) #,
-          
-          # shinydashboard::menuSubItem(
-          #   tabName = "sample",
-          #   text = info$sample[["title"]],
-          #   icon = shiny::icon(info$sample[["icon"]]))
+            icon = shiny::icon(info$design[["icon"]]))
         )),
 
       # Tab 5 and 6: Analyses
@@ -164,19 +157,13 @@ app_server <- function(input, output, session) {
               text = info$ctsd[["title"]],
               icon = shiny::icon(info$ctsd[["icon"]])) },
           
-          # if (is.null(rv$which_question) ||
-          #     "Trajectory" %in% rv$which_question) {
-          #   shinydashboard::menuSubItem(
-          #     tabName = "traj",
-          #     text = info$traj[["title"]],
-          #     icon = shiny::icon(info$traj[["icon"]])) },
-          # 
-          #   shinydashboard::menuSubItem(
-          #     tabName = "meta",
-          #     text = info$meta[["title"]],
-          #     icon = shiny::icon(info$meta[["icon"]]))
+          # shinydashboard::menuSubItem(
+          #   tabName = "meta",
+          #   text = info$meta[["title"]],
+          #   icon = shiny::icon(info$meta[["icon"]]))
           
-          NULL
+          NULL 
+          
         )),
       
       # Tab 8: Report
@@ -205,7 +192,6 @@ app_server <- function(input, output, session) {
   mod_tab_about_server("tab_about_1", rv = rv)
 
   # Data tabs:
-  # mod_comp_data_server("comp_data", rv = rv)
   mod_tab_data_upload_server("tab_data_upload_1", rv = rv)
   mod_tab_data_select_server("tab_data_select_1", rv = rv)
   mod_tab_sims_server("tab_sims_1", rv = rv)
@@ -216,14 +202,13 @@ app_server <- function(input, output, session) {
   # Analyses tabs:
   mod_tab_hrange_server("tab_hrange_1", rv = rv)
   mod_tab_ctsd_server("tab_ctsd_1", rv = rv)
-  # mod_tab_traj_server("tab_traj_1", rv = rv)
-  # mod_tab_meta_server("tab_meta_1", rv = rv)
+  mod_tab_meta_server("tab_meta_1", rv = rv)
   
   # Report tab:
   mod_tab_report_server("tab_report_1", rv = rv)
   
   # Misc: -----------------------------------------------------------------
-
+  
   # Number of individuals/devices deployed:
   mod_comp_m_server("comp_m_in_hr", rv = rv, set_analysis = "hr")
   mod_comp_m_server("comp_m_in_ctsd", rv = rv, set_analysis = "ctsd")
