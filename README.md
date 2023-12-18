@@ -73,7 +73,8 @@ further details.
 
 If you encounter a bug, please [submit an
 issue](https://github.com/ecoisilva/movedesign/issues). For more general
-questions and suggestions, contact [Inês Silva](i.simoes-silva@hzdr.de).
+questions and suggestions, contact [Inês
+Silva](mailto:i.simoes-silva@hzdr.de?subject=%5Bmovedesign%5D).
 
 ## Citation
 

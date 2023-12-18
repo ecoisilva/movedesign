@@ -60,7 +60,7 @@ Run the guided tutorial in the "Home" tab (see the [vignette](https://ecoisilva.
 
 ## Getting help
 
-If you encounter a bug, please [submit an issue](https://github.com/ecoisilva/movedesign/issues). For more general questions and suggestions, contact [Inês Silva](i.simoes-silva@hzdr.de).
+If you encounter a bug, please [submit an issue](https://github.com/ecoisilva/movedesign/issues). For more general questions and suggestions, contact [Inês Silva](mailto:i.simoes-silva@hzdr.de?subject=[movedesign]).
 
 ## Citation
 
