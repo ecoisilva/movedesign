@@ -42,7 +42,8 @@ mod_comp_viz_ui <- function(id) {
         ),
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
             p(style = "margin-top: 10px;"),
-            uiOutput(ns("select_groups")))
+            uiOutput(ns("select_groups")),
+            uiOutput(ns("selectUI_legend_groups")))
         
       ), # end of panels (2 out of 4)
 
@@ -52,7 +53,7 @@ mod_comp_viz_ui <- function(id) {
           icon("filter", class = "cl-sea"),
           span("Individual", class = "ttl-panel")
         ),
-
+        
         p(style = "margin-top: 10px;"),
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
             
@@ -154,10 +155,11 @@ mod_comp_viz_server <- function(id, rv) {
     
     observe({
       if (length(req(input$set_groups)$A) != 0 &&
-          length(req(input$set_groups)$B) != 0)
-        rv$groups <- input$set_groups
-      else rv$groups <- NULL
-    })
+          length(req(input$set_groups)$B) != 0) {
+        rv$groups[[1]] <- input$set_groups
+        rv$grouped <- TRUE
+      }
+    }) # end of observe
     
     ## Summarize data: ----------------------------------------------------
     
@@ -190,7 +192,7 @@ mod_comp_viz_server <- function(id, rv) {
     observe({
       hideTab(inputId = "vizTabs_data",
               target = ns("vizPanel_groups"))
-      if (req(rv$which_meta) == "compare")
+      if ("compare" %in% req(rv$which_meta))
         showTab(inputId = "vizTabs_data",
                 target = ns("vizPanel_groups"))
     }) # end of observe
@@ -204,24 +206,36 @@ mod_comp_viz_server <- function(id, rv) {
     
     output$select_groups <- renderUI({
       req(rv$datList)
-      m <- length(rv$datList)
       
-      set_id <- names(rv$datList)
-      # if (!is.null(rv$id)) set_id <- rv$id
+      if (is.null(rv$id)) {
+        ui <- tagList(
+          p(style = "margin-top: 35px;"),
+          span(class = "help-block",
+               style = "text-align: center !important;",
+               
+               fontawesome::fa("circle-exclamation", fill = pal$dgr),
+               span("Note:", class = "help-block-note"),
+               "Please select all the individuals from the",
+               fontawesome::fa("stopwatch", fill = pal$sea),
+               span("Dataset", class = "cl-sea"), "box",
+               "which you intend to assign into groups."),
+          p(style = "margin-bottom: 35px;"))
+        
+      } else {
+        req(rv$id)
+        m <- length(rv$datList)
+        set_id <- rv$id # names(rv$datList)
+        
+        ui <- chooserInput(ns("set_groups"), 
+                           leftLabel = "Group A", 
+                           rightLabel = "Group B",
+                           leftChoices = set_id, 
+                           rightChoices = c(),
+                           size = 4, 
+                           multiple = TRUE)
+      }
       
-      ui <- chooserInput(ns("set_groups"), 
-                         leftLabel = "Group A", 
-                         rightLabel = "Group B",
-                         
-                         leftChoices = set_id, 
-                         rightChoices = c(), 
-                         
-                         size = 4, 
-                         multiple = TRUE)
-      
-      # , column(
-      #   align = "center", width = 12,
-      #   verbatimTextOutput(ns("selection")))
+      return(ui)
       
     }) # end of renderUI, "select_groups"
     
@@ -244,14 +258,22 @@ mod_comp_viz_server <- function(id, rv) {
       
       tabselected <- NULL
       
-      if (rv$is_valid && length(rv$datList[rv$id]) > 1) {
+      if ("compare" %in% req(rv$which_meta)) {
         if (rv$active_tab == 'data_upload')
-          tabselected <- "comp_viz_uploaded-vizPanel_individual"
+          tabselected <- "comp_viz_uploaded-vizPanel_groups"
         
         if (rv$active_tab == 'data_select')
-          tabselected <- "comp_viz_selected-vizPanel_individual"
+          tabselected <- "comp_viz_selected-vizPanel_groups"
+      } else {
+        if (rv$is_valid && length(rv$datList[rv$id]) > 1) {
+          if (rv$active_tab == 'data_upload')
+            tabselected <- "comp_viz_uploaded-vizPanel_individual"
+          
+          if (rv$active_tab == 'data_select')
+            tabselected <- "comp_viz_selected-vizPanel_individual"
+        }
       }
-      
+        
       req(tabselected)
       updateTabsetPanel(
         session,
@@ -282,6 +304,123 @@ mod_comp_viz_server <- function(id, rv) {
       else shinyjs::show(id = "vizInput_id")
     }) %>% # end of observe,
       bindEvent(rv$id)
+    
+    ## Rendering legend for groups: -------------------------------------
+    
+    output$selectUI_legend_groups <- renderUI({
+      req(rv$datList, rv$fitList)
+      req(rv$which_question, rv$grouped, rv$is_valid)
+      req(length(rv$groups[[1]][["A"]]) > 0,
+          length(rv$groups[[1]][["B"]]) > 0)
+      
+      datList <- rv$datList
+      fitList <- rv$fitList
+      
+      group_A <- rv$fitList[rv$groups[[1]][["A"]]]
+      group_A[sapply(group_A, is.null)] <- NULL
+      group_B <- rv$fitList[rv$groups[[1]][["B"]]]
+      group_B[sapply(group_B, is.null)] <- NULL
+      
+      if (length(rv$which_question) == 1) {
+        if (rv$which_question == "Home range") {
+          name <- "area"
+          type <- "home range area"
+        } else if (rv$which_question == "Speed & distance") {
+          name <- "speed"
+          type <- "movement speed"
+        }
+        
+        out <- capture_meta(list(A = group_A,
+                                 B = group_B),
+                            variable = name,
+                            units = FALSE, 
+                            verbose = FALSE, 
+                            plot = FALSE) %>% 
+          suppressMessages() %>% 
+          suppressWarnings() %>% 
+          quiet()
+        
+        req(out)
+        detected <- out$logs$subpop_detected
+        if (detected) {
+          ui_extra <- tagList(span(
+            "Sub-populations were", span("correctly", class = "cl-sea"),
+            "detected for", type, "with the current groups."))
+        } else if (!detected) {
+          ui_extra <- tagList(span(
+            "No sub-populations detected with the current groups",
+            "for", wrap_none(type, "."),
+            "Proceed with", wrap_none(span("caution", 
+                                           class = "cl-dgr"), ".")))
+        }
+        
+      } else {
+        out_hr <- capture_meta(list(A = group_A,
+                                    B = group_B),
+                               variable = "area",
+                               units = FALSE, 
+                               verbose = FALSE, 
+                               plot = FALSE) %>% 
+          suppressMessages() %>% 
+          suppressWarnings() %>% 
+          quiet()
+        
+        out_sd <- capture_meta(list(A = group_A,
+                                    B = group_B),
+                               variable = "speed",
+                               units = FALSE, 
+                               verbose = FALSE, 
+                               plot = FALSE) %>% 
+          suppressMessages() %>% 
+          suppressWarnings() %>% 
+          quiet()
+        
+        req(out_hr, out_sd)
+        detected_hr <- out_hr$logs$subpop_detected
+        detected_sd <- out_sd$logs$subpop_detected
+        
+        if (detected_hr && detected_sd) {
+          ui_extra <- tagList(span(
+            "Sub-populations were correctly detected for",
+            span("home range area", class = "cl-sea"),
+            "and for", span("movement speed", class = "cl-sea"),
+            "with the current groups."))
+        } else if (detected_hr && !detected_sd) {
+          ui_extra <- tagList(span(
+            "Sub-populations were correctly detected for",
+            span("home range area", class = "cl-sea"),
+            "but not for", span("movement speed", class = "cl-dgr"),
+            "with the current groups."))
+        } else if (!detected_hr && detected_sd) {
+          ui_extra <- tagList(span(
+            "Sub-populations were correctly detected for",
+            span("movement speed", class = "cl-sea"),
+            "but not for", span("home range area", class = "cl-dgr"),
+            "with the current groups."))
+        } else if (!detected_hr && !detected_sd) {
+          ui_extra <- tagList(span(
+            "No sub-populations detected with the current groups",
+            "for", span("home range area", class = "cl-dgr"),
+            "or for", 
+            wrap_none(span("movement speed", class = "cl-dgr"), "."),
+            "Proceed with", wrap_none(span("caution", 
+                                           class = "cl-dgr"), ".")))
+        }
+      }
+      
+      ui <- tagList(
+        p(style = "margin-top: 35px;"),
+        span(class = "help-block",
+             style = "text-align: justify !important;",
+             
+             fontawesome::fa("circle-exclamation", fill = pal$dgr),
+             span("Note:", class = "help-block-note"),
+             ui_extra
+        ))
+      
+      return(ui)
+      
+    }) # end of renderUI, "selectUI_legend_groups"
     
     # PLOTS -------------------------------------------------------------
     ## Rendering all data (xy): -----------------------------------------
@@ -457,10 +596,11 @@ mod_comp_viz_server <- function(id, rv) {
     output$vizPlot_svf <- ggiraph::renderGirafe({
       if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
       if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
-      req(rv$svfList)
+      req(rv$datList, rv$svfList)
+      req(length(rv$svfList) == length(rv$datList))
       
       svf <- rv$svfList
-      
+
       if (!is.null(rv$id)) {
         if (length(rv$id) == 0) svf <- svf
         else if (length(rv$id) == 1) svf <- svf[1]
@@ -468,7 +608,7 @@ mod_comp_viz_server <- function(id, rv) {
       }
       
       p <- plotting_svf(
-        svf, fill = pal$dgr, 
+        svf, fill = rep(pal$dgr, length(rv$datList)),
         add_fit = ifelse(is.null(input$vizInput_add_fit),
                          FALSE, input$vizInput_add_fit),
         fraction = input$vizInput_fraction / 100)

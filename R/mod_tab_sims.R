@@ -11,6 +11,10 @@
 #'
 mod_tab_sims_ui <- function(id) {
   ns <- NS(id)
+  
+  sigma_choices <- c("square kilometers", "square meters", "ha")
+  names(sigma_choices) <- c("km\u00B2", "m\u00B2", "hectares")
+  
   tagList(
     fluidRow(
       
@@ -150,7 +154,7 @@ mod_tab_sims_ui <- function(id) {
           ## Spatial parameters -------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Other parameters", class = "ttl-box_solid"),
+            title = span("Other parameters:", class = "ttl-box_solid"),
             id = ns("simBox_spatialscales"),
             status = "primary",
             width = NULL,
@@ -186,10 +190,7 @@ mod_tab_sims_ui <- function(id) {
               selectInput(
                 inputId = ns("sigma0_units"),
                 label = NULL,
-                choices = c(
-                  "Square kilometers" = "square kilometers",
-                  "Square meters" = "square meters",
-                  "Hectares" = "ha"),
+                choices = sigma_choices,
                 selected = "Square kilometers")
               
             ), # end of splitLayout
@@ -227,7 +228,51 @@ mod_tab_sims_ui <- function(id) {
               width = "100%",
               class = "btn-primary")
             
-          ) # end of box // simBox_submit
+          ), # end of box // simBox_submit
+          
+          # Parameters for groups (if available): -------------------------
+          
+          shinydashboardPlus::box(
+            title = tagList(
+              icon("object-ungroup", class = "cl-jgl"),
+              HTML('&nbsp;'), span("Groups", class = "ttl-box cl-jgl")),
+            id = ns("simBox_groups"),
+            status = "warning",
+            width = NULL,
+            solidHeader = FALSE,
+            collapsible = FALSE,
+            
+            tabsetPanel(
+              id = ns("simTabs_groups"),
+              
+              tabPanel(
+                value = ns("simPanel_group_A"),
+                title = tagList(
+                  span("Group A", class = "ttl-panel cl-jgl")
+                ),
+                
+                fluidRow(
+                  column(width = 12, mod_blocks_ui(ns("simBlock_taupA"))),
+                  column(width = 12, mod_blocks_ui(ns("simBlock_tauvA")))
+                ) # end of fluidRow
+                
+              ), # end of panels (1 out of 2)
+              
+              tabPanel(
+                value = ns("simPanel_group_B"),
+                title = tagList(
+                  span("Group B", class = "ttl-panel cl-jgl")
+                ),
+                
+                fluidRow(
+                  column(width = 12, mod_blocks_ui(ns("simBlock_taupB"))),
+                  column(width = 12, mod_blocks_ui(ns("simBlock_tauvB")))
+                ) # end of fluidRow
+                
+              ) # end of panels (2 out of 2)
+            ) # end of tabsetPanel
+            
+          ) # end of box, "simBox_groups"
       ), # end of div (right column)
       
       # [center column] ---------------------------------------------------
@@ -379,15 +424,7 @@ mod_tab_sims_ui <- function(id) {
             solidHeader = FALSE,
             
             div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
-                p(style = paste("text-align: justify;",
-                                "margin-top: 15px;"),
-                  
-                  "This information will be added to the",
-                  icon("box-archive", class = "cl-mdn"),
-                  span("Report", class = "cl-mdn"), "tab,",
-                  "so it can be reviewed at any point.",
-                  "Note that only the last set of parameters",
-                  "will be used for further analyses.")
+                uiOutput(ns("simUI_legend"))
                 
             ), # end of div (left)
             
@@ -410,15 +447,28 @@ mod_tab_sims_ui <- function(id) {
             ), # end of div (right)
             
             footer = tagList(
-              div(style = "display:inline-block; float:right",
-                  
-                  actionButton(
-                    inputId = ns("simTable_clear"),
-                    label = "Clear table",
-                    icon =  icon("trash"),
-                    width = "110px")
-                  
+              column(
+                width = 12, align = "right",
+                style = "padding-right: 0px;",
+                
+                div(id = "sims-footer",
+                    shiny::actionButton(
+                      inputId = ns("simTable_save"),
+                      label = span("Save",
+                                   span("groups", class = "cl-wht")),
+                      icon =  icon("object-ungroup"),
+                      class = "btn-sims",
+                      width = "120px"),
+                    HTML("&nbsp;"),
+                    shiny::actionButton(
+                      inputId = ns("simTable_clear"),
+                      label = span("Clear",
+                                   span("table", class = "cl-sea")),
+                      icon =  icon("trash"),
+                      width = "120px"))
+                
               )) # end of tagList (footer)
+            
           ) # end of box // simBox_summary
           
       ), # end of column (center)
@@ -475,12 +525,99 @@ mod_tab_sims_server <- function(id, rv) {
     ns <- session$ns
     pal <- load_pal()
     
+    # MAIN REACTIVE VALUES ------------------------------------------------
+    
+    rv$sims <- reactiveValues(
+      m = 0,
+      tbl = NULL,
+      grouped = FALSE
+    )
+    
+    sims_debounced <- reactive({
+      state <- reactable::getReactableState("simTable")
+      if (is.null(state$selected)) return(NULL)
+      
+      req(state$selected)
+      selected <- state$selected
+      if (identical(selected, character(0)) || 
+          any(is.na(selected))) return(NULL)
+      else return(selected)
+      
+    }) %>% debounce(1000)
+    
+    observe({
+      req(rv$datList,
+          !rv$sims$grouped,
+          rv$report_sims_yn,
+          rv$active_tab == 'sims', 
+          rv$which_meta == "compare",
+          rv$data_type == "simulated")
+      
+      selected <- sims_debounced()
+      if (length(selected) == 2) {
+        req(rv$sims$tbl, length(rv$sigma) == 1)
+        
+        rv$groups[[1]] <- list(A = "1", B = "2")
+        rv$grouped <- TRUE
+        
+        selected_m <- rv$sims$tbl[selected, ]$m
+        rv$tau_p <- c(rv$tau_p[1], rv$tau_p0[selected_m])
+        rv$tau_v <- c(rv$tau_v[1], rv$tau_v0[selected_m])
+        rv$sigma <- c(rv$sigma[1], rv$sigma0[selected_m])
+        rv$mu <- list(array(0, dim = 2, 
+                            dimnames = list(c("x", "y"))),
+                      array(0, dim = 2, 
+                            dimnames = list(c("x", "y"))),
+                      array(0, dim = 2, 
+                            dimnames = list(c("x", "y"))))
+        names(rv$tau_p) <- c("All", "A", "B") 
+        names(rv$tau_v) <- c("All", "A", "B") 
+        names(rv$sigma) <- c("All", "A", "B") 
+        names(rv$mu) <- c("All", "A", "B") 
+        rv$sims$grouped <- TRUE
+        
+        shinyalert::shinyalert(
+          className = "modal_success",
+          type = "success",
+          title = "Success!",
+          text = tagList(span(
+            "Proceed to the", br(),
+            icon("stopwatch", class = "cl-mdn"),
+            span("Sampling design", class = "cl-mdn"), "tab."
+          )),
+          html = TRUE,
+          size = "xs")
+        
+      } else {
+        
+        msg_log(
+          style = "danger",
+          message = paste0("Number of groups exceeds ",
+                           msg_danger("limits"), "."),
+          detail = "Select two groups only.")
+        
+        shinyalert::shinyalert(
+          title = "Groups exceed limit",
+          text = tagList(span(
+            "Please select only two sets of parameters",
+            "from the table, then click the",
+            icon("object-ungroupp", class = "cl-jgl"),
+            span("Save groups", class = "cl-jgl"),
+            'button again.')),
+          html = TRUE,
+          size = "xs")
+      }
+      
+    }) %>% # end of observe,
+      bindEvent(input$simTable_save)
+    
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     ## Hide boxes initially:
     
     shinyjs::hide(id = "simBox_viz")
     shinyjs::hide(id = "simBox_summary")
+    shinyjs::hide(id = "simBox_groups")
     shinyjs::hide(id = "sim_details")
     
     observe({
@@ -549,11 +686,11 @@ mod_tab_sims_server <- function(id, rv) {
     ## Convert values/units: ----------------------------------------------
     
     observe({
-      req(input$tau_p0_units != rv$tau_p0$unit[2])
+      req(input$tau_p0_units != rv$tau_p[[1]]$unit[2])
       
       new_tau_p0 <- sigdigits(
         input$tau_p0_units %#%
-          rv$tau_p0$value[2] %#% rv$tau_p0$unit[2], 3)
+          rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -564,11 +701,11 @@ mod_tab_sims_server <- function(id, rv) {
     }) %>% bindEvent(input$tau_p0_units)
     
     observe({
-      req(input$tau_v0_units != rv$tau_v0$unit[2])
+      req(input$tau_v0_units != rv$tau_v[[1]]$unit[2])
       
       new_tau_v0 <- sigdigits(
         input$tau_v0_units %#%
-          rv$tau_v0$value[2] %#% rv$tau_v0$unit[2], 3)
+          rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -579,11 +716,11 @@ mod_tab_sims_server <- function(id, rv) {
     }) %>% bindEvent(input$tau_v0_units)
     
     observe({
-      req(input$sigma0_units != rv$sigma0$unit[2])
+      req(input$sigma0_units != rv$sigma[[1]]$unit[2])
       
       new_sigma0 <- sigdigits(
         input$sigma0_units %#%
-          rv$sigma0$value[2] %#% rv$sigma0$unit[2], 3)
+          rv$sigma[[1]]$value[2] %#% rv$sigma[[1]]$unit[2], 3)
       
       updateNumericInput(
         session,
@@ -593,11 +730,52 @@ mod_tab_sims_server <- function(id, rv) {
       
     }) %>% bindEvent(input$sigma0_units)
     
+    ## Rendering text for table box: --------------------------------------
+    
+    output$simUI_legend <- renderUI({
+      
+      if(req(rv$which_meta) == "compare") {
+        ui <- p(
+          style = paste("text-align: justify;",
+                        "margin-top: 15px;"),
+          
+          "For group comparisons, choose",
+          span("two", class = "cl-sea"), "sets of parameters",
+          "from the table to be used in subsequent analyses.")
+        
+      } else {
+        ui <- p(
+          style = paste("text-align: justify;",
+                        "margin-top: 15px;"),
+          
+          "This information will be added to the",
+          icon("box-archive", class = "cl-mdn"),
+          span("Report", class = "cl-mdn"), "tab,",
+          "so it can be reviewed at any point.",
+          "Note that only the last set of parameters",
+          "will be used for further analyses.")
+      }
+      
+      return(ui)
+      
+    }) # end of renderUI,  "simUI_legend"
+    
+    ## Show parameters box for groups (if available): ---------------------
+    
+    observe({
+      req(rv$grouped, rv$tau_p)
+      
+      if (length(rv$tau_p) == 3) {
+        shinyjs::show(id = "simBox_groups")
+      } else { shinyjs::hide(id = "simBox_groups") }
+      
+    }) # end of observe
+    
     # OPERATIONS ----------------------------------------------------------
     ## Generate random seed: ----------------------------------------------
     
     observe({
-      rv$seed0 <- round(stats::runif(1, min = 1, max = 10000), 0)
+      rv$seed0 <- generate_seed()
     }) %>% bindEvent(to_rerun(), ignoreInit = TRUE)
     
     output$seedvalue <- renderPrint({
@@ -607,28 +785,37 @@ mod_tab_sims_server <- function(id, rv) {
     
     ## Prepare model and run simulation: ----------------------------------
     
-    observe({
-      req(rv$active_tab == 'sims')
+    simulating_data <- reactive({
       
-      rv$tau_p0 <- data.frame(value = c(NA, input$tau_p0, NA),
-                                unit = rep(input$tau_p0_units, 3))
-      rownames(rv$tau_p0) <- c("low", "est", "high")
+      rv$sims$m <- rv$sims$m + 1
+      rv$tau_p <- list(
+        All = data.frame(value = c(NA, input$tau_p0, NA),
+                         unit = rep(input$tau_p0_units, 3),
+                         row.names = c("low", "est", "high")))
       
-      rv$tau_v0 <- data.frame(value = c(NA, input$tau_v0, NA),
-                                unit = rep(input$tau_v0_units, 3))
-      rownames(rv$tau_v0) <- c("low", "est", "high")
+      rv$tau_p0 <<- c(rv$tau_p0, rv$tau_p)
+      names(rv$tau_p0)[[length(rv$tau_p0)]] <- as.character(rv$sims$m)
       
-      rv$sigma0 <- data.frame(value = c(NA, input$sigma0, NA),
-                                unit = rep(input$sigma0_units, 3))
-      rownames(rv$sigma0) <- c("low", "est", "high")
+      rv$tau_v <- list(
+        All = data.frame(value = c(NA, input$tau_v0, NA),
+                         unit = rep(input$tau_v0_units, 3),
+                         row.names = c("low", "est", "high")))
       
-      rv$mu0 <- array(0, dim = 2, dimnames = list(c("x", "y")))
+      rv$tau_v0 <<- c(rv$tau_v0, rv$tau_v)
+      names(rv$tau_v0)[[length(rv$tau_v0)]] <- as.character(rv$sims$m)
+      
+      rv$sigma <- list(
+        All = data.frame(value = c(NA, input$sigma0, NA),
+                         unit = rep(input$sigma0_units, 3),
+                         row.names = c("low", "est", "high")))
+      
+      rv$sigma0 <<- c(rv$sigma0, rv$sigma)
+      names(rv$sigma0)[[length(rv$sigma0)]] <- as.character(rv$sims$m)
+      
+      rv$mu <- list(All = array(0, dim = 2, 
+                                dimnames = list(c("x", "y"))))
       
       rv$is_run <- FALSE
-      
-    }) %>% bindEvent(saved_pars())
-    
-    create_simulation <- reactive({
       
       mod <- prepare_mod(
         tau_p = input$tau_p0, tau_p_unit = input$tau_p0_units,
@@ -663,15 +850,20 @@ mod_tab_sims_server <- function(id, rv) {
         dur = rv$dur0, dur_units = rv$dur0_units,
         dti = rv$dti0, dti_units = rv$dti0_units,
         seed = rv$seed0)
+      rv$sims$grouped <- FALSE
       
-      mod <- list(mod)
-      names(out) <- c("Animal_1")
-      names(mod) <- c("Animal_1")
-      rv$modList <- mod
+      if (is.null(rv$modList)) {
+        rv$modList <- list(mod)
+        names(rv$modList) <- as.character(rv$sims$m)
+      } else {
+        rv$modList <<- c(rv$modList, mod)
+        names(rv$modList)[[length(rv$modList)]] <- 
+          as.character(rv$sims$m)
+      }
       
       return(out)
       
-    }) %>% # end of reactive, create_simulation()
+    }) %>% # end of reactive, simulating_data()
       bindCache(input$tau_p0,
                 input$tau_p0_units,
                 input$tau_v0,
@@ -754,7 +946,7 @@ mod_tab_sims_server <- function(id, rv) {
         ) # end of show_modal_spinner
         
         start_sim <- Sys.time()
-        rv$datList <- create_simulation()
+        rv$datList <- simulating_data()
         
         # Store relevant values:
         rv$data_type <- "simulated"
@@ -851,10 +1043,10 @@ mod_tab_sims_server <- function(id, rv) {
       tmp_tauv <- input$tau_v0 %#% input$tau_v0_units
       
       if (tmp_taup > tmp_tauv) { 
-        tau <- rv$tau_p0 
+        tau <- isolate(rv$tau_p[[1]])
         tau_html <- "\u03C4\u209A"
       } else { 
-        tau <- rv$tau_v0 
+        tau <- isolate(rv$tau_v[[1]])
         tau_html <- "\u03C4\u1D65"
       }
       
@@ -862,8 +1054,10 @@ mod_tab_sims_server <- function(id, rv) {
       newdat <- newdat[which(newdat$t <= (
         tau$value[2] %#% tau$unit[2])), ]
       
+      dur <- isolate(rv$dur0)
+      dur_units <- isolate(rv$dur0_units)    
       out_tau <- fix_unit(tau$value[2], tau$unit[2])
-      out_dur <- fix_unit(rv$dur0, rv$dur0_units)
+      out_dur <- fix_unit(dur, dur_units)
       subtitle <- paste(
         "Highlighting one", tau_html, "cycle",
         paste0("(\u2248 ", out_tau[1], " ", out_tau[2], ")"),
@@ -945,7 +1139,8 @@ mod_tab_sims_server <- function(id, rv) {
           #               "cursor:pointer;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
       
-    }) # end of renderGirafe // simPlot_id
+    }) %>% # end of renderGirafe // simPlot_id,
+      bindEvent(to_run())
     
     ## Preparing data for animation plot: ---------------------------------
     
@@ -985,7 +1180,7 @@ mod_tab_sims_server <- function(id, rv) {
           ticks = FALSE,
           width = "85%"))
       
-    }) # end of renderUI // simInput_timeline
+    }) # end of renderUI, "simInput_timeline"
     
     output$simPlot_route <- ggiraph::renderGirafe({
       req(input$timeline)
@@ -1098,6 +1293,7 @@ mod_tab_sims_server <- function(id, rv) {
     simRow <- reactive({
       
       out <- data.frame(
+        m = NA,
         seed = NA,
         taup = NA,
         tauv = NA,
@@ -1107,18 +1303,19 @@ mod_tab_sims_server <- function(id, rv) {
         mdist = NA,
         speed = NA)
       
+      out$m <- names(rv$tau_p0[length(rv$tau_p0)])
       out$seed <- rv$seed0
       
       out$taup <- paste(
-        scales::label_comma(accuracy = .1)(rv$tau_p0$value[2]),
-        abbrv_unit(rv$tau_p0$unit[2]))
+        scales::label_comma(accuracy = .1)(rv$tau_p[[1]]$value[2]),
+        abbrv_unit(rv$tau_p[[1]]$unit[2]))
       
       out$tauv <- paste(
-        scales::label_comma(accuracy = .1)(rv$tau_v0$value[2]),
-        abbrv_unit(rv$tau_v0$unit[2]))
+        scales::label_comma(accuracy = .1)(rv$tau_v[[1]]$value[2]),
+        abbrv_unit(rv$tau_v[[1]]$unit[2]))
       
-      sig <- fix_unit(rv$sigma0$value[2],
-                      rv$sigma0$unit[2], convert = TRUE)
+      sig <- fix_unit(rv$sigma[[1]]$value[2],
+                      rv$sigma[[1]]$unit[2], convert = TRUE)
       out$sigma <- paste(sig$value, abbrv_unit(sig$unit))
       
       out$time_elapsed <- paste(
@@ -1157,18 +1354,22 @@ mod_tab_sims_server <- function(id, rv) {
       req(rv$fitList)
       shinyjs::show(id = "simBox_summary")
       shinyjs::disable("simButton_save")
+      shinyjs::disable("simTable_save")
       
-      rv$dt_sims <<- rbind(rv$dt_sims, simRow())
-      rv$dt_sims <- dplyr::distinct(rv$dt_sims)
+      rv$sims$tbl <<- rbind(rv$sims$tbl, simRow())
+      rv$sims$tbl <- dplyr::distinct(rv$sims$tbl)
       rv$report_sims_yn <- TRUE
+      
+      if (nrow(rv$sims$tbl) >= 2) shinyjs::enable("simTable_save")
+      else shinyjs::disable("simTable_save")
       
     }) %>% # end of observe
       bindEvent(input$simButton_save)
     
     output$simTable <- reactable::renderReactable({
-      req(rv$dt_sims)
+      req(rv$sims$tbl, rv$which_meta)
       
-      dt_sims <- rv$dt_sims[, -1]
+      dt_sims <- rv$sims$tbl[, -c(1:2)]
       
       columnNames <- list(
         taup = "\u03C4\u209A",
@@ -1179,48 +1380,66 @@ mod_tab_sims_server <- function(id, rv) {
         mdist = "Dist (mean)",
         speed = "Speed (mean)")
       
-      reactable::reactable(
-        dt_sims,
-        compact = TRUE,
-        highlight = TRUE,
-        striped = TRUE,
-        
-        defaultPageSize = 5,
-        paginationType = "jump",
-        showPageSizeOptions = TRUE,
-        pageSizeOptions = c(5, 10, 20),
-        showPageInfo = FALSE,
-        
-        defaultColDef =
-          reactable::colDef(
-            headerClass = "rtable_header",
-            align = "right",
-            minWidth = 55),
-        
-        columns = list(
-          taup = reactable::colDef(
-            name = columnNames[["taup"]],
-            style = list(fontWeight = "bold")),
-          tauv = reactable::colDef(
-            name = columnNames[["tauv"]],
-            style = list(fontWeight = "bold")),
-          sigma = reactable::colDef(
-            minWidth = 60, name = columnNames[["sigma"]],
-            style = list(fontWeight = "bold")),
-          time_elapsed = reactable::colDef(
-            minWidth = 100, name = columnNames[["time_elapsed"]]),
-          tdist = reactable::colDef(
-            minWidth = 85, name = columnNames[["tdist"]]),
-          mdist = reactable::colDef(
-            minWidth = 85, name = columnNames[["mdist"]]),
-          speed = reactable::colDef(
-            minWidth = 100, name = columnNames[["speed"]])
-        ))
+      columnList <- list(
+        taup = reactable::colDef(
+          name = columnNames[["taup"]],
+          style = list(fontWeight = "bold")),
+        tauv = reactable::colDef(
+          name = columnNames[["tauv"]],
+          style = list(fontWeight = "bold")),
+        sigma = reactable::colDef(
+          minWidth = 60, name = columnNames[["sigma"]],
+          style = list(fontWeight = "bold")),
+        time_elapsed = reactable::colDef(
+          minWidth = 100, name = columnNames[["time_elapsed"]]),
+        tdist = reactable::colDef(
+          minWidth = 85, name = columnNames[["tdist"]]),
+        mdist = reactable::colDef(
+          minWidth = 85, name = columnNames[["mdist"]]),
+        speed = reactable::colDef(
+          minWidth = 100, name = columnNames[["speed"]]))
+      
+      column_default <- reactable::colDef(
+        headerClass = "rtable_header",
+        align = "right",
+        minWidth = 55)
+      
+      if (rv$which_meta == "compare") {
+        reactable::reactable(
+          onClick = "select",
+          selection = "multiple",
+          dt_sims,
+          compact = TRUE,
+          highlight = TRUE,
+          striped = TRUE,
+          
+          defaultPageSize = 5,
+          paginationType = "jump",
+          showPageSizeOptions = TRUE,
+          pageSizeOptions = c(5, 10, 20),
+          showPageInfo = FALSE,
+          defaultColDef = column_default,
+          columns = columnList)
+      } else {
+        reactable::reactable(
+          dt_sims,
+          compact = TRUE,
+          highlight = TRUE,
+          striped = TRUE,
+          
+          defaultPageSize = 5,
+          paginationType = "jump",
+          showPageSizeOptions = TRUE,
+          pageSizeOptions = c(5, 10, 20),
+          showPageInfo = FALSE,
+          defaultColDef = column_default,
+          columns = columnList)
+      }
       
     }) # end of renderDataTable // simTable
     
     observe({
-      rv$dt_sims <- NULL
+      rv$sims$tbl <- NULL
     }) %>% # end of observe,
       bindEvent(input$simTable_clear)
     
@@ -1402,6 +1621,52 @@ mod_tab_sims_server <- function(id, rv) {
       
     }) %>% bindEvent(input$help_sims)
     
+    # BLOCKS --------------------------------------------------------------
+    
+    observe({
+      req(rv$active_tab == 'sims')
+      req(length(rv$tau_p) == 3, length(rv$tau_v) == 3)
+    
+      mod_blocks_server(
+        id = "simBlock_taupA", 
+        rv = rv, type = "tau", name = "tau_p", group = "A",
+        input_name = list(
+          chr = "sims_taupA",
+          html = wrap_none("Position autocorrelation ",
+                           "(\u03C4", tags$sub("p"), ")")))
+      
+      mod_blocks_server(
+        id = "simBlock_tauvA", 
+        rv = rv, type = "tau", name = "tau_v", group = "A",
+        input_name = list(
+          chr = "sims_tauvA",
+          html = wrap_none("Velocity autocorrelation ",
+                           "(\u03C4", tags$sub("v"), ")")))
+      
+    }) # end of observe
+    
+    observe({
+      req(rv$active_tab == 'sims')
+      req(length(rv$tau_p) == 3, length(rv$tau_v) == 3)
+      
+      mod_blocks_server(
+        id = "simBlock_taupB", 
+        rv = rv, type = "tau", name = "tau_p", group = "B",
+        input_name = list(
+          chr = "sims_taupB",
+          html = wrap_none("Position autocorrelation ",
+                           "(\u03C4", tags$sub("p"), ")")))
+      
+      mod_blocks_server(
+        id = "simBlock_tauvB", 
+        rv = rv, type = "tau", name = "tau_v", group = "B",
+        input_name = list(
+          chr = "sims_tauvB",
+          html = wrap_none("Velocity autocorrelation ",
+                           "(\u03C4", tags$sub("v"), ")")))
+      
+    }) # end of observe
+    
     # SETTINGS ------------------------------------------------------------
     ## Restore state: -----------------------------------------------------
     
@@ -1412,36 +1677,36 @@ mod_tab_sims_server <- function(id, rv) {
       updateNumericInput(
         session = session,
         inputId = "tau_p0",
-        value = rv$restored_vals$"tau_p0")
+        value = rv$restored_vals$"tau_p"[[1]]$value[2])
       
       updateSelectInput(
         session = session,
         inputId = "tau_p0_units",
-        selected = rv$restored_vals$"tau_p0_units")
+        selected = rv$restored_vals$"tau_p"[[1]]$unit[2])
       
       updateNumericInput(
         session,
         inputId = "tau_v0",
-        value = rv$restored_vals$"tau_v0")
+        value = rv$restored_vals$"tau_v"[[1]]$value[2])
       
       updateSelectInput(
         session = session,
         inputId = "tau_v0_units",
-        selected = rv$restored_vals$"tau_v0_units")
+        selected = rv$restored_vals$"tau_v"[[1]]$unit[2])
       
       updateNumericInput(
         session,
         inputId = ns("sigma0"),
-        value = rv$restored_vals$"sigma0")
+        value = rv$restored_vals$"sigma"[[1]]$value[2])
       
       updateSelectInput(
         session = session,
         inputId = "sigma0_units",
-        selected = rv$restored_vals$"sigma0_units")
+        selected = rv$restored_vals$"sigma"[[1]]$unit[2])
       
-      rv$tau_p0 <- rv$restored_vals$"tau_p0"
-      rv$tau_v0 <- rv$restored_vals$"tau_v0"
-      rv$sigma0 <- rv$restored_vals$"sigma0"
+      rv$tau_p <- rv$restored_vals$"tau_p"
+      rv$tau_v <- rv$restored_vals$"tau_v"
+      rv$sigma <- rv$restored_vals$"sigma"
       
       rv$seed0 <- rv$restored_vals$"seed0"
       
@@ -1469,7 +1734,6 @@ mod_tab_sims_server <- function(id, rv) {
     ## Additional information: --------------------------------------------
     
     # Export values for tests:
-    
     # shiny::exportTestValues(
     #   datList = rv$datList
     # )

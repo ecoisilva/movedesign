@@ -21,6 +21,7 @@ mod_blocks_server <- function(id,
                               rv, 
                               type,
                               name = NULL,
+                              group = 1,
                               
                               n = NULL,
                               N = NULL,
@@ -61,7 +62,7 @@ mod_blocks_server <- function(id,
              # Timescale, spatial parameters and velocity:
              "species" = {
                
-               out <- rv[[name]]
+               out <- rv[[name]][[group]]
                if (!is.numeric(out["est", 1])) return(NULL)
                
                if (type == "tau" || type == "speed") {
@@ -158,12 +159,13 @@ mod_blocks_server <- function(id,
              "outputs" = {
                
                out <- rv[[name]]
-               is_multiple <- !is.data.frame(out)
+               is_multiple <- ifelse(nrow(out) > 1, TRUE, FALSE)
                
                if (grepl("Est", name)) {
                  
                  out <- data.frame(
-                     value = colMeans(out[,2:4]) %>% as.vector(),
+                     value = as.vector(
+                       colMeans(out[,2:4], na.rm = TRUE)),
                      unit = out$unit[1])
                  out <- fix_unit(out, ui = TRUE, convert = TRUE)
                  
@@ -182,17 +184,30 @@ mod_blocks_server <- function(id,
                
                if (grepl("Err", name)) {
                  
-                 est <- mean(rv[[name]]$est, na.rm = TRUE)
+                 if (grepl("meta", name)) {
+                   out <- out[grep(type, out$type), ]
+                   out <- out[nrow(out), ]
+                   is_multiple <- FALSE
+                 }
                  
-                 # ci <- calculate_ci(rv[[name]]$est, level = 0.95)
-                 # lci <- ci$CI_low
-                 # uci <- ci$CI_high
+                 est <- mean(out$est, na.rm = TRUE)
                  
-                 # Credible intervals:
-                 ci <- suppressWarnings(bayestestR::ci(
-                   rv[[name]]$est, ci = .95, method = "HDI"))
-                 lci <- ci$CI_low
-                 uci <- ci$CI_high
+                 if (is_multiple) {
+                   # Confidence intervals:
+                   # ci <- calculate_ci(rv[[name]]$est, level = 0.95)
+                   # lci <- ci$CI_low
+                   # uci <- ci$CI_high
+                   
+                   # Credible intervals:
+                   ci <- suppressWarnings(bayestestR::ci(
+                     rv[[name]]$est, ci = .95, method = "HDI"))
+                   lci <- ci$CI_low
+                   uci <- ci$CI_high
+                   
+                 } else {
+                   lci <- mean(rv[[name]]$lci, na.rm = TRUE)
+                   uci <- mean(rv[[name]]$uci, na.rm = TRUE)
+                 }
                  
                  value <- c(lci, est, uci)
                  

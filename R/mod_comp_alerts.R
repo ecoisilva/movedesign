@@ -18,10 +18,35 @@ mod_comp_alerts_ui <- function(id){
 #'
 #' @noRd
 mod_comp_alerts_server <- function(id, rv) {
-  moduleServer( id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    pal <- load_pal()
     
     # ALERTS --------------------------------------------------------------
+    
+    ## If no groups available after sims tab:
+    
+    observe({
+      req(rv$datList,
+          rv$active_tab == 'device',
+          rv$which_meta == "compare",
+          rv$data_type == "simulated")
+      
+      if (length(rv$tau_p) == 1)
+        shinyalert::shinyalert(
+          type = "error",
+          title = "No groups found",
+          text = tagList(span(
+            "No groups were set, or one of the groups is blank.",
+            "Go to the", fontawesome::fa("file-pen", fill = pal$sea),
+            span("Simulate data", class = "cl-sea"),
+            "tab to fix, by selecting two sets of parameters from",
+            "the table."
+          )),
+          html = TRUE,
+          size = "xs")
+      
+    }) # end of observe
     
     ## If no initial data uploaded, selected or simulated:
     

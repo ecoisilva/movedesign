@@ -120,18 +120,20 @@ mod_tab_hrange_ui <- function(id) {
               ) # end of panels (2 out of 2)
             ), # end of tabs
             
-            footer = column(
-              width = 12, align = "right",
-              style = "padding-left: 0px; padding-right: 0px;",
-              
-              shiny::actionButton(
-                inputId = ns("hrButton_compare"),
-                icon = icon("code-compare"),
-                label = "Compare",
-                class = "btn-info",
-                width = "125px")
-            
-            ) # end of column (footer)
+            footer = div(
+              id = "hrBox_regime_footer",
+              column(
+                width = 12, align = "right",
+                style = "padding-left: 0px; padding-right: 0px;",
+                
+                shiny::actionButton(
+                  inputId = ns("hrButton_compare"),
+                  icon = icon("code-compare"),
+                  label = "Compare",
+                  class = "btn-info",
+                  width = "125px")
+                
+              )) # end of column, div (footer)
           ), # end of box // hrBox_regime
           
           ## Sample sizes: ------------------------------------------------
@@ -321,7 +323,7 @@ mod_tab_hrange_ui <- function(id) {
                 shiny::actionButton(
                   inputId = ns("add_hr_table"),
                   label = span("Show", span("table", class = "cl-sea")),
-                  icon = icon("bookmark"),
+                  icon = icon("eye"),
                   width = "100%")
                 
               )) # end of footer
@@ -375,14 +377,34 @@ mod_tab_hrange_server <- function(id, rv) {
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
-    rv$hr <- reactiveValues(akdeList = list(), time = c(0, 0))
+    rv$hr <- reactiveValues(akdeList = list())
+    
+    ## Calculate ratio (effect size) if groups: ---------------------------
+    
+    observe({
+      req(rv$active_tab == 'hr')
+      req("compare" %in% rv$which_meta,
+          rv$mu, rv$sigma,
+          rv$grouped)
+      req(length(rv$mu) == 3,
+          length(rv$sigma) == 3)
+      
+      truth <- estimating_truth()
+      ratio <- truth[["area"]][[2]]/truth[["area"]][[3]]
+      # message("Group A's home range is ", round(ratio, 2),
+      #         " times the size of Group B's home range.")
+      
+      rv$ratio[["hr"]] <- ratio
+      shinyjs::hide(id = "hrBox_regime_footer")
+      
+    }) # end of observe
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
-    observe({
-      if (req(rv$nsims) != length(req(rv$simfitList)))
-        shinyjs::hide(id = "hrBox_viz")
-    })
+    # observe({
+    #   if (req(rv$nsims) != length(req(rv$simfitList)))
+    #     shinyjs::hide(id = "hrBox_viz")
+    # })
     
     observe({
       shinyjs::show(id = "hrBox_regime")
@@ -410,15 +432,18 @@ mod_tab_hrange_server <- function(id, rv) {
       hideTab(inputId = tmp_id, target = ns(tmp_target))
     }
     
+    shinyjs::hide(id = "hr_nsim")
+    
     ## Update based on number of simulations: -----------------------------
     
     observe({
-      req(rv$simList)
+      req(rv$active_tab == 'hr',
+          rv$simList, rv$akdeList)
+      req(length(rv$simList) == length(rv$akdeList))
       rv$hr_nsim <- 1
       
       if (length(rv$simList) == 1) {
         shinyjs::hide(id = "hr_nsim")
-        
       } else {
         shinyjs::show(id = "hr_nsim")
         div(class = "sims-irs",
@@ -430,12 +455,12 @@ mod_tab_hrange_server <- function(id, rv) {
               selected = length(rv$simList)))
       }
       
-    }) %>% # end of observer
-      bindEvent(rv$simList)
+    }) # end of observer
     
     observe({
-      req(rv$simList,
-          input$hr_nsim >= 1)
+      req(rv$simList, rv$is_analyses,
+          input$hr_nsim >= 1,
+          rv$active_tab == 'hr')
       
       int <- round(input$hr_nsim, 0)
       if (int %in% seq(1, length(rv$simList), 1))
@@ -606,12 +631,22 @@ mod_tab_hrange_server <- function(id, rv) {
     
     output$hrUI_errLegend <- renderUI({
       req(rv$hrErr,
-          rv$simList)
+          rv$simList,
+          rv$which_meta)
       
       ci <- suppressWarnings(bayestestR::ci(
         rv$hrErr$est, ci = .95, method = "HDI"))
       lci <- ci$CI_low
       uci <- ci$CI_high
+      
+      if (rv$which_meta != "none") extra_ui <- tagList(
+        "To obtain valid credible intervals, run more simulations",
+        "through the", span("Simulations", class = "cl-grn"), "box.")
+      else extra_ui <- tagList(
+        "To obtain valid credible intervals, select a different",
+        span("analytical target", class = "cl-sea"), "in the",
+        icon("house", class = "cl-mdn"),
+        span("Home", class = "cl-mdn"), "tab.")
       
       ui <- ""
       if (length(rv$simList) > 1) {
@@ -623,10 +658,11 @@ mod_tab_hrange_server <- function(id, rv) {
                  
                  fontawesome::fa("circle-exclamation", fill = pal$dgr),
                  span("Note:", class = "help-block-note"), 
-                 "Credible intervals (CIs) were too large or the number of",
-                 "simulations insufficient, returning ",
+                 "Credible intervals (CIs) were too large or the",
+                 "number of simulations insufficient, returning ",
                  wrap_none(span("NAs", class = "cl-dgr"), "."),
-                 "Run more simulations to obtain valid CIs."))
+                 "Run more", span("simulations", class = "cl-grn"), 
+                 "to obtain valid CIs."))
       } else {
         ui <- tagList(
           p(style = "margin-top: 22px;"),
@@ -638,9 +674,7 @@ mod_tab_hrange_server <- function(id, rv) {
                "This relative error is based on a single simulation,",
                "and the error range is calculated from the 95%",
                "confidence intervals [low\u2014high CI].",
-               "To obtain valid credible intervals, run more",
-               "simulations through",
-               span("Simulations", class = "cl-grn"), "box."))
+               extra_ui))
       }
       
       return(ui)
@@ -750,13 +784,13 @@ mod_tab_hrange_server <- function(id, rv) {
     # Adjust sampling parameters necessary for simulation:
     
     observe({
-      req(rv$tau_p0, rv$tau_v0,
+      req(rv$tau_p, rv$tau_v,
           rv$dur, rv$dti,
           rv$akdeList)
       
       # Species parameters:
       
-      taup <- "days" %#% rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+      taup <- "days" %#% rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       
       # Sampling duration:
       
@@ -783,10 +817,10 @@ mod_tab_hrange_server <- function(id, rv) {
       tmprange <- NULL
       if (rv$data_type != "simulated") {
         tmprange <- paste(ifelse(
-          rv$tau_p0$value[1] == 0, "0",
-          scales::label_comma(accuracy = .1)(rv$tau_p0$value[1])),
+          rv$tau_p[[1]]$value[1] == 0, "0",
+          scales::label_comma(accuracy = .1)(rv$tau_p[[1]]$value[1])),
           "\u2014",
-          scales::label_comma(accuracy = .1)(rv$tau_p0$value[3]))
+          scales::label_comma(accuracy = .1)(rv$tau_p[[1]]$value[3]))
       }
       
       shiny::showModal(
@@ -811,8 +845,8 @@ mod_tab_hrange_server <- function(id, rv) {
             #               "(\u03C4", tags$sub("p"), ")")),
             #   value =
             #     paste(scales::label_comma(
-            #       accuracy = .1)(rv$tau_p0$value[2]),
-            #       rv$tau_p0$unit[2]),
+            #       accuracy = .1)(rv$tau_p[[1]]$value[2]),
+            #       rv$tau_p[[1]]$unit[2]),
             #   subtitle = tmprange),
             
             p("If home range estimation is your goal,",
@@ -893,9 +927,9 @@ mod_tab_hrange_server <- function(id, rv) {
     # Calculate true home range:
     estimating_truth <- reactive({
       
-      mean_x <- rv$mu0[1]
-      mean_y <- rv$mu0[2]
-      sig <- rv$sigma0$value[2] %#% rv$sigma0$unit[2]
+      mean_x <- rv$mu[[1]][1]
+      mean_y <- rv$mu[[1]][2]
+      sig <- rv$sigma[[1]]$value[2] %#% rv$sigma[[1]]$unit[2]
       area <- -2 * log(0.05) * pi * sig
       radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
       truth <- data.frame(
@@ -906,50 +940,128 @@ mod_tab_hrange_server <- function(id, rv) {
       truth$y <- unlist(lapply(
         mean_y, function(x) x + radius_y * sin(truth$angle)))
       
-      return(list(area = area, data = truth))
+      if ("compare" %in% req(rv$which_meta)) {
+        
+        sigA <- rv$sigma[[2]]$value[2] %#% rv$sigma[[2]]$unit[2]
+        sigB <- rv$sigma[[3]]$value[2] %#% rv$sigma[[3]]$unit[2]
+        areaA <- -2 * log(0.05) * pi * sigA
+        areaB <- -2 * log(0.05) * pi * sigB
+        
+        radius_xA <- radius_yA <- sqrt(-2 * log(0.05) * sigA)
+        radius_xB <- radius_yB <- sqrt(-2 * log(0.05) * sigB)
+        
+        truthA <- data.frame(
+          id = rep(1, each = 100),
+          angle = seq(0, 2 * pi, length.out = 100))
+        truthA$x <- unlist(lapply(
+          mean_x, function(x) x + radius_xA * cos(truthA$angle)))
+        truthA$y <- unlist(lapply(
+          mean_y, function(x) x + radius_yA * sin(truthA$angle)))
+        
+        truthB <- data.frame(
+          id = rep(1, each = 100),
+          angle = seq(0, 2 * pi, length.out = 100))
+        truthB$x <- unlist(lapply(
+          mean_x, function(x) x + radius_xB * cos(truthB$angle)))
+        truthB$y <- unlist(lapply(
+          mean_y, function(x) x + radius_yB * sin(truthB$angle)))
+        
+        area <- list("All" = area, "A" = areaA, "B" = areaB)
+        truth <- list("All" = truth, "A" = truthA, "B" = truthB)
+      } else {
+        area <- list("All" = area)
+        truth <- list("All" = truth)
+      }
       
-    }) # end of reactive, "estimating_truth"
+      hr_truth <- list(area = area, data = truth)
+      rv$truth$hr <- hr_truth
+      return(hr_truth)
+      
+    }) # end of reactive, estimating_truth()
     
     ## Estimating for initial sampling design: ----------------------------
     
     estimating_hr <- reactive({
       
-      hr <- list()
+      start_hr <- Sys.time()
       if (length(rv$simList) == 1) {
-        hr[[1]] <- ctmm::akde(data = rv$simList[[1]], 
-                              CTMM = rv$simfitList[[1]])
-        rv$akdeList[[1]] <- hr[[1]]
+        
+        hr <- tryCatch(
+          ctmm::akde(rv$simList[[1]], rv$simfitList[[1]]),
+          warning = function(w) NULL,
+          error = function(e) NULL)
+        hr <- list(hr)
+        rv$akdeList[[1]] <- hr
         
       } else {
         
+        n_sims <- length(rv$simList) - length(rv$akdeList)
         if (length(rv$akdeList) == 0) {
           seq_for_est <- 1:length(rv$simList)
         } else { 
-          n_sims <- length(rv$simList) - length(rv$akdeList)
           seq_for_est <- (length(rv$akdeList) + 1):length(rv$simList)
         }
         
-        for (i in seq_for_est) {
-          start_hr <- Sys.time()
+        if (rv$parallel && n_sims >= 4) {
           
-          msg_log(
-            style = "warning",
-            message = paste0("Estimation for sim no. ", i, " ",
-                             msg_warning("in progress"), ","),
-            detail = "This may take a while...")
+          hr <- par.akde(
+            rv$simList[seq_for_est],
+            rv$simfitList[seq_for_est],
+            parallel = rv$parallel)
           
-          hr[[i]] <- ctmm::akde(data = rv$simList[[i]],
-                                CTMM = rv$simfitList[[i]])
-          rv$akdeList[[length(rv$akdeList) + 1]] <- hr[[i]]
+          rv$akdeList <<- c(rv$akdeList, hr)
           
-          msg_log(
-            style = 'warning',
-            message = paste0("Estimation for sim no. ", i, " ",
-                             msg_success("completed"), "..."),
-            run_time = difftime(Sys.time(), start_hr, units = "secs"))
-        }
+        } else {
+          
+          j <- 0
+          hr <- list()
+          for (i in seq_for_est) {
+            j <- j + 1
+            
+            # shinyFeedback::showToast(
+            #   type = "info",
+            #   message = paste0("Estimation ", i, " out of ",
+            #                    length(seq_for_est), "..."),
+            #   .options = list(
+            #     progressBar = FALSE,
+            #     closeButton = TRUE,
+            #     preventDuplicates = TRUE,
+            #     positionClass = "toast-bottom-right"))
+            
+            msg_log(
+              style = "warning",
+              message = paste0("Estimation for sim no. ", i, " ",
+                               msg_warning("in progress"), ","),
+              detail = "This may take a while...")
+            
+            hr[[j]] <- tryCatch(
+              ctmm::akde(rv$simList[[i]], rv$simfitList[[i]]),
+              warning = function(w) { w; return(NULL) },
+              error = function(e) NULL)
+            rv$akdeList[[length(rv$akdeList) + 1]] <- hr[[j]]
+            
+            msg_log(
+              style = 'warning',
+              message = paste0("Estimation for sim no. ", i, " ",
+                               msg_success("completed"), "..."),
+              run_time = difftime(Sys.time(), start_hr, units = "secs"))
+            
+            # shinyFeedback::showToast(
+            #   type = "success",
+            #   message = paste0("Estimation ", i, 
+            #                    " out of ", length(rv$simList),
+            #                    " completed."),
+            #   .options = list(
+            #     progressBar = FALSE,
+            #     closeButton = TRUE,
+            #     preventDuplicates = TRUE,
+            #     positionClass = "toast-bottom-right"))
+            
+          } # end of for loop
+        } # end of if [rv$parallel]
       }
       
+      names(rv$akdeList) <- names(rv$simList)
       return(hr)
       
     }) %>% # end of reactive, estimating_hr()
@@ -959,20 +1071,27 @@ mod_tab_hrange_server <- function(id, rv) {
                 rv$dti)
     
     observe({
-      req(rv$active_tab == 'hr',
-          rv$simList,
+      req("Home range" %in% rv$which_question)
+      req(rv$simList,
           rv$simfitList,
-          rv$tmp$id == rv$id)
-      req(length(rv$simList) == length(rv$simfitList))
+          rv$tmp$id == rv$id,
+          length(rv$simList) == length(rv$simfitList))
       
-      tmplist <- list("hrBox_areas",
-                      "hrBox_viz",
-                      "hrBox_misc")
+      boxes <- list("hrBox_areas",
+                    "hrBox_viz",
+                    "hrBox_misc")
       
-      for (i in 1:length(tmplist)) shinyjs::show(id = tmplist[i])
+      for (b in 1:length(boxes)) shinyjs::show(id = boxes[b])
       
-      rv$hr$time <- c(0,0)
+      rv$time_hr <- c(0,0)
       start <- Sys.time()
+      
+      num_sims <- length(rv$simList) - length(rv$akdeList)
+      if (length(rv$akdeList) == 0) {
+        seq_for <- 1:length(rv$simList)
+      } else {
+        seq_for <- (length(rv$akdeList) + 1):length(rv$simList)
+      }
       
       msg_log(
         style = "warning",
@@ -981,9 +1100,12 @@ mod_tab_hrange_server <- function(id, rv) {
       
       loading_modal("Estimating home range")
       
-      akde <- estimating_hr()
-      truth <- estimating_truth()[["area"]]
+      hrList <- estimating_hr()
+      hr_truth <- estimating_truth()
+      req(hr_truth)
+      hr_truth <- hr_truth[["area"]][[1]]
       
+      # If tiny DOF[area]
       N1 <- extract_dof(rv$simfitList, "area")
       if (all(N1 < 0.001)) {
         proceed <- NULL
@@ -1002,14 +1124,36 @@ mod_tab_hrange_server <- function(id, rv) {
         
         msg_log(
           style = "danger",
-          message = paste(
+          message = paste0(
             "Model fit has a very low ",
             msg_danger("effective sample size"), ","),
           detail = paste("Choose a different sampling design",
                          "or seed to proceed."))
-        
         req(proceed)
       }
+      
+      if (is.null(hr_truth) || is.null(hrList)) {
+        proceed <- NULL
+        shinybusy::remove_modal_spinner()
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Error",
+          text = tagList(p(
+            style = "text-align: justify !important;",
+            "Home range estimation failed.")),
+          html = TRUE, size = "s")
+        
+        msg_log(
+          style = "danger",
+          message = paste(
+            "Home range estimation ",
+            msg_danger("failed"), ","),
+          detail = paste("Report bug."))
+        req(proceed)
+      }
+      
+      req(length(rv$simList) == length(rv$akdeList))
       
       out_est_df <- data.frame(seed = numeric(0),
                                lci = numeric(0), 
@@ -1021,65 +1165,82 @@ mod_tab_hrange_server <- function(id, rv) {
                                est = numeric(0),
                                uci = numeric(0))
       
-      for (i in seq_along(rv$simList)) {
+      for (i in seq_along(hrList)) {
+        sim_no <- seq_for[i]
         
-        N1 <- extract_dof(rv$simfitList[[i]], "area")[[1]]
-        if (N1 < 0.001) {
-          out_est <- rep(NA, 3) 
-          out_err <- rep(NA, 3)
-          tmpunit <- NA
-        } else {
-          tmpsum <- summary(rv$akdeList[[i]])
-          tmpname <- rownames(summary(rv$akdeList[[i]])$CI)
-          tmpunit <- extract_units(tmpname[grep('^area', tmpname)])
-          
-          out_est <- c( 
-            "lci" = tmpsum$CI[1], 
-            "est" = tmpsum$CI[2], 
-            "uci" = tmpsum$CI[3]) 
-          out_err <- c( 
-            "lci" = ((out_est[[1]] %#% tmpunit) - truth) / truth, 
-            "est" = ((out_est[[2]] %#% tmpunit) - truth) / truth, 
-            "uci" = ((out_est[[3]] %#% tmpunit) - truth) / truth) 
+        group <- 1
+        if (rv$grouped) {
+          nm <- names(rv$simList)[[sim_no]]
+          group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
+          truth <- rv$truth$hr[["area"]][[group]]
         }
+        
+        N1 <- extract_dof(rv$simfitList[[sim_no]], "area")[[1]]
+        tmpsum <- tryCatch(
+          summary(rv$akdeList[[i]]),
+          error = function(e) e)
+        
+        if (is.null(rv$akdeList[[sim_no]]) || 
+            inherits(tmpsum, "error") || N1 < 0.001) {
+          out_est_df <- out_est_df %>%
+            dplyr::add_row(
+              seed = rv$seedList[[sim_no]],
+              lci = NA, est = NA, uci = NA, unit = NA)
+          out_err_df <- out_err_df %>%
+            dplyr::add_row(
+              seed = rv$seedList[[sim_no]],
+              lci = NA, est = NA, uci = NA) 
+          
+          rv$hr$tbl <<- rbind(
+            rv$hr$tbl, 
+            hrRow(seed = rv$seedList[[sim_no]],
+                  group = if (rv$grouped) group else NA,
+                  data = rv$simList[[sim_no]], 
+                  tau_p = rv$tau_p[[group]],
+                  dur = rv$dur,
+                  dti = rv$dti,
+                  fit = rv$simfitList[[sim_no]],
+                  area = out_est_df[i, ],
+                  error = out_err_df[i, ]))
+          next
+        }
+        
+        tmpname <- rownames(summary(rv$akdeList[[sim_no]])$CI)
+        tmpunit <- extract_units(tmpname[grep('^area', tmpname)])
         
         out_est_df <- out_est_df %>%
           dplyr::add_row(
-            seed = rv$seedList[[i]],
-            lci = out_est[[1]], 
-            est = out_est[[2]], 
-            uci = out_est[[3]], 
+            seed = rv$seedList[[sim_no]],
+            lci = tmpsum$CI[1], 
+            est = tmpsum$CI[2], 
+            uci = tmpsum$CI[3], 
             unit = tmpunit)
         out_err_df <- out_err_df %>%
           dplyr::add_row(
-            seed = rv$seedList[[i]],
-            lci = out_err[[1]], 
-            est = out_err[[2]], 
-            uci = out_err[[3]])
+            seed = rv$seedList[[sim_no]],
+            lci = ((tmpsum$CI[1] %#% tmpunit) - truth) / truth, 
+            est = ((tmpsum$CI[2] %#% tmpunit) - truth) / truth, 
+            uci = ((tmpsum$CI[3] %#% tmpunit) - truth) / truth) 
+        
+        rv$hr$tbl <<- rbind(
+          rv$hr$tbl, 
+          hrRow(seed = rv$seedList[[sim_no]],
+                group = if (rv$grouped) group else NA,
+                data = rv$simList[[sim_no]], 
+                tau_p = rv$tau_p[[group]],
+                dur = rv$dur,
+                dti = rv$dti,
+                fit = rv$simfitList[[sim_no]],
+                area = out_est_df[i, ],
+                error =  out_err_df[i, ]))
         
       }
       
-      rv$hrEst <- out_est_df
-      rv$hrErr <- out_err_df
+      rv$hrEst <<- rbind(rv$hrEst, out_est_df)
+      rv$hrErr <<- rbind(rv$hrErr, out_err_df)
       
-      ### Save to table:
-      
-      for (i in seq_along(rv$simList)) {
-        rv$hr$tbl <<- rbind(
-          rv$hr$tbl, 
-          hrRow(seed = rv$seedList[[i]],
-                data = rv$simList[[i]], 
-                dur = rv$dur,
-                dti = rv$dti,
-                fit = rv$simfitList[[i]],
-                area = rv$hrEst[i, ],
-                error = rv$hrErr[i, ])
-        )
-      }
-      
-      # rv$report_hr_yn <- TRUE
       time_hr <- difftime(Sys.time(), start, units = "sec")
-      rv$hr$time[1] <- rv$hr$time[1] + time_hr[[1]]
+      rv$time_hr[1] <- rv$time_hr[1] + time_hr[[1]]
       
       msg_log(
         style = "success",
@@ -1090,6 +1251,7 @@ mod_tab_hrange_server <- function(id, rv) {
       rv$hr_completed <- TRUE
       rv$is_analyses <- TRUE
       rv$is_report <- FALSE
+      rv$is_meta <- FALSE
       
       # UI elements:
       
@@ -1179,7 +1341,10 @@ mod_tab_hrange_server <- function(id, rv) {
                   rv$hr$simList))
     
     estimating_hr_new <- reactive({
-      ctmm::akde(data = rv$hr$simList, CTMM = rv$hr$fitList)
+      tryCatch(
+        ctmm::akde(rv$hr$simList, rv$hr$fitList),
+        warning = function(w) NULL,
+        error = function(e) NULL)
       
     }) %>% # end of reactive, estimating_hr_new()
       bindCache(rv$hr$dur,
@@ -1321,7 +1486,7 @@ mod_tab_hrange_server <- function(id, rv) {
           detail = "This may take a while...")
         
         akde_new <- estimating_hr_new()
-        truth <- estimating_truth()[["area"]]
+        truth <- estimating_truth()[["area"]][[1]]
         
         tmpsumm <- summary(akde_new[[1]])
         tmpname <- rownames(tmpsumm$CI)
@@ -1350,13 +1515,25 @@ mod_tab_hrange_server <- function(id, rv) {
                               est = out_err[[2]], 
                               uci = out_err[[3]])
         
+        rv$hr$tbl <<- rbind(
+          rv$hr$tbl, 
+          hrRow(seed = rv$seedList[[set_id]],
+                data_type = "Modified",
+                data = rv$hr$simList[[1]], 
+                tau_p = rv$tau_p[[1]],
+                dur = rv$hr$dur,
+                dti = rv$hr$dti,
+                N = rv$N1_new[[1]], 
+                area = rv$hrEst_new[[1]],
+                error = rv$hrErr_new[[1]]))
+        
         rv$hrEst_new <- out_est
         rv$hrErr_new <- out_err
         
         rv$is_analyses <- TRUE
         rv$hr$akdeList <- akde_new
         time_hr <- difftime(Sys.time(), start_est, units = "sec")
-        rv$hr$time[2] <- rv$hr$time[2] + 
+        rv$time_hr[2] <- rv$time_hr[2] + 
           difftime(Sys.time(), start, units = "sec")[[1]]
         
         msg_log(
@@ -1385,28 +1562,44 @@ mod_tab_hrange_server <- function(id, rv) {
         show_truth <- ifelse(input$hr_truth, TRUE, FALSE)
       } else { show_truth <- FALSE }
       
-      truth <- estimating_truth()[["data"]]
-      ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]],
-                               rv$akdeList[[rv$hr_nsim]],
-                               truth))
-      
-      if (!is.null(rv$hr$akdeList)) {
-        req(rv$hr$simList, rv$hr$akdeList)
+      if (is.null(rv$akdeList[[rv$hr_nsim]])) {
+        ud <- ggplot2::ggplot() +
+            ggtext::geom_richtext(
+              mapping = ggplot2::aes(x = 1, y = 1),
+              size = 5,
+              color = "grey50",
+              fill = NA, label.color = NA,
+              label = paste0("[Effective sample size *too low*]"),
+              family = "Roboto Condensed") + 
+            ggplot2::theme_void()
+        
+      } else {
+        
+        truth <- estimating_truth()[["data"]][[1]]
         ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]],
                                  rv$akdeList[[rv$hr_nsim]],
-                                 rv$hr$simList,
-                                 rv$hr$akdeList[[1]],
                                  truth))
+        
+        if (!is.null(rv$hr$akdeList)) {
+          req(rv$hr$simList, rv$hr$akdeList)
+          ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]],
+                                   rv$akdeList[[rv$hr_nsim]],
+                                   rv$hr$simList,
+                                   rv$hr$akdeList[[1]],
+                                   truth))
+        }
+        
+        req(rv$simList[[rv$hr_nsim]], rv$akdeList[[rv$hr_nsim]])
+        
+        ud <- plotting_hr(
+          input1 = list(data = rv$simList[[rv$hr_nsim]],
+                        ud = rv$akdeList[[rv$hr_nsim]]),
+          truth = truth,
+          show_truth = show_truth,
+          contours = input$hr_contours,
+          color = pal$sea,
+          extent = ext)
       }
-      
-      ud <- plotting_hr(
-        input1 = list(data = rv$simList[[rv$hr_nsim]],
-                      ud = rv$akdeList[[rv$hr_nsim]]),
-        truth = truth,
-        show_truth = show_truth,
-        contours = input$hr_contours,
-        color = pal$sea,
-        extent = ext)
       
       ggiraph::girafe(
         ggobj = ud,
@@ -1435,7 +1628,7 @@ mod_tab_hrange_server <- function(id, rv) {
       
       # Rendering home range estimate plot:
       
-      truth <- estimating_truth()[["data"]]
+      truth <- estimating_truth()[["data"]][[1]]
       ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]], 
                                rv$hr$simList[[1]],
                                rv$akdeList[[rv$hr_nsim]], 
@@ -1469,54 +1662,10 @@ mod_tab_hrange_server <- function(id, rv) {
     }) # end of renderGirafe
     
     # TABLES --------------------------------------------------------------
-    
-    hrRow <- function(seed,  
-                      data_type = "Initial",
-                      data,
-                      fit = NULL,
-                      N = NULL,
-                      dur,
-                      dti,
-                      area, 
-                      error) {
-      
-      if (!is.null(fit)) N <- extract_dof(fit, name = "area")[[1]]
-      
-      out <- data.frame(
-        seed = seed,
-        data = data_type,
-        taup = NA,
-        dur = NA,
-        dti = NA,
-        n = nrow(data),
-        N1 = N,
-        area = NA,
-        area_err = error$est,
-        area_err_min = error$lci,
-        area_err_max = error$uci)
-      
-      out$taup <- paste(
-        scales::label_comma(.1)(rv$tau_p0$value[2]),
-        abbrv_unit(rv$tau_p0$unit[2]))
-      
-      out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
-      out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
-      
-      out_dti <- fix_unit(dti$value, dti$unit)
-      out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
-      
-      out_area <- scales::label_comma(.1)(area$est)
-      if (is.na(out_area)) out$area <- NA
-      else out$area <- paste(out_area, abbrv_unit(area$unit))
-      
-      return(out)
-      
-    } # end of function, hrRow()
-    
     ## Initial sampling design: -------------------------------------------
     
     observe({
-      req(rv$simList, rv$dev$N1, rv$hrErr, input$add_hr_table)
+      req(rv$simList, rv$hrErr, input$add_hr_table)
       
       shinyjs::show(id = "hrBox_summary")
       rv$hr$tbl <- dplyr::distinct(rv$hr$tbl)
@@ -1528,24 +1677,10 @@ mod_tab_hrange_server <- function(id, rv) {
     
     observe({
       req(rv$hr$fitList, rv$hrEst_new)
-      
-      set_id <- 1
-      if (!is.null(rv$hr_nsim)) set_id <- isolate(rv$hr_nsim)
-      
-      rv$hr$tbl <<- rbind(rv$hr$tbl, 
-                          hrRow(seed = rv$seedList[[set_id]],
-                                data_type = "Modified",
-                                dur = rv$dur,
-                                dti = rv$dti,
-                                data = rv$hr$simList[[1]], 
-                                N = rv$N1_new[[1]], 
-                                area = rv$hrEst_new[[1]],
-                                error = rv$hrErr_new[[1]]))
       rv$hr$tbl <- dplyr::distinct(rv$hr$tbl)
-      # rv$report_hr_yn <- TRUE
       
     }) %>% # end of observe
-      bindEvent(list(input$add_hr_table, rv$simList))
+      bindEvent(list(input$add_hr_table, rv$hr$fitList))
     
     ## Rendering output table: --------------------------------------------
     
@@ -1730,7 +1865,7 @@ mod_tab_hrange_server <- function(id, rv) {
         rv = rv, type = "hr", name = "hrErr")
     
     }) # end of observe
-
+    
     observe({
       req(rv$hr$simList, rv$hr$akdeList, 
           rv$hrEst_new,
@@ -1906,9 +2041,9 @@ mod_tab_hrange_server <- function(id, rv) {
     # MISC ----------------------------------------------------------------
 
     output$out_time_hr <- renderText({
-      req(rv$hr$time)
+      req(rv$time_hr)
 
-      out <- fix_unit(rv$hr$time[1], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time_hr[1], "seconds", convert = TRUE)
       out_txt <- paste0("Initial sampling design took approximately ",
                         out$value, " ", out$unit, ".")
       out_txt
@@ -1916,9 +2051,9 @@ mod_tab_hrange_server <- function(id, rv) {
     }) # end of renderText, "time_hr"
 
     output$out_time_hr_new <- renderText({
-      req(rv$hr$time, rv$hr$akdeList)
+      req(rv$time_hr, rv$hr$akdeList)
 
-      out <- fix_unit(rv$hr$time[2], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time_hr[2], "seconds", convert = TRUE)
       out_txt <- paste0("New sampling design took approximately ",
                         out$value, " ", out$unit, ".")
       out_txt
@@ -1926,9 +2061,9 @@ mod_tab_hrange_server <- function(id, rv) {
     }) # end of renderText, "time_hr_new"
 
     output$out_time_hr_total <- renderText({
-      req(rv$hr$time, rv$hr$akdeList)
+      req(rv$time_hr, rv$hr$akdeList)
 
-      total_time <- rv$hr$time[1] + rv$hr$time[2]
+      total_time <- rv$time_hr[1] + rv$time_hr[2]
 
       out <- fix_unit(total_time, "seconds", convert = TRUE)
       out_txt <- paste0("... In total, this section took ",
@@ -1936,25 +2071,6 @@ mod_tab_hrange_server <- function(id, rv) {
       out_txt
 
     }) # end of renderText, "time_hr_total"
-
-
-    # # Save information for report if table is not requested:
-    #
-    # observe({
-    #   req(rv$active_tab == 'hr',
-    #       rv$is_analyses)
-    #
-    #   req(is.null(rv$hr$tbl))
-    #   rv$report_hr_yn <- FALSE
-    #
-    #   if (!is.null(rv$hrErr_new)) {
-    #     req(rv$hrErr_new)
-    #     rv$report_hr_yn <- TRUE
-    #     rv$hr$tbl <- hrRow_new()
-    #   }
-    #
-    # }) %>% # end of observe,
-    #   bindEvent(list(input$run_hr, input$run_hr_new))
     
   }) # end of moduleServer
 }

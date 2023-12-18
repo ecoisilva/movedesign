@@ -49,8 +49,18 @@ mod_comp_settings_ui <- function(id){
                        "font-size: 15px;",
                        "letter-spacing: 0.5px;")),
         value = TRUE),
+      br(),
+      shinyWidgets::autonumericInput(
+        inputId = ns("ncores"),
+        label = "Number of cores:",
+        currencySymbol = " core(s)",
+        currencySymbolPlacement = "s",
+        decimalPlaces = 0,
+        minimumValue = 1,
+        maximumValue = 32,
+        value = 1, wheelStep = 1),
       br()
-
+      
     ) # end of column
   ) # end of tagList
 }
@@ -71,7 +81,6 @@ mod_comp_settings_server <- function(id, rv) {
     }) %>% bindEvent(input$parallel)
 
     # observe({
-    # 
     # }) %>% bindEvent(input$lang_select)
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
@@ -79,7 +88,7 @@ mod_comp_settings_server <- function(id, rv) {
     output$text_save <- renderUI({
       
       out_text <- "Save all stored values to your local environment."
-      if (is.null(rv$data0)) {
+      if (is.null(rv$dataList)) {
         out_text <- paste(
           "Return here after running any analyses to save",
           "all stored values to your local environment.")
@@ -90,6 +99,21 @@ mod_comp_settings_server <- function(id, rv) {
       
     }) # end of output, "text_save"
     
+    ## Update number of cores: --------------------------------------------
+    
+    observe({
+      
+      num_cores <- parallel::detectCores(logical = FALSE)
+      
+      shinyWidgets::updateAutonumericInput(
+        session = session,
+        inputId = "ncores",
+        label = span("Number of cores:", class = "cl-wht"),
+        value = num_cores)
+      
+    }) %>% # end of observe,
+      bindEvent(rv$parallel)
+    
     # SETTINGS ------------------------------------------------------------
     ## Save settings/values (for next session): ---------------------------
     
@@ -98,7 +122,7 @@ mod_comp_settings_server <- function(id, rv) {
         paste0("movedesign-settings_", Sys.Date(), ".rds")
       },
       content = function(file) {
-        if (is.null(rv$data0)) {
+        if (is.null(rv$simList)) {
           shiny::showNotification(
             "No data to save", type = "error", duration = 8)
         } else { saveRDS(reactiveValuesToList(rv), file = file) }

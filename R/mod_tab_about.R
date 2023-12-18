@@ -138,49 +138,54 @@ mod_tab_about_ui <- function(id) {
                                 style = "color: var(--danger);")),
                   individual = TRUE),
                 
-                # div(class = "btn-nobg",
-                # shinyWidgets::radioGroupButtons(
-                #   inputId = ns("which_m"),
-                #   label = span("Devices deployed:",
-                #                style = "font-size: 16px;"),
-                #   choiceNames = c(
-                #     tagList(span(em(
-                #       '"I have a specific number in mind."'))), 
-                #     tagList(span(em(
-                #       '"I want to determine the',
-                #       span("optimal", class = "cl-sea"),
-                #       'number of devices."')))),
-                #   choiceValues = list("set_m", "get_m"),
-                #   selected = character(0),
-                #   checkIcon = list(
-                #     yes = tags$i(class = "fa fa-check-square",
-                #                  style = "color: var(--sea);"),
-                #     no = tags$i(class = "fa fa-square-o",
-                #                 style = "color: var(--danger);")),
-                #   direction = "vertical")),
-                # 
-                # div(class = "btn-nobg",
-                # shinyWidgets::radioGroupButtons(
-                #   inputId = ns("which_meta"),
-                #   label = span("Target:",
-                #                style = "font-size: 16px;"),
-                #   choiceNames = c(
-                #     tagList(span(
-                #       "Mean of",
-                #       span("sampled population", 
-                #            class = "cl-sea"))), 
-                #     tagList(span(
-                #       "Compare", span("two", class = "cl-sea"),
-                #       "sampled populations"))),
-                #   choiceValues = list("mean", "compare"),
-                #   selected = character(0),
-                #   checkIcon = list(
-                #     yes = tags$i(class = "fa fa-check-square",
-                #                  style = "color: var(--sea);"),
-                #     no = tags$i(class = "fa fa-square-o",
-                #                 style = "color: var(--danger);")),
-                #   direction = "vertical"))
+                div(class = "btn-nobg",
+                    shinyWidgets::radioGroupButtons(
+                      inputId = ns("which_meta"),
+                      label = span("Analytical target:",
+                                   style = "font-size: 16px;"),
+                      choiceNames = c(
+                        tagList(span(
+                          "Single", span("individual",
+                                         class = "cl-sea"))),
+                        tagList(span(
+                          "Mean of",
+                          span("sampled population",
+                               class = "cl-sea"))),
+                        tagList(span(
+                          "Compare", span("two", class = "cl-sea"),
+                          "sampled populations"))),
+                      choiceValues = list("none", "mean", "compare"),
+                      selected = character(0),
+                      checkIcon = list(
+                        yes = tags$i(class = "fa fa-check-square",
+                                     style = "color: var(--sea);"),
+                        no = tags$i(class = "fa fa-square-o",
+                                    style = "color: var(--danger);")),
+                      direction = "vertical")),
                 
+                div(class = "btn-nobg",
+                    shinyWidgets::radioGroupButtons(
+                      inputId = ns("which_m"),
+                      label = span("Deployment:",
+                                   style = "font-size: 16px;"),
+                      choiceNames = c(
+                        tagList(span(em(
+                          '"I plan to deploy a',
+                          span("set", class = "cl-jgl"),
+                          'number of VHF/GPS tags."'))),
+                        tagList(span(em(
+                          '"I want to determine the',
+                          span("minimum", class = "cl-jgl"),
+                          'number of VHF/GPS tags."')))),
+                      choiceValues = list("set_m", "get_m"),
+                      selected = character(0),
+                      checkIcon = list(
+                        yes = tags$i(class = "fa fa-check-square",
+                                     style = "color: var(--jungle);"),
+                        no = tags$i(class = "fa fa-square-o",
+                                    style = "color: var(--danger);")),
+                      direction = "vertical"))
+            
             ) # end of div
           ) # end of fluidRow
 
@@ -269,12 +274,14 @@ mod_tab_about_server <- function(id, rv) {
     observe({
       rv$which_data <- input$which_data
       rv$which_question <- input$which_question
-    }, label = "o-about_questions")
+      rv$which_meta <- input$which_meta
+      
+      req(input$which_m)
+    }, label = "o-about_workflow")
     
     observe({
-      rv$which_meta <- input$which_meta
-    }, label = "o-about_meta")
-    
+      rv$which_m <- input$which_m
+    }, label = "o-about_m")
     
     observe({
       rv$overwrite_active <- input$overwrite_active
@@ -282,12 +289,45 @@ mod_tab_about_server <- function(id, rv) {
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
-    # observe({
-    #   shinyWidgets::updateCheckboxGroupButtons(
-    #     session = session,
-    #     inputId = "which_question",
-    #     selected = rv$which_question)
-    # }, label = "o-about_update")
+    shinyjs::hide(id = "which_m")
+    shinyjs::hide(id = "num_tags")
+    shinyjs::hide(id = "num_tags_max")
+    
+    observe({
+      if (rv$which_meta == "none") shinyjs::hide(id = "which_m")
+      else shinyjs::show(id = "which_m")
+      
+    }) %>% # end of observe,
+      bindEvent(rv$which_meta)
+    
+    observe({
+      req(rv$which_m, rv$which_question)
+      if (rv$which_m == "get_m" && 
+          length(rv$which_question) == 2) {
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Warning",
+          text = tagList(span(
+            "Searching for the", span("minimum", class = "cl-jgl"),
+            "number of VHF/GPS tags is an iterative process.",
+            "Currently, this option only allows for one",
+            span("research question", class = "cl-dgr"),
+            "at a time. Please select either 'Home range' or",
+            "'Speed & distance' (but not both) to proceed.")),
+          confirmButtonText = "Dismiss",
+          html = TRUE,
+          size = "xs")
+        
+        # shinyWidgets::updateCheckboxGroupButtons(
+        #   session = session,
+        #   inputId = "which_question",
+        #   selected = character(0))
+        
+        rv$which_question <- NULL
+      }
+      
+    }) # end of observe
     
     observe({
       req(input$which_meta)
@@ -303,11 +343,11 @@ mod_tab_about_server <- function(id, rv) {
             "target estimate (e.g.,",
             wrap_none(span("home range", class = "cl-dgr"), ", ",
                       span("speed and distance", class = "cl-dgr"),
-            ").")
-          )),
+            ")."))),
           html = TRUE,
           size = "xs")
       }
+      
     }) # end of observe
     
     
@@ -341,6 +381,7 @@ mod_tab_about_server <- function(id, rv) {
       restored_vals <- readRDS(
         file = paste(input$restore_state$datapath))
       rv$restored_vals <- restored_vals
+      rv$overwrite_all <- TRUE
 
       shiny::showModal(
         shiny::modalDialog(
@@ -348,9 +389,11 @@ mod_tab_about_server <- function(id, rv) {
 
           p("Data status:"),
           p("Type:", rv$restored_vals$"data_type"),
-
-          p("Parameters:"),
-          p("Seed:", rv$restored_vals$"seed0"),
+          p("Number of simulations:", 
+            length(rv$restored_vals$"simList")),
+          
+          # p("Parameters:"),
+          # p("Seed:", rv$restored_vals$"seed0"),
 
           footer = tagList(
             modalButton("Dismiss")

@@ -600,7 +600,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           detail = "Origin location and time added.")
       }
       
-      newdat <- telemetry_as_df(out_dataset)
+      newdat <- telemetry_as_df(dataList)
       
       if(all(is.na(newdat$x),
              is.na(newdat$y))) {
@@ -623,8 +623,8 @@ mod_tab_data_upload_server <- function(id, rv) {
                                       action = "toggle")
       }
       
-      if (class(out_dataset)[1] != "list" && 
-          class(out_dataset[[1]])[1] != "ctmm")
+      if (class(dataList)[1] != "list" && 
+          class(dataList[[1]])[1] != "ctmm")
         dataList <- list(dataList)
       
       rv$datList <- dataList
@@ -718,7 +718,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       # out <- tryCatch(
       #   par.ctmm.fit(datList, guessList, parallel = rv$parallel),
-      #   error = function(e) e) # testing only
+      #   error = function(e) e) # dev only
       
       if (inherits(out, "error")) {
         msg_log(
@@ -801,10 +801,14 @@ mod_tab_data_upload_server <- function(id, rv) {
         names(fitList) <- names(rv$datList[rv$id])
         rv$fitList <- fitList
         
-      } else msg_log(
+      } else {
+        proceed <- NULL
+        msg_log(
         style = "danger",
         message = paste0("Model fit ", msg_danger("failed"), "."),
         detail = "May be due to low absolute sample size.")
+        req(proceed)
+      }
       
       req(rv$fitList)
       
@@ -964,17 +968,20 @@ mod_tab_data_upload_server <- function(id, rv) {
           wrap_none(span("parameters", class = "cl-sea"),
                     span("...", style = "color: #797979;"))))
       
-      rv$sigma0 <- extract_pars(
-        obj = fit0, data = dat0, name = "sigma", meta = get_meta)[[1]]
-      rv$tau_p0 <- extract_pars(
-        obj = fit0, name = "position", meta = get_meta)[[1]]
-      rv$tau_v0 <- extract_pars(
-        obj = fit0, name = "velocity", meta = get_meta)[[1]]
-      rv$speed0 <- extract_pars(
-        obj = fit0, name = "speed", meta = get_meta)[[1]]
+      rv$sigma <- extract_pars(
+        obj = fit0, data = dat0, name = "sigma", meta = get_meta)
+      rv$tau_p <- extract_pars(
+        obj = fit0, name = "position", meta = get_meta)
+      rv$tau_v <- extract_pars(
+        obj = fit0, name = "velocity", meta = get_meta)
+      rv$speed <- extract_pars(
+        obj = fit0, name = "speed", meta = get_meta)
       
-      if (length(rv$id) == 1) rv$mu0 <- fit0[[1]]$mu
-      else rv$mu0 <- array(0, dim = 2, dimnames = list(c("x", "y")))
+      if (rv$grouped) rv$proceed <- TRUE
+      
+      if (length(rv$id) == 1) rv$mu <- list(fit0[[1]]$mu)
+      else rv$mu <- list(array(0, dim = 2, 
+                               dimnames = list(c("x", "y"))))
       
       rv$svfList <- extract_svf(dat0, fit0)
       
@@ -1009,7 +1016,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           text = tagList(span(
             "Proceed to the", br(),
             icon("stopwatch", class = "cl-mdn"),
-            span("Tracking regime", class = "cl-mdn"), "tab."
+            span("Sampling design", class = "cl-mdn"), "tab."
           )),
           html = TRUE,
           size = "xs")
@@ -1027,6 +1034,62 @@ mod_tab_data_upload_server <- function(id, rv) {
       
     }) %>% # end of observe, then:
       bindEvent(input$uploadButton_extract)
+    
+    ## Extract parameters for groups: -------------------------------------
+    
+    observe({
+      req(rv$proceed,
+          rv$which_question,
+          rv$data_type == "uploaded",
+          rv$active_tab == 'data_upload')
+      req(rv$datList, rv$fitList, rv$groups, rv$is_valid)
+      req(length(rv$sigma) == 1)
+      
+      dat <- list(A = rv$datList[rv$groups[[1]]$A],
+                  B = rv$datList[rv$groups[[1]]$B])
+      fit <- list(A = rv$fitList[rv$groups[[1]]$A],
+                  B = rv$fitList[rv$groups[[1]]$B])
+      
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]], data = dat[[x]], 
+          name = "sigma", meta = TRUE)[[1]]
+      }) %>% c(rv$sigma, .) -> rv$sigma
+      names(rv$sigma) <- c("All", "A", "B") 
+      
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]], 
+          name = "position", meta = TRUE)[[1]]
+      }) %>% c(rv$tau_p, .) -> rv$tau_p
+      names(rv$tau_p) <- c("All", "A", "B") 
+      
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]], 
+          name = "velocity", meta = TRUE)[[1]]
+      }) %>% c(rv$tau_v, .) -> rv$tau_v
+      names(rv$tau_v) <- c("All", "A", "B") 
+      
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]],
+          name = "speed", meta = TRUE)[[1]]
+      }) %>% c(rv$speed, .) -> rv$speed
+      names(rv$speed) <- c("All", "A", "B") 
+      
+      rv$mu <- list(array(0, dim = 2, 
+                          dimnames = list(c("x", "y"))),
+                    array(0, dim = 2, 
+                          dimnames = list(c("x", "y"))),
+                    array(0, dim = 2, 
+                          dimnames = list(c("x", "y"))))
+      names(rv$mu) <- c("All", "A", "B")
+      
+      rv$proceed <- NULL
+      
+    }) %>% # end of observe,
+      bindEvent(rv$proceed)
     
     # BLOCKS --------------------------------------------------------------
     ## Tracking regime: ---------------------------------------------------

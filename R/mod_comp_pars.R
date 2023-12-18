@@ -89,33 +89,18 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     observe({
-      if ("Home range" %in% rv$which_question) {
-        
-        out <- out_hr <- shinyWidgets::pickerInput(
-          inputId = ns("highlight_dur"),
-          label = span("Sampling duration (in days):",
-                       class = "txt-label"),
-          choices = 2^seq(1, 12, by = 1),
-          options = list(title = "(select here)"),
-          width = "200px")
-      }
+      req(length(rv$which_question) == 1)
       
-      if ("Speed & distance" %in% rv$which_question) {
-        
-        dat <- movedesign::sims_speed[[2]]
-        out <- out_sd <- shinyWidgets::pickerInput(
-          inputId = ns("highlight_dti"),
-          label = span("Sampling interval:",
-                       class = "txt-label"),
-          choices = dat$dti_notes %>% unique,
-          options = list(title = "(select here)"),
-          width = "200px")
-      }
-      
-      if (length(rv$which_question) > 1)
-        shinyjs::hide(id = "parInput_type")
-      
-    }) %>% bindEvent(rv$which_question)
+      if (rv$which_question == "Home range")
+        shinyWidgets::updateRadioGroupButtons(
+          inputId = "parInput_type",
+          selected = "tau_p")
+      else if (rv$which_question == "Speed & distance")
+        shinyWidgets::updateRadioGroupButtons(
+          inputId = "parInput_type",
+          selected = "tau_v")
+
+    }) # end of observe
     
     observe({
       req(rv$species, rv$datList)
@@ -214,7 +199,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
                         inputId = "parTabs",
                         selected = ns("parPanel_all"))
       
-      if (!is.null(rv$is_valid) && !is.null(rv$sigma0)) {
+      if (!is.null(rv$is_valid) && !is.null(rv$sigma)) {
         showTab(inputId = "vizTabs_viz",
                 target = ns("parPanel_individual"))
         updateTabsetPanel(session,
@@ -228,8 +213,8 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     ## Rendering parameters for all individuals: --------------------------
     
     output$parPlot_all <- ggiraph::renderGirafe({
-      req(rv$datList, rv$fitList, input$parInput_type)
-      req(length(rv$fitList) > 1)
+      req(rv$which_question, input$parInput_type)
+      req(rv$datList, length(rv$fitList) > 1)
       
       datList <- rv$datList
       fitList <- rv$fitList
@@ -237,16 +222,16 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         if (length(rv$id) != 0) {
           datList <- datList[rv$id]
           fitList <- fitList[rv$id]
-        } 
-      
-      is_grouped <- !is.null(rv$groups)
+        }
       
       if (input$parInput_type == "tau_p") {
         name <- "position"
-        x_label <- "Position autocorrelation (in " }
+        x_label <- "Position autocorrelation (in " 
+      }
       if (input$parInput_type == "tau_v") {
         name <- "velocity"
-        x_label <- "Velocity autocorrelation (in " }
+        x_label <- "Velocity autocorrelation (in "
+      }
       
       capture_meta(fitList, 
                    variable = paste("tau", name),
@@ -274,11 +259,11 @@ mod_comp_pars_server <- function(id, rv, set_type) {
           est  = pars$unit[1] %#% out[1, 2],
           high = pars$unit[1] %#% out[1, 3])
       
-      if (is_grouped) {
+      if (rv$grouped) {
         pars <- pars %>%
           dplyr::mutate(group = dplyr::case_when(
-            m %in% unlist(rv$groups["A"]) ~ "Group A",
-            m %in% unlist(rv$groups["B"]) ~ "Group B",
+            m %in% unlist(rv$groups[[1]]["A"]) ~ "Group A",
+            m %in% unlist(rv$groups[[1]]["B"]) ~ "Group B",
             TRUE ~ ""))
         x_color <- c(pal$sea, "black", "grey50")
         f <- .65
@@ -297,7 +282,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         ggplot2::geom_point(size = 3) +
         ggplot2::geom_linerange(ggplot2::aes(xmin = low,
                                              xmax = high)) +
-        { if (is_grouped)
+        { if (rv$grouped)
           ggplot2::facet_wrap(group ~ ., dir = "v",
                               scales = "free_y") } +
         
@@ -307,7 +292,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         
         theme_movedesign() +
         
-        { if (!is_grouped)
+        { if (!rv$grouped)
           ggplot2::theme(axis.text.y =
                            ggplot2::element_text(
                              color = x_axis_color)) %>%
@@ -336,7 +321,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     ## Movement process: --------------------------------------------------
     
     output$parBlock_process <- shiny::renderUI({
-      req(rv$fitList, rv$mu0)
+      req(rv$fitList)
       
       # set_id <- input$parInput_id
       
@@ -383,13 +368,13 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     ## Timescale parameters: ----------------------------------------------
     
     observe({
-      req(rv$tau_p0)
+      req(rv$tau_p)
       
       mod_blocks_server(
         id = "parBlock_taup", 
-        rv = rv, type = "tau", name = "tau_p0",
+        rv = rv, type = "tau", name = "tau_p",
         input_name = list(
-          chr = "data_taup0",
+          chr = "data_taup",
           html = wrap_none("Position autocorrelation ",
                            "(\u03C4", tags$sub("p"), ")")),
         input_modal = paste0("modal_taup_", set_type))
@@ -397,13 +382,13 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     }) # end of observe
     
     observe({
-      req(rv$tau_v0)
+      req(rv$tau_v)
       
       mod_blocks_server(
         id = "parBlock_tauv",
-        rv = rv, type = "tau", name = "tau_v0",
+        rv = rv, type = "tau", name = "tau_v",
         input_name = list(
-          chr = "data_tauv0",
+          chr = "data_tauv",
           html = wrap_none("Velocity autocorrelation ",
                            "(\u03C4", tags$sub("v"), ")")),
         input_modal = paste0("modal_tauv_", set_type))
@@ -413,13 +398,13 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     ## Location variance: -------------------------------------------------
     
     observe({
-      req(rv$sigma0)
+      req(rv$sigma)
       
       mod_blocks_server(
         id = "parBlock_sigma",
-        rv = rv, type = "sigma", name = "sigma0",
+        rv = rv, type = "sigma", name = "sigma",
         input_name = list(
-          chr = "data_sigma0",
+          chr = "data_sigma",
           html = wrap_none("Location variance ",
                            "(\u03C3", tags$sub("p"), ")")),
         input_modal = paste0("modal_sigma_", set_type))
@@ -429,13 +414,13 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     ## Speed: -------------------------------------------------------------
     
     observe({
-      req(rv$speed0)
+      req(rv$speed)
       
       mod_blocks_server(
         id = "parBlock_speed",
-        rv = rv, type = "speed", name = "speed0",
+        rv = rv, type = "speed", name = "speed",
         input_name = list(
-          chr = "data_speed0",
+          chr = "data_speed",
           html = wrap_none("Velocity variance (\u03C3", 
                            tags$sub("v"), ")")), 
         input_modal = paste0("modal_speed_", set_type))

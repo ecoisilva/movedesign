@@ -382,9 +382,9 @@ mod_tab_report_server <- function(id, rv) {
     
     observe({
       req(rv$active_tab == 'report')
-      req(rv$tau_p0, rv$dur$value, rv$dur$unit)
+      req(rv$tau_p[[1]], rv$dur$value, rv$dur$unit)
       
-      input_taup <- "days" %#% rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+      input_taup <- "days" %#% rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       
       dat <- movedesign::sims_hrange[[1]] %>%
@@ -414,7 +414,8 @@ mod_tab_report_server <- function(id, rv) {
       req(input$highlight_dur > 0)
       shinyjs::show(id = "end_comparison")
       
-      input_taup <- "days" %#% rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+      input_taup <- "days" %#% rv$tau_p[[1]]$value[2] %#%
+        rv$tau_p[[1]]$unit[2]
       
       dat <- movedesign::sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
@@ -444,9 +445,9 @@ mod_tab_report_server <- function(id, rv) {
     
     observe({
       req(rv$active_tab == 'report')
-      req(rv$tau_v0, rv$dti$value, rv$dti$unit)
+      req(rv$tau_v, rv$dti$value, rv$dti$unit)
       
-      input_tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
+      input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
@@ -478,7 +479,7 @@ mod_tab_report_server <- function(id, rv) {
       req(input$highlight_dti > 0)
       shinyjs::show(id = "end_comparison")
       
-      input_tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
+      input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       
       dat <- movedesign::sims_speed[[1]]
       
@@ -601,23 +602,23 @@ mod_tab_report_server <- function(id, rv) {
       
       # Characteristic timescales:
       
-      tau_p <- rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
-      tau_v <- ifelse(is.null(rv$tau_v0), 0,
-                      rv$tau_v0$value[2] %#% rv$tau_v0$unit[2])
+      tau_p <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
+      tau_v <- ifelse(is.null(rv$tau_v[[1]]), 0,
+                      rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2])
       
       # Ideal sampling design:
       
       ideal_dur <- fix_unit(tau_p * 30, "seconds", convert = TRUE)
       dur_unit <- ideal_dur$unit
       
-      if (is.null(rv$tau_v0)) {
+      if (is.null(rv$tau_v[[1]])) {
         ideal_dti <- data.frame(value = Inf, unit = "days")
       } else {
-        ideal_dti <- fix_unit(rv$tau_v0$value[2],
-                              rv$tau_v0$unit[2], convert = TRUE)
+        ideal_dti <- fix_unit(rv$tau_v[[1]]$value[2],
+                              rv$tau_v[[1]]$unit[2], convert = TRUE)
       }
       
-      dti_unit <- ifelse(is.null(rv$tau_v0), "days", ideal_dti$unit)
+      dti_unit <- ifelse(is.null(rv$tau_v[[1]]), "days", ideal_dti$unit)
       
       # Current sampling design:
       
@@ -745,22 +746,22 @@ mod_tab_report_server <- function(id, rv) {
       
       # Characteristic timescales:
       
-      tau_p <- rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
-      tau_v <- ifelse(is.null(rv$tau_v0), 0,
-                      rv$tau_v0$value[2] %#% rv$tau_v0$unit[2])
+      tau_p <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
+      tau_v <- ifelse(is.null(rv$tau_v[[1]]), 0,
+                      rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2])
       
       # Sampling design:
       
       ideal_dur <- fix_unit(tau_p * 30, "seconds", convert = TRUE)
       dur_unit <- ideal_dur$unit
       
-      if (is.null(rv$tau_v0)) {
+      if (is.null(rv$tau_v[[1]])) {
         ideal_dti <- data.frame(value = Inf, unit = "days")
       } else {
-        ideal_dti <- fix_unit(rv$tau_v0$value[2],
-                              rv$tau_v0$unit[2], convert = TRUE)
+        ideal_dti <- fix_unit(rv$tau_v[[1]]$value[2],
+                              rv$tau_v[[1]]$unit[2], convert = TRUE)
       }
-      dti_unit <- ifelse(is.null(rv$tau_v0), "days", ideal_dti$unit)
+      dti_unit <- ifelse(is.null(rv$tau_v[[1]]), "days", ideal_dti$unit)
       
       dur <- dur_unit %#% rv$dur$value %#% rv$dur$unit
       dur <- fix_unit(dur, dur_unit)
@@ -771,7 +772,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if ("Home range" %in% rv$which_question) {
         req(rv$hr_HDI, rv$hrErr)
-        
+       
         hrCI <- c(round(rv$hr_HDI$CI_low * 100, 1),
                   round(rv$hr_HDI$CI * 100, 0),
                   round(rv$hr_HDI$CI_high * 100, 1))
@@ -1184,9 +1185,10 @@ mod_tab_report_server <- function(id, rv) {
                 #                   "color: black;",
                 #                   "padding: 0;",
                 #                   "margin: -5px 0 0 0;")) %>%
-                #     bsplus::bs_attach_modal(id_modal = "modal_precision")
+                #     bsplus::bs_attach_modal(
+                #       id_modal = "modal_precision")
                 # ), # end of fluidRow
-                
+
                 ggiraph::girafeOutput(
                   outputId = ns("repPlot_precision"),
                   width = "100%", height = "100%"),
@@ -1240,7 +1242,8 @@ mod_tab_report_server <- function(id, rv) {
                 #                   "color: black;",
                 #                   "padding: 0;",
                 #                   "margin: -5px 0 0 0;")) %>%
-                #     bsplus::bs_attach_modal(id_modal = "modal_precision")
+                #     bsplus::bs_attach_modal(
+                #       id_modal = "modal_precision")
                 # ), # end of fluidRow
                 
                 ggiraph::girafeOutput(
@@ -1279,8 +1282,8 @@ mod_tab_report_server <- function(id, rv) {
           "and with low", "but with high")
         
         ideal_dur <- fix_unit(
-          ("days" %#% rv$tau_p0$value[2] %#%
-             rv$tau_p0$unit[2]) * 10,
+          ("days" %#% rv$tau_p[[1]]$value[2] %#%
+             rv$tau_p[[1]]$unit[2]) * 10,
           "days")
         
         if (highlighted_dur >= ideal_dur$value) {
@@ -1334,8 +1337,8 @@ mod_tab_report_server <- function(id, rv) {
           "and with low", "but with high")
         
         ideal_dti <- fix_unit(
-          (rv$tau_v0$value[2] %#% 
-             rv$tau_v0$unit[2]) / 3, "seconds")
+          (rv$tau_v[[1]]$value[2] %#% 
+             rv$tau_v[[1]]$unit[2]) / 3, "seconds")
         
         if (highlighted_dti <= ideal_dti$value) {
           out_comp <- out_comp_sd <-
@@ -1388,11 +1391,11 @@ mod_tab_report_server <- function(id, rv) {
     
     output$repPlotLegend1 <- renderUI({
       req(rv$which_question, input$ci,
-          rv$tau_p0, rv$tau_v0, rv$dur, rv$dti)
+          rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
       
       input_taup <- "days" %#% 
-        rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
-      input_tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
+        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
+      input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
@@ -1462,9 +1465,9 @@ mod_tab_report_server <- function(id, rv) {
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
-              "This plot shows the probability density of estimate errors",
-              "based on 400 simulations for a sampling duration of", 
-              dur_for_hr, "days,", "with the median",
+              "This plot shows the probability density of estimate",
+              "errors based on 400 simulations for a sampling duration", 
+              "of", dur_for_hr, "days,", "with the median",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
                 " in ", span("light blue", class = "cl-sea"), "),"),
@@ -1482,9 +1485,9 @@ mod_tab_report_server <- function(id, rv) {
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
-              "This plot shows the probability density of estimate errors",
-              "based on 400 simulations for a sampling interval of", 
-              wrap_none(dti_for_sd, ","), "with the median",
+              "This plot shows the probability density of estimate",
+              "errors based on 400 simulations for a sampling interval", 
+              "of", wrap_none(dti_for_sd, ","), "with the median",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
                 " in ", span("light blue", class = "cl-sea"), "),"),
@@ -1517,7 +1520,7 @@ mod_tab_report_server <- function(id, rv) {
       input_ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       
       input_taup <- "days" %#% 
-        rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       
       is_both <- FALSE
@@ -1755,7 +1758,7 @@ mod_tab_report_server <- function(id, rv) {
     #### Accuracy of speed & distance simulations: ------------------------
     
     observe({
-      req(rv$simList, rv$tau_v0,
+      req(rv$simList, rv$tau_v[[1]],
           rv$dur, rv$dti,
           input$ci, rv$which_question)
       
@@ -1771,7 +1774,7 @@ mod_tab_report_server <- function(id, rv) {
       req("Speed & distance" %in% rv$which_question)
       input_ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       
-      input_tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
+      input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
@@ -2047,10 +2050,10 @@ mod_tab_report_server <- function(id, rv) {
     
     output$repPlotLegend2 <- renderUI({
       req(rv$which_question, input$ci,
-          rv$tau_p0, rv$tau_v0, rv$dur, rv$dti)
+          rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
       
       input_taup <- "days" %#% 
-        rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
@@ -2447,11 +2450,11 @@ mod_tab_report_server <- function(id, rv) {
     
     output$repPlotLegend3 <- renderUI({
       req(rv$which_question, 
-          input$ci, rv$tau_p0, rv$tau_v0, rv$dur, rv$dti)
+          input$ci, rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
       req(length(rv$which_question) == 1)
       
       input_taup <- "days" %#%
-        rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
@@ -2521,7 +2524,7 @@ mod_tab_report_server <- function(id, rv) {
         "color: #fff;")
       
       input_taup <- "days" %#% 
-        rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       
       dat <- movedesign::sims_hrange[[2]] %>%
@@ -2654,7 +2657,7 @@ mod_tab_report_server <- function(id, rv) {
         "padding: 5px;",
         "color: #fff;")
       
-      input_tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
+      input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
@@ -2842,17 +2845,17 @@ mod_tab_report_server <- function(id, rv) {
       tmpdat <- suppressMessages(dplyr::full_join(dat, tmpdat))
       
       tmpdat$taup <- paste(
-        scales::label_comma(accuracy = .1)(rv$tau_p0$value[2]),
-        abbrv_unit(rv$tau_p0$unit[2]))
+        scales::label_comma(accuracy = .1)(rv$tau_p[[1]]$value[2]),
+        abbrv_unit(rv$tau_p[[1]]$unit[2]))
       
-      if (!is.null(rv$tau_v0)) {
+      if (!is.null(rv$tau_v[[1]])) {
         tmpdat$tauv <- paste(
-          scales::label_comma(accuracy = .1)(rv$tau_v0$value[2]),
-          abbrv_unit(rv$tau_v0$unit[2]))
+          scales::label_comma(accuracy = .1)(rv$tau_v[[1]]$value[2]),
+          abbrv_unit(rv$tau_v[[1]]$unit[2]))
       }
       
-      out <- fix_unit(rv$sigma0$value[2],
-                      rv$sigma0$unit[2], convert = TRUE)
+      out <- fix_unit(rv$sigma[[1]]$value[2],
+                      rv$sigma[[1]]$unit[2], convert = TRUE)
       tmpdat$sigma <- paste(out$value, abbrv_unit(out$unit))
       
       if ("Home range" %in% rv$which_question) {
@@ -3147,11 +3150,11 @@ mod_tab_report_server <- function(id, rv) {
     ## Timescale parameters: ----------------------------------------------
     
     observe({
-      req(rv$tau_p0)
+      req(rv$tau_p[[1]])
       
       mod_blocks_server(
         id = "repBlock_taup", 
-        rv = rv, type = "tau", name = "tau_p0",
+        rv = rv, type = "tau", name = "tau_p",
         input_name = list(
           chr = "data_taup0",
           html = wrap_none("Position autocorrelation ",
@@ -3160,11 +3163,11 @@ mod_tab_report_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      req(rv$tau_v0)
+      req(rv$tau_v[[1]])
       
       mod_blocks_server(
         id = "repBlock_tauv",
-        rv = rv, type = "tau", name = "tau_v0",
+        rv = rv, type = "tau", name = "tau_v",
         input_name = list(
           chr = "data_tauv0",
           html = wrap_none("Velocity autocorrelation ",
@@ -3175,11 +3178,11 @@ mod_tab_report_server <- function(id, rv) {
     ## Location variance: -------------------------------------------------
     
     observe({
-      req(rv$sigma0)
+      req(rv$sigma[[1]])
       
       mod_blocks_server(
         id = "repBlock_sigma",
-        rv = rv, type = "sigma", name = "sigma0",
+        rv = rv, type = "sigma", name = "sigma",
         input_name = list(
           chr = "data_sigma0",
           html = wrap_none("Location variance ",

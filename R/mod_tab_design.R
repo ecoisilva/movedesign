@@ -348,7 +348,7 @@ mod_tab_design_ui <- function(id) {
             #   
             #   shiny::actionButton(
             #     inputId = ns("devButton_save"),
-            #     icon = icon("bookmark"),
+            #     icon = icon("eye"),
             #     label = span("Show", span("table", class = "cl-sea")),
             #     width = "110px")) # end of footer
             
@@ -441,7 +441,6 @@ mod_tab_design_ui <- function(id) {
                     #       inputId = ns("dev_nsim"),
                     #       label = "Show simulation no.:",
                     #       choices = seq(1, 100, by = 1))),
-                    # p(),
                     
                     ggiraph::girafeOutput(
                       outputId = ns("devPlot_id"),
@@ -486,7 +485,7 @@ mod_tab_design_ui <- function(id) {
                         label = span(
                           "Add", span("model fit", class = "cl-sea"),
                           "to variogram", icon("wrench")),
-                        value = FALSE)
+                        value = TRUE)
                       
                     ) # end of column
                     
@@ -669,7 +668,7 @@ mod_tab_design_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'device',
           rv$which_question,
-          rv$tau_p0,
+          rv$tau_p,
           rv$dur,
           rv$dti,
           input$est_type)
@@ -677,7 +676,7 @@ mod_tab_design_server <- function(id, rv) {
       n <- NULL
       N1 <- NULL
       
-      taup <- rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+      taup <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       
       dur <- rv$dur$value %#% rv$dur$unit
       dti <- rv$dti$value %#% rv$dti$unit
@@ -700,6 +699,8 @@ mod_tab_design_server <- function(id, rv) {
         
       } else if (input$est_type == 2 && !is.null(rv$simfitList)) {
         req(rv$simList, rv$simfitList)
+        req(length(rv$simList) == length(rv$simfitList))
+        
         rv$is_fitted <- "Yes"
         
         rv$dev$n <- lapply(seq_along(rv$simList), function(x)
@@ -720,7 +721,7 @@ mod_tab_design_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'device',
           rv$which_question,
-          rv$tau_v0,
+          rv$tau_v[[1]],
           rv$dur,
           rv$dti,
           input$est_type)
@@ -728,7 +729,7 @@ mod_tab_design_server <- function(id, rv) {
       n <- NULL
       N2 <- NULL
       
-      tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
+      tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       
       dur <- rv$dur$value %#% rv$dur$unit
       dti <- rv$dti$value %#% rv$dti$unit
@@ -756,6 +757,7 @@ mod_tab_design_server <- function(id, rv) {
         
       } else if (input$est_type == 2 && !is.null(rv$simfitList)) {
         req(rv$simList, rv$simfitList)
+        req(length(rv$simList) == length(rv$simfitList))
         rv$is_fitted <- "Yes"
         
         rv$dev$n <- lapply(seq_along(rv$simList), function(x)
@@ -814,7 +816,7 @@ mod_tab_design_server <- function(id, rv) {
     observe({ ### Reveal species & device parameters box:
       req(rv$active_tab == 'device')
       
-      if (!is.null(rv$tau_p0) & !is.null(rv$tau_v0)) {
+      if (!is.null(rv$tau_p[[1]]) & !is.null(rv$tau_v[[1]])) {
         shinyjs::show(id = "devBox_pars")
       } else { shinyjs::hide(id = "devBox_pars") }
       
@@ -920,6 +922,42 @@ mod_tab_design_server <- function(id, rv) {
         shinyjs::hide(id = "device_max") }
       
     }) # end of observe
+    
+    ## Update based on number of simulations: -----------------------------
+    
+    # observe({
+    #   req(rv$simList,
+    #       rv$active_tab == 'device')
+    #   rv$dev_nsim <- 1
+    #   
+    #   if (length(rv$simList) == 1) {
+    #     shinyjs::hide(id = "dev_nsim")
+    #     
+    #   } else {
+    #     shinyjs::show(id = "dev_nsim")
+    #     div(class = "sims-irs",
+    #         shinyWidgets::updateSliderTextInput(
+    #           session = session,
+    #           inputId = "dev_nsim",
+    #           label = "Show simulation no.:",
+    #           choices = seq(1, length(rv$simList), by = 1),
+    #           selected = length(rv$simList)))
+    #   }
+    #   
+    # }) %>% # end of observer
+    #   bindEvent(rv$simList)
+    # 
+    # observe({
+    #   req(rv$simList,
+    #       input$hr_nsim >= 1,
+    #       rv$active_tab == 'device')
+    #   
+    #   int <- round(input$dev_nsim, 0)
+    #   if (int %in% seq(1, length(rv$simList), 1))
+    #     rv$dev_nsim <- input$dev_nsim
+    #   
+    # }) %>% # end of observer,
+    #   bindEvent(input$dev_nsim)
     
     ## Render validate buttons: -------------------------------------------
     
@@ -1390,7 +1428,7 @@ mod_tab_design_server <- function(id, rv) {
     output$devPlotLegend <- renderUI({
       req(rv$which_question, input$gps_from_plot)
       if (length(rv$which_question) > 1) {
-        req(rv$tau_p0, rv$tau_v0)
+        req(rv$tau_p[[1]], rv$tau_v[[1]])
         
         ui <- tagList(
           fontawesome::fa("circle-exclamation", fill = pal$dgr),
@@ -1407,7 +1445,7 @@ mod_tab_design_server <- function(id, rv) {
         switch(
           rv$which_question,
           "Home range" = {
-            req(rv$tau_p0)
+            req(rv$tau_p[[1]])
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
@@ -1417,7 +1455,7 @@ mod_tab_design_server <- function(id, rv) {
               "for each sampling design; true N may differ.")
           },
           "Speed & distance" = {
-            req(rv$tau_v0)
+            req(rv$tau_v[[1]])
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
@@ -1852,8 +1890,9 @@ mod_tab_design_server <- function(id, rv) {
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
       if (rv$data_type == "simulated") {
-        fit <- rv$modList[[1]]
-      } else {
+        fit <- fitA <- rv$modList[[1]]
+        if (rv$grouped) fitB <- rv$modList[[2]]
+      } else if (rv$data_type != "simulated") {
         if (rv$indvar) {
           # TODO fix for isotropic/anisotropic
           fit <- mean(rv$fitList[rv$id]) %>% 
@@ -1863,23 +1902,52 @@ mod_tab_design_server <- function(id, rv) {
           # TODO change to tryCatch
           fit <- emulate(fit, seed = rv$seed0, fast = TRUE)
         } else {
-          # TODO fix no propagation of uncertainty
+          # TODO add propagation of uncertainty
           # (possible if fix for anisotropic is included)
           fit <- prepare_mod(
-            tau_p = rv$tau_p0[2, ],
-            tau_v = rv$tau_v0[2, ],
-            sigma = rv$sigma0[2, ],
-            mu = rv$mu0)
+            tau_p = rv$tau_p[[1]][2, ],
+            tau_v = rv$tau_v[[1]][2, ],
+            sigma = rv$sigma[[1]][2, ],
+            mu = rv$mu[[1]])
+          
+          if ("compare" %in% req(rv$which_meta)) {
+            if (length(rv$tau_p) == 3 ||
+                length(rv$tau_v) == 3 ||
+                length(rv$sigma) == 3 || length(rv$mu) == 3) {
+              fitA <- prepare_mod(
+                tau_p = rv$tau_p[[2]][2, ],
+                tau_v = rv$tau_v[[2]][2, ],
+                sigma = rv$sigma[[2]][2, ],
+                mu = rv$mu[[2]])
+              fitB <- prepare_mod(
+                tau_p = rv$tau_p[[3]][2, ],
+                tau_v = rv$tau_v[[3]][2, ],
+                sigma = rv$sigma[[3]][2, ],
+                mu = rv$mu[[3]])
+            }
+          }
         }
+        
         rv$modList <- list(fit)
+        if (rv$grouped) rv$modList_groups <- list(A = fitA, B = fitB)
       }
       
-      fit$mu[[1, "x"]] <- 0
-      fit$mu[[1, "y"]] <- 0 # recenter to 0,0
+      # fit$mu[[1, "x"]] <- 0
+      # fit$mu[[1, "y"]] <- 0 # recenter to 0,0
       
-      sim <- ctmm::simulate(fit, t = t_new, seed = rv$seed0)
-      sim <- pseudonymize(sim)
-      return(list(sim))
+      if (rv$grouped) {
+        simA <- ctmm::simulate(fitA, t = t_new, seed = rv$seed0)
+        simB <- ctmm::simulate(fitB, t = t_new, seed = rv$seed0 + 1)
+        simA <- pseudonymize(simA)
+        simB <- pseudonymize(simB)
+        sim <- list(simA, simB)
+        return(sim)
+        
+      } else {
+        sim <- ctmm::simulate(fit, t = t_new, seed = rv$seed0)
+        sim <- pseudonymize(sim)
+        return(list(sim))
+      }
       
     }) %>% # end of reactive, simulating_data()
       bindCache(c(rv$species,
@@ -1897,8 +1965,8 @@ mod_tab_design_server <- function(id, rv) {
       return(out_time)
       
     }) %>% # end of reactive, estimating_time()
-      bindCache(c(rv$tau_p0, 
-                  rv$tau_v0,
+      bindCache(c(rv$tau_p[[1]], 
+                  rv$tau_v[[1]],
                   rv$dur, 
                   rv$dti))
     
@@ -1923,12 +1991,12 @@ mod_tab_design_server <- function(id, rv) {
       #   par.ctmm.select(simList, guessList, parallel = rv$parallel),
       #   error = function(e) e)
       
-      #TODO DEV
       out <- tryCatch(
         par.ctmm.fit(simList, guessList, parallel = rv$parallel),
-        error = function(e) e)
+        error = function(e) e) #TODO DEV
       
-      return(list(out))
+      if (length(simList) == 1) return(list(out))
+      else return(out)
       
     }) %>% # end of reactive, fitting_ctmm()
       bindCache(rv$datList,
@@ -1943,13 +2011,13 @@ mod_tab_design_server <- function(id, rv) {
       req(rv$which_question,
           rv$datList,
           rv$fitList,
-          rv$sigma0,
+          rv$sigma,
           rv$dur, 
           rv$dti,
           rv$dev$is_valid)
       
-      if ("Home range" %in% rv$which_question) req(rv$tau_p0)
-      if ("Speed & distance" %in% rv$which_question) req(rv$tau_v0)
+      if ("Home range" %in% rv$which_question) req(rv$tau_p[[1]])
+      if ("Speed & distance" %in% rv$which_question) req(rv$tau_v[[1]])
       
       shinyFeedback::showToast(
         type = "info",
@@ -1974,13 +2042,24 @@ mod_tab_design_server <- function(id, rv) {
         ))
       )
       
+      if (req(rv$which_meta) == "compare")
+        req(length(rv$tau_p) == 3)
+      
       start <- Sys.time()
       simList <- simulating_data()
-      rv$seedList <- list(rv$seed0)
       
-      rv$nsims <- 1
+      if (!rv$grouped) {
+        rv$seedList <- list(rv$seed0)
+        names(simList) <- c(rv$seed0)
+      } else {
+        rv$seedList <- list(rv$seed0, rv$seed0 + 1)
+        rv$groups[[2]] <- list(A = as.character(rv$seed0), 
+                               B = as.character(rv$seed0 + 1))
+        names(simList) <- c(rv$seed0, rv$seed0 + 1)
+      }
+      rv$nsims <- NULL # length(simList)
       rv$simList <- simList
-      rv$dev$n <- list(nrow(simList[[1]]))
+      rv$dev$n <- lapply(simList, function(x) nrow(x))
       
       rv$needs_fit <- TRUE
       rv$is_analyses <- NULL
@@ -2057,8 +2136,7 @@ mod_tab_design_server <- function(id, rv) {
     
     observe({
       req(rv$dev$confirm_time)
-      
-      shinyjs::show(id = "devBox_sims")
+      fitList <- NULL
       
       msg_log(
         style = "warning",
@@ -2096,6 +2174,9 @@ mod_tab_design_server <- function(id, rv) {
       time_fit <- difftime(Sys.time(), start, units = "secs")
       
       if (!is.null(fitList)) {
+        
+        shinyjs::show(id = "devBox_sims")
+        
         msg_log(
           style = 'success',
           message = paste0("Model fit ",
@@ -2105,20 +2186,24 @@ mod_tab_design_server <- function(id, rv) {
         rv$needs_fit <- FALSE
         rv$simfitList <- fitList
         
-        rv$dev$tbl <<- rbind(
-          rv$dev$tbl, 
-          devRow(seed = rv$seed0,
-                 device = input$device_type,
-                 dur = rv$dur, dti = rv$dti,
-                 data = rv$simList[[1]], 
-                 fit = rv$simfitList[[1]])
-        )
+        lapply(seq_along(fitList), function(x) {
+          rv$dev$tbl <<- rbind(
+            rv$dev$tbl,
+            devRow(
+              seed = rv$seedList[[x]],
+              group = if (rv$grouped) names(rv$groups[[2]])[x] else NA,
+              device = input$device_type,
+              dur = rv$dur, dti = rv$dti,
+              data = rv$simList[[x]],
+              fit = rv$simfitList[[x]]))
+        })
         
         rv$report_dev_yn <- TRUE
         
         # (Re)start for every new set of sampling parameters:
         rv$akdeList <- list()
         rv$ctsdList <- list()
+        rv$pathList <- list()
         
         shinyjs::disable("devButton_run")
         shinyjs::enable("devButton_save")
@@ -2207,10 +2292,10 @@ mod_tab_design_server <- function(id, rv) {
         add_N2 <- FALSE
         
         if ("Home range" %in% rv$which_question &&
-            !is.null(rv$tau_p0)) {
+            !is.null(rv$tau_p[[1]])) {
           
           req(rv$is_valid)
-          taup <- rv$tau_p0$value[2] %#% rv$tau_p0$unit[2]
+          taup <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
           gps_sim$N_area <- gps_sim$dur_sec / taup
           
           ylim.prim <- c(0, max(gps_sim$dur))
@@ -2223,10 +2308,10 @@ mod_tab_design_server <- function(id, rv) {
         } # end of N1
         
         if ("Speed & distance" %in% rv$which_question &&
-            !is.null(rv$tau_v0)) {
+            !is.null(rv$tau_v[[1]])) {
           
           req(rv$is_valid)
-          tauv <- rv$tau_v0$value[2] %#% rv$tau_v0$unit[2]
+          tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
           gps_sim$N_speed <- NA
           
           for (i in 1:nrow(gps_sim)) {
@@ -2256,8 +2341,8 @@ mod_tab_design_server <- function(id, rv) {
         } # end of N2
         
         if (length(rv$which_question) > 1 &&
-            !is.null(rv$tau_v0) &&
-            !is.null(rv$tau_v0)) {
+            !is.null(rv$tau_v[[1]]) &&
+            !is.null(rv$tau_v[[1]])) {
           req(rv$is_valid)
           
           ylim.prim <- c(0, max(gps_sim$dur))
@@ -2459,44 +2544,85 @@ mod_tab_design_server <- function(id, rv) {
     ## Plotting new simulated data plot (xy): -----------------------------
     
     output$devPlot_id <- ggiraph::renderGirafe({
-      req(rv$datList, rv$id, rv$simList) # input$dev_nsim
+      req(rv$datList, rv$simList, rv$id)
       
-      newdat <- rv$simList[[1]] 
+      sim <- rv$simList[[1]]
       if (rv$data_type == "simulated") {
         dat <- rv$datList[[1]]
-        dat <- dat[which(dat$t <= max(newdat$t)), ]
+        dat <- dat[which(dat$t <= max(sim$t)), ]
       } else {
         dat <- as_tele_dt(rv$datList[rv$id])
       }
       
       ymin <- min(
-        min(newdat$y) - diff(range(newdat$y)) * .2,
+        min(sim$y) - diff(range(sim$y)) * .2,
         min(dat$y) - diff(range(dat$y)) * .2)
       
       ymax <- max(
-        max(newdat$y) + diff(range(newdat$y)) * .2,
+        max(sim$y) + diff(range(sim$y)) * .2,
         max(dat$y) + diff(range(dat$y)) * .2)
       
-      p <- ggplot2::ggplot() +
-        ggplot2::geom_point(
-          dat, mapping = ggplot2::aes(
-            x = x, y = y, fill = id), 
-          color = "grey90", shape = 21, size = 1.4) +
-        ggplot2::scale_fill_grey(start = .4) +
+      if (rv$grouped) {
+        sim_new <- rv$simList[[2]]
+        ymin <- min(ymin, min(sim_new$y) - diff(range(sim_new$y)) * .2)
+        ymax <- max(ymax, max(sim_new$y) + diff(range(sim_new$y)) * .2)
         
-        ggplot2::geom_path(
-          newdat, mapping = ggplot2::aes(
-            x = x, y = y,
-            color = timestamp),
-          linewidth = .6, alpha = .8) +
+        p <- ggplot2::ggplot() +
+          ggplot2::geom_point(
+            dat, mapping = ggplot2::aes(
+              x = x, y = y, fill = id), 
+            color = "grey90", shape = 21, size = 1.4) +
+          ggplot2::scale_fill_grey(start = .4) +
+          
+          ggplot2::geom_path(
+            sim, mapping = ggplot2::aes(
+              x = x, y = y),
+            color = pal$grn,
+            linewidth = .6, alpha = .8) +
+          
+          ggplot2::geom_path(
+            sim_new, mapping = ggplot2::aes(
+              x = x, y = y),
+            color = pal$sea,
+            linewidth = .6, alpha = .8) +
+          
+          ggiraph::geom_point_interactive(
+            sim, mapping = ggplot2::aes(
+              x = x, y = y,
+              tooltip = timestamp),
+            color = pal$grn,
+            size = 2.5) +
+          ggiraph::geom_point_interactive(
+            sim_new, mapping = ggplot2::aes(
+              x = x, y = y,
+              tooltip = timestamp),
+            color = pal$sea,
+            size = 2.5)
         
-        ggiraph::geom_point_interactive(
-          newdat, mapping = ggplot2::aes(
-            x = x, y = y,
-            color = timestamp,
-            tooltip = timestamp),
-          size = 2.5) +
+      } else {
         
+        p <- ggplot2::ggplot() +
+          ggplot2::geom_point(
+            dat, mapping = ggplot2::aes(
+              x = x, y = y, fill = id), 
+            color = "grey90", shape = 21, size = 1.4) +
+          ggplot2::scale_fill_grey(start = .4) +
+          
+            ggplot2::geom_path(
+              sim, mapping = ggplot2::aes(
+                x = x, y = y,
+                color = timestamp),
+              linewidth = .6, alpha = .8) +
+          
+            ggiraph::geom_point_interactive(
+              sim, mapping = ggplot2::aes(
+                x = x, y = y,
+                color = timestamp,
+                tooltip = timestamp),
+              size = 2.5)
+        
+      }
+      p <- p +
         ggplot2::labs(
           x = "x coordinate",
           y = "y coordinate") +
@@ -2509,8 +2635,8 @@ mod_tab_design_server <- function(id, rv) {
         viridis::scale_color_viridis(
           name = "Tracking time:",
           option = "D", trans = "time",
-          breaks = c(min(newdat$timestamp),
-                     max(newdat$timestamp)),
+          breaks = c(min(sim$timestamp),
+                     max(sim$timestamp)),
           labels = c("Start", "End")) +
         
         theme_movedesign() +
@@ -2546,10 +2672,15 @@ mod_tab_design_server <- function(id, rv) {
     output$devPlot_svf <- ggiraph::renderGirafe({
       req(rv$simList, rv$simfitList)
       
+      # set_id <- 1
+      # if (!is.null(rv$dev_nsim)) set_id <- rv$dev_nsim
+      
       rv$simsvfList <- extract_svf(rv$simList, rv$simfitList, fraction = 1)
       
+      if (length(rv$simList) == 1) hex_fill <- pal$dgr
+      else hex_fill <- c(pal$grn, pal$sea)
       p <- plotting_svf(rv$simsvfList,
-                        fill = pal$dgr,
+                        fill = hex_fill,
                         add_fit = ifelse(is.null(input$dev_add_fit),
                                          FALSE, input$dev_add_fit),
                         fraction = input$dev_fraction / 100)
@@ -2570,11 +2701,11 @@ mod_tab_design_server <- function(id, rv) {
     ## Species parameters: ------------------------------------------------
     
     observe({
-      req(rv$tau_p0)
+      req(rv$tau_p)
       
       mod_blocks_server(
         id = "devBlock_taup", 
-        rv = rv, type = "tau", name = "tau_p0",
+        rv = rv, type = "tau", name = "tau_p",
         input_name = list(
           chr = "dev_taup0",
           html = wrap_none("Position autocorrelation ",
@@ -2583,11 +2714,11 @@ mod_tab_design_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      req(rv$tau_v0)
+      req(rv$tau_v)
       
       mod_blocks_server(
         id = "devBlock_tauv",
-        rv = rv, type = "tau", name = "tau_v0",
+        rv = rv, type = "tau", name = "tau_v",
         input_name = list(
           chr = "dev_tauv0",
           html = wrap_none("Velocity autocorrelation ",
@@ -2687,6 +2818,8 @@ mod_tab_design_server <- function(id, rv) {
       req(rv$dev$tbl)
       
       dt_dev <- rv$dev$tbl[, -1]
+      if (!rv$grouped) dt_dev <- dplyr::select(dt_dev, -group)
+      
       nms <- list(
         device = "Type",
         dur = "Duration",

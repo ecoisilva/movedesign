@@ -622,77 +622,167 @@ mod_tab_data_select_server <- function(id, rv) {
     observe({
       req(rv$which_question,
           rv$data_type == "selected",
-          rv$datList, rv$id, rv$is_valid)
+          rv$datList, rv$fitList, rv$id, rv$is_valid)
       
-      shinyjs::show(id = "selectBox_regime")
-      shinyjs::show(id = "selectBox_sizes")
-      
-      dat0 <- rv$datList[rv$id]
-      fit0 <- rv$fitList[rv$id]
-      get_meta <- ifelse(length(rv$id) == 1, FALSE, TRUE)
-      
-      shinybusy::show_modal_spinner(
-        spin = "fading-circle",
-        color = "var(--sea)",
-        text = tagList(
-          span("Extracting", style = "color: #797979;"),
-          wrap_none(span("parameters", class = "cl-sea"),
-                    span("...", style = "color: #797979;"))))
-      
-      rv$sigma0 <- extract_pars(
-        obj = fit0, data = dat0, name = "sigma", meta = get_meta)[[1]]
-      rv$tau_p0 <- extract_pars(
-        obj = fit0, name = "position", meta = get_meta)[[1]]
-      rv$tau_v0 <- extract_pars(
-        obj = fit0, name = "velocity", meta = get_meta)[[1]]
-      rv$speed0 <- extract_pars(
-        obj = fit0, name = "speed", meta = get_meta)[[1]]
-      
-      if (length(rv$id) == 1) rv$mu0 <- fit0[[1]]$mu
-      else rv$mu0 <- array(0, dim = 2, dimnames = list(c("x", "y")))
-      
-      rv$svfList <- extract_svf(dat0, fit0)
-      
-      rv$tmp$sp_common <- rv$species_common
-      rv$tmp$sp <- rv$species_binom
-      rv$tmp$id <- rv$id
-      
-      shinyFeedback::showToast(
-        type = "success",
-        message = "Parameters extracted!",
-        .options = list(
-          timeOut = 3000,
-          extendedTimeOut = 3500,
-          progressBar = FALSE,
-          closeButton = TRUE,
-          preventDuplicates = TRUE,
-          positionClass = "toast-bottom-right"))
-      
-      msg_log(
-        style = "success",
-        message = paste0("Parameters ",
-                         msg_success("extracted"), "."),
-        detail = paste("Proceed to",
-                       msg_success('Sampling design'), "tab."))
-      
-      if (!rv$tour_active) {
+      if (("compare" %in% rv$which_meta) && 
+          (length(rv$groups[[1]]$A) == 0 ||
+           length(rv$groups[[1]]$B) == 0)) {
+        
         shinyalert::shinyalert(
-          className = "modal_success",
-          type = "success",
-          title = "Success!",
+          type = "error",
+          title = "No groups found",
           text = tagList(span(
-            "Proceed to the", br(),
-            icon("stopwatch", class = "cl-mdn"),
-            span("Tracking regime", class = "cl-mdn"), "tab."
+            "No groups were set, or one of the groups is blank.",
+            "Go to the",
+            icon("object-ungroup", class = "cl-jgl"),
+            span("Groups", class = "cl-jgl"), "tab to fix."
           )),
           html = TRUE,
           size = "xs")
+        
+      } else {
+        
+        shinyjs::show(id = "selectBox_regime")
+        shinyjs::show(id = "selectBox_sizes")
+        
+        dat0 <- rv$datList[rv$id]
+        fit0 <- rv$fitList[rv$id]
+        get_meta <- ifelse(length(rv$id) == 1, FALSE, TRUE)
+        
+        shinybusy::show_modal_spinner(
+          spin = "fading-circle",
+          color = "var(--sea)",
+          text = tagList(
+            span("Extracting", style = "color: #797979;"),
+            wrap_none(span("parameters", class = "cl-sea"),
+                      span("...", style = "color: #797979;"))))
+        
+        rv$sigma <- extract_pars(
+          obj = fit0, data = dat0, name = "sigma", meta = get_meta)
+        rv$tau_p <- extract_pars(
+          obj = fit0, name = "position", meta = get_meta)
+        rv$tau_v <- extract_pars(
+          obj = fit0, name = "velocity", meta = get_meta)
+        rv$speed <- extract_pars(
+          obj = fit0, name = "speed", meta = get_meta)
+        
+        if (rv$grouped) rv$proceed <- TRUE
+  
+        if (length(rv$id) == 1) rv$mu <- list(fit0[[1]]$mu)
+        else rv$mu <- list(array(0, dim = 2, 
+                                 dimnames = list(c("x", "y"))))
+        
+        rv$svfList <- extract_svf(dat0, fit0)
+        
+        rv$tmp$sp_common <- rv$species_common
+        rv$tmp$sp <- rv$species_binom
+        rv$tmp$id <- rv$id
+        
+        shinyFeedback::showToast(
+          type = "success",
+          message = "Parameters extracted!",
+          .options = list(
+            timeOut = 3000,
+            extendedTimeOut = 3500,
+            progressBar = FALSE,
+            closeButton = TRUE,
+            preventDuplicates = TRUE,
+            positionClass = "toast-bottom-right"))
+        
+        msg_log(
+          style = "success",
+          message = paste0("Parameters ",
+                           msg_success("extracted"), "."),
+          detail = paste("Proceed to",
+                         msg_success('Sampling design'), "tab."))
+        
+        if (!rv$tour_active) {
+          shinyalert::shinyalert(
+            className = "modal_success",
+            type = "success",
+            title = "Success!",
+            text = tagList(span(
+              "Proceed to the", br(),
+              icon("stopwatch", class = "cl-mdn"),
+              span("Sampling design", class = "cl-mdn"), "tab."
+            )),
+            html = TRUE,
+            size = "xs")
+        }
+        
+        shinybusy::remove_modal_spinner()
       }
       
-      shinybusy::remove_modal_spinner()
-      
-    }) %>% # end of observe, then:
+    }) %>% # end of observe,
       bindEvent(input$selectButton_extract)
+    
+    ## Extract parameters for groups: -------------------------------------
+    
+    observe({
+      req(rv$proceed,
+          rv$which_question,
+          rv$data_type == "selected",
+          rv$active_tab == 'data_select')
+      req(rv$datList, rv$fitList, rv$groups, rv$is_valid)
+      req(length(rv$sigma) == 1)
+      
+      dat <- list(A = rv$datList[rv$groups[[1]]$A],
+                  B = rv$datList[rv$groups[[1]]$B])
+      fit <- list(A = rv$fitList[rv$groups[[1]]$A],
+                  B = rv$fitList[rv$groups[[1]]$B])
+      
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]], data = dat[[x]], 
+          name = "sigma", meta = TRUE)[[1]]
+      }) %>% c(rv$sigma, .) -> rv$sigma
+      names(rv$sigma) <- c("All", "A", "B") 
+      
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]], 
+          name = "position", meta = TRUE)[[1]]
+      }) %>% c(rv$tau_p, .) -> rv$tau_p
+      names(rv$tau_p) <- c("All", "A", "B") 
+
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]], 
+          name = "velocity", meta = TRUE)[[1]]
+      }) %>% c(rv$tau_v, .) -> rv$tau_v
+      names(rv$tau_v) <- c("All", "A", "B") 
+      
+      lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]],
+          name = "speed", meta = TRUE)[[1]]
+      }) %>% c(rv$speed, .) -> rv$speed
+      names(rv$speed) <- c("All", "A", "B") 
+      
+      rv$mu <- list(array(0, dim = 2, 
+                          dimnames = list(c("x", "y"))),
+                    array(0, dim = 2, 
+                          dimnames = list(c("x", "y"))),
+                    array(0, dim = 2, 
+                          dimnames = list(c("x", "y"))))
+      names(rv$mu) <- c("All", "A", "B") 
+      
+      rv$proceed <- NULL
+      
+      # modA <- prepare_mod(
+      #   tau_p = rv$tau_p[[2]][2, ],
+      #   tau_v = rv$tau_v[[2]][2, ],
+      #   sigma = rv$sigma[[2]][2, ],
+      #   mu = rv$mu[[2]])
+      # modB <- prepare_mod(
+      #   tau_p = rv$tau_p[[3]][2, ],
+      #   tau_v = rv$tau_v[[3]][2, ],
+      #   sigma = rv$sigma[[3]][2, ],
+      #   mu = rv$mu[[3]])
+      # rv$modList <- X
+      
+    }) %>% # end of observe,
+      bindEvent(rv$proceed)
     
     # BLOCKS --------------------------------------------------------------
     ## Tracking regime: ---------------------------------------------------

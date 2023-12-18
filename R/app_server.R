@@ -27,27 +27,41 @@ app_server <- function(input, output, session) {
     "turtle" = "Glyptemys insculpta")
   
   rv <- reactiveValues(
-    nsims = 1,
+    seedList = list(),
+    data_type = NULL,
+    
+    nsims = NULL,
     species = NULL,
     id = NULL,
-    data_type = NULL,
-    group = NULL,
+    
+    groups = list(intro = list(A = c(), B = c()),
+                  final = list(A = c(), B = c())),
+    grouped = FALSE,
     
     ctmm = data.frame(cbind(species, species_binom)),
+    
+    truth = list(hr = list(area = list(),
+                           data = list()),
+                 ctsd = list()),
+    
     dev = NULL,
     pars = NULL,
     hr = NULL,
-    ctsd = NULL,
+    sd = NULL,
     report = NULL,
     tmp = NULL,
     status = FALSE,
     set_analysis = NULL,
     
-    ctsdList = NULL,
-    akdeList = NULL,
+    ctsdList = list(),
+    akdeList = list(),
+    pathList = list(),
     indvar = FALSE,
     
-    time = c(0,0),
+    is_analyses = FALSE,
+    is_report = FALSE,
+    
+    time = c(0, 0),
     tour_active = FALSE,
     alert_active = TRUE,
     overwrite_active = FALSE,
@@ -157,13 +171,12 @@ app_server <- function(input, output, session) {
               text = info$ctsd[["title"]],
               icon = shiny::icon(info$ctsd[["icon"]])) },
           
-          # shinydashboard::menuSubItem(
-          #   tabName = "meta",
-          #   text = info$meta[["title"]],
-          #   icon = shiny::icon(info$meta[["icon"]]))
-          
-          NULL 
-          
+          if (is.null(rv$which_meta) ||
+              req(rv$which_meta) != "none") {
+            shinydashboard::menuSubItem(
+              tabName = "meta",
+              text = info$meta[["title"]],
+              icon = shiny::icon(info$meta[["icon"]])) }
         )),
       
       # Tab 8: Report
@@ -209,7 +222,7 @@ app_server <- function(input, output, session) {
   
   # Misc: -----------------------------------------------------------------
   
-  # Number of individuals/devices deployed:
+  # Number of tags to deploy:
   mod_comp_m_server("comp_m_in_hr", rv = rv, set_analysis = "hr")
   mod_comp_m_server("comp_m_in_ctsd", rv = rv, set_analysis = "ctsd")
   
@@ -238,7 +251,7 @@ app_server <- function(input, output, session) {
       backgroundColor = "#eee",
       boxShadow = "inset 2px 0 0 0 #009da0")
   ))
-
+  
   # onStop(function() {
   #   message("Session stopped")
   # 
