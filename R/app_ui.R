@@ -147,10 +147,10 @@ app_ui <- function(request) {
             tabName = "ctsd",
             mod_tab_ctsd_ui("tab_ctsd_1")),
           
-          # # Tab 5.3 'Meta-analyses'
-          # newTabItem(
-          #   tabName = "meta",
-          #   mod_tab_meta_ui("tab_meta_1")),
+          # Tab 5.3 'Meta-analyses'
+          newTabItem(
+            tabName = "meta",
+            mod_tab_meta_ui("tab_meta_1")),
           
           # Tab 6 'Report'
           newTabItem(

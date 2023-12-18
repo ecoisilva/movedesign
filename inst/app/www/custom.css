@@ -732,6 +732,11 @@ select[multiple], select[size] {
   background-color: var(--sea);
   border-color: var(--sea);
 }
+.checkbox-info input[type="checkbox"]:checked+label::before,
+.checkbox-info input[type="radio"]:checked+label::before {
+  background-color: var(--jungle);
+  border-color: var(--jungle);
+}
 
 .irs--shiny .irs {
   color: var(--grey-300);

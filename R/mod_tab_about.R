@@ -25,8 +25,6 @@ mod_tab_about_ui <- function(id) {
           align = "center", width = 12,
           style = "padding: 0 20px 0 20px;",
           
-        
-          
           img(src = "www/logo.png", height = "140px"), p(),
           
           p(style = "max-width: 685px;",
@@ -37,8 +35,20 @@ mod_tab_about_ui <- function(id) {
             "studies related to two",
             "main research questions: the estimation of",
             span("home ranges", class = "cl-sea-d"), "and of",
-            HTML(paste0(span("speed and distance traveled",
-                             class = "cl-sea-d"), ".")))
+            wrap_none(span("speed and distance traveled",
+                             class = "cl-sea-d"), ".")),
+          br(),
+          p(style = "max-width: 685px;",
+            span(class = "help-block",
+                 style = "text-align: center !important;",
+                 
+                 fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
+                 span("Note:", class = "help-block-note"),
+                 "This is the", span( "development", class = "cl-dgr"),
+                 "version of the application, currently undergoing",
+                 "testing. Use with caution, as it may crash",
+                 "or behave unexpectedly.")),
+          p(style = "margin-bottom: 35px;")
 
           ) # end of column (text)
       ), # end of box // intro
@@ -120,7 +130,6 @@ mod_tab_about_ui <- function(id) {
                                style = "font-size: 16px;"),
                   choices = c("Home range",
                               "Speed & distance"),
-                              # "Trajectory"),
                   selected = character(0),
                   checkIcon = list(
                     yes = tags$i(class = "fa fa-check-square",
