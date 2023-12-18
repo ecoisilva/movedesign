@@ -1,9 +1,9 @@
 bibentry(
  bibtype = "Article",
- doi = "10.1101/2023.01.27.525894",
+ doi = "10.1111/2041-210X.14153",
  year = 2023,
  author = "Ines Silva and Christen H. Fleming and Michael J. Noonan and William F. Fagan and Justin M. Calabrese",
  title = "movedesign: Shiny R app to evaluate sampling design for animal tracking movement studies",
- journal = "bioRxiv",
- textVersion = "Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese, J. M. (2023). movedesign: Shiny R app to evaluate sampling design for animal tracking movement studies. bioRxiv, 2023-01"
+ journal = "Methods in Ecology and Evolution",
+ textVersion = "Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese, J. M. (2023). movedesign: Shiny R app to evaluate sampling design for animal movement studies. Methods in Ecology and Evolution, 14(9), 2216-2225."
 )

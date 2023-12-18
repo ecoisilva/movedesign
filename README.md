@@ -84,4 +84,5 @@ citation("movedesign")
 
 > Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese,
 > J. M. (2023). movedesign: Shiny R app to evaluate sampling design for
-> animal tracking movement studies. bioRxiv, 2023-01.
+> animal movement studies. Methods in Ecology and Evolution, 14(9),
+> 2216-2225.
