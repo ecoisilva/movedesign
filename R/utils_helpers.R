@@ -29,6 +29,23 @@ msg_success <- crayon::make_style("#009da0")
 msg_danger <- crayon::make_style("#dd4b39")
 msg_warning <- crayon::make_style("#ffbf00")
 
+#' Generate seed
+#' 
+#' @noRd
+generate_seed <- function(seed_list = NULL) {
+  
+  set.seed(NULL)
+  get_random <- function(n) {
+    round(stats::runif(n, min = 1, max = 999999), 0)
+  }
+  
+  out <- get_random(1)
+  if (!is.null(seed_list))
+    while ((out %in% seed_list) && ((out + 1) %in% seed_list)) 
+      out <- get_random(1)
+  return(out)
+}
+
 #' Parameter blocks
 #'
 #' @description Display parameters.
@@ -437,11 +454,11 @@ reset_reactiveValues <- function(rv) {
   if (!is.null(isolate(rv$species))) rv$species <- NULL
   if (!is.null(isolate(rv$id))) rv$id <- NULL
   
-  if (!is.null(isolate(rv$sigma0))) rv$sigma0 <- NULL
-  if (!is.null(isolate(rv$tau_p0))) rv$tau_p0 <- NULL
-  if (!is.null(isolate(rv$tau_v0))) rv$tau_v0 <- NULL
-  if (!is.null(isolate(rv$speed0))) rv$speed0 <- NULL
-  if (!is.null(isolate(rv$mu0))) rv$mu0 <- NULL
+  if (!is.null(isolate(rv$sigma))) rv$sigma <- NULL
+  if (!is.null(isolate(rv$tau_p))) rv$tau_p <- NULL
+  if (!is.null(isolate(rv$tau_v))) rv$tau_v <- NULL
+  if (!is.null(isolate(rv$speed))) rv$speed <- NULL
+  if (!is.null(isolate(rv$mu))) rv$mu <- NULL
   
   if (!is.null(isolate(rv$tmp$id))) rv$tmp$id <- NULL
   if (!is.null(isolate(rv$tmp$sp))) rv$tmp$sp <- NULL
@@ -460,6 +477,7 @@ reset_reactiveValues <- function(rv) {
   
   if (!is.null(isolate(rv$hr))) rv$hr <- NULL
   if (!is.null(isolate(rv$sd))) rv$sd <- NULL
+  if (!is.null(isolate(rv$nsims))) rv$nsims <- NULL
   
 }
 
@@ -533,7 +551,6 @@ plotting_hr <- function(input1,
                         extent) {
   
   id <- NULL
-  
   if (!is.list(input1)) stop("Input is not a list.")
   data <- data1 <- input1[["data"]]
   to_plot <- "initial"
@@ -650,7 +667,8 @@ plotting_hr <- function(input1,
 plotting_svf <- function(data, fill,
                          fraction = .5,
                          add_fit = FALSE,
-                         x_unit = "days", y_unit = "km^2") {
+                         x_unit = "days",
+                         y_unit = "km^2") {
   out <- list()
   if (class(data[[1]])[1] != "list") data <- list(data)
   m <- length(data)
@@ -698,7 +716,7 @@ plotting_svf <- function(data, fill,
           data = fit,
           mapping = ggplot2::aes(x = lag,
                                  y = svf),
-          color = fill, linetype = "dashed") 
+          color = fill[[x]], linetype = "dashed") 
       } +
       
       { if (add_fit) 
@@ -707,7 +725,7 @@ plotting_svf <- function(data, fill,
           mapping = ggplot2::aes(x = lag,
                                  ymin = svf_lower,
                                  ymax = svf_upper),
-          fill = fill, alpha = 0.2)
+          fill = fill[[x]], alpha = 0.2)
       } +
       
       ggplot2::labs(
@@ -910,25 +928,21 @@ wrap_none <- function(text, ...,
 #'
 #' @noRd
 format_num <- function(value) {
-  color <- case_when(
+  list(color = case_when(
     value < 5 ~ "#dd4b39",
     value > 5 & value < 30 ~ "#ffa600",
-    TRUE ~ "#222d32")
-  list(color = color) #, fontWeight = "bold")
+    TRUE ~ "#222d32")) #, fontWeight = "bold")
 }
 
 #' format_perc
 #'
 #' @noRd
 format_perc <- function(value) {
-  color <- case_when(
-    abs(value) > .8 ~ "#dd4b39",
-    abs(value) > .1 & abs(value) < .8 ~ "#ffa600",
-    TRUE ~ "#006669")
-  list(color = color) #, fontWeight = "bold")
+  list(color = case_when(
+    abs(value) > .5 ~ "#dd4b39",
+    abs(value) > .1 & abs(value) < .5 ~ "#ffa600",
+    TRUE ~ "#006669"))
 }
-
-
 
 #' Calculate limits for plots.
 #'
@@ -1205,7 +1219,8 @@ newTabItem <- function(tabName = NULL, ...) {
 #'
 #' @noRd
 telemetry_as_df <- function(object) {
-  if (!is.list(object)) object <- list(object)
+  if (class(object)[1] != "list" && class(object)[1] != "ctmm") 
+    stop("Object must be a telemetry object.")
   
   out_df <- lapply(seq_along(object), function(x) {
     df <- cbind(object[[x]], id = names(object)[x])
@@ -1372,14 +1387,17 @@ as_tele_dt <- function(object) {
 }
 
 devRow <- function(seed, 
+                   group = NULL,
                    device, 
                    dur, 
                    dti,
                    data,
                    fit) {
   
+  if (is.null(group)) group <- NA
   out <- data.frame(
     seed = seed,
+    group = group,
     device = NA,
     dur = NA,
     dti = NA,
@@ -1402,6 +1420,105 @@ devRow <- function(seed,
   return(out)
 }
 
+hrRow <- function(seed,  
+                  data_type = "Initial",
+                  data,
+                  group = NULL,
+                  fit = NULL,
+                  N = NULL,
+                  tau_p,
+                  dur,
+                  dti,
+                  area, 
+                  error) {
+  
+  if (is.null(group)) group <- NA
+  if (!is.null(fit)) N <- extract_dof(fit, name = "area")[[1]]
+  
+  out <- data.frame(
+    seed = seed,
+    group = group,
+    data = data_type,
+    taup = NA,
+    dur = NA,
+    dti = NA,
+    n = nrow(data),
+    N1 = N,
+    area = NA,
+    area_err = error$est,
+    area_err_min = error$lci,
+    area_err_max = error$uci)
+  
+  out$taup <- paste(
+    scales::label_comma(.1)(tau_p$value[2]),
+    abbrv_unit(tau_p$unit[2]))
+  
+  out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
+  out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
+  
+  out_dti <- fix_unit(dti$value, dti$unit)
+  out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
+  
+  out_area <- scales::label_comma(.1)(area$est)
+  if (is.na(out_area)) out$area <- NA
+  else out$area <- paste(out_area, abbrv_unit(area$unit))
+  
+  return(out)
+  
+} # end of function, hrRow()
+
+sdRow <- function(seed, 
+                  group = NULL,
+                  data_type = "Initial", 
+                  data,
+                  fit = NULL, 
+                  N = NULL,
+                  tau_v,
+                  dur,
+                  dti,
+                  speed,
+                  speed_error,
+                  distance, 
+                  distance_error) {
+  
+  if (is.null(group)) group <- NA
+  if (!is.null(fit)) N <- extract_dof(fit, name = "speed")[[1]]
+  
+  out <- data.frame(
+    seed = seed,
+    group = group,
+    data = data_type,
+    tauv = NA,
+    dur = NA,
+    dti = NA,
+    n = nrow(data),
+    N2 = N,
+    ctsd = NA,
+    ctsd_err = speed_error$est,
+    ctsd_err_min = speed_error$lci,
+    ctsd_err_max = speed_error$uci,
+    dist = NA,
+    dist_err = distance_error$est)
+  
+  out$tauv <- paste(
+    scales::label_comma(.1)(tau_v$value[2]),
+    abbrv_unit(tau_v$unit[2]))
+  
+  out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
+  out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
+  
+  out_dti <- fix_unit(dti$value, dti$unit)
+  out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
+  
+  out_ctsd <- fix_unit(speed$est, speed$unit)
+  out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
+  
+  out_dist <- fix_unit(distance$est, distance$unit, convert = TRUE)
+  out$dist <- paste(out_dist$value, out_dist$unit)
+  
+  return(out)
+  
+} # end of function, sdRow()
 
 #' Chooser input
 #'
@@ -1565,7 +1682,6 @@ par.lapply <- function(obj,
 par.ctmm.select <- function(data,
                             guess,
                             cores = NULL,
-                            trace = TRUE,
                             parallel = TRUE) {
   
   if (class(data)[1] != "list" && class(data[[1]])[1] != "ctmm") {
@@ -1598,11 +1714,13 @@ par.ctmm.select <- function(data,
               list(input[[1]],
                    CTMM = input[[2]],
                    control = list(method = "pNewton",
-                                  cores = internal_cores)),
+                                  cores = internal_cores),
+                   trace = TRUE),
               ctmm::ctmm.select,
               list(input[[1]],
                    CTMM = input[[2]],
-                   control = list(cores = internal_cores)),
+                   control = list(cores = internal_cores),
+                   trace = TRUE),
               paste0("ctmm.select() failed with pNewton,",
                      "switching to Nelder-Mead."))
   }
@@ -1610,8 +1728,7 @@ par.ctmm.select <- function(data,
   if (length(input) == 1) {
     # Process one individual on multiple cores:
     internal_cores <- if (parallel) -1 else 1
-    out <- try(try_select(input[[1]],
-                          trace = trace))
+    out <- try(try_select(input[[1]]))
     
   } else {
     # Process multiple individuals:
@@ -1624,7 +1741,7 @@ par.ctmm.select <- function(data,
   
   if (any(has_error(out))) {
     message("Error in model selection")
-    stop(out)
+    return(NULL)
   }
   
   return(out)
@@ -1692,8 +1809,68 @@ par.ctmm.fit <- function(data,
                           parallel = parallel))
   }
   
-  if (any(has_error(out))) message("Error in model fit")
+  if (any(has_error(out))) {
+    message("Error in model fit")
+    return(NULL)
+  }
+  
   return(out)
+}
+
+
+#' Parallel home range estimation
+#'
+#' @param input Telemetry (data) and model (fit) lists.
+#' @inheritParams par_lapply
+#'
+#' @noRd
+#'
+par.akde <- function(data,
+                      fit,
+                      cores = NULL,
+                      trace = TRUE,
+                      parallel = TRUE) {
+  
+  if (class(fit)[1] != "list" && class(fit[[1]])[1] != "ctmm") {
+    stop("'input' must be a list of ctmm objects.")
+  } else {
+    if (length(data) != length(fit)) 
+      stop("'data' and 'fit' must be same length.")
+    input <- lapply(seq_along(data),
+                    function(x) list(data[[x]], 
+                                     fit[[x]]))
+  }
+  
+  try_akde <- function(input) {
+    out <- tryCatch({
+      ctmm::akde(input[[1]], input[[2]])
+    }, error = function(e) return(NULL))
+    return(out)
+  }
+  
+  if (length(input) == 1) {
+    # Process one individual on multiple cores:
+    internal_cores <- if (parallel) -1 else 1
+    out_akde <- try(try_akde(input[[1]]))
+    
+  } else {
+    # Process multiple animals on multiple cores:
+    internal_cores <- 1
+    out_akde <- par.lapply(input,
+                            try_akde, 
+                            cores = cores,
+                            parallel = parallel)
+  }
+  
+  if (any(has_error(out_akde))) {
+    msg_log(
+      style = "danger",
+      message = paste0("Home range estimation ",
+                       msg_danger("failed"), "."))
+  }
+  
+  set.seed(NULL)
+  return(out_akde)
 }
 
 
