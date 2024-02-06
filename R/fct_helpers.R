@@ -21,6 +21,7 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
   
   all_units <- c("year", "month", "week",
                  "day", "hour", "minute", "second",
+                 "hr", "min", "sec",
                  "kilometer", "meter", "km", "m",
                  "km^2", "m^2","hm^2", "ha", 
                  "km\u00B2", "m\u00B2", "hm\u00B2",
@@ -84,7 +85,7 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
 #'
 #' @importFrom dplyr case_when
 #' @importFrom dplyr add_row
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' @noRd
 fix_unit <- function(input,
                      unit,
@@ -122,6 +123,7 @@ fix_unit <- function(input,
                 "km^2", "m^2", "hm^2", "ha")
   
   units_vl <- c("kilometers/day", "kilometer/day", "km/day",
+                "meters/day", "meter/day", "m/day",
                 "kilometers/hour", "kilometer/hour", "km/h",
                 "meters/second", "meter/second", "m/s")
   
@@ -249,7 +251,7 @@ fix_unit <- function(input,
 #' @param tau_p_units character vector of sigma units.
 #' @param mu numeric vector of length 2 in the format c(x, y).
 #'
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' @noRd
 prepare_mod <- function(tau_p, tau_p_unit = NULL,
                         tau_v, tau_v_unit = NULL,
@@ -311,7 +313,7 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
 #' @param tau_v0_units character vector of sampling interval units.
 #' @param seed0 random seed value for simulation.
 #'
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' @noRd
 simulate_data <- function(data = NULL,
                           mod,
@@ -368,7 +370,7 @@ calculate_ci <- function(data, level = 0.95) {
 #' @description Extracting values and units from ctmm summaries.
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' @noRd
 extract_pars <- function(
     obj, data = NULL,
@@ -463,7 +465,7 @@ extract_pars <- function(
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' @noRd
 extract_sampling <- function(obj, name) {
   
@@ -515,8 +517,11 @@ extract_dof <- function(
   out <- list()
   out <- lapply(seq_along(obj), function(x) {
     sum.obj <- summary(obj[[x]])
-    nms.obj <- names(sum.obj$DOF)
+    if (is.null(sum.obj)) return(NULL)
+    if (is.null(sum.obj$DOF) || length(sum.obj$DOF) == 0)
+      return(NULL)
     
+    nms.obj <- names(sum.obj$DOF)
     out_tmp <- sum.obj$DOF[grep(name, nms.obj)][[1]]
     if (is.na(out_tmp)) out_tmp <- NULL
     return(out_tmp)
@@ -531,7 +536,7 @@ extract_dof <- function(
 #' @description Extract semi-variance data
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' @noRd
 extract_svf <- function(data, fit = NULL,
                         fraction = 1, level = .95,
@@ -625,7 +630,7 @@ extract_svf <- function(data, fit = NULL,
 #' @description Extracting values and units from ctmm summaries.
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' @noRd
 extract_outputs <- function(obj,
                             name = c("hr", "ctsd"),
@@ -704,8 +709,8 @@ extract_outputs <- function(obj,
 #' @param dti_max Maximum sampling interval (or minimum frequency) for the maximum duration.
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
-#' @importFrom dplyr `%>%`
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
 #' 
 #' @noRd
 simulate_gps <- function(data,
@@ -899,8 +904,8 @@ update_f <- function(x, init) {
 #' @description Estimate computation time of ctmm functions.
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
-#' @importFrom dplyr `%>%`
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
 #' @noRd
 #' 
 guess_time <- function(data,
@@ -936,8 +941,10 @@ guess_time <- function(data,
     
     start <- Sys.time()
     guess <- ctmm::ctmm.guess(data[1:200, ], interactive = FALSE)
-    fit <- par.ctmm.select(list(data[1:200, ]), list(guess),
-                           trace = FALSE, parallel = TRUE)
+    fit <- par.ctmm.select(list(data[1:200, ]), 
+                           list(guess),
+                           trace = trace,
+                           parallel = TRUE)
     total_time <- difftime(Sys.time(), start, units = "sec")[[1]]
     expt <- expt_unit %#% (total_time * nrow(data) / 200)
     
@@ -986,9 +993,11 @@ guess_time <- function(data,
       
     } else {
       if (tauv/dti < 10)
-        y <- y_max <- exp(-3.28912 + 1.01494 * x1 + 0.01953 * x1 * x2)
+        y <- y_max <- exp(-3.28912 + 1.01494 * 
+                            x1 + 0.01953 * x1 * x2)
       if (tauv/dti >= 10)
-        y <- y_max <- exp(-2.0056285 + 0.9462089 * x1 + 0.0023285 * x1 * x2)
+        y <- y_max <- exp(-2.0056285 + 0.9462089 * 
+                            x1 + 0.0023285 * x1 * x2)
       if (N < 15) y_max <- y_max + y_max * 2
       
       y <- expt_unit %#% y
@@ -1108,8 +1117,8 @@ estimate_trajectory <- function(data,
 #' @description Convert to a different unit.
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
-#' @importFrom dplyr `%>%`
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
 #' @noRd
 #'
 convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
@@ -1135,8 +1144,8 @@ convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
 #' @description Capture all outputs from the ctmm::meta() function.
 #' @keywords internal
 #'
-#' @importFrom ctmm `%#%`
-#' @importFrom dplyr `%>%`
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
 #' @noRd
 #'
 capture_meta <- function(x, 

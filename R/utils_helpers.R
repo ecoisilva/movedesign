@@ -323,7 +323,7 @@ extract_units <- function(input, name = NULL) {
 #' @return The return value, if any, from executing the utility.
 #' @keywords internal
 #'
-#' @importFrom dplyr `%>%`
+#' @importFrom dplyr %>%
 #' @noRd
 help_text <- function(title, subtitle, content) {
   shiny::fluidRow(
@@ -344,7 +344,7 @@ help_text <- function(title, subtitle, content) {
 #' @description Add helper tip to inputs.
 #' @keywords internal
 #'
-#' @importFrom dplyr `%>%`
+#' @importFrom dplyr %>%
 #' @noRd
 help_tip <- function(input, text, placement = "bottom") {
   bsplus::shinyInput_label_embed(
@@ -362,7 +362,7 @@ help_tip <- function(input, text, placement = "bottom") {
 #' @keywords internal
 #'
 #' @importFrom crayon make_style
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
 #' 
 #' @noRd
 msg_log <- function(..., detail, 
@@ -450,7 +450,8 @@ msg_step <- function(current, total, style) {
 reset_reactiveValues <- function(rv) {
 
   rv$is_valid <- FALSE
-
+  rv$is_analyses <- FALSE
+  
   if (!is.null(isolate(rv$species))) rv$species <- NULL
   if (!is.null(isolate(rv$id))) rv$id <- NULL
   
@@ -486,7 +487,7 @@ reset_reactiveValues <- function(rv) {
 #' @description Add help modal to inputs
 #' @keywords internal
 #'
-#' @importFrom dplyr `%>%`
+#' @importFrom dplyr %>%
 #' @noRd
 help_modal <- function(input, file) {
   bsplus::shinyInput_label_embed(
@@ -504,7 +505,7 @@ help_modal <- function(input, file) {
 #' @keywords internal
 #' 
 #' @importFrom ggplot2 %+replace%
-#' @importFrom dplyr `%>%`
+#' @importFrom dplyr %>%
 #'
 #' @param ft_size Base font size.
 #' @noRd
@@ -662,7 +663,7 @@ plotting_hr <- function(input1,
 #' @description Plot variogram from ctmm
 #' @keywords internal
 #'
-#' @importFrom dplyr `%>%`
+#' @importFrom dplyr %>%
 #' @noRd
 plotting_svf <- function(data, fill,
                          fraction = .5,
@@ -768,20 +769,20 @@ sigdigits <- function(x, digits) {
 #' @description Subset time frame
 #' @keywords internal
 #'
-#' @importFrom dplyr `%>%`
+#' @importFrom dplyr %>%
 #' @noRd
 #'
 subset_timeframe <- function(var, value) {
   as.data.frame(var) %>% dplyr::top_frac(value)
 }
 
-#' add_spinner
+#' Show loading spinner
 #'
 #' @description WIP
 #' @keywords internal
 #'
-#' @importFrom dplyr `%>%`
-#' @importFrom ctmm `%#%`
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
 #' @noRd
 #'
 add_spinner <- function(ui, type = 4, height = "300px") {
@@ -793,15 +794,26 @@ add_spinner <- function(ui, type = 4, height = "300px") {
                       default = "#f4f4f4"))
 }
 
-
+#' Show loading modal
+#'
+#' @description WIP
+#' @keywords internal
+#'
+#' @importFrom dplyr %>%
+#' @importFrom ctmm %#%
+#' @noRd
+#'
 loading_modal <- function(x, 
                           exp_time = NULL,
+                          parallel = FALSE,
                           n = NULL, type = "speed") {
   
   if (missing(x))
     stop("`x` argument not provided.")
   if (!is.character(x))
     stop("`unit` argument must be a character string.")
+  
+  note_parallel <- ifelse(parallel, "set", "simulation")
   
   x <- stringr::str_split(x, " ")[[1]]
   num_words <- length(x)
@@ -867,7 +879,7 @@ loading_modal <- function(x,
           p(),
           p("Expected run time:",
             style = header_css), br(),
-          p(exp_time$range, "(per simulation)", 
+          p(exp_time$range, paste0("(per ", note_parallel, ")"), 
             style = time_css), p(),
           p("Total run time:", 
             style = header_css), br(),
@@ -1632,7 +1644,7 @@ par.lapply <- function(obj,
           cluster_size <- min(length(obj), num_cores * 2)
         
         message(
-          " Running parallel in SOCKET cluster of ",
+          " Running in parallel SOCKET cluster of ",
           cluster_size, "...")
         
         cl <- parallel::makeCluster(cluster_size, outfile = "")
@@ -1647,7 +1659,7 @@ par.lapply <- function(obj,
           cluster_size <- min(length(obj), num_cores * 4)
         
         message(
-          " Running parallel with mclapply cluster of ",
+          " Running in parallel with mclapply cluster of ",
           cluster_size, "...")
         
         out <- parallel::mclapply(obj, fun, mc.cores = cluster_size)
@@ -1681,6 +1693,7 @@ par.lapply <- function(obj,
 #'
 par.ctmm.select <- function(data,
                             guess,
+                            trace = TRUE,
                             cores = NULL,
                             parallel = TRUE) {
   
@@ -1692,7 +1705,8 @@ par.ctmm.select <- function(data,
     
     input <- lapply(seq_along(data),
                     function(x) list(data[[x]], 
-                                     guess[[x]]))
+                                     guess[[x]],
+                                     trace))
   }
   
   # if (parallel && length(data) > 1)
@@ -1715,12 +1729,12 @@ par.ctmm.select <- function(data,
                    CTMM = input[[2]],
                    control = list(method = "pNewton",
                                   cores = internal_cores),
-                   trace = TRUE),
+                   trace = input[[3]]),
               ctmm::ctmm.select,
               list(input[[1]],
                    CTMM = input[[2]],
                    control = list(cores = internal_cores),
-                   trace = TRUE),
+                   trace = input[[3]]),
               paste0("ctmm.select() failed with pNewton,",
                      "switching to Nelder-Mead."))
   }
