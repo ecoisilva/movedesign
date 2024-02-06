@@ -39,7 +39,8 @@ mod_comp_pars_ui <- function(id) {
             
             ggiraph::girafeOutput(
               outputId = ns("parPlot_all"),
-              width = "100%", height = "50%")
+              width = "100%", height = "50%"),
+            uiOutput(ns("parUI_legend"))
             
           )) # end of fluidRow
         
@@ -212,6 +213,57 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     # PLOTS ---------------------------------------------------------------
     ## Rendering parameters for all individuals: --------------------------
     
+    output$parUI_legend <- renderUI({
+      req(rv$which_question, rv$is_valid, input$parInput_type)
+      req(rv$datList, rv$fitList)
+      req(length(rv$fitList) > 1)
+      
+      ui <- ui_extra <- NULL
+      taup <- extract_pars(rv$fitList, name = "position", meta = TRUE)
+      tauv <- extract_pars(rv$fitList, name = "velocity", meta = TRUE)
+      
+      if (length(rv$which_question) == 2)
+        ui_extra <- span(
+          "Please select a different individual or dataset if proceeding",
+          "with both", span("home range", class = "cl-dgr"), 
+          "and",  span("speed/distance", class = "cl-dgr"), "estimation.")
+      
+      if (input$parInput_type == "tau_p" && is.null(taup)) {
+        ui <- tagList(
+          p(style = "margin-top: 15px;"),
+          span(class = "help-block",
+               style = "text-align: justify !important;",
+               
+               fontawesome::fa("circle-exclamation", fill = pal$dgr),
+               span("Note:", class = "help-block-note"), 
+               "No significant signature of the animal's",
+               span("position autocorrelation", class = "cl-dgr"),
+               "parameter remains in this dataset.", ui_extra))
+        shinyjs::hide(id = "parPlot_all")
+      } else {
+        shinyjs::show(id = "parPlot_all")
+      }
+      
+      if (input$parInput_type == "tau_v" && is.null(tauv)) {
+        ui <- tagList(
+          p(style = "margin-top: 15px;"),
+          span(class = "help-block",
+               style = "text-align: justify !important;",
+               
+               fontawesome::fa("circle-exclamation", fill = pal$dgr),
+               span("Note:", class = "help-block-note"), 
+               "No significant signature of the animal's",
+               span("velocity autocorrelation", class = "cl-dgr"),
+               "parameter remains in this dataset.", ui_extra))
+        shinyjs::hide(id = "parPlot_all")
+      } else {
+        shinyjs::show(id = "parPlot_all")
+      }
+      
+      return(ui)
+      
+    }) # end of renderUI, "parUI_legend"
+    
     output$parPlot_all <- ggiraph::renderGirafe({
       req(rv$which_question, input$parInput_type)
       req(rv$datList, length(rv$fitList) > 1)
@@ -303,7 +355,6 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         ggobj = p.all,
         width_svg = 5.5, height_svg = max(2, length(datList) * f),
         options = list(
-          # ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
           ggiraph::opts_tooltip(

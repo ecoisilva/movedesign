@@ -316,7 +316,8 @@ mod_tab_meta_server <- function(id, rv) {
     shinyjs::hide(id = "txt_ratio")
     shinyjs::hide(id = "txt_ratio_label")
     
-    boxnames <- c("outputs",
+    boxnames <- c("simulations",
+                  "outputs",
                   "summary",
                   "err_hr",
                   "err_speed")
@@ -356,7 +357,18 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of observe
     
+    
     ## Update based on outputs: -------------------------------------------
+    
+    observe({
+      req(rv$is_valid)
+      
+      if (rv$is_valid)
+        shinyjs::show(id = "metaBox_simulations")
+       else shinyjs::hide(id = "metaBox_simulations")
+      
+    }) # end of observe
+    
     
     observe({
       req(rv$metaList_groups, rv$set_analysis)
@@ -379,6 +391,7 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of observe
     
+    
     observe({
       hideTab(inputId = "metaTabs_outputs",
               target = ns("metaPanel_groups"))
@@ -388,10 +401,12 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of observe
     
+    
     output$nsims_total <- renderText({
       if (!is.null(rv$simList)) return(length(rv$simList))
       else return(0)
     }) # end of renderText, "nsims_total"
+    
     
     ## Render new text (for effect size): ---------------------------------
     
@@ -566,9 +581,9 @@ mod_tab_meta_server <- function(id, rv) {
     ## Run meta-analyses: -------------------------------------------------
     
     observe({
-      req(rv$active_tab == 'meta',
-          rv$truth, !rv$is_meta,
-          length(rv$simList) <= 2)
+      req(rv$active_tab == 'meta')
+      req(rv$truth, !rv$is_meta, rv$is_valid)
+      req(rv$simList, length(rv$simList) <= 2)
       
       shinyalert::shinyalert(
         type = "warning",

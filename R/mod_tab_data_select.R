@@ -440,10 +440,8 @@ mod_tab_data_select_server <- function(id, rv) {
       
       out_data <- rv$datList[rv$id]
       req(!is.null(out_data[[1]]$"timestamp"))
-      rv$input_x <- ifelse(!is.null(out_data[[1]]$"x"),
-                             "x", "longitude")
-      rv$input_y <- ifelse(!is.null(out_data[[1]]$"y"),
-                             "y", "latitude")
+      rv$input_x <- ifelse(!is.null(out_data[[1]]$"x"), "x", "longitude")
+      rv$input_y <- ifelse(!is.null(out_data[[1]]$"y"), "y", "latitude")
       rv$input_t <- "timestamp"
       
     }) %>% # end of observe,
