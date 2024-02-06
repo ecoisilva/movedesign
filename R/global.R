@@ -1,3 +1,4 @@
+options(shiny.maxRequestSize = 30 * 1024^2) # 30 MB
 
 .onLoad <- function(libname, pkgname) {
   rlang::run_on_load()
