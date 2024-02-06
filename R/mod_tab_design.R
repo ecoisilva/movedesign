@@ -1892,39 +1892,59 @@ mod_tab_design_server <- function(id, rv) {
       if (rv$data_type == "simulated") {
         fit <- fitA <- rv$modList[[1]]
         if (rv$grouped) fitB <- rv$modList[[2]]
+        
       } else if (rv$data_type != "simulated") {
-        if (rv$indvar) {
-          # TODO fix for isotropic/anisotropic
-          fit <- mean(rv$fitList[rv$id]) %>% 
-            suppressMessages() %>% 
-            suppressWarnings() %>% 
-            quiet()
-          # TODO change to tryCatch
-          fit <- emulate(fit, seed = rv$seed0, fast = TRUE)
-        } else {
-          # TODO add propagation of uncertainty
-          # (possible if fix for anisotropic is included)
-          fit <- prepare_mod(
-            tau_p = rv$tau_p[[1]][2, ],
-            tau_v = rv$tau_v[[1]][2, ],
-            sigma = rv$sigma[[1]][2, ],
-            mu = rv$mu[[1]])
-          
-          if ("compare" %in% req(rv$which_meta)) {
-            if (length(rv$tau_p) == 3 ||
-                length(rv$tau_v) == 3 ||
-                length(rv$sigma) == 3 || length(rv$mu) == 3) {
-              fitA <- prepare_mod(
-                tau_p = rv$tau_p[[2]][2, ],
-                tau_v = rv$tau_v[[2]][2, ],
-                sigma = rv$sigma[[2]][2, ],
-                mu = rv$mu[[2]])
-              fitB <- prepare_mod(
-                tau_p = rv$tau_p[[3]][2, ],
-                tau_v = rv$tau_v[[3]][2, ],
-                sigma = rv$sigma[[3]][2, ],
-                mu = rv$mu[[3]])
-            }
+        
+        # fit <- prepare_mod(
+        #   tau_p = rv$tau_p[[1]][2, ],
+        #   tau_v = rv$tau_v[[1]][2, ],
+        #   sigma = rv$sigma[[1]][2, ],
+        #   mu = rv$mu[[1]])
+        
+        fit <- ctmm:::mean.ctmm(x = rv$fitList[rv$id]) %>% 
+          suppressMessages() %>% 
+          suppressWarnings() %>% 
+          quiet()
+        rv$is_isotropic <- fit$sigma@isotropic[[1]]
+        
+        # Recenter to 0,0 (not needed if using prepare_mod):
+        fit$mu[[1, "x"]] <- 0
+        fit$mu[[1, "y"]] <- 0
+        
+        if ("compare" %in% req(rv$which_meta)) {
+          if (length(rv$tau_p) == 3 ||
+              length(rv$tau_v) == 3 ||
+              length(rv$sigma) == 3 || length(rv$mu) == 3) {
+            req(rv$groups)
+            
+            # fitA <- prepare_mod(
+            #   tau_p = rv$tau_p[[2]][2, ],
+            #   tau_v = rv$tau_v[[2]][2, ],
+            #   sigma = rv$sigma[[2]][2, ],
+            #   mu = rv$mu[[2]])
+            # fitB <- prepare_mod(
+            #   tau_p = rv$tau_p[[3]][2, ],
+            #   tau_v = rv$tau_v[[3]][2, ],
+            #   sigma = rv$sigma[[3]][2, ],
+            #   mu = rv$mu[[3]])
+            
+            fitA <- ctmm:::mean.ctmm(
+              rv$fitList[rv$groups[[1]][["A"]]]) %>% 
+              suppressMessages() %>% 
+              suppressWarnings() %>% 
+              quiet()
+            
+            fitB <- ctmm:::mean.ctmm(
+              rv$fitList[rv$groups[[1]][["B"]]]) %>% 
+              suppressMessages() %>% 
+              suppressWarnings() %>% 
+              quiet()
+            
+            # Recenter to 0,0 (not needed if using prepare_mod):
+            fitA$mu[[1, "x"]] <- 0
+            fitA$mu[[1, "y"]] <- 0
+            fitB$mu[[1, "x"]] <- 0
+            fitB$mu[[1, "y"]] <- 0
           }
         }
         
@@ -1932,8 +1952,6 @@ mod_tab_design_server <- function(id, rv) {
         if (rv$grouped) rv$modList_groups <- list(A = fitA, B = fitB)
       }
       
-      # fit$mu[[1, "x"]] <- 0
-      # fit$mu[[1, "y"]] <- 0 # recenter to 0,0
       
       if (rv$grouped) {
         simA <- ctmm::simulate(fitA, t = t_new, seed = rv$seed0)

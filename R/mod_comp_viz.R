@@ -596,8 +596,8 @@ mod_comp_viz_server <- function(id, rv) {
     output$vizPlot_svf <- ggiraph::renderGirafe({
       if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
       if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
-      req(rv$datList, rv$svfList)
-      req(length(rv$svfList) == length(rv$datList))
+      req(rv$datList, rv$svfList, rv$id)
+      req(length(rv$svfList) == length(rv$datList[rv$id]))
       
       svf <- rv$svfList
 
@@ -608,7 +608,7 @@ mod_comp_viz_server <- function(id, rv) {
       }
       
       p <- plotting_svf(
-        svf, fill = rep(pal$dgr, length(rv$datList)),
+        svf, fill = rep(pal$dgr, length(rv$datList[rv$id])),
         add_fit = ifelse(is.null(input$vizInput_add_fit),
                          FALSE, input$vizInput_add_fit),
         fraction = input$vizInput_fraction / 100)

@@ -929,9 +929,23 @@ mod_tab_hrange_server <- function(id, rv) {
       
       mean_x <- rv$mu[[1]][1]
       mean_y <- rv$mu[[1]][2]
-      sig <- rv$sigma[[1]]$value[2] %#% rv$sigma[[1]]$unit[2]
+      
+      if (rv$is_isotropic) {
+        sig <- rv$sigma[[1]]$value[2] %#% rv$sigma[[1]]$unit[2]
+        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+        
+      } else {
+        fit <- rv$modList[[1]]
+        sig1 <- fit$sigma@par["major"][[1]]
+        sig2 <- fit$sigma@par["minor"][[1]]
+        sig <- sqrt(det(fit$sigma))
+        
+        radius_x <- sqrt(-2 * log(0.05) * sig1)
+        radius_y <- sqrt(-2 * log(0.05) * sig2)
+      }
+      
       area <- -2 * log(0.05) * pi * sig
-      radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+      
       truth <- data.frame(
         id = rep(1, each = 100),
         angle = seq(0, 2 * pi, length.out = 100))
@@ -941,14 +955,36 @@ mod_tab_hrange_server <- function(id, rv) {
         mean_y, function(x) x + radius_y * sin(truth$angle)))
       
       if ("compare" %in% req(rv$which_meta)) {
+        # 
+        # mean_xA <- rv$mu[[1]][1]
+        # mean_yB <- rv$mu[[1]][2]
+        # 
+        if (rv$is_isotropic) {
+          sigA <- rv$sigma[[2]]$value[2] %#% rv$sigma[[2]]$unit[2]
+          sigB <- rv$sigma[[3]]$value[2] %#% rv$sigma[[3]]$unit[2]
+          
+          radius_xA <- radius_yA <- sqrt(-2 * log(0.05) * sigA)
+          radius_xB <- radius_yB <- sqrt(-2 * log(0.05) * sigB)
+          
+        } else {
+          fitA <- rv$modList_groups[["A"]]
+          sigA1 <- fitA$sigma@par["major"][[1]]
+          sigA2 <- fitA$sigma@par["minor"][[1]]
+          fitB <- rv$modList_groups[["B"]]
+          sigB1 <- fitB$sigma@par["major"][[1]]
+          sigB2 <- fitB$sigma@par["minor"][[1]]
+          sigA <- sqrt(det(fitA$sigma))
+          sigB <- sqrt(det(fitB$sigma))
+          
+          radius_xA <- sqrt(-2 * log(0.05) * sigA1)
+          radius_yA <- sqrt(-2 * log(0.05) * sigA2)
+          
+          radius_xB <- sqrt(-2 * log(0.05) * sigB1)
+          radius_yB <- sqrt(-2 * log(0.05) * sigB2)
+        }
         
-        sigA <- rv$sigma[[2]]$value[2] %#% rv$sigma[[2]]$unit[2]
-        sigB <- rv$sigma[[3]]$value[2] %#% rv$sigma[[3]]$unit[2]
         areaA <- -2 * log(0.05) * pi * sigA
         areaB <- -2 * log(0.05) * pi * sigB
-        
-        radius_xA <- radius_yA <- sqrt(-2 * log(0.05) * sigA)
-        radius_xB <- radius_yB <- sqrt(-2 * log(0.05) * sigB)
         
         truthA <- data.frame(
           id = rep(1, each = 100),
@@ -991,7 +1027,7 @@ mod_tab_hrange_server <- function(id, rv) {
           warning = function(w) NULL,
           error = function(e) NULL)
         hr <- list(hr)
-        rv$akdeList[[1]] <- hr
+        rv$akdeList <- hr
         
       } else {
         
@@ -1071,7 +1107,8 @@ mod_tab_hrange_server <- function(id, rv) {
                 rv$dti)
     
     observe({
-      req("Home range" %in% rv$which_question)
+      req("Home range" %in% rv$which_question,
+          rv$is_analyses == FALSE)
       req(rv$simList,
           rv$simfitList,
           rv$tmp$id == rv$id,
@@ -1172,10 +1209,11 @@ mod_tab_hrange_server <- function(id, rv) {
         if (rv$grouped) {
           nm <- names(rv$simList)[[sim_no]]
           group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
-          truth <- rv$truth$hr[["area"]][[group]]
+          hr_truth <- rv$truth$hr[["area"]][[group]]
         }
         
         N1 <- extract_dof(rv$simfitList[[sim_no]], "area")[[1]]
+        
         tmpsum <- tryCatch(
           summary(rv$akdeList[[i]]),
           error = function(e) e)
@@ -1189,7 +1227,7 @@ mod_tab_hrange_server <- function(id, rv) {
           out_err_df <- out_err_df %>%
             dplyr::add_row(
               seed = rv$seedList[[sim_no]],
-              lci = NA, est = NA, uci = NA) 
+              lci = NA, est = NA, uci = NA)
           
           rv$hr$tbl <<- rbind(
             rv$hr$tbl, 
@@ -1218,9 +1256,9 @@ mod_tab_hrange_server <- function(id, rv) {
         out_err_df <- out_err_df %>%
           dplyr::add_row(
             seed = rv$seedList[[sim_no]],
-            lci = ((tmpsum$CI[1] %#% tmpunit) - truth) / truth, 
-            est = ((tmpsum$CI[2] %#% tmpunit) - truth) / truth, 
-            uci = ((tmpsum$CI[3] %#% tmpunit) - truth) / truth) 
+            lci = ((tmpsum$CI[1] %#% tmpunit) - hr_truth) / hr_truth, 
+            est = ((tmpsum$CI[2] %#% tmpunit) - hr_truth) / hr_truth, 
+            uci = ((tmpsum$CI[3] %#% tmpunit) - hr_truth) / hr_truth) 
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
@@ -1554,7 +1592,7 @@ mod_tab_hrange_server <- function(id, rv) {
     
     output$hrPlot <- ggiraph::renderGirafe({
       req(rv$is_analyses, 
-          rv$simList, rv$hr_nsim,
+          rv$simList, input$hr_nsim,
           length(rv$akdeList) > 0)
       req(length(rv$simList) == length(rv$akdeList))
       
@@ -1562,7 +1600,7 @@ mod_tab_hrange_server <- function(id, rv) {
         show_truth <- ifelse(input$hr_truth, TRUE, FALSE)
       } else { show_truth <- FALSE }
       
-      if (is.null(rv$akdeList[[rv$hr_nsim]])) {
+      if (is.null(rv$akdeList[[input$hr_nsim]])) {
         ud <- ggplot2::ggplot() +
             ggtext::geom_richtext(
               mapping = ggplot2::aes(x = 1, y = 1),
@@ -1576,24 +1614,25 @@ mod_tab_hrange_server <- function(id, rv) {
       } else {
         
         truth <- estimating_truth()[["data"]][[1]]
-        ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]],
-                                 rv$akdeList[[rv$hr_nsim]],
+        ext <- ctmm::extent(list(rv$simList[[input$hr_nsim]],
+                                 rv$akdeList[[input$hr_nsim]],
                                  truth))
         
         if (!is.null(rv$hr$akdeList)) {
           req(rv$hr$simList, rv$hr$akdeList)
-          ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]],
-                                   rv$akdeList[[rv$hr_nsim]],
+          ext <- ctmm::extent(list(rv$simList[[input$hr_nsim]],
+                                   rv$akdeList[[input$hr_nsim]],
                                    rv$hr$simList,
                                    rv$hr$akdeList[[1]],
                                    truth))
         }
         
-        req(rv$simList[[rv$hr_nsim]], rv$akdeList[[rv$hr_nsim]])
+        req(rv$simList[[input$hr_nsim]],
+            rv$akdeList[[input$hr_nsim]])
         
         ud <- plotting_hr(
-          input1 = list(data = rv$simList[[rv$hr_nsim]],
-                        ud = rv$akdeList[[rv$hr_nsim]]),
+          input1 = list(data = rv$simList[[input$hr_nsim]],
+                        ud = rv$akdeList[[input$hr_nsim]]),
           truth = truth,
           show_truth = show_truth,
           contours = input$hr_contours,
@@ -1818,15 +1857,16 @@ mod_tab_hrange_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      req(rv$active_tab == 'hr', rv$simList, rv$simfitList)
-      
+      req(rv$active_tab == 'hr',
+          rv$simList, rv$simfitList)
+
       mod_blocks_server(
-        id = "hrBlock_N", 
+        id = "hrBlock_N",
         rv = rv, data = rv$simList, fit = rv$simfitList,
         type = "N", name = "area")
-      
+
     }) # end of observe
-    
+
     observe({
       req(rv$active_tab == 'hr', rv$hr$simList)
       
