@@ -58,8 +58,10 @@ app_server <- function(input, output, session) {
     pathList = list(),
     indvar = FALSE,
     
+    is_isotropic = NULL,
     is_analyses = FALSE,
     is_report = FALSE,
+    is_meta = FALSE,
     
     time = c(0, 0),
     tour_active = FALSE,
@@ -216,10 +218,10 @@ app_server <- function(input, output, session) {
   mod_tab_hrange_server("tab_hrange_1", rv = rv)
   mod_tab_ctsd_server("tab_ctsd_1", rv = rv)
   mod_tab_meta_server("tab_meta_1", rv = rv)
-  
+
   # Report tab:
   mod_tab_report_server("tab_report_1", rv = rv)
-  
+
   # Misc: -----------------------------------------------------------------
   
   # Number of tags to deploy:
