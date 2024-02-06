@@ -2062,7 +2062,7 @@ mod_tab_design_server <- function(id, rv) {
       rv$dev$n <- lapply(simList, function(x) nrow(x))
       
       rv$needs_fit <- TRUE
-      rv$is_analyses <- NULL
+      rv$is_analyses <- FALSE
       rv$hr_completed <- FALSE
       rv$sd_completed <- FALSE
       
@@ -2537,6 +2537,7 @@ mod_tab_design_server <- function(id, rv) {
                 input$gps_dur_unit,
                 input$gps_dti_max,
                 input$device_log,
+                rv$active_tab,
                 rv$which_question,
                 rv$overwrite_seed) %>% 
       debounce(250)

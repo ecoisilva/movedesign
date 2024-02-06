@@ -297,17 +297,6 @@ mod_tab_data_upload_server <- function(id, rv) {
     ns <- session$ns
     pal <- load_pal()
     
-    # observe({
-    #   req(input$sp_uploaded != "")
-    #   
-    #   mod_comp_data_server("uploaded",
-    #                        rv = rv,
-    #                        type = "uploaded",
-    #                        species = input$sp_uploaded,
-    #                        dataset_id = input$id_uploaded)
-    # }) %>% 
-    #   bindEvent(c(input$sp_uploaded, input$id_uploaded))
-    
     # MAIN REACTIVE VALUES ------------------------------------------------
     
     # rv$upload <- reactiveValues() # currently empty
@@ -346,16 +335,16 @@ mod_tab_data_upload_server <- function(id, rv) {
                   "parameters",
                   "sizes",
                   "misc")
-
+    
     for (i in 1:length(boxnames)) {
       shinyjs::hide(id = paste0("uploadBox_", boxnames[i]))
     }
-
+    
     observe({
       req(rv$active_tab, rv$data_type)
       if (rv$active_tab == 'data_upload' && rv$data_type != "uploaded")
         shinyjs::hide(id = "uploadBox_viz")
-
+      
     }) # end of observe
     
     ## Render validate button: --------------------------------------------
@@ -385,30 +374,41 @@ mod_tab_data_upload_server <- function(id, rv) {
     ## If data available, update variable inputs: -------------------------
     
     observe({
-      req(rv$data_type == "uploaded",
-          rv$datList,
-          rv$input_x,
-          rv$input_y,
-          rv$input_t)
-          
+      req(rv$active_tab == 'data_upload', 
+          rv$datList, rv$id)
+      
+      rv$is_valid <- NULL # was FALSE
+      
+      shinyjs::show(id = "uploadVar_x")
+      shinyjs::show(id = "uploadVar_y")
+      shinyjs::show(id = "uploadVar_t")
+      
+    }) %>% # end of observe,
+      bindEvent(rv$id)
+    
+    observe({
+      req(rv$active_tab == 'data_upload')
+      req(rv$data_type == "uploaded")
+      req(rv$datList)
+
       out_data <- rv$datList[[1]]
-      req(!is.null(out_data$"timestamp"))
       
       updateSelectInput(
         session, inputId = "uploadVar_x",
         label = "X coordinate:",
         choices = names(out_data),
-        selected = rv$input_x)
+        selected = ifelse(!is.null(out_data$"x"), "x", "longitude"))
       updateSelectInput(
         session, inputId = "uploadVar_y",
         label = "Y coordinate:",
         choices = names(out_data),
-        selected = rv$input_y)
+        selected = ifelse(!is.null(out_data$"y"), "y", "latitude"))
       updateSelectInput(
         session, inputId = "uploadVar_t",
         label = "Datetime:",
         choices = names(out_data),
-        selected = rv$input_t)
+        selected = ifelse(!is.null(out_data$"timestamp"),
+                          "timestamp", NULL))
       
     }) %>% # end of observe,
       bindEvent(rv$datList)
@@ -463,7 +463,6 @@ mod_tab_data_upload_server <- function(id, rv) {
         
       } else {
         rv$species <- rv$species_binom <- input$sp_uploaded
-        rv$needs_fit <- TRUE
         
       } # end of if ()
       
@@ -485,18 +484,16 @@ mod_tab_data_upload_server <- function(id, rv) {
             span('Validate', class = "cl-mdn"), "and",
             icon("paper-plane", class = "cl-mdn"),
             span('Extract', class = "cl-mdn"),
-            'buttons.'),
-            html = TRUE,
-            size = "xs"))
+            'buttons.')),
+          html = TRUE,
+          size = "xs")
       }
       
     }) %>% # end of observe, then:
       bindEvent(input$uploadButton_extract)
     
     # OPERATIONS ----------------------------------------------------------
-    ## 1. Upload .csv file with data, create reactive values: -------------
-    
-    ### 1.1. Read in file submission:
+    ## 1. Upload .csv file with data: -------------------------------------
     
     reading_file <- reactive({
       if (is.null(input$file_csv)) return("")
@@ -523,7 +520,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           style = "warning",
           message = paste0("File may be ",
                            msg_warning("incorrectly formatted"), "."),
-          detail = "Check a different separator or quote.")
+          detail = "Try a different separator and/or quote.")
         return(NULL)
       }
       
@@ -557,30 +554,42 @@ mod_tab_data_upload_server <- function(id, rv) {
           message = paste0("File is ",
                            msg_danger("not correctly formatted"), "."),
           detail = "May be missing one or more columns.")
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "File invalid",
+          text = tagList(span(
+            "File is",
+            wrap_none(span("not correctly formatted", class = "cl-dgr"), ","), 
+            "and cannot be converted. Please check for missing columns",
+            "(animal ID, x & y coordinates, timestamp).")),
+          confirmButtonText = "Dismiss",
+          html = TRUE,
+          size = "xs")
+        
+        shinybusy::remove_modal_spinner()
         return(NULL)
       }
       
-      req(out_dataset)
       msg_log(
         style = "success",
-        message = paste0("File ",
-                         msg_success("submitted"), "."),
-        detail = "Please select one individual from this dataset.")
+        message = paste0("File ", msg_success("uploaded"), "."))
+      
+      req(out_dataset)
       
       # Check number of individuals within dataset:
       
-      dataList <- out_dataset
+      datList <- out_dataset
       if ("timestamp" %in% names(out_dataset)) {
-        dataList <- list()
-        dataList[[1]] <- out_dataset
-        names(dataList) <- summary(as_tele_list(out_dataset))$identity
+        datList <- list()
+        datList[[1]] <- out_dataset
+        names(datList) <- summary(as_tele_list(out_dataset))$identity
       }
       
       # Check if data is anonymized:
       
-      if (!("timestamp" %in% names(dataList[[1]]))) {
-        
-        dataList <- pseudonymize(dataList)
+      if (!("timestamp" %in% names(datList[[1]]))) {
+        datList <- pseudonymize(datList)
         
         shinyFeedback::showToast(
           type = "success",
@@ -600,74 +609,58 @@ mod_tab_data_upload_server <- function(id, rv) {
           detail = "Origin location and time added.")
       }
       
-      newdat <- telemetry_as_df(dataList)
+      newdat <- telemetry_as_df(datList)
       
-      if(all(is.na(newdat$x),
-             is.na(newdat$y))) {
+      if(all(is.na(newdat$x), is.na(newdat$y))) {
         
         msg_log(
           style = "danger",
           message = paste0("Coercion to telemetry object ",
                            msg_danger("failed"), "."),
-          detail = "Check column names for coordinates.")
+          detail = "Check column names of coordinates.")
+        
+        shinybusy::remove_modal_spinner()
         return(NULL)
       }
       
       shinyjs::show(id = "uploadBox_species")
-      shinyjs::hide(id = "uploadVar_x")
-      shinyjs::hide(id = "uploadVar_y")
-      shinyjs::hide(id = "uploadVar_t")
+      # shinyjs::hide(id = "uploadVar_x")
+      # shinyjs::hide(id = "uploadVar_y")
+      # shinyjs::hide(id = "uploadVar_t")
       
       if (!input$uploadBox_file$collapsed) {
         shinydashboardPlus::updateBox("uploadBox_file",
                                       action = "toggle")
       }
       
-      if (class(dataList)[1] != "list" && 
-          class(dataList[[1]])[1] != "ctmm")
-        dataList <- list(dataList)
+      if (class(datList)[1] != "list" && 
+          class(datList[[1]])[1] != "ctmm")
+        datList <- list(datList)
       
-      rv$datList <- dataList
-      rv$svfList <- extract_svf(dataList, fraction = 1)
+      rv$datList <- datList
       rv$fitList <- NULL
+      rv$svfList <- NULL
       rv$id <- NULL
       
       rv$data_type <- "uploaded"
-      shinyjs::show(id = "uploadBox_parameters")
+      
       shinyjs::show(id = "uploadBox_viz")
       
       if (req(species) != "")
-          shiny::updateTextInput(
-            session = session,
-            inputId = "sp_uploaded",
-            label = "Scientific name:",
-            value = species)
+        shiny::updateTextInput(
+          session = session,
+          inputId = "sp_uploaded",
+          label = "Scientific name:",
+          value = species)
       
       out_data <- rv$datList[[1]]
       req(!is.null(out_data$"timestamp"))
-      rv$input_x <- ifelse(!is.null(out_data$"x"),
-                           "x", "longitude")
-      rv$input_y <- ifelse(!is.null(out_data$"y"),
-                           "y", "latitude")
+      rv$input_x <- ifelse(!is.null(out_data$"x"), "x", "longitude")
+      rv$input_y <- ifelse(!is.null(out_data$"y"), "y", "latitude")
       rv$input_t <- "timestamp"
       
     }) %>% # end of observe,
       bindEvent(input$confirm_upload)
-    
-    # 1.2. Set data columns (x, y, t):
-    
-    observe({
-      req(rv$active_tab == 'data_upload', 
-          rv$datList, rv$id)
-      
-      rv$is_valid <- FALSE
-      
-      shinyjs::show(id = "uploadVar_x")
-      shinyjs::show(id = "uploadVar_y")
-      shinyjs::show(id = "uploadVar_t")
-      
-    }) %>% # end of observe,
-      bindEvent(rv$id)
     
     ## 2. Validate data: --------------------------------------------------
     
@@ -749,18 +742,16 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       if ((expt$max %#% expt$unit) > (15 %#% "minutes")) {
         
-        out <- fix_unit(expt$max, expt$unit, convert = TRUE)
+        out_expt <- fix_unit(expt$max, expt$unit, convert = TRUE)
         
         shinyalert::shinyalert(
           className = "modal_warning",
           title = "Do you wish to proceed?",
-          callbackR = function(x) {
-            rv$confirm_time <- x
-          },
+          callbackR = function(x) { rv$confirm_time <- x },
           text = tagList(span(
             "Expected run time for the next phase", br(),
             "is approximately",
-            wrap_none(span(out$value, out$unit,
+            wrap_none(span(out_expt$value, out_expt$unit,
                            class = "cl-dgr"), ".")
           )),
           type = "warning",
@@ -773,46 +764,42 @@ mod_tab_data_upload_server <- function(id, rv) {
       } else { confirm_time <- TRUE }
       
       req(confirm_time)
-      
-      start_time <- Sys.time()
+      start_fit <- Sys.time()
       msg_log(
         style = "warning",
         message = paste0("Model fit ",
-                         msg_warning("in progress"), "."),
+                         msg_warning("in progress"), ","),
         detail = "Please wait for model selection to finish:")
       
-      n <- 1
       m <- length(rv$datList[rv$id])
-      if (m > 1) {
-        if (rv$parallel) n <- round_any(
-          m/parallel::detectCores(logical = FALSE), 1, f = ceiling)
-        else n <- length(m)
-        if (n < 1) n <- 1
-      }
+      if (rv$parallel) m <- round_any(
+        m/parallel::detectCores(logical = FALSE), 1, f = ceiling) 
       
-      loading_modal("Selecting movement model", exp_time = expt, n = n)
+      loading_modal("Selecting movement model",
+                    exp_time = expt, parallel = rv$parallel, n = m)
       fitList <- fitting_ctmm()
       
-      if (!inherits(fitList, "error")) {
+      if (inherits(fitList, "error")) {
+        proceed <- NULL
+        msg_log(
+          style = "danger",
+          message = paste0("Model fit ", msg_danger("failed"), "."),
+          detail = "May be due to low absolute sample size.")
+        req(proceed)
+        
+      } else {
         
         if (class(fitList)[1] != "list" && 
             class(fitList[[1]])[1] != "ctmm")
           fitList <- list(fitList)
+        
         names(fitList) <- names(rv$datList[rv$id])
         rv$fitList <- fitList
         
-      } else {
-        proceed <- NULL
-        msg_log(
-        style = "danger",
-        message = paste0("Model fit ", msg_danger("failed"), "."),
-        detail = "May be due to low absolute sample size.")
-        req(proceed)
       }
       
       req(rv$fitList)
-      
-      time_fit <- difftime(Sys.time(), start_time, units = "sec")
+      time_fit <- difftime(Sys.time(), start_fit, units = "sec")
       rv$time[1] <- rv$time[1] + time_fit[[1]]
       
       msg_log(
@@ -821,7 +808,6 @@ mod_tab_data_upload_server <- function(id, rv) {
                          msg_success("completed"), "."),
         run_time = time_fit)
       
-      rv$needs_fit <- FALSE
       shinybusy::remove_modal_spinner()
       
       ### Set up for validation:
@@ -829,7 +815,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       taup <- extract_pars(rv$fitList, name = "position", meta = TRUE)
       tauv <- extract_pars(rv$fitList, name = "velocity", meta = TRUE)
       
-      ### Validate based on research questions:
+      ### Validate based on research question(s):
       
       rv$is_valid <- TRUE
       if (is.null(taup) & is.null(tauv)) {
@@ -844,8 +830,7 @@ mod_tab_data_upload_server <- function(id, rv) {
             "remains in this dataset.",
             "Please select a different individual or dataset to",
             "proceed with", span("home range", class = "cl-dgr"),
-            "estimation."
-          )),
+            "estimation.")),
           confirmButtonText = "Dismiss",
           html = TRUE)
         
@@ -853,62 +838,54 @@ mod_tab_data_upload_server <- function(id, rv) {
       }
       
       req(rv$is_valid)
-      if ("Home range" %in% rv$which_question) {
-        if (is.null(taup)) {
-          
-          shinyalert::shinyalert(
-            type = "error",
-            
-            title = "Dataset invalid",
-            text = tagList(span(
-              "No significant signature of the animal's",
-              span("position autocorrelation", class = "cl-dgr"),
-              "parameter remains in this dataset.",
-              "Please select a different individual or dataset to",
-              "proceed with", span("home range", class = "cl-dgr"),
-              "estimation."
-            )),
-            confirmButtonText = "Dismiss",
-            html = TRUE)
-          
-          msg_log(
-            style = "danger",
-            message = paste(
-              "No signature of",
-              msg_danger("position autocorrelation"), "found."),
-            detail = "Select different dataset(s) to proceed.")
-          
-          rv$is_valid <- NULL
-        }
+      if ("Home range" %in% rv$which_question && is.null(taup)) {
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Dataset invalid",
+          text = tagList(span(
+            "No significant signature of the animal's",
+            span("position autocorrelation", class = "cl-dgr"),
+            "parameter remains in this dataset.",
+            "Please select a different individual or dataset to",
+            "proceed with", span("home range", class = "cl-dgr"),
+            "estimation.")),
+          confirmButtonText = "Dismiss",
+          html = TRUE)
+        
+        msg_log(
+          style = "danger",
+          message = paste(
+            "No signature of",
+            msg_danger("position autocorrelation"), "found."),
+          detail = "Select different dataset(s) to proceed.")
+        
+        rv$is_valid <- NULL
       }
       
-      if ("Speed & distance" %in% rv$which_question) {
-        if (is.null(tauv)) {
-          
-          shinyalert::shinyalert(
-            type = "error",
-            
-            title = "Dataset invalid",
-            text = tagList(span(
-              "No significant signature of the animal's",
-              span("velocity autocorrelation", class = "cl-dgr"),
-              "parameter remains in this dataset.",
-              "Please select a different individual or dataset to",
-              "proceed with", span("distance/speed", class = "cl-dgr"),
-              "estimation."
-            )),
-            confirmButtonText = "Dismiss",
-            html = TRUE)
-          
-          msg_log(
-            style = "danger",
-            message = paste("No signature of",
-                            msg_danger("velocity autocorrelation"),
-                            "found."),
-            detail = "Select a different dataset to proceed.")
-          
-          rv$is_valid <- NULL
-        }
+      if ("Speed & distance" %in% rv$which_question && is.null(tauv)) {
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Dataset invalid",
+          text = tagList(span(
+            "No significant signature of the animal's",
+            span("velocity autocorrelation", class = "cl-dgr"),
+            "parameter remains in this dataset.",
+            "Please select a different individual or dataset to",
+            "proceed with", span("distance/speed", class = "cl-dgr"),
+            "estimation.")),
+          confirmButtonText = "Dismiss",
+          html = TRUE)
+        
+        msg_log(
+          style = "danger",
+          message = paste(
+            "No signature of",
+            msg_danger("velocity autocorrelation"), "found."),
+          detail = "Select a different dataset to proceed.")
+        
+        rv$is_valid <- NULL
       }
       
       req(rv$is_valid)
@@ -933,12 +910,6 @@ mod_tab_data_upload_server <- function(id, rv) {
           preventDuplicates = TRUE,
           positionClass = "toast-bottom-right"))
       
-      # if (!input$select_intro$collapsed &&
-      #    rv$tour_active) { NULL } else {
-      #      shinydashboardPlus::updateBox("select_intro",
-      #                                    action = "toggle")
-      #    }
-      
       shinyjs::show(id = "uploadBox_parameters")
       
     }) %>% # end of observe,
@@ -949,8 +920,8 @@ mod_tab_data_upload_server <- function(id, rv) {
     
     observe({
       req(rv$which_question,
-          rv$data_type == "uploaded",
-          rv$datList, rv$id, rv$is_valid)
+          rv$data_type == "uploaded", rv$id, rv$is_valid)
+      req(rv$datList, rv$fitList)
       
       shinyjs::show(id = "uploadBox_regime")
       shinyjs::show(id = "uploadBox_sizes")
@@ -983,7 +954,33 @@ mod_tab_data_upload_server <- function(id, rv) {
       else rv$mu <- list(array(0, dim = 2, 
                                dimnames = list(c("x", "y"))))
       
-      rv$svfList <- extract_svf(dat0, fit0)
+      shinybusy::remove_modal_spinner()
+      
+      ### Extract variogram:
+      
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = tagList(span(
+          style = "font-size: 18px;",
+          span("Extracting", style = "color: #797979;"),
+          wrap_none(span("variogram", class = "cl-sea"),
+                    span("...", style = "color: #797979;")))))
+      
+      msg_log(
+        style = "warning",
+        message = paste0("Extracting ", msg_warning("variograms"), ","),
+        detail = "This may take a while...")
+      
+      start_svf <- Sys.time()
+      rv$svfList <- extract_svf(rv$datList[rv$id],
+                                rv$fitList[rv$id], fraction = 1)
+      time_svf <- difftime(Sys.time(), start_svf, units = "sec")
+      
+      msg_log(
+        style = 'success',
+        message = paste0("Variograms ", msg_success("extracted"), ","),
+        run_time = time_svf)
       
       shinybusy::remove_modal_spinner()
       
@@ -1003,7 +1000,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       msg_log(
         style = "success",
-        message = paste0("Parameters ",
+        message = paste0("All parameters ",
                          msg_success("extracted"), "."),
         detail = paste("Proceed to",
                        msg_success('Sampling design'), "tab."))
@@ -1022,11 +1019,6 @@ mod_tab_data_upload_server <- function(id, rv) {
           size = "xs")
       }
       
-      # if (!input$uploadBox_species$collapsed) {
-      #   shinydashboardPlus::updateBox("uploadBox_species",
-      #                                 action = "toggle")
-      # }
-      
       shinyjs::hide(id = "uploadVar_x")
       shinyjs::hide(id = "uploadVar_y")
       shinyjs::hide(id = "uploadVar_t")
@@ -1038,12 +1030,13 @@ mod_tab_data_upload_server <- function(id, rv) {
     ## Extract parameters for groups: -------------------------------------
     
     observe({
-      req(rv$proceed,
+      req(rv$proceed)
+      req(rv$is_valid,
           rv$which_question,
           rv$data_type == "uploaded",
           rv$active_tab == 'data_upload')
-      req(rv$datList, rv$fitList, rv$groups, rv$is_valid)
       req(length(rv$sigma) == 1)
+      req(rv$datList, rv$fitList, rv$groups)
       
       dat <- list(A = rv$datList[rv$groups[[1]]$A],
                   B = rv$datList[rv$groups[[1]]$B])
@@ -1155,7 +1148,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       return(paste0("Model fitting took approximately ",
                     out$value, " ", out$unit, "."))
       
-    }) # end of renderText // upload_time
+    }) # end of renderText, "upload_time"
     
   }) # end of moduleServer
 }

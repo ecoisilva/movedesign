@@ -61,8 +61,9 @@ mod_comp_m_ui <- function(id) {
           fluidRow(
             column(width = 12,
                    verbatimTextOutput(outputId = ns("txt_ratio"))
-            )),
+            )) #,
           
+          ##TODO
           # p(style = "margin-top: 10px;"),
           # fluidRow(
           #   column(width = 12, align = "center",
@@ -104,7 +105,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
-    rv$m <- reactiveValues(needs_fit = NULL, tmpList = NULL)
+    rv$m <- reactiveValues(proceed = NULL, 
+                           needs_fit = NULL, 
+                           tmpList = NULL)
     
     ## Simulating data: ---------------------------------------------------
     
@@ -458,7 +461,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         n <- nrow(rv$simList[[x]]))
       
       rv$m$needs_fit <- TRUE
-      rv$is_analyses <- NULL
+      rv$is_analyses <- FALSE
       rv$hr_completed <- FALSE
       rv$sd_completed <- FALSE
       
@@ -659,7 +662,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     ### Home range area: --------------------------------------------------
     
     observe({
-      req(rv$which_meta,
+      req(rv$which_meta != "none",
           rv$which_question == "Home range",
           rv$which_m == "get_m")
       req(rv$datList,
