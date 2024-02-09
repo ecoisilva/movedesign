@@ -734,7 +734,7 @@ mod_tab_sims_server <- function(id, rv) {
     
     output$simUI_legend <- renderUI({
       
-      if(req(rv$which_meta) == "compare") {
+      if(rv$which_meta == "compare") {
         ui <- p(
           style = paste("text-align: justify;",
                         "margin-top: 15px;"),

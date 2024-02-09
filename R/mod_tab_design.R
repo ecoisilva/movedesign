@@ -1895,23 +1895,34 @@ mod_tab_design_server <- function(id, rv) {
         
       } else if (rv$data_type != "simulated") {
         
-        # fit <- prepare_mod(
-        #   tau_p = rv$tau_p[[1]][2, ],
-        #   tau_v = rv$tau_v[[1]][2, ],
-        #   sigma = rv$sigma[[1]][2, ],
-        #   mu = rv$mu[[1]])
+        fit <- prepare_mod(
+          tau_p = rv$tau_p[[1]][2, ],
+          tau_v = rv$tau_v[[1]][2, ],
+          sigma = rv$sigma[[1]][2, ],
+          mu = rv$mu[[1]])
         
-        fit <- ctmm:::mean.ctmm(x = rv$fitList[rv$id]) %>% 
-          suppressMessages() %>% 
-          suppressWarnings() %>% 
-          quiet()
+        # fit <- tryCatch( # error
+        #   ctmm:::mean.ctmm(x = rv$fitList[rv$id]) %>% 
+        #     suppressMessages() %>% 
+        #     suppressWarnings() %>% 
+        #     quiet(),
+        #   error = function(e) e)
+        # 
+        # if (inherits(fit, "error")) {
+        #   msg_log(
+        #     style = "danger",
+        #     message = paste0(
+        #       "Mean fit ", msg_danger("failed"), "."))
+        #   return(NULL)
+        # }
+        
         rv$is_isotropic <- fit$sigma@isotropic[[1]]
         
         # Recenter to 0,0 (not needed if using prepare_mod):
         fit$mu[[1, "x"]] <- 0
         fit$mu[[1, "y"]] <- 0
         
-        if ("compare" %in% req(rv$which_meta)) {
+        if ("compare" %in% rv$which_meta) {
           if (length(rv$tau_p) == 3 ||
               length(rv$tau_v) == 3 ||
               length(rv$sigma) == 3 || length(rv$mu) == 3) {
@@ -2049,6 +2060,7 @@ mod_tab_design_server <- function(id, rv) {
           positionClass = "toast-bottom-right")
       )
       
+      
       shinybusy::show_modal_spinner(
         spin = "fading-circle",
         color = "var(--sea)",
@@ -2060,12 +2072,21 @@ mod_tab_design_server <- function(id, rv) {
         ))
       )
       
-      if (req(rv$which_meta) == "compare")
-        req(length(rv$tau_p) == 3)
+        if (rv$which_meta == "compare")
+          req(length(rv$tau_p) == 3)
       
       start <- Sys.time()
       simList <- simulating_data()
-      
+      # if (is.null(simList)) {
+      #   
+      #   shinybusy::remove_modal_spinner()
+      #   msg_log(
+      #     style = "danger",
+      #     message = paste0(
+      #       "Simulation ", msg_danger("failed"), "."))
+      # }
+      # 
+      # req(simList)
       if (!rv$grouped) {
         rv$seedList <- list(rv$seed0)
         names(simList) <- c(rv$seed0)

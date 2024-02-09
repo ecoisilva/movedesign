@@ -779,17 +779,28 @@ mod_tab_ctsd_server <- function(id, rv) {
           shinyalert::shinyalert(
             title = "Oops!",
             text = span(
-              "Data selected is from individual",
-              HTML(paste0(span(rv$id, class = "cl-dgr"),
-                          ",")), "but parameters are from",
-              HTML(paste0(span(rv$tmp$id, class = "cl-dgr"), ".")),
-              br(), "Please extract parameters in the",
+              "Data selected is from different individual(s).",
+              "Please extract parameters in the",
               icon("paw", class = "cl-mdn"),
               span("Species", class = "cl-mdn"), "tab",
               "for the appropriate individual before",
               "estimating home range."),
             html = TRUE,
             size = "xs")
+          # shinyalert::shinyalert(
+          #   title = "Oops!",
+          #   text = span(
+          #     "Data selected is from individual",
+          #     HTML(paste0(span(rv$id, class = "cl-dgr"),
+          #                 ",")), "but parameters are from",
+          #     HTML(paste0(span(rv$tmp$id, class = "cl-dgr"), ".")),
+          #     br(), "Please extract parameters in the",
+          #     icon("paw", class = "cl-mdn"),
+          #     span("Species", class = "cl-mdn"), "tab",
+          #     "for the appropriate individual before",
+          #     "estimating home range."),
+          #   html = TRUE,
+          #   size = "xs")
         }
         
         ## If no signature of velocity persists in data:
@@ -1512,8 +1523,8 @@ mod_tab_ctsd_server <- function(id, rv) {
         if (rv$grouped) {
           nm <- names(rv$simList)[[sim_no]]
           group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
-          truth <- ctsd_truth[[group]]
         }
+        truth <- ctsd_truth[[group]]
         
         out_est_df <- out_est_df %>%
           dplyr::add_row(seed = rv$seedList[[sim_no]],
@@ -1528,7 +1539,6 @@ mod_tab_ctsd_server <- function(id, rv) {
             lci = ((sdList[[i]][[1]] %#% tmpunit) - truth) / truth,
             est = ((sdList[[i]][[2]] %#% tmpunit) - truth) / truth,
             uci = ((sdList[[i]][[3]] %#% tmpunit) - truth) / truth)
-        
       }
       
       rv$speedDatList <- dataList
@@ -2591,7 +2601,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       req(rv$ctsdList, rv$speedEst, rv$speedErr)
       req(nrow(rv$speedEst) == length(rv$simList),
           nrow(rv$speedErr) == length(rv$simList))
-        
+      
       mod_blocks_server(
         id = "sdBlock_est",
         rv = rv, type = "ctsd", name = "speedEst")

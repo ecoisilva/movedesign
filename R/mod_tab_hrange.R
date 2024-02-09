@@ -927,8 +927,8 @@ mod_tab_hrange_server <- function(id, rv) {
     # Calculate true home range:
     estimating_truth <- reactive({
       
-      mean_x <- rv$mu[[1]][1]
-      mean_y <- rv$mu[[1]][2]
+      mean_x <- 0 # rv$mu[[1]][1]
+      mean_y <- 0 # rv$mu[[1]][2]
       
       if (rv$is_isotropic) {
         sig <- rv$sigma[[1]]$value[2] %#% rv$sigma[[1]]$unit[2]
@@ -954,11 +954,11 @@ mod_tab_hrange_server <- function(id, rv) {
       truth$y <- unlist(lapply(
         mean_y, function(x) x + radius_y * sin(truth$angle)))
       
-      if ("compare" %in% req(rv$which_meta)) {
-        # 
+      if ("compare" %in% rv$which_meta) {
+        
         # mean_xA <- rv$mu[[1]][1]
         # mean_yB <- rv$mu[[1]][2]
-        # 
+         
         if (rv$is_isotropic) {
           sigA <- rv$sigma[[2]]$value[2] %#% rv$sigma[[2]]$unit[2]
           sigB <- rv$sigma[[3]]$value[2] %#% rv$sigma[[3]]$unit[2]

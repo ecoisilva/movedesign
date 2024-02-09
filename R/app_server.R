@@ -34,6 +34,9 @@ app_server <- function(input, output, session) {
     species = NULL,
     id = NULL,
     
+    which_m = NULL,
+    which_meta = "none",
+    
     groups = list(intro = list(A = c(), B = c()),
                   final = list(A = c(), B = c())),
     grouped = FALSE,
@@ -171,14 +174,14 @@ app_server <- function(input, output, session) {
             shinydashboard::menuSubItem(
               tabName = "ctsd",
               text = info$ctsd[["title"]],
-              icon = shiny::icon(info$ctsd[["icon"]])) },
+              icon = shiny::icon(info$ctsd[["icon"]])) } #,
           
-          if (is.null(rv$which_meta) ||
-              req(rv$which_meta) != "none") {
-            shinydashboard::menuSubItem(
-              tabName = "meta",
-              text = info$meta[["title"]],
-              icon = shiny::icon(info$meta[["icon"]])) }
+          # if (is.null(rv$which_meta) ||
+          #     req(rv$which_meta) != "none") {
+          #   shinydashboard::menuSubItem(
+          #     tabName = "meta",
+          #     text = info$meta[["title"]],
+          #     icon = shiny::icon(info$meta[["icon"]])) }
         )),
       
       # Tab 8: Report

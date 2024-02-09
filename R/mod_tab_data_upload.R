@@ -738,32 +738,33 @@ mod_tab_data_upload_server <- function(id, rv) {
       ### Model fitting:
       
       expt <- timing_fit()
-      confirm_time <- NULL
+      rv$confirm_time <- NULL
       
-      if ((expt$max %#% expt$unit) > (15 %#% "minutes")) {
-        
-        out_expt <- fix_unit(expt$max, expt$unit, convert = TRUE)
-        
-        shinyalert::shinyalert(
-          className = "modal_warning",
-          title = "Do you wish to proceed?",
-          callbackR = function(x) { rv$confirm_time <- x },
-          text = tagList(span(
-            "Expected run time for the next phase", br(),
-            "is approximately",
-            wrap_none(span(out_expt$value, out_expt$unit,
-                           class = "cl-dgr"), ".")
-          )),
-          type = "warning",
-          showCancelButton = TRUE,
-          cancelButtonText = "Stop",
-          confirmButtonCol = pal$mdn,
-          confirmButtonText = "Proceed",
-          html = TRUE)
-        
-      } else { confirm_time <- TRUE }
+      # if ((expt$max %#% expt$unit) > (15 %#% "minutes")) {
+      #   
+      #   out_expt <- fix_unit(expt$max, expt$unit, convert = TRUE)
+      #   
+      #   shinyalert::shinyalert(
+      #     className = "modal_warning",
+      #     title = "Do you wish to proceed?",
+      #     callbackR = function(x) { rv$confirm_time <- x },
+      #     text = tagList(span(
+      #       "Expected run time for the next phase", br(),
+      #       "is approximately",
+      #       wrap_none(span(out_expt$value, out_expt$unit,
+      #                      class = "cl-dgr"), ".")
+      #     )),
+      #     type = "warning",
+      #     showCancelButton = TRUE,
+      #     cancelButtonText = "Stop",
+      #     confirmButtonCol = pal$mdn,
+      #     confirmButtonText = "Proceed",
+      #     html = TRUE)
+      #   
+      # } else { rv$confirm_time <- TRUE }
+      rv$confirm_time <- TRUE
       
-      req(confirm_time)
+      req(rv$confirm_time)
       start_fit <- Sys.time()
       msg_log(
         style = "warning",
@@ -911,6 +912,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           positionClass = "toast-bottom-right"))
       
       shinyjs::show(id = "uploadBox_parameters")
+      rv$confirm_time <- FALSE
       
     }) %>% # end of observe,
       bindEvent(input$validate_upload)
@@ -1143,7 +1145,7 @@ mod_tab_data_upload_server <- function(id, rv) {
     output$upload_time <- renderText({
       req(rv$time)
       
-      out <- fix_unit(rv$time[1], "seconds", convert = TRUE)
+      out <- fix_uFnit(rv$time[1], "seconds", convert = TRUE)
       
       return(paste0("Model fitting took approximately ",
                     out$value, " ", out$unit, "."))

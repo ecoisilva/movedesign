@@ -38,17 +38,17 @@ mod_tab_about_ui <- function(id) {
             wrap_none(span("speed and distance traveled",
                              class = "cl-sea-d"), ".")),
           br(),
-          p(style = "max-width: 685px;",
-            span(class = "help-block",
-                 style = "text-align: center !important;",
-                 
-                 fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
-                 span("Note:", class = "help-block-note"),
-                 "This is the", span( "development", class = "cl-dgr"),
-                 "version of the application, currently undergoing",
-                 "testing. Use with caution, as it may crash",
-                 "or behave unexpectedly.")),
-          p(style = "margin-bottom: 35px;")
+          # p(style = "max-width: 685px;",
+          #   span(class = "help-block",
+          #        style = "text-align: center !important;",
+          #        
+          #        fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
+          #        span("Note:", class = "help-block-note"),
+          #        "This is the", span( "development", class = "cl-dgr"),
+          #        "version of the application, currently undergoing",
+          #        "testing. Use with caution, as it may crash",
+          #        "or behave unexpectedly.")),
+          # p(style = "margin-bottom: 35px;")
 
           ) # end of column (text)
       ), # end of box // intro
@@ -138,53 +138,53 @@ mod_tab_about_ui <- function(id) {
                                 style = "color: var(--danger);")),
                   individual = TRUE),
                 
-                div(class = "btn-nobg",
-                    shinyWidgets::radioGroupButtons(
-                      inputId = ns("which_meta"),
-                      label = span("Analytical target:",
-                                   style = "font-size: 16px;"),
-                      choiceNames = c(
-                        tagList(span(
-                          "Single", span("individual",
-                                         class = "cl-sea"))),
-                        tagList(span(
-                          "Mean of",
-                          span("sampled population",
-                               class = "cl-sea"))),
-                        tagList(span(
-                          "Compare", span("two", class = "cl-sea"),
-                          "sampled populations"))),
-                      choiceValues = list("none", "mean", "compare"),
-                      selected = character(0),
-                      checkIcon = list(
-                        yes = tags$i(class = "fa fa-check-square",
-                                     style = "color: var(--sea);"),
-                        no = tags$i(class = "fa fa-square-o",
-                                    style = "color: var(--danger);")),
-                      direction = "vertical")),
-                
-                div(class = "btn-nobg",
-                    shinyWidgets::radioGroupButtons(
-                      inputId = ns("which_m"),
-                      label = span("Deployment:",
-                                   style = "font-size: 16px;"),
-                      choiceNames = c(
-                        tagList(span(em(
-                          '"I plan to deploy a',
-                          span("set", class = "cl-jgl"),
-                          'number of VHF/GPS tags."'))),
-                        tagList(span(em(
-                          '"I want to determine the',
-                          span("minimum", class = "cl-jgl"),
-                          'number of VHF/GPS tags."')))),
-                      choiceValues = list("set_m", "get_m"),
-                      selected = character(0),
-                      checkIcon = list(
-                        yes = tags$i(class = "fa fa-check-square",
-                                     style = "color: var(--jungle);"),
-                        no = tags$i(class = "fa fa-square-o",
-                                    style = "color: var(--danger);")),
-                      direction = "vertical"))
+                # div(class = "btn-nobg",
+                #     shinyWidgets::radioGroupButtons(
+                #       inputId = ns("which_meta"),
+                #       label = span("Analytical target:",
+                #                    style = "font-size: 16px;"),
+                #       choiceNames = c(
+                #         tagList(span(
+                #           "Single", span("individual",
+                #                          class = "cl-sea"))),
+                #         tagList(span(
+                #           "Mean of",
+                #           span("sampled population",
+                #                class = "cl-sea"))),
+                #         tagList(span(
+                #           "Compare", span("two", class = "cl-sea"),
+                #           "sampled populations"))),
+                #       choiceValues = list("none", "mean", "compare"),
+                #       selected = character(0),
+                #       checkIcon = list(
+                #         yes = tags$i(class = "fa fa-check-square",
+                #                      style = "color: var(--sea);"),
+                #         no = tags$i(class = "fa fa-square-o",
+                #                     style = "color: var(--danger);")),
+                #       direction = "vertical")),
+                # 
+                # div(class = "btn-nobg",
+                #     shinyWidgets::radioGroupButtons(
+                #       inputId = ns("which_m"),
+                #       label = span("Deployment:",
+                #                    style = "font-size: 16px;"),
+                #       choiceNames = c(
+                #         tagList(span(em(
+                #           '"I plan to deploy a',
+                #           span("set", class = "cl-jgl"),
+                #           'number of VHF/GPS tags."'))),
+                #         tagList(span(em(
+                #           '"I want to determine the',
+                #           span("minimum", class = "cl-jgl"),
+                #           'number of VHF/GPS tags."')))),
+                #       choiceValues = list("set_m", "get_m"),
+                #       selected = character(0),
+                #       checkIcon = list(
+                #         yes = tags$i(class = "fa fa-check-square",
+                #                      style = "color: var(--jungle);"),
+                #         no = tags$i(class = "fa fa-square-o",
+                #                     style = "color: var(--danger);")),
+                #       direction = "vertical"))
             
             ) # end of div
           ) # end of fluidRow
@@ -274,7 +274,7 @@ mod_tab_about_server <- function(id, rv) {
     observe({
       rv$which_data <- input$which_data
       rv$which_question <- input$which_question
-      rv$which_meta <- input$which_meta
+      # rv$which_meta <- input$which_meta
       
       req(input$which_m)
     }, label = "o-about_workflow")

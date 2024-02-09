@@ -1525,8 +1525,12 @@ sdRow <- function(seed,
   out_ctsd <- fix_unit(speed$est, speed$unit)
   out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
   
-  out_dist <- fix_unit(distance$est, distance$unit, convert = TRUE)
-  out$dist <- paste(out_dist$value, out_dist$unit)
+  if (is.na(distance$est)) {
+    out$dist <- NA
+  } else {
+    out_dist <- fix_unit(distance$est, distance$unit, convert = TRUE)
+    out$dist <- paste(out_dist$value, out_dist$unit)
+  }
   
   return(out)
   

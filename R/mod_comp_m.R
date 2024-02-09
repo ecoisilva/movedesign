@@ -279,9 +279,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     #   bindEvent(rv$is_analyses)
     
     observe({
-      req(length(rv$simList) > 1)
+      req(rv$which_meta, length(rv$simList) > 1)
       
-      wheel_step <- ifelse("compare" %in% req(rv$which_meta), 2, 1)
+      wheel_step <- ifelse("compare" %in% rv$which_meta, 2, 1)
       shinyWidgets::updateAutonumericInput(
         session = session,
         inputId = "nsims",
