@@ -41,7 +41,7 @@ mod_tab_about_ui <- function(id) {
           # p(style = "max-width: 685px;",
           #   span(class = "help-block",
           #        style = "text-align: center !important;",
-          #        
+          # 
           #        fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
           #        span("Note:", class = "help-block-note"),
           #        "This is the", span( "development", class = "cl-dgr"),
@@ -137,7 +137,7 @@ mod_tab_about_ui <- function(id) {
                     no = tags$i(class = "fa fa-square-o",
                                 style = "color: var(--danger);")),
                   individual = TRUE),
-                
+
                 # div(class = "btn-nobg",
                 #     shinyWidgets::radioGroupButtons(
                 #       inputId = ns("which_meta"),

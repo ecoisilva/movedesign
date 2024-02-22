@@ -384,7 +384,8 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$active_tab == 'report')
       req(rv$tau_p[[1]], rv$dur$value, rv$dur$unit)
       
-      input_taup <- "days" %#% rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
+      input_taup <- "days" %#% 
+        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       
       dat <- movedesign::sims_hrange[[1]] %>%
@@ -1449,7 +1450,7 @@ mod_tab_report_server <- function(id, rv) {
           "and the", wrap_none(input$ci, "%"),
           "credible intervals (shaded areas + lines).",
           "For AKDE, the 400 simulations were based on", 
-          "movement processes with \u03C4\u209A = ", out_taup, "days;",
+          "movement processes with \u03C4\u209A = ", out_taup, "day(s);",
           "for CTSD, \u03C4\u1D65 = ", 
           out_tauv$value, paste0(out_tauv$unit, "."),
           "Your simulation(s)",
@@ -1466,8 +1467,11 @@ mod_tab_report_server <- function(id, rv) {
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the probability density of estimate",
-              "errors based on 400 simulations for a sampling duration", 
-              "of", dur_for_hr, "days,", "with the median",
+              "errors based on 400 simulations for",
+              "movement processes with \u03C4\u209A = ", out_taup, 
+              "day(s),",
+              "and for a sampling duration of", 
+              dur_for_hr, "days,", "with the median",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
                 " in ", span("light blue", class = "cl-sea"), "),"),
@@ -1486,8 +1490,11 @@ mod_tab_report_server <- function(id, rv) {
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the probability density of estimate",
-              "errors based on 400 simulations for a sampling interval", 
-              "of", wrap_none(dti_for_sd, ","), "with the median",
+              "errors based on 400 simulations",
+              "for movement processes with \u03C4\u1D65 = ", 
+              out_tauv$value, out_tauv$unit,
+              "and for a sampling interval of", 
+              wrap_none(dti_for_sd, ","), "with the median",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
                 " in ", span("light blue", class = "cl-sea"), "),"),
@@ -2064,6 +2071,16 @@ mod_tab_report_server <- function(id, rv) {
       out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
       dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
       
+      if (!is.null(rv$tau_v)) {
+        input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
+        
+        dt_sd <- movedesign::sims_speed[[1]] %>%
+          dplyr::mutate(dur = round("days" %#% dur, 1))
+        out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
+        out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
+        # TODO TOCHECK
+      }
+      
       dt_sd <- movedesign::sims_speed[[1]] %>%
         dplyr::mutate(dur = round(input_dur, 0)) %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
@@ -2097,7 +2114,12 @@ mod_tab_report_server <- function(id, rv) {
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the expected error",
-              "based on 400 simulations for a sampling duration of", 
+              "based on 400 simulations",
+              
+              "for movement processes with \u03C4\u209A = ",
+              out_taup, "day(s),",
+              
+              "for a sampling duration of", 
               dur_for_hr, "days,", "with the medians",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
@@ -2118,7 +2140,12 @@ mod_tab_report_server <- function(id, rv) {
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the expected error",
-              "based on 400 simulations for a sampling interval of", 
+              "based on 400 simulations",
+              
+              "for movement processes with \u03C4\u1D65 = ", 
+              out_tauv$value, out_tauv$unit,
+              
+              "for a sampling interval of", 
               wrap_none(dti_for_sd, ","), "with the medians",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
@@ -2458,6 +2485,12 @@ mod_tab_report_server <- function(id, rv) {
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
+      dat <- movedesign::sims_hrange[[1]] %>%
+        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% duration, 1))
+      
+      out_taup <- dat$tau_p[which.min(abs(dat$tau_p - input_taup))]
+      
       switch(
         rv$which_question,
         "Home range" = {
@@ -2471,8 +2504,12 @@ mod_tab_report_server <- function(id, rv) {
             fontawesome::fa("circle-exclamation", fill = pal$dgr),
             span("Note:", class = "help-block-note"), 
             "This plot shows only the mean expected errors and",
-            "(confidence intervals) simulated for different sampling",
-            "durations (from 1 day to", wrap_none(max_dur, " days)"),
+            "(confidence intervals) simulated for",
+            
+            "movement processes with \u03C4\u209A = ", out_taup, "days,",
+            
+            "and for different sampling",
+            "durations (from 1 day to", wrap_none(max_dur, " days)."),
             "These are based on aggregated information from",
             "up to 400 simulations, so mean values will not match",
             "your current values.", br(),
@@ -2493,7 +2530,11 @@ mod_tab_report_server <- function(id, rv) {
             fontawesome::fa("circle-exclamation", fill = pal$dgr),
             span("Note:", class = "help-block-note"), 
             "This plot shows only the mean expected errors and",
-            "(confidence intervals) simulated for different sampling",
+            "(confidence intervals) simulated",
+            
+            # TODO add out_tauv
+            
+            "for different sampling",
             "durations (from 1 day to", wrap_none(max_dur, " days)"),
             "These are based on aggregated information from",
             "up to 400 simulations, so mean values will not match",
@@ -2881,7 +2922,7 @@ mod_tab_report_server <- function(id, rv) {
       
       tmpdat <- tmpdat %>%
         dplyr::group_by(seed) %>%
-        dplyr::summarize(across(everything(), 
+        dplyr::summarize(dplyr::across(dplyr::everything(), 
                          ~ifelse(all(is.na(.)), NA,
                                  .[!is.na(.)][1])))
       

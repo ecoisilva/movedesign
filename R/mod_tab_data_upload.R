@@ -637,6 +637,21 @@ mod_tab_data_upload_server <- function(id, rv) {
           class(datList[[1]])[1] != "ctmm")
         datList <- list(datList)
       
+      tmp <- list()
+      new_nms <- c()
+      old_nms <- names(datList)
+      for (x in seq_along(datList)) {
+        if (nrow(datList[[x]]) > 1) {
+          new_nms <- c(new_nms, old_nms[[x]])
+          tmp[[x]] <- datList[[x]] 
+        } else {
+          message("Individual ", x, " removed (only one location).")
+          tmp[[x]] <- NULL
+        }
+      }
+      datList <- tmp[!sapply(tmp, is.null)]
+      names(datList) <- new_nms
+      
       rv$datList <- datList
       rv$fitList <- NULL
       rv$svfList <- NULL
@@ -891,14 +906,17 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       req(rv$is_valid)
       
+      if (length(rv$datList) == 1)
+        txt_extra <- ", and the individual is " else
+          txt_extra <- ", and the individuals are "
+      
       msg_log(
         style = "success",
         message = paste0("Species and individual ",
                          msg_success("validated"), "."),
         detail = paste0("Species selected is the ",
                         msg_success(rv$species_binom),
-                        ", and the individual is ",
-                        msg_success(toString(rv$id)), "."))
+                        txt_extra, msg_success(toString(rv$id)), "."))
       
       shinyFeedback::showToast(
         type = "success",
@@ -1145,7 +1163,7 @@ mod_tab_data_upload_server <- function(id, rv) {
     output$upload_time <- renderText({
       req(rv$time)
       
-      out <- fix_uFnit(rv$time[1], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time[1], "seconds", convert = TRUE)
       
       return(paste0("Model fitting took approximately ",
                     out$value, " ", out$unit, "."))

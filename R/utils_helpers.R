@@ -680,6 +680,8 @@ plotting_svf <- function(data, fill,
       expression("Semi-variance"~"("*m^{"2"}*")")
   if (y_unit == "hectares") y_lab <- "Semi-variance (ha)"
   
+  data[sapply(data, is.null)] <- NULL
+  
   out <- lapply(seq_along(data), function(x) {
     if (is.null(data[[x]]$fit)) {
       svf <- data[[x]]$data %>% dplyr::slice_min(lag, prop = fraction)

@@ -105,10 +105,15 @@ mod_blocks_server <- function(id,
                if (length(out) > 1) out <- do.call(rbind, out)
                else out <- out[[1]]
                
-               unit <- fix_unit(mean(out$value), out$unit[1])$unit
-               out <- c("mean" = fix_unit(mean(out$value), unit)$value,
-                        "min" = fix_unit(min(out$value), unit)$value,
-                        "max" = fix_unit(max(out$value), unit)$value)
+               unit <- fix_unit(mean(out$value, na.rm = TRUE),
+                                out$unit[1])$unit
+               out <- c(
+                 "mean" = fix_unit(
+                   mean(out$value, na.rm = TRUE), unit)$value,
+                 "min" = fix_unit(
+                   min(out$value, na.rm = TRUE), unit)$value,
+                 "max" = fix_unit(
+                   max(out$value, na.rm = TRUE), unit)$value)
                
                if (length(data) != 1) 
                  subtitle <- span(ifelse(out[2] == 0, "0", out[2]), 
@@ -312,7 +317,7 @@ mod_blocks_server <- function(id,
           percentage = prepare_outputs()[["perc"]],
           icon = ifelse(type == "n", FALSE, TRUE),
           value = prepare_outputs()[["value"]],
-          interval = prepare_outputs()[["subtitle"]],
+          intervals = prepare_outputs()[["subtitle"]],
           rightBorder = options[["rightBorder"]],
           marginBottom = options[["rightBorder"]])
         

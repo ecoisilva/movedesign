@@ -27,6 +27,7 @@ rlang::on_load(rlang::local_use_cli(inline = TRUE))
 utils::globalVariables(
   c(".data", "group", "seed",
     
+    "id",
     "x", "y",
     "long", "lat",
     "longitude", "latitude",
@@ -35,10 +36,26 @@ utils::globalVariables(
     "duration", "dur",
     "interval", "dti", "dti_notes",
     
+    "value", "low", "high",
+    "est", "lci", "uci",
     "error", "error_lci", "error_uci",
     "CI_low", "CI_high",
     
+    "svf",
+    "svf_lower",
+    "svf_upper",
+    "svf_low50",
+    "svf_upp50",
+    
     "par_modal",
+    
+    "type",
+    "variable",
+    
+    "n",
+    "m",
+    "subpop",
+    "overlaps",
     
     "buffalo",
     "coati",

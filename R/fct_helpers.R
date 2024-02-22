@@ -556,7 +556,6 @@ extract_svf <- function(data, fit = NULL,
     fit <- list(fit)
   }
   
-  x <- 1
   out <- lapply(seq_along(data), function(x) {
     
     if (is.null(fit[[x]])) {
@@ -577,45 +576,52 @@ extract_svf <- function(data, fit = NULL,
     lag <- V[[1]]$lag
     lag[1] <- lag[2]/1000
     
-    if (!is.null(fit[[x]])) {
-      fit[[x]]$tau <- fit[[x]]$tau[fit[[x]]$tau > 0]
-      SVF <- ctmm:::svf.func(fit[[x]], moment = TRUE)
-      svf <- SVF$svf
-      DOF <- SVF$DOF
-      
-      if(any(diag(fit[[x]]$COV) > 0)) {
-        SVF <- Vectorize(function(t) svf(t))(lag)
-        dof <- Vectorize(function(t) { DOF(t) })(lag)
-        svf.lower <- Vectorize(function(dof) CI.lower(dof, level) )(dof)
-        svf.upper <- Vectorize(function(dof) CI.upper(dof, level) )(dof)
+    if (length(lag) == 1) {
+      out <- NULL
+    } else {
+      if (!is.null(fit[[x]])) {
+        fit[[x]]$tau <- fit[[x]]$tau[fit[[x]]$tau > 0]
+        SVF <- ctmm:::svf.func(fit[[x]], moment = TRUE)
+        svf <- SVF$svf
+        DOF <- SVF$DOF
+        
+        if (any(diag(fit[[x]]$COV) > 0)) {
+          SVF <- Vectorize(function(t) svf(t))(lag)
+          dof <- Vectorize(function(t) { DOF(t) })(lag)
+          svf.lower <- Vectorize(function(dof) CI.lower(dof, level) )(dof)
+          svf.upper <- Vectorize(function(dof) CI.upper(dof, level) )(dof)
+        }
       }
+      
+      VAR <- data.frame(svf = VAR$SVF,
+                        dof = VAR$DOF,
+                        lag = VAR$lag) %>%
+        dplyr::slice_min(lag, prop = fraction) %>%
+        dplyr::mutate(lag = x_unit %#% lag)
+      
+      VAR$svf_lower <- y_unit %#% ( VAR$svf * CI.lower(VAR$dof, level) )
+      VAR$svf_upper <- y_unit %#% ( VAR$svf * CI.upper(VAR$dof, level) )
+      VAR$svf_low50 <- y_unit %#% ( VAR$svf * CI.lower(VAR$dof, .5) )
+      VAR$svf_upp50 <- y_unit %#% ( VAR$svf * CI.upper(VAR$dof, .5) )
+      VAR$svf <- y_unit %#% VAR$svf
+      
+      FIT <- NULL
+      if (!is.null(fit[[x]])) {
+        FIT <- data.frame(
+          svf = y_unit %#% 
+            sapply(lag, Vectorize(function(t) { svf(t) })),
+          lag = x_unit %#% lag,
+          svf_lower = SVF * (y_unit %#% svf.lower),
+          svf_upper = SVF * (y_unit %#% svf.upper))
+      }
+      
+      out <- list(data = VAR,
+                  fit = FIT,
+                  x_unit = x_unit,
+                  y_unit = y_unit)
     }
     
-    VAR <- data.frame(svf = VAR$SVF,
-                      dof = VAR$DOF,
-                      lag = VAR$lag) %>%
-      dplyr::slice_min(lag, prop = fraction) %>%
-      dplyr::mutate(lag = x_unit %#% lag)
-    
-    VAR$svf_lower <- y_unit %#% ( VAR$svf * CI.lower(VAR$dof, level) )
-    VAR$svf_upper <- y_unit %#% ( VAR$svf * CI.upper(VAR$dof, level) )
-    VAR$svf_low50 <- y_unit %#% ( VAR$svf * CI.lower(VAR$dof, .5) )
-    VAR$svf_upp50 <- y_unit %#% ( VAR$svf * CI.upper(VAR$dof, .5) )
-    VAR$svf <- y_unit %#% VAR$svf
-    
-    FIT <- NULL
-    if (!is.null(fit[[x]])) {
-      FIT <- data.frame(
-        svf = y_unit %#% sapply(lag, Vectorize(function(t) { svf(t) })),
-        lag = x_unit %#% lag,
-        svf_lower = SVF * (y_unit %#% svf.lower),
-        svf_upper = SVF * (y_unit %#% svf.upper))
-    }
-    
-    return(list(data = VAR,
-                fit = FIT,
-                x_unit = x_unit,
-                y_unit = y_unit))
+    return(out)
     
   }) # end of lapply
   

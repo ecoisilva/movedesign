@@ -12,4 +12,8 @@
 #' @importFrom stats median
 #' @importFrom utils data
 #' @importFrom utils packageVersion
+#' @importFrom stats reorder
+#' @importFrom utils capture.output
+#' @importFrom utils head
+#' @importFrom utils read.table
 NULL

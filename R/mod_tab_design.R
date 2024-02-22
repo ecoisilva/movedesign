@@ -1916,8 +1916,6 @@ mod_tab_design_server <- function(id, rv) {
         #   return(NULL)
         # }
         
-        rv$is_isotropic <- fit$sigma@isotropic[[1]]
-        
         # Recenter to 0,0 (not needed if using prepare_mod):
         fit$mu[[1, "x"]] <- 0
         fit$mu[[1, "y"]] <- 0
@@ -2159,7 +2157,7 @@ mod_tab_design_server <- function(id, rv) {
             "Expected run time for the next phase", br(),
             "is approximately",
             wrap_none(span(
-              expt$range, expt$unit, class = "cl-dgr"), ".")
+              expt$range, class = "cl-dgr"), ".")
           )),
           type = "warning",
           showCancelButton = TRUE,
@@ -2224,6 +2222,7 @@ mod_tab_design_server <- function(id, rv) {
         
         rv$needs_fit <- FALSE
         rv$simfitList <- fitList
+        rv$is_isotropic <- fitList[[1]]$sigma@isotropic[[1]]
         
         lapply(seq_along(fitList), function(x) {
           rv$dev$tbl <<- rbind(
@@ -2787,7 +2786,7 @@ mod_tab_design_server <- function(id, rv) {
     ## Sample sizes: ----------------------------------------------------
     
     output$devBlock_n <- renderUI({
-      req(rv$simList, rv$dev$n[[1]])
+      req(rv$dev$n[[1]])
       
       n <- rv$dev$n[[1]]
       
