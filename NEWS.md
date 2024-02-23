@@ -1,10 +1,29 @@
+# movedesign 0.3.0
+
+-   Third release of movedesign.
+
+## New features
+
+-   Now fully supports multiple simulations within the same workflow.
+-   Added meta-analyses tab. Users can compare estimates for two different groups (e.g. females/males).
+-   Users can test a specific number of tags, or get the minimum number of tags for a specific output.
+
+## Minor improvements
+-  Added outlier plots to Data tabs.
+-  Added warning messages in case of very low effective sample sizes.
+
+## Bug fixes
+
+-   Fixed issue during data upload due to missing argument (#3).
+-   Fixed Report tab bug, should now display the correct CIs (#3).
+
 # movedesign 0.2.0
 
 -   Second release of movedesign.
 
 ## New features
 
--   Now supports running multiple simulations within the same workflow.
+-   Began support for multiple simulations within the same workflow.
 -   Expected errors will update to show the mean (and CIs if applicable) for multiple simulations.
 -   Can switch plots for each simulation (both for HR and trajectories).
 
