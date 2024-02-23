@@ -861,6 +861,19 @@ mod_tab_sims_server <- function(id, rv) {
           as.character(rv$sims$m)
       }
       
+      names(out) <- as.character(rv$sims$m)
+      
+      # TODO (check if needed)
+      # if (!rv$grouped) {
+      #   rv$seedList <- list(rv$seed0)
+      #   names(out) <- c(rv$seed0)
+      # } else {
+      #   rv$seedList <- list(rv$seed0, rv$seed0 + 1)
+      #   rv$groups[[2]] <- list(A = as.character(rv$seed0), 
+      #                          B = as.character(rv$seed0 + 1))
+      #   names(out) <- c(rv$seed0, rv$seed0 + 1)
+      # }
+      
       return(out)
       
     }) %>% # end of reactive, simulating_data()
