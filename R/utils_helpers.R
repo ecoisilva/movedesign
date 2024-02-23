@@ -582,8 +582,12 @@ plotting_hr <- function(input1,
   extent[1,"y"] <- min(extent[1,"y"], min(truth$y), min(data$y))
   extent[2,"y"] <- max(extent[2,"y"], max(truth$y), max(data$y))
   
-  extent[,"x"] <- extent[,"x"] + diff(range(extent[,"x"])) * c(-.01, .01)
-  extent[,"y"] <- extent[,"y"] + diff(range(extent[,"y"])) * c(-.01, .01)
+  extent[,"x"] <- extent[,"x"] + 
+    diff(range(extent[,"x"])) *
+    c(-.01, .01)
+  extent[,"y"] <- extent[,"y"] + 
+    diff(range(extent[,"y"])) *
+    c(-.01, .01)
   
   ud <- ctmm::as.sf(ud, level = .95, level.UD = .95)
   
@@ -684,10 +688,12 @@ plotting_svf <- function(data, fill,
   
   out <- lapply(seq_along(data), function(x) {
     if (is.null(data[[x]]$fit)) {
-      svf <- data[[x]]$data %>% dplyr::slice_min(lag, prop = fraction)
+      svf <- data[[x]]$data %>% 
+        dplyr::slice_min(lag, prop = fraction)
       add_fit <- FALSE
     } else {
-      fit <- data[[x]]$fit %>% dplyr::slice_min(lag, prop = fraction)
+      fit <- data[[x]]$fit %>% 
+        dplyr::slice_min(lag, prop = fraction)
       svf <- data[[x]]$data[data[[x]]$data$lag <= max(fit$lag), ]
     }
       
@@ -744,6 +750,120 @@ plotting_svf <- function(data, fill,
   
 }
 
+#' Plot outlier
+#'
+#' @description Plot outliers
+#' @keywords internal
+#'
+#' @importFrom dplyr %>%
+#' @noRd
+plotting_outlier <- function(data) {
+  
+  m <- length(data)
+  out_data <- quiet(ctmm::outlie(data, plot = FALSE)) %>% 
+    suppressMessages() %>%
+    suppressWarnings()
+  
+  out_plot <- lapply(seq_along(data), function(x) {
+    
+    ind <- data[[x]]
+    UERE <- ctmm::uere(ind)
+    
+    if ("VAR.xy" %!in% names(ind)) {
+      ctmm::uere(ind) <- UERE
+    }
+    
+    error <- UERE$UERE[, "horizontal"]
+    names(error) <- rownames(UERE$UERE)
+    error <- ctmm::ctmm(error = error, axes = c("x", "y"))
+    error <- ctmm:::get.error(ind, error, calibrate = TRUE)
+    
+    DT <- diff(data[[x]]$t)
+    time.res <- ctmm:::time_res(DT)
+    ZERO <- DT == 0
+    if (any(ZERO)) {
+      DT[ZERO] <- time.res[2]
+    }
+    Vs <- ctmm:::assign_speeds(data[[x]], UERE = error, 
+                               DT = DT, axes = c("x", "y"))
+    v <- Vs$v.t
+    VAR.v <- Vs$VAR.t
+    mu <- ctmm:::median.telemetry(data[[x]])
+    d <- ctmm:::get.telemetry(data[[x]], axes = c("x", "y"))
+    mu <- ctmm:::get.telemetry(mu, axes = c("x", "y"))
+    mu <- c(mu)
+    d <- t(d) - mu
+    if (length(dim(error)) == 3) {
+      d <- t(d)
+    } else {
+      d <- colSums(d^2)
+      d <- sqrt(d)
+    }
+    D <- ctmm:::distanceMLE(d, error, return.VAR = TRUE)
+    d <- D[, 1]
+    VAR.d <- D[, 2]
+    rm(D)
+    
+    if ("z" %in% names(data[[x]])) {
+      error <- UERE$UERE[, "vertical"]
+      names(error) <- rownames(UERE$UERE)
+      error <- ctmm(error = error, axes = c("z"))
+      error <- get.error(data[[x]], error, calibrate = TRUE)
+      Vz <- assign_speeds(data[[x]], UERE = error, DT = DT,
+                          axes = "z")
+      vz <- Vz$v.t
+      VAR.vz <- Vz$VAR.t
+      dz <- get.telemetry(data[[x]], axes = c("z"))
+      dz <- dz - stats::median(data[[x]]$z)
+      dz <- abs(dz)
+      DZ <- distanceMLE(dz, error, axes = "z", 
+                        return.VAR = TRUE)
+      dz <- DZ[, 1]
+      VAR.dz <- DZ[, 2]
+      rm(DZ)
+    }
+    
+    lwd <- Vs$v.dt
+    if (diff(range(lwd))) lwd <- lwd / max(lwd) else lwd <- 0
+    if (diff(range(d))) cex <- d/max(d) * 4 else cex <- 0
+    
+    # col <- grDevices::rgb(cex, 0, 0, cex)
+    palette <- colorRampPalette(c("white", 
+                                  "red"))(length(cex))
+    
+    ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
+    
+    p <- ggplot2::ggplot(data[[x]]) +
+      ggplot2::geom_segment(
+        data = data.frame(
+          x0 = data[[x]]$x[-length(data[[x]]$x)],
+          y0 = data[[x]]$y[-length(data[[x]]$y)],
+          x1 = data[[x]]$x[-1],
+          y1 = data[[x]]$y[-1],
+          lwd = lwd),
+        ggplot2::aes(x = x0, y = y0, 
+                     xend = x1, yend = y1, 
+                     color = lwd),
+        linewidth = lwd) +
+      
+      viridis::scale_color_viridis(option = "mako",
+                                   direction = -1) +
+      
+      ggplot2::geom_point(
+        ggplot2::aes(x = x, y = y),
+        color = palette, size = cex, shape = 20) +
+      
+      ggplot2::scale_size_identity() +
+      ggplot2::labs(x = NULL, y = NULL) +
+      theme_movedesign(ft_size = ft_size) +
+      ggplot2::theme(legend.position = "none")
+    
+    return(p)
+  })
+  
+  return(list(data = out_data, plot = out_plot))
+  
+}
 
 
 #' To significant digits
@@ -886,7 +1006,12 @@ loading_modal <- function(x,
           p("Total run time:", 
             style = header_css), br(),
           p("\u2248", out_txt_range,
-            style = time_css), p())
+            style = time_css), p(),
+          
+          p(span("*Does not account for parallelization,",
+                 "run time may be substantially lower.",
+                 class = "cl-dgr"), 
+            style = "font-size: 14px; line-height: 1;"))
       }
     }
   }
@@ -1524,13 +1649,18 @@ sdRow <- function(seed,
   out_dti <- fix_unit(dti$value, dti$unit)
   out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
   
-  out_ctsd <- fix_unit(speed$est, speed$unit)
-  out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
+  if (is.na(speed$est) || is.infinite(speed$est)) {
+    out$ctsd <- NA
+  } else {
+    out_ctsd <- fix_unit(speed$est, speed$unit)
+    out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
+  }
   
   if (is.na(distance$est)) {
     out$dist <- NA
   } else {
-    out_dist <- fix_unit(distance$est, distance$unit, convert = TRUE)
+    out_dist <- fix_unit(distance$est, distance$unit,
+                         convert = TRUE)
     out$dist <- paste(out_dist$value, out_dist$unit)
   }
   

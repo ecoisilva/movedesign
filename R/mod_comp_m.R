@@ -285,7 +285,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       shinyWidgets::updateAutonumericInput(
         session = session,
         inputId = "nsims",
-        label = "Number of tags:",
+        label = "Number of tags (total):",
         value = length(rv$simList), 
         options = list(
           decimalPlaces = 0,

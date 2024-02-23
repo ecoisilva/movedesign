@@ -273,7 +273,8 @@ mod_tab_report_server <- function(id, rv) {
       output$end_report <- renderUI({ NULL })
       output$end_report_both <- renderUI({ NULL })
           
-    }) %>% bindEvent(rv$active_tab)
+    }) %>% # end of observe,
+      bindEvent(rv$active_tab)
     
     ## Rendering research questions: --------------------------------------
     
@@ -336,8 +337,10 @@ mod_tab_report_server <- function(id, rv) {
     ## Rendering regime comparison inputs: --------------------------------
     
     output$highlighting_reg <- renderUI({
-      req(rv$which_question)
+      req(rv$which_question, rv$which_m)
+      req(rv$which_m == "none")
       
+      # TODO show if tau values of pre-run sims apply
       if ("Home range" %in% rv$which_question) {
         
         out <- out_hr <- shinyWidgets::pickerInput(
@@ -369,6 +372,16 @@ mod_tab_report_server <- function(id, rv) {
       
     }) # end of renderUI, "highlighting_reg"
     
+    observe({
+      req(input$highlight_dur)
+      rv$highlight_dur <- input$highlight_dur
+    })
+    
+    observe({
+      req(input$highlight_dti)
+      rv$highlight_dti <- input$highlight_dti
+    })
+    
     ## Rendering total number of simulations: -----------------------------
     
     output$rep_nsims <- renderText({
@@ -384,26 +397,45 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$active_tab == 'report')
       req(rv$tau_p[[1]], rv$dur$value, rv$dur$unit)
       
-      input_taup <- "days" %#% 
-        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
-      input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
-      
-      dat <- movedesign::sims_hrange[[1]] %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-        dplyr::mutate(duration = round("days" %#% duration, 1))
-      
-      out_taup <- dat$tau_p[which.min(abs(dat$tau_p - input_taup))]
-      out_dur <- dat$dur[which.min(abs(dat$dur - input_dur))]
-      
-      newdat <- dat %>%
-        dplyr::filter(tau_p == out_taup) %>%
-        dplyr::filter(duration == out_dur)
-      
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
+      
+      taup_unit <- "days"
+      input_taup <- taup_unit %#% 
+        rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
+      input_dur <- taup_unit %#% rv$dur$value %#% rv$dur$unit
+      
+      if (rv$which_m == "none") {
+        dat <- movedesign::sims_hrange[[1]] %>%
+          dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
+          dplyr::mutate(duration = round("days" %#% duration, 1))
+        
+        out_taup <- dat$tau_p[which.min(abs(dat$tau_p - input_taup))]
+        out_dur <- dat$dur[which.min(abs(dat$dur - input_dur))]
+        
+        newdat <- dat %>%
+          dplyr::filter(tau_p == out_taup) %>%
+          dplyr::filter(duration == out_dur)
+        
+      } else {
+        req(rv$hr$tbl)
+        
+        newdat <- data.frame(
+          tau_p = input_taup,
+          duration = input_dur,
+          error = rv$hr$tbl$area_err,
+          error_lci = rv$hr$tbl$area_err_min, 
+          error_uci = rv$hr$tbl$area_err_max)
+        
+        out_taup <- input_taup
+        out_dur <- input_dur
+      }
+      
       rv$hr_CI <- data.frame(
         mean = mean(newdat$error, na.rm = TRUE),
-        CI_low = mean(newdat$error_lci, na.rm = TRUE),
-        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+        CI_low = min(newdat$error, na.rm = TRUE),
+        CI_high = max(newdat$error, na.rm = TRUE))
+      # CI_low = mean(newdat$error_lci, na.rm = TRUE),
+      # CI_high = mean(newdat$error_uci, na.rm = TRUE))
       
       # Credible intervals:
       rv$hr_HDI <- suppressWarnings(
@@ -412,7 +444,7 @@ mod_tab_report_server <- function(id, rv) {
     }) # end of observe
     
     observe({ # For comparison with new duration:
-      req(input$highlight_dur > 0)
+      req(rv$highlight_dur > 0)
       shinyjs::show(id = "end_comparison")
       
       input_taup <- "days" %#% rv$tau_p[[1]]$value[2] %#%
@@ -423,7 +455,7 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::mutate(duration = round("days" %#% duration, 1))
       
       out_taup <- dat$tau_p[which.min(abs(dat$tau_p - input_taup))]
-      out_dur <- as.numeric(input$highlight_dur)
+      out_dur <- as.numeric(rv$highlight_dur)
       
       newdat <- dat %>%
         dplyr::filter(tau_p == out_taup) %>%
@@ -440,7 +472,7 @@ mod_tab_report_server <- function(id, rv) {
         bayestestR::ci(newdat$error, ci = ci, method = "HDI"))
       
     }) %>% # end of observe,
-      bindEvent(input$highlight_dur)
+      bindEvent(rv$highlight_dur)
     
     ## Credible intervals for speed & distance estimation: ----------------
     
@@ -448,23 +480,37 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$active_tab == 'report')
       req(rv$tau_v, rv$dti$value, rv$dti$unit)
       
+      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
+      
       input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
-      dat <- movedesign::sims_speed[[1]] %>%
-        dplyr::mutate(dur = round("days" %#% dur, 0))
+      if (rv$which_m == "none") {
+        dat <- movedesign::sims_speed[[1]] %>%
+          dplyr::mutate(dur = round("days" %#% dur, 0))
+        
+        out_tauv <- dat$tau_v[which.min(abs(dat$tau_v - input_tauv))]
+        out_dti <- dat$dti[which.min(abs(dat$dti - input_dti))]
+        out_dur <- dat$dur[which.min(abs(dat$dur - input_dur))]
+        
+        newdat <- dat %>%
+          dplyr::filter(tau_v == out_tauv) %>%
+          dplyr::filter(dur == out_dur) %>%
+          dplyr::filter(dti == out_dti)
+        
+      } else {
+        req(rv$sd$tbl)
+        
+        newdat <- data.table::data.table(
+          # tau_v = input_tauv,
+          # dur = input_dur,
+          # dti = input_dti,
+          error = rv$sd$tbl$ctsd_err,
+          error_lci = rv$sd$tbl$ctsd_err_min, 
+          error_uci = rv$sd$tbl$ctsd_err_max)
+      }
       
-      out_tauv <- dat$tau_v[which.min(abs(dat$tau_v - input_tauv))]
-      out_dti <- dat$dti[which.min(abs(dat$dti - input_dti))]
-      out_dur <- dat$dur[which.min(abs(dat$dur - input_dur))]
-      
-      newdat <- dat %>%
-        dplyr::filter(tau_v == out_tauv) %>%
-        dplyr::filter(dur == out_dur) %>%
-        dplyr::filter(dti == out_dti)
-      
-      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       rv$sd_CI <- data.frame(
         mean = mean(newdat$error, na.rm = TRUE),
         CI_low = mean(newdat$error_lci, na.rm = TRUE),
@@ -477,7 +523,7 @@ mod_tab_report_server <- function(id, rv) {
     }) # end of observe
     
     observe({ # For comparison with new interval:
-      req(input$highlight_dti > 0)
+      req(rv$highlight_dti > 0)
       shinyjs::show(id = "end_comparison")
       
       input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
@@ -489,7 +535,7 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       out_dti <- fix_unit(
-        opts$dti[match(input$highlight_dti, opts$dti_notes)], "seconds")
+        opts$dti[match(rv$highlight_dti, opts$dti_notes)], "seconds")
       
       newdat <- dat %>%
         dplyr::filter(tau_v == out_tauv) %>%
@@ -506,7 +552,7 @@ mod_tab_report_server <- function(id, rv) {
         bayestestR::ci(newdat$error, ci = ci, method = "HDI"))
       
     }) %>% # end of observe,
-      bindEvent(input$highlight_dti)
+      bindEvent(rv$highlight_dti)
     
     # REPORT --------------------------------------------------------------
     
@@ -581,12 +627,25 @@ mod_tab_report_server <- function(id, rv) {
              }
       ) # end of switch
       
+      out_bias <- NULL
+      if (rv$add_note) {
+        out_bias <- span(
+          "However, due to ",
+          span("very low effective sample sizes",
+               style = "font-weight: bold;"),
+          "of the",
+          rv$data_type, "data, these parameters may not be",
+          "accurate, and lead to negatively biased outputs.",
+          class = "cl-dgr")
+      }
+      
       rv$report$species <- p(
         out_species, "Please see the",
         icon("paw", class = "cl-sea"),
         span("Species", class = "cl-sea"),
-        "parameters above for more details.")
-    
+        "parameters above for more details.",
+        out_bias)
+      
     }) %>% # end of observe,
       bindEvent(input$build_report)
     
@@ -803,13 +862,22 @@ mod_tab_report_server <- function(id, rv) {
             "for home range estimation.")
         }
         
-        out_hr2 <- span(
-          "Keep in mind that, for a similar duration of",
-          plot_dur, "days, there is a",
-          wrap_none(hrCI[2], "%", css = "cl-blk"),
-          "probability that the relative error will lie between",
-          wrap_none(hrCI[1], "%", css = "cl-blk"),
-          "and", wrap_none(hrCI[2], "%", end = ".", css = "cl-blk"))
+        out_hr2 <- NULL
+        if (rv$which_m == "none") {
+          out_hr2 <- span(
+            "Keep in mind that, for a similar duration of",
+            plot_dur, "days, there is a",
+            wrap_none(hrCI[2], "%", css = "cl-blk"),
+            "probability that the relative error will lie between",
+            wrap_none(hrCI[1], "%", css = "cl-blk"),
+            "and", wrap_none(hrCI[3], "%", end = ".", css = "cl-blk"))
+        } else {
+          out_hr2 <- span(
+            "There is a", wrap_none(hrCI[2], "%", css = "cl-blk"),
+            "probability the relative error will lie between",
+            wrap_none(hrCI[1], "%", css = "cl-blk"),
+            "and", wrap_none(hrCI[3], "%", end = ".", css = "cl-blk"))
+        }
         
         nsims <- ifelse(
           length(rv$simList) == 1,
@@ -937,6 +1005,9 @@ mod_tab_report_server <- function(id, rv) {
       sufficient <- span("sufficient", class = "cl-grn")
       insufficient <- span("insufficient", class = "cl-dgr")
       
+      txt_hr_uncertainty <- NULL
+      txt_sd_uncertainty <- NULL
+      
       ## Number of simulations:
       
       out_nsims <- span(
@@ -959,11 +1030,20 @@ mod_tab_report_server <- function(id, rv) {
                               na.rm = TRUE) * 100, 1)
       
       if (length(rv$simList) > 1) {
-        ci <- suppressWarnings(bayestestR::ci(
-          rv[["hrErr"]]$est, ci = .95, method = "HDI"))
-        hrErr_lci <- ci$CI_low
-        hrErr_uci <- ci$CI_high
+        # ci <- suppressWarnings(bayestestR::ci(
+        #   rv[["hrErr"]]$est, ci = .95, method = "HDI"))
+        # hrErr_lci <- ci$CI_low
+        # hrErr_uci <- ci$CI_high
+        
+        req(rv$hr_HDI)
+        hrErr_lci <- round(rv$hr_HDI$CI_low * 100, 1)
+        hrErr_uci <- round(rv$hr_HDI$CI_high * 100, 1)
       }
+      
+      txt_hr_uncertainty <- ifelse(
+        hrErr_uci < .3 & hrErr_lci > -.3,
+        "(with low uncertainty)",
+        "(with high uncertainty)")
       
       # Speed and distance errors:
       
@@ -976,11 +1056,22 @@ mod_tab_report_server <- function(id, rv) {
                                 na.rm = TRUE) * 100, 1)
         
         if (length(rv$simList) > 1) {
-          ci <- suppressWarnings(bayestestR::ci(
-            rv[["speedErr"]]$est, ci = .95, method = "HDI"))
-          sdErr_uci <- ci$CI_low
-          sdErr_lci <- ci$CI_high
+          # ci <- suppressWarnings(bayestestR::ci(
+          #   rv[["speedErr"]]$est, ci = .95, method = "HDI"))
+          # sdErr_uci <- ci$CI_low
+          # sdErr_lci <- ci$CI_high
+          
+          req(rv$sd_HDI)
+          sdErr_lci <- round(rv$sd_HDI$CI_low * 100, 1)
+          sdErr_uci <- round(rv$sd_HDI$CI_high * 100, 1)
+          
         }
+        
+        txt_sd_uncertainty <- ifelse(
+          sdErr_uci < .3 & sdErr_lci > -.3,
+          "(with low uncertainty)", 
+          "(with high uncertainty)")
+        
       }
       
       if (is_hr & !is_ctsd) {
@@ -988,17 +1079,23 @@ mod_tab_report_server <- function(id, rv) {
           style = "font-weight: bold;",
           
           "Your current tracking regime is likely sufficient",
-          "for home range estimation, but insufficient",
-          "for speed & distance estimation.")
+          "for home range estimation",
+          wrap_none(txt_hr_uncertainty, ","),
+          "but insufficient",
+          "for speed & distance estimation",
+          wrap_none(txt_sd_uncertainty, "."))
         
         if (any(rv$dev$N2 == 0))
           out <- span(
             style = "font-weight: bold;",
             
             "Your current tracking regime is likely sufficient",
-            "for home range estimation, and is inappropriate for",
+            "for home range estimation",
+            wrap_none(txt_hr_uncertainty, ","),
+            "and is",
             span("inappropriate", class = "cl-dgr"),
-            "for speed & distance estimation.")
+            "for speed & distance estimation",
+            wrap_none(txt_sd_uncertainty, "."))
       }
       
       if (!is_hr & is_ctsd) {
@@ -1006,8 +1103,11 @@ mod_tab_report_server <- function(id, rv) {
           style = "font-weight: bold;",
           
           "Your current tracking regime may be insufficient",
-          "for home range estimation, but likely sufficient",
-          "for speed & distance estimation.")
+          "for home range estimation",
+          wrap_none(txt_hr_uncertainty, ","),
+          "but likely sufficient",
+          "for speed & distance estimation",
+          wrap_none(txt_sd_uncertainty, "."))
       }
       
       if (is_hr & is_ctsd) {
@@ -1015,8 +1115,10 @@ mod_tab_report_server <- function(id, rv) {
           style = "font-weight: bold;",
           
           "Your current tracking regime is likely sufficient",
-          "for both home range estimation and for",
-          "speed & distance estimation.")
+          "for both home range estimation",
+          wrap_none(txt_hr_uncertainty, ","),
+          "and for speed & distance estimation",
+          wrap_none(txt_sd_uncertainty, "."))
       }
       
       if (!is_hr & !is_ctsd) {
@@ -1024,17 +1126,22 @@ mod_tab_report_server <- function(id, rv) {
           style = "font-weight: bold;",
           
           "Your current tracking regime may be insufficient",
-          "for both home range estimation and for",
-          "speed & distance estimation.")
+          "for both home range estimation",
+          wrap_none(txt_hr_uncertainty, ","),
+          "and for speed & distance estimation",
+          wrap_none(txt_sd_uncertainty, "."))
         
         if (any(rv$dev$N2 == 0))
           out <- span(
             style = "font-weight: bold;",
             
             "Your current tracking regime may be insufficient",
-            "for home range estimation, and is inappropriate for",
+            "for home range estimation",
+            wrap_none(txt_hr_uncertainty, ","),
+            "and is",
             span("inappropriate", class = "cl-dgr"),
-            "for speed & distance estimation.")
+            "for speed & distance estimation",
+            wrap_none(txt_sd_uncertainty, "."))
       }
       
       if (is.na(hrErr_lci) || is.na(hrErr_uci)) {
@@ -1261,6 +1368,16 @@ mod_tab_report_server <- function(id, rv) {
           
         }) # end of switch
       
+      
+      if (rv$which_m == "none") {
+        shinyjs::show(id = "section-highlight_dur")
+        shinyjs::show(id = "section-highlight_dti")
+      } else {
+        shinyjs::hide(id = "section-highlight_dur")
+        shinyjs::hide(id = "section-highlight_dti")
+      }
+      
+      
     }) %>% bindEvent(input$build_report)
     
     ## Reporting COMPARISON (if available): ------------------------------
@@ -1270,9 +1387,9 @@ mod_tab_report_server <- function(id, rv) {
       
       if (length(rv$which_question) == 1 &
           "Home range" %in% rv$which_question) {
-        req(input$highlight_dur)
+        req(rv$highlight_dur)
         
-        highlighted_dur <- as.numeric(input$highlight_dur)
+        highlighted_dur <- as.numeric(rv$highlight_dur)
         
         CI <- round(rv$hr_HDI_new$CI * 100, 0)
         LCI <- round(rv$hr_HDI_new$CI_low * 100, 1)
@@ -1317,13 +1434,13 @@ mod_tab_report_server <- function(id, rv) {
       
       if (length(rv$which_question) == 1 &
           "Speed & distance" %in% rv$which_question) {
-        req(input$highlight_dti)
+        req(rv$highlight_dti)
         
         opts <- movedesign::sims_speed[[1]] %>%
           dplyr::select(dti, dti_notes) %>%
           unique()
         
-        highlighted_dti <- opts$dti[match(input$highlight_dti,
+        highlighted_dti <- opts$dti[match(rv$highlight_dti,
                                           opts$dti_notes)]
         
         out_dti <- fix_unit(highlighted_dti, "seconds",
@@ -1391,13 +1508,17 @@ mod_tab_report_server <- function(id, rv) {
     ## Rendering density plots: -------------------------------------------
     
     output$repPlotLegend1 <- renderUI({
-      req(rv$which_question, input$ci,
-          rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
+      req(rv$which_question, rv$which_m, input$ci)
+      req(rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
       
-      input_taup <- "days" %#% 
+      m <- ifelse(rv$which_m == "none", 400, length(rv$simList))
+      taup_unit <- ifelse(rv$which_m == "none", 
+                          "days", rv$tau_p[[1]]$unit[2])
+      
+      input_taup <- taup_unit %#% 
         rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
-      input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
+      input_dur <- taup_unit %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
       dt_hr <- movedesign::sims_hrange[[1]] %>%
@@ -1405,12 +1526,22 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::mutate(duration = round("days" %#% duration, 1))
       
       out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
-      dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
+      
+      if (rv$which_m != "none") {
+        taup_unit <- fix_unit(input_taup, taup_unit)$unit
+        dur_for_hr <- paste0(round(input_dur, 1), " ", taup_unit, ",")
+      } else {
+        dur_for_hr <- paste(
+          dt_hr$dur[which.min(
+            abs(dt_hr$dur - input_dur))],
+          " ", taup_unit, ",")
+      }
       
       dt_sd <- movedesign::sims_speed[[1]] %>%
         dplyr::mutate(dur = round("days" %#% dur, 1))
       out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
       out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
+      tauv_unit <- out_tauv$unit
       dur_for_sd <- dt_sd$dur[which.min(abs(dt_sd$dur - input_dur))]
       
       dt_sd <- movedesign::sims_speed[[1]] %>%
@@ -1418,17 +1549,16 @@ mod_tab_report_server <- function(id, rv) {
         unique()
       out_dti <- dt_sd$dti[which.min(abs(dt_sd$dti - input_dti))]
       dti_for_sd <- dt_sd$dti_notes[match(out_dti, dt_sd$dti)]
-      dti_for_sd
       
       txt_highlight <- ""
       
       add_txt_highlight <- FALSE
-      if (!is.null(input$highlight_dur)) {
-        if (input$highlight_dur != "") add_txt_highlight <- TRUE
+      if (!is.null(rv$highlight_dur)) {
+        if (rv$highlight_dur != "") add_txt_highlight <- TRUE
       }
       
-      if (!is.null(input$highlight_dti)) {
-        if (input$highlight_dti != "") add_txt_highlight <- TRUE
+      if (!is.null(rv$highlight_dti)) {
+        if (rv$highlight_dti != "") add_txt_highlight <- TRUE
       }
       
       if (add_txt_highlight) {
@@ -1439,20 +1569,39 @@ mod_tab_report_server <- function(id, rv) {
             " in ", span("black", style = "color: black;"), "."))
       }
       
+      
       if (length(rv$which_question) > 1) {
+        if (rv$which_m == "none") {
+          sim_hr_details <- paste0(
+            "movement processes with \u03C4\u209A = ", 
+            out_taup, " day(s);")
+          sim_sd_details <- paste0(
+            "\u03C4\u1D65 = ", 
+            out_tauv$value, " ", out_tauv$unit, ".")
+        } else {
+          input_tauv <- tauv_unit %#% input_tauv
+          tauv_unit <- abbrv_unit(tauv_unit)
+          sim_hr_details <- paste0(
+            "movement processes with \u03C4\u209A = ", 
+            round(input_taup, 1), " ", taup_unit, ";")
+          sim_sd_details <- paste0(
+            "\u03C4\u1D65 = ", 
+            round(input_tauv, 1), " ", tauv_unit, ".")
+        }
+        
         ui <- tagList(
           fontawesome::fa("circle-exclamation", fill = pal$dgr),
           span("Note:", class = "help-block-note"), 
           "These plots show the probability density of estimate errors",
-          "based on 400 simulations, with the medians",
+          "based on ", m, " simulations, with the medians",
           wrap_none(
             "(", fontawesome::fa("diamond"), " in lighter colors),"),
           "and the", wrap_none(input$ci, "%"),
           "credible intervals (shaded areas + lines).",
-          "For AKDE, the 400 simulations were based on", 
-          "movement processes with \u03C4\u209A = ", out_taup, "day(s);",
-          "for CTSD, \u03C4\u1D65 = ", 
-          out_tauv$value, paste0(out_tauv$unit, "."),
+          "For AKDE, the ", m, " simulations were based on", 
+          sim_hr_details,
+          "for CTSD,",
+          sim_sd_details,
           "Your simulation(s)",
           "estimate errors are the circles", wrap_none(
             "(", fontawesome::fa("circle", prefer_type = "solid"), ")"),
@@ -1463,15 +1612,25 @@ mod_tab_report_server <- function(id, rv) {
         switch(
           rv$which_question,
           "Home range" = {
+            
+            if (rv$which_m == "none") {
+              sim_details <- paste0(
+                "movement processes with \u03C4\u209A = ", 
+                out_taup, " day(s),")
+            } else {
+              sim_details <- paste0(
+                "movement processes with \u03C4\u209A = ", 
+                round(input_taup, 1), " ", taup_unit, ";")
+            }
+            
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the probability density of estimate",
-              "errors based on 400 simulations for",
-              "movement processes with \u03C4\u209A = ", out_taup, 
-              "day(s),",
+              "errors based on", m, "simulations for",
+              sim_details,
               "and for a sampling duration of", 
-              dur_for_hr, "days,", "with the median",
+              dur_for_hr, "with the median",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
                 " in ", span("light blue", class = "cl-sea"), "),"),
@@ -1486,13 +1645,26 @@ mod_tab_report_server <- function(id, rv) {
               txt_highlight)
           },
           "Speed & distance" = {
+            
+            input_tauv <- tauv_unit %#% input_tauv
+            tauv_unit <- abbrv_unit(tauv_unit)
+            
+            if (rv$which_m == "none") {
+              sim_details <- paste0(
+                "movement processes with \u03C4\u1D65 = ", 
+                out_tauv$value, " ", out_tauv$unit)
+            } else {
+              sim_details <- paste0(
+                "movement processes with \u03C4\u1D65 = ", 
+                round(input_tauv, 1), " ", tauv_unit)
+            }
+            
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the probability density of estimate",
-              "errors based on 400 simulations",
-              "for movement processes with \u03C4\u1D65 = ", 
-              out_tauv$value, out_tauv$unit,
+              "errors based on", m, "simulations for",
+              sim_details,
               "and for a sampling interval of", 
               wrap_none(dti_for_sd, ","), "with the median",
               wrap_none(
@@ -1522,13 +1694,17 @@ mod_tab_report_server <- function(id, rv) {
     #### Accuracy of home range simulations: ------------------------------
     
     output$repPlot_hr <- ggiraph::renderGirafe({
-      req(rv$which_question, input$ci)
+      req(rv$which_question, rv$which_m, input$ci)
+      
+      m <- ifelse(rv$which_m == "none", 400, length(rv$simList))
+      
+      taup_unit <- ifelse(rv$which_m == "none", 
+                          "days", rv$tau_p[[1]]$unit[2])
       
       input_ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-      
-      input_taup <- "days" %#% 
+      input_taup <- taup_unit %#% 
         rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
-      input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
+      input_dur <- taup_unit %#% rv$dur$value %#% rv$dur$unit
       
       is_both <- FALSE
       rv$ft_size <- 13
@@ -1547,8 +1723,8 @@ mod_tab_report_server <- function(id, rv) {
       # Preparing if () statements:
       
       is_dur <- FALSE
-      if (!is.null(input$highlight_dur))
-        if (!is.na(as.numeric(input$highlight_dur))) 
+      if (!is.null(rv$highlight_dur))
+        if (!is.na(as.numeric(rv$highlight_dur))) 
           is_dur <- TRUE
       
       is_log <- FALSE
@@ -1558,22 +1734,43 @@ mod_tab_report_server <- function(id, rv) {
       
       # Prepare datasets:
       
-      dt_hr <- movedesign::sims_hrange[[1]] %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-        dplyr::mutate(duration = round("days" %#% duration, 1))
+      if (rv$which_m == "none") {
+        dt_hr <- movedesign::sims_hrange[[1]] %>%
+          dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
+          dplyr::mutate(duration = round("days" %#% duration, 1))
+        
+        out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
+        dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
+        
+        # Create density data frames:
+        ds1_hr <- dt_hr %>%
+          dplyr::filter(tau_p == out_taup) %>%
+          dplyr::filter(duration == dur_for_hr) %>%
+          stats::na.omit()
+        
+      } else {
+        req(rv$hr$tbl)
+        
+        dt_hr <- data.frame(
+          tau_p = input_taup,
+          duration = input_dur,
+          error = rv$hr$tbl$area_err,
+          error_lci = rv$hr$tbl$area_err_min, 
+          error_uci = rv$hr$tbl$area_err_max)
+        
+        out_taup <- input_taup
+        dur_for_hr <- input_dur
+        
+        # Create density data frames:
+        ds1_hr <- dt_hr %>%
+          stats::na.omit()
+      }
       
-      out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
-      dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
-      rv$report$dur_for_hr <- dur_for_hr
+      rv$report$dur_for_hr <- paste0(round(dur_for_hr, 1),
+                                     " ", taup_unit, ",")
       
-      # Create density data frames:
-      
-      ds1_hr <- dt_hr %>%
-        dplyr::filter(tau_p == out_taup) %>%
-        dplyr::filter(duration == dur_for_hr) %>%
-        stats::na.omit()
+      # Calculate median/ci:
       med <- stats::median(ds1_hr$error)
-      
       ds1_hr <- stats::density(ds1_hr$error)
       ds1_hr <- data.frame(x = ds1_hr$x, y = ds1_hr$y)
       rv$report$ds1_hr <- data.frame(
@@ -1591,7 +1788,7 @@ mod_tab_report_server <- function(id, rv) {
         req(rv$hr_HDI_new)
         
         out_dur_new <- dt_hr$dur[
-          abs(dt_hr$dur - as.numeric(input$highlight_dur)) %>%
+          abs(dt_hr$dur - as.numeric(rv$highlight_dur)) %>%
             which.min()]
         
         ds2_hr <- dt_hr %>%
@@ -1644,7 +1841,7 @@ mod_tab_report_server <- function(id, rv) {
       lbl <- c(
         paste0("AKDE error"),
         paste0("Median AKDE error + ", rv$hr_HDI$CI * 100,
-               "% HDI for ", dur_for_hr, " days"))
+               "% HDI for ", rv$report$dur_for_hr))
       brk <- c("now", "est")
       
       val_fill <- val_col <- c("now" = pal$sea_d, "est" = pal$sea)
@@ -1657,7 +1854,7 @@ mod_tab_report_server <- function(id, rv) {
       if (is_dur) {
         lbl <- c(
           lbl, paste0("Median AKDE error + ", rv$hr_HDI$CI * 100,
-                      "% HDI for ", input$highlight_dur, " days"))
+                      "% HDI for ", rv$highlight_dur, " days"))
         brk <- c(brk, "est_new")
         
         val_fill <- val_col <- c(val_fill, "est_new" = pal$mdn)
@@ -1760,7 +1957,7 @@ mod_tab_report_server <- function(id, rv) {
     }) %>% # end of renderGirafe // repPlot_hr
       bindEvent(list(input$build_report,
                      input$scale_density,
-                     input$highlight_dur))
+                     rv$highlight_dur))
     
     #### Accuracy of speed & distance simulations: ------------------------
     
@@ -1795,8 +1992,8 @@ mod_tab_report_server <- function(id, rv) {
       # Preparing if () statements:
       
       is_dti <- FALSE
-      if (!is.null(input$highlight_dti)) {
-        if (input$highlight_dti != "")
+      if (!is.null(rv$highlight_dti)) {
+        if (rv$highlight_dti != "")
           is_dti <- TRUE
       }
       
@@ -1848,7 +2045,7 @@ mod_tab_report_server <- function(id, rv) {
       if (is_dti) {
         req(rv$sd_HDI_new)
         
-        dti_new <- sd_opts$dti[match(input$highlight_dti,
+        dti_new <- sd_opts$dti[match(rv$highlight_dti,
                                      sd_opts$dti_notes)]
         out_dti_new <- dt_sd$dti[which.min(abs(dt_sd$dti - dti_new))]
         txt_dti_new <- sd_opts$dti_notes[match(out_dti_new,
@@ -2051,17 +2248,22 @@ mod_tab_report_server <- function(id, rv) {
     }) %>% # end of observe,
       bindEvent(list(input$build_report,
                      input$scale_density,
-                     input$highlight_dti))
+                     rv$highlight_dti))
     
     ## Rendering precision plot: ------------------------------------------
     
     output$repPlotLegend2 <- renderUI({
-      req(rv$which_question, input$ci,
-          rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
+      req(rv$which_question, rv$which_m, input$ci)
+      req(rv$which_m == "none")
+      req(rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
       
-      input_taup <- "days" %#% 
+      m <- ifelse(rv$which_m == "none", 400, length(rv$simList))
+      taup_unit <- ifelse(rv$which_m == "none", 
+                          "days", rv$tau_p[[1]]$unit[2])
+      
+      input_taup <- taup_unit %#% 
         rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
-      input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
+      input_dur <- taup_unit %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
       dt_hr <- movedesign::sims_hrange[[1]] %>%
@@ -2069,7 +2271,16 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::mutate(duration = round("days" %#% duration, 1))
       
       out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
-      dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
+      
+      if (rv$which_m != "none") {
+        taup_unit <- fix_unit(input_taup, taup_unit)$unit
+        dur_for_hr <- paste0(round(input_dur, 1),
+                             " ", taup_unit, ",")
+      } else {
+        dur_for_hr <- paste(
+          round(dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))], 1),
+          " ", taup_unit, ",")
+      }
       
       if (!is.null(rv$tau_v)) {
         input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
@@ -2110,17 +2321,25 @@ mod_tab_report_server <- function(id, rv) {
         switch(
           rv$which_question,
           "Home range" = {
+            
+            if (rv$which_m == "none") {
+              sim_details <- paste0(
+                "movement processes with \u03C4\u209A = ", 
+                out_taup, " day(s),")
+            } else {
+              sim_details <- paste0(
+                "movement processes with \u03C4\u209A = ", 
+                round(input_taup, 1), " ", taup_unit, ",")
+            }
+            
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the expected error",
-              "based on 400 simulations",
-              
-              "for movement processes with \u03C4\u209A = ",
-              out_taup, "day(s),",
-              
+              "based on", m, "simulations for",
+              sim_details,
               "for a sampling duration of", 
-              dur_for_hr, "days,", "with the medians",
+              dur_for_hr, "with the medians",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
                 " in ", span("light blue", class = "cl-sea"), "),"),
@@ -2136,13 +2355,24 @@ mod_tab_report_server <- function(id, rv) {
                                    class = "cl-sea-d"), "."))
           },
           "Speed & distance" = {
+            
+            # if (rv$which_m == "none") {
+            #   sim_details <- paste0(
+            #     "movement processes with \u03C4\u1D65 = ", 
+            #     out_tauv$value, out_tauv$unit)
+            # } else {
+            #   sim_details <- paste0(
+            #     "movement processes with \u03C4\u1D65 = ", 
+            #     out_tauv$value, out_tauv$unit)
+            # }
+            
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
               "This plot shows the expected error",
-              "based on 400 simulations",
+              "based on", m, "simulations for",
               
-              "for movement processes with \u03C4\u1D65 = ", 
+              "movement processes with \u03C4\u1D65 = ", 
               out_tauv$value, out_tauv$unit,
               
               "for a sampling interval of", 
@@ -2174,21 +2404,22 @@ mod_tab_report_server <- function(id, rv) {
     
     output$repPlot_precision <- ggiraph::renderGirafe({
       req(rv$hr_HDI, rv$sd_HDI)
-
+      req(rv$which_m == "none")
+      
       is_both <- FALSE
       if (!is.null(rv$which_question))
         if (length(rv$which_question) > 1)
           is_both <- TRUE
 
       is_dur <- FALSE
-      if (!is.null(input$highlight_dur)) {
-        if (!is.na(as.numeric(input$highlight_dur)))
+      if (!is.null(rv$highlight_dur)) {
+        if (!is.na(as.numeric(rv$highlight_dur)))
           is_dur <- TRUE
       }
 
       is_dti <- FALSE
-      if (!is.null(input$highlight_dti)) {
-        if (input$highlight_dti != "")
+      if (!is.null(rv$highlight_dti)) {
+        if (rv$highlight_dti != "")
           is_dti <- TRUE
       }
 
@@ -2223,7 +2454,7 @@ mod_tab_report_server <- function(id, rv) {
             lci = rv$hr_HDI_new$CI_low,
             uci = rv$hr_HDI_new$CI_high,
             label = paste0("AKDE error for ",
-                           input$highlight_dur, " days"),
+                           rv$highlight_dur, " days"),
             fill = pal$mdn,
             col = pal$mdn,
             linetype = "solid",
@@ -2271,7 +2502,7 @@ mod_tab_report_server <- function(id, rv) {
             lci = rv$hr_HDI$CI_low,
             uci = rv$hr_HDI$CI_high,
             label = paste0("AKDE error for ",
-                           rv$report$dur_for_hr, " days"),
+                           rv$report$dur_for_hr),
             fill = pal$sea,
             col = pal$sea,
             linetype = "solid",
@@ -2495,27 +2726,28 @@ mod_tab_report_server <- function(id, rv) {
         rv$which_question,
         "Home range" = {
           
-          dt_hr <- movedesign::sims_hrange[[1]] %>%
-            dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-            dplyr::mutate(duration = round("days" %#% duration, 1))
-          max_dur <- max(dt_hr$duration)
+          max_dur <- max(dat$duration)
+          unit <- ifelse(out_taup == 1, "day", "days")
           
           ui <- tagList(
-            fontawesome::fa("circle-exclamation", fill = pal$dgr),
-            span("Note:", class = "help-block-note"), 
+            fontawesome::fa("triangle-exclamation", fill = pal$dgr),
+            span("Warning:", class = "help-block-note"), 
             "This plot shows only the mean expected errors and",
             "(confidence intervals) simulated for",
             
-            "movement processes with \u03C4\u209A = ", out_taup, "days,",
+            "movement processes with \u03C4\u209A = ", 
+            span(out_taup, unit, class = "cl-dgr"),
             
             "and for different sampling",
-            "durations (from 1 day to", wrap_none(max_dur, " days)."),
-            "These are based on aggregated information from",
-            "up to 400 simulations, so mean values will not match",
-            "your current values.", br(),
+            "durations (from 1 day to", wrap_none(max_dur, " days)"),
+            "in grey.",
             "As sampling duration increases, we will expect lower",
             "estimate errors (points) and",
-            "narrower confidence intervals (shaded area).")
+            "lower uncertainty (shaded area).", br(),
+            "These are based on aggregated information from",
+            "pre-run simulations, so values may not match.",
+            "Evaluate with",
+            wrap_none("caution", class = "cl-dgr", "."))
           
         },
         "Speed & distance" = {
@@ -2536,12 +2768,14 @@ mod_tab_report_server <- function(id, rv) {
             
             "for different sampling",
             "durations (from 1 day to", wrap_none(max_dur, " days)"),
-            "These are based on aggregated information from",
-            "up to 400 simulations, so mean values will not match",
-            "your current values.", br(),
+            "in grey.",
             "As sampling duration increases, we will expect lower",
             "estimate errors (points) and",
-            "lower uncertainty (shaded area).")
+            "lower uncertainty (shaded area).", br(),
+            "These are based on aggregated information from",
+            "pre-run simulations, so values may not match.",
+            "Evaluate with",
+            wrap_none("caution", class = "cl-dgr", "."))
           
         },
         stop(paste0("No handler for ",
@@ -2555,7 +2789,7 @@ mod_tab_report_server <- function(id, rv) {
     }) # end of renderUI, "repPlotLegend3"
     
     output$repPlot_comp_hr <- ggiraph::renderGirafe({
-      req(rv$hrErr)
+      req(rv$which_m, rv$hrErr)
       
       tooltip_css <- paste(
         "font-family: 'Roboto Condensed', sans-serif;",
@@ -2571,24 +2805,36 @@ mod_tab_report_server <- function(id, rv) {
       dat <- movedesign::sims_hrange[[2]] %>%
         dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% duration, 1))
+      
+      index_taup <- which.min(abs(dat$tau_p - input_taup))
+      filtering <- dat$tau_p[index_taup]
+      newdat_filtered <- dat_filtered <- dat %>% 
+        dplyr::filter(tau_p == filtering)
+      index_dur <- which.min(abs(dat_filtered$duration - input_dur))
+      
+      if (rv$which_m != "none") {
+        req(rv$hr$tbl)
+        newdat_filtered <- data.frame(
+          tau_p = input_taup,
+          duration = input_dur,
+          error = mean(rv$hr$tbl$area_err, na.rm = TRUE),
+          error_lci = mean(rv$hr$tbl$area_err_min, na.rm = TRUE),
+          error_uci = mean(rv$hr$tbl$area_err_max, na.rm = TRUE))
+        index_dur <- 1
+      }
+      
       dat$id <- 1:nrow(dat)
       
-      if (input$highlight_dur > 0) {
-        dur_NEW <- as.numeric(input$highlight_dur)
+      if (rv$highlight_dur > 0) {
+        dur_NEW <- as.numeric(rv$highlight_dur)
         is_highlight <- TRUE
       } else {
         is_highlight <- NULL
       }
       
-      index_taup <- which.min(abs(dat$tau_p - input_taup))
-      filtering <- dat$tau_p[index_taup]
-      dat_filtered <- dat %>% dplyr::filter(tau_p == filtering)
-      index_dur <- which.min(abs(dat_filtered$duration - input_dur))
-      selected <- dat_filtered$id[index_dur]
-      
       pd <- ggplot2::position_dodge(width = 0.6)
       
-      if (input$highlight_dur > 0) {
+      if (rv$highlight_dur > 0) {
         
         newdat <- dat_filtered %>%
           dplyr::filter(duration == dur_NEW)
@@ -2640,17 +2886,17 @@ mod_tab_report_server <- function(id, rv) {
           size = 2.5, shape = 18, col = "grey40") +
         
         ggplot2::geom_segment(
-          data = dat_filtered[index_dur,],
-          ggplot2::aes_string(x = "duration",
-                              xend = "duration",
-                              y = "error_lci",
-                              yend = "error_uci"),
-          col = pal$sea,
-          linetype = "solid",
-          size = 1.5, alpha = .8) +
+            data = newdat_filtered[index_dur,],
+            ggplot2::aes_string(x = "duration",
+                                xend = "duration",
+                                y = "error_lci",
+                                yend = "error_uci"),
+            col = pal$sea,
+            linetype = "solid",
+            size = 1.5, alpha = .8) +
         
         ggplot2::geom_point(
-          data = dat_filtered[index_dur,],
+          data = newdat_filtered[index_dur,],
           mapping = ggplot2::aes_string(x = "duration",
                                         y = "error",
                                         group = "tau_p"),
@@ -2664,8 +2910,8 @@ mod_tab_report_server <- function(id, rv) {
         ggplot2::labs(x = "Sampling duration (in days)",
                       y = "Estimate error (%)") +
         
-        { if (input$highlight_dur > 0) p1 } +
-        { if (input$highlight_dur > 0) p2 } +
+        { if (rv$highlight_dur > 0) p1 } +
+        { if (rv$highlight_dur > 0) p2 } +
         
         theme_movedesign(ft_size = rv$ft_size) +
         ggplot2::theme(legend.position = "none")
@@ -2703,8 +2949,8 @@ mod_tab_report_server <- function(id, rv) {
       input_dti <- rv$dti$value %#% rv$dti$unit
       
       reveal_if <- FALSE
-      if (!is.null(input$highlight_dti)) {
-        if (input$highlight_dti != "") reveal_if <- TRUE
+      if (!is.null(rv$highlight_dti)) {
+        if (rv$highlight_dti != "") reveal_if <- TRUE
       }
       
       sims <- movedesign::sims_speed[[2]]
@@ -2717,7 +2963,7 @@ mod_tab_report_server <- function(id, rv) {
         unique()
       
       if (reveal_if) {
-        dti_new <- opts$dti[match(input$highlight_dti,
+        dti_new <- opts$dti[match(rv$highlight_dti,
                                   opts$dti_notes)]
         is_highlight <- TRUE
       } else {
@@ -2737,7 +2983,7 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::filter(tau_v == filtering_tauv) %>%
         dplyr::filter(dti == filtering_dti) %>%
         stats::na.omit()
-      selected <- dat_filtered$id[index_dti]
+      
       pd <- ggplot2::position_dodge(width = 0.6)
       
       if (reveal_if) {

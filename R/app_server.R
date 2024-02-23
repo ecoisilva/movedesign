@@ -27,21 +27,19 @@ app_server <- function(input, output, session) {
     "turtle" = "Glyptemys insculpta")
   
   rv <- reactiveValues(
-    seedList = list(),
+    ctmm = data.frame(cbind(species, species_binom)),
     data_type = NULL,
     
     nsims = NULL,
     species = NULL,
     id = NULL,
     
-    which_m = NULL,
+    which_m = "none",
     which_meta = "none",
     
     groups = list(intro = list(A = c(), B = c()),
                   final = list(A = c(), B = c())),
     grouped = FALSE,
-    
-    ctmm = data.frame(cbind(species, species_binom)),
     
     truth = list(hr = list(area = list(),
                            data = list()),
@@ -56,6 +54,7 @@ app_server <- function(input, output, session) {
     status = FALSE,
     set_analysis = NULL,
     
+    seedList = list(),
     ctsdList = list(),
     akdeList = list(),
     pathList = list(),
@@ -66,11 +65,16 @@ app_server <- function(input, output, session) {
     is_report = FALSE,
     is_meta = FALSE,
     
+    add_note = NULL,
+    
     time = c(0, 0),
     tour_active = FALSE,
     alert_active = TRUE,
     overwrite_active = FALSE,
     crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0",
+    
+    highlight_dur = "",
+    highlight_dti = "",
     
     var_fraction = .5)
   
@@ -174,14 +178,14 @@ app_server <- function(input, output, session) {
             shinydashboard::menuSubItem(
               tabName = "ctsd",
               text = info$ctsd[["title"]],
-              icon = shiny::icon(info$ctsd[["icon"]])) } #,
+              icon = shiny::icon(info$ctsd[["icon"]])) },
           
-          # if (is.null(rv$which_meta) ||
-          #     req(rv$which_meta) != "none") {
-          #   shinydashboard::menuSubItem(
-          #     tabName = "meta",
-          #     text = info$meta[["title"]],
-          #     icon = shiny::icon(info$meta[["icon"]])) }
+          if (is.null(rv$which_meta) ||
+              req(rv$which_meta) != "none") {
+            shinydashboard::menuSubItem(
+              tabName = "meta",
+              text = info$meta[["title"]],
+              icon = shiny::icon(info$meta[["icon"]])) }
         )),
       
       # Tab 8: Report

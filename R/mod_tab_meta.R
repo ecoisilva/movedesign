@@ -332,6 +332,11 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$active_tab == 'meta')
       req(rv$which_meta, rv$which_question)
       
+      shinyjs::hide(id = "txt_hr_ratio")
+      shinyjs::hide(id = "txt_hr_ratio_label")
+      shinyjs::hide(id = "txt_sd_ratio")
+      shinyjs::hide(id = "txt_sd_ratio_label")
+      
       if ("compare" %in% rv$which_meta) {
         if ("Home range" %in% rv$which_question) {
           shinyjs::show(id = "txt_hr_ratio")
@@ -341,17 +346,6 @@ mod_tab_meta_server <- function(id, rv) {
         if ("Speed & distance" %in% rv$which_question) {
           shinyjs::show(id = "txt_sd_ratio")
           shinyjs::show(id = "txt_sd_ratio_label")
-        }
-        
-      } else {
-        if ("Home range" %in% rv$which_question) {
-          shinyjs::hide(id = "txt_hr_ratio")
-          shinyjs::hide(id = "txt_hr_ratio_label")
-        } 
-        
-        if ("Speed & distance" %in% rv$which_question) {
-          shinyjs::hide(id = "txt_sd_ratio")
-          shinyjs::hide(id = "txt_sd_ratio_label")
         }
       }
       
@@ -465,11 +459,10 @@ mod_tab_meta_server <- function(id, rv) {
     ## Add notes explaining table outputs: --------------------------------
     
     output$metaUI_legend_all <- renderUI({
-      req(rv$metaList, rv$set_analysis)
+      req(rv$grouped, rv$metaList, rv$set_analysis)
       
       out <- rv$metaList[[rv$set_analysis]]
       subpop_detected <- out$logs$subpop_detected
-      
       
       if (rv$grouped && subpop_detected) {
         ui_extra <- tagList(span(
@@ -585,11 +578,14 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$truth, !rv$is_meta, rv$is_valid)
       req(rv$simList, length(rv$simList) <= 2)
       
+      m <- length(rv$simList)
+      m <- ifelse(m == 1, "one simulation", "two simulations")
+      
       shinyalert::shinyalert(
         type = "warning",
         title = "Warning",
         text = tagList(span(
-          "Only two simulations currently available.",
+          "Only", m, "currently available.",
           "Run more", span("simulations", class = "cl-grn"), 
           "in one of the previous analyses tabs."
         )),
@@ -925,9 +921,11 @@ mod_tab_meta_server <- function(id, rv) {
       f <- .3
       x_label <- paste0(x_label, out$unit[[1]], ")")
       p.all <- out %>% 
-        ggplot2::ggplot(ggplot2::aes(x = est,
-                                     y = as.factor(reorder(id, est)), 
-                                     color = id)) +
+        ggplot2::ggplot(
+          ggplot2::aes(x = est,
+                       y = id,
+                       # y = as.factor(reorder(id, est)), 
+                       color = id)) +
         
         ggplot2::geom_vline(xintercept = truth,
                             color = "black",

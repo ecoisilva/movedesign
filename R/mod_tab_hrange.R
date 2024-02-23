@@ -349,18 +349,19 @@ mod_tab_hrange_ui <- function(id) {
           
           ## Additional information: --------------------------------------
           
-          shinydashboardPlus::box(
-            title = span("Additional information:", class = "ttl-box"),
-            id = ns("hrBox_misc"),
-            width = NULL,
-            solidHeader = FALSE,
-            
-            verbatimTextOutput(outputId = ns("out_time_hr")),
-            verbatimTextOutput(outputId = ns("out_time_hr_new")),
-            div(class = "pre-main",
-                verbatimTextOutput(outputId = ns("out_time_hr_total")))
-            
-          ) # end of box
+          # shinydashboardPlus::box(
+          #   title = span("Additional information:", class = "ttl-box"),
+          #   id = ns("hrBox_misc"),
+          #   width = NULL,
+          #   solidHeader = FALSE,
+          #   
+          #   verbatimTextOutput(outputId = ns("out_time_hr")),
+          #   verbatimTextOutput(outputId = ns("out_time_hr_new")),
+          #   div(class = "pre-main",
+          #       verbatimTextOutput(outputId = ns("out_time_hr_total")))
+          #   
+          # ) # end of box
+          
       ) # end of column (bottom)
       
     ) # end of fluidRow
