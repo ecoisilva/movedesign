@@ -32,7 +32,7 @@ mod_comp_viz_ui <- function(id) {
               width = "100%", height = "100%")
         )
 
-      ), # end of panels (1 out of 4)
+      ), # end of panels (1 out of 5)
       
       tabPanel(
         value = ns("vizPanel_groups"),
@@ -45,7 +45,7 @@ mod_comp_viz_ui <- function(id) {
             uiOutput(ns("select_groups")),
             uiOutput(ns("selectUI_legend_groups")))
         
-      ), # end of panels (2 out of 4)
+      ), # end of panels (2 out of 5)
 
       tabPanel(
         value = ns("vizPanel_individual"),
@@ -82,8 +82,22 @@ mod_comp_viz_ui <- function(id) {
             uiOutput(ns("vizTable_showVars"))
         )
 
-      ), # end of panels (3 out of 4)
-
+      ), # end of panels (3 out of 5)
+      
+      tabPanel(
+        value = ns("vizPanel_outlier"),
+        title = tagList(
+          icon("bug", class = "cl-sea"),
+          span("Outliers", class = "ttl-panel")
+        ),
+        
+        p(),
+        ggiraph::girafeOutput(
+          outputId = ns("vizPlot_outlier"),
+          width = "100%", height = "100%")
+        
+      ), # end of panels (4 out of 5)
+      
       tabPanel(
         value = ns("vizPanel_svf"),
         title = tagList(
@@ -117,7 +131,7 @@ mod_comp_viz_ui <- function(id) {
               p()
             ))
 
-      ) # end of panels (1 out of 3)
+      ) # end of panels (5 out of 5)
     ) # end of tabs
 
   )
@@ -590,9 +604,41 @@ mod_comp_viz_server <- function(id, rv) {
                         "cursor: pointer;"))))
       
     }) # end of renderGirafe // vizPlot_id
+    
+    ## Rendering outlier plot: --------------------------------------------
+    
+    output$vizPlot_outlier <- ggiraph::renderGirafe({
+      if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
+      if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
+      req(rv$datList, rv$svfList, rv$id)
+      
+      m <- length(rv$datList)
+      dat <- rv$datList
 
+      if (!is.null(rv$id)) {
+        if (length(rv$id) == 0) dat <- dat
+        else if (length(rv$id) == 1) dat <- dat[1]
+        else dat <- dat[rv$id]
+      }
+      
+      out <- plotting_outlier(dat)
+      ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
+      
+      ggiraph::girafe(
+        ggobj = suppressWarnings(
+          ggpubr::ggarrange(plotlist = out$plot)),
+        options = list(
+          ggiraph::opts_selection(type = "none"),
+          ggiraph::opts_toolbar(saveaspng = FALSE),
+          ggiraph::opts_sizing(rescale = TRUE, width = .5),
+          ggiraph::opts_hover(css = paste("fill: #ffbf00;",
+                                          "stroke: #ffbf00;"))
+        ))
+
+    }) # end of renderGirafe // vizPlot_outlier
+    
     ## Rendering variogram (svf): ---------------------------------------
-
+    
     output$vizPlot_svf <- ggiraph::renderGirafe({
       if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
       if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
