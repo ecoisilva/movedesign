@@ -187,7 +187,9 @@ mod_tab_data_select_ui <- function(id) {
                   column(width = 4, mod_blocks_ui(ns("selBlock_n"))),
                   column(width = 4, mod_blocks_ui(ns("selBlock_Narea"))),
                   column(width = 4, mod_blocks_ui(ns("selBlock_Nspeed")))
-                ) # end of fluidRow
+                ), # end of fluidRow
+                
+                uiOutput(ns("selectUI_size_notes"))
                 
               ) # end of box // selectBox_sizes
           ), # end of div
@@ -331,6 +333,98 @@ mod_tab_data_select_server <- function(id, rv) {
       return(ui)
       
     }) # end of renderUI, "selectUI_reset"
+    
+    ## Render notes for low effective sample sizes: -----------------------
+    
+    output$selectUI_size_notes <- renderUI({
+      req(rv$which_question)
+      req(rv$datList, rv$fitList, rv$id, rv$is_valid)
+      req(rv$id %in% names(rv$datList))
+      
+      add_ui <- FALSE
+      ui_N_area <- NULL
+      ui_N_speed <- NULL
+      
+      if (length(rv$which_question) > 1) {
+        req(rv$tau_p[[1]], rv$tau_v[[1]])
+        
+        N1 <- do.call(c, extract_dof(rv$fitList[rv$id], name = "area"))
+        N2 <- do.call(c, extract_dof(rv$fitList[rv$id], name = "speed"))
+        
+        add_word <- NULL
+        if (any(N1 <= 5) || mean(N1) < 5) {
+          ui_N_area <- span(
+            span("N[area]", class = "cl-dgr"),
+            "is below 5 for some or all of your individuals.")
+          add_word <- "also"
+          add_ui <- TRUE
+        }
+        
+        if (any(N2 <= 5) || mean(N2) < 5) {
+          ui_N_speed <- span(
+            span("N[speed]", class = "cl-dgr"), "is", add_word,
+            "below 5 for some or all of your individuals.")
+          add_ui <- TRUE
+        }
+        
+      } else {
+        
+        switch(
+          rv$which_question,
+          "Home range" = {
+            req(rv$tau_p[[1]])
+            N1 <- do.call(
+              c, extract_dof(rv$fitList[rv$id], name = "area"))
+            
+            if (any(N1 <= 5) || mean(N1) < 5) {
+              ui_N_area <- span(
+                span("N[area]", class = "cl-dgr"),
+                "is below 5 for some or all of your individuals.")
+              add_ui <- TRUE
+            }
+            
+          },
+          "Speed & distance" = {
+            req(rv$tau_v[[1]])
+            N2 <- do.call(
+              c, extract_dof(rv$fitList[rv$id], name = "speed"))
+            
+            if (any(N2 <= 5) || mean(N2) < 5) {
+              ui_N_speed <- span(
+                span("N[speed]", class = "cl-sea"),
+                "is below 5 for some or all of your individuals.")
+            }
+            
+          },
+          stop(paste0("No handler for ",
+                      rv$which_question, "."))
+        )
+      }
+      
+      ui <- NULL
+      if (add_ui) {
+        ui <- span(
+          class = "help-block", 
+          tagList(
+            fontawesome::fa("triangle-exclamation", fill = pal$dgr),
+            span("Warning:", class = "help-block-note"), 
+            ui_N_area,
+            ui_N_speed,
+            "Very small effective sample sizes may lead to",
+            "negatively biased estimates.",
+            wrap_none(
+              span("Please select only those individuals with",
+                   "larger effective sample sizes (ideally > 30),",
+                   "and those who meet the range residency",
+                   "assumption, before proceeding"), css = "cl-dgr", 
+              end = ".")))
+        
+        rv$add_note <- TRUE
+      }
+      
+      return(ui)
+      
+    }) # end of renderUI, "selectUI_size_notes"
     
     # ALERTS --------------------------------------------------------------
     
