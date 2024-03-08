@@ -2094,9 +2094,6 @@ mod_tab_design_server <- function(id, rv) {
         names(simList) <- c(rv$seed0, rv$seed0 + 1)
       }
       rv$nsims <- NULL # length(simList)
-      rv$simList <- simList
-      rv$dev$n <- lapply(simList, function(x) nrow(x))
-      
       rv$needs_fit <- TRUE
       rv$is_analyses <- FALSE
       rv$hr_completed <- FALSE
@@ -2106,6 +2103,7 @@ mod_tab_design_server <- function(id, rv) {
 
       if (!is.null(input$device_fixsuccess))
         if (req(input$device_fixsuccess) < 100) {
+          
           to_keep <- round(sapply(simList, function(x)
             nrow(x) * (1 - rv$lost$perc)))
           
@@ -2130,6 +2128,9 @@ mod_tab_design_server <- function(id, rv) {
             return(x) })
           
         } # end of input$device_error
+      
+      rv$simList <- simList
+      rv$dev$n <- lapply(simList, function(x) nrow(x))
       
       msg_log(
         style = "success",
