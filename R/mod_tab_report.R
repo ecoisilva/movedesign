@@ -303,24 +303,25 @@ mod_tab_report_server <- function(id, rv) {
     ## Rendering device limitations: --------------------------------------
     
     output$report_device <- renderUI({
-      req(rv$which_limits)
+      req(rv$which_limitations)
       
-      if ("loss" %in% rv$which_limits) {
-        ui_loss <- staticBlock(paste0(rv$lost$perc, "%"), active = TRUE)
-      } else if (!("loss" %in% rv$which_limits)) {
+      if ("loss" %in% rv$which_limitations) {
+        ui_loss <- staticBlock(
+          paste0(rv$lost$perc * 100, "%"), active = TRUE)
+      } else if (!("loss" %in% rv$which_limitations)) {
         ui_loss <- staticBlock("No data loss", active = FALSE)
       }
       
-      if ("error" %in% rv$which_limits) {
+      if ("error" %in% rv$which_limitations) {
         ui_error <- staticBlock(paste(rv$error, "meters"), active = TRUE)
-      } else if (!("error" %in% rv$which_limits)) {
+      } else if (!("error" %in% rv$which_limitations)) {
         ui_error <- staticBlock("No error", active = FALSE)
       }
       
-      if ("limit" %in% rv$which_limits) {
+      if ("limit" %in% rv$which_limitations) {
         ui_limit <- staticBlock(paste(rv$storage, "locations"),
                                 type = "max", active = TRUE)
-      } else if (!("limit" %in% rv$which_limits)) {
+      } else if (!("limit" %in% rv$which_limitations)) {
         ui_limit <- staticBlock("No limit", active = FALSE)
       }
       
@@ -1602,7 +1603,7 @@ mod_tab_report_server <- function(id, rv) {
           sim_hr_details,
           "for CTSD,",
           sim_sd_details,
-          "Your simulation(s)",
+          "Your simulation(s)' mean",
           "estimate errors are the circles", wrap_none(
             "(", fontawesome::fa("circle", prefer_type = "solid"), ")"),
           "in darker colors.")
@@ -1636,7 +1637,7 @@ mod_tab_report_server <- function(id, rv) {
                 " in ", span("light blue", class = "cl-sea"), "),"),
               "and the", wrap_none(input$ci, "%"),
               "credible intervals (shaded area).",
-              "In contrast, your simulation(s)'",
+              "In contrast, your simulation(s)' mean",
               "error is the circle", wrap_none(
                 "(", fontawesome::fa("circle", prefer_type = "solid",
                                      fill = pal$sea_d), ")"),
@@ -1672,7 +1673,7 @@ mod_tab_report_server <- function(id, rv) {
                 " in ", span("light blue", class = "cl-sea"), "),"),
               "and the", wrap_none(input$ci, "%"),
               "credible intervals (shaded area).",
-              "Your simulation(s)'",
+              "Your simulation(s)' mean",
               "error is the circle", wrap_none(
                 "(", fontawesome::fa("circle", prefer_type = "solid",
                                      fill = pal$sea_d), ")"),
@@ -1829,13 +1830,15 @@ mod_tab_report_server <- function(id, rv) {
             xend = .data$CI_high,
             y = 0, yend = 0,
             col = "est_new", linetype = "est_new"),
-          size = .8)
+          size = .8) %>% 
+          suppressWarnings()
         
         hr_p4 <- ggplot2::geom_point(
           mapping = ggplot2::aes(
             x = rv$report$ds2_hr[["median"]], y = 0,
             col = "est_new", shape = "est_new"),
-          size = 6)
+          size = 6) %>% 
+          suppressWarnings()
       }
       
       lbl <- c(
@@ -1892,7 +1895,8 @@ mod_tab_report_server <- function(id, rv) {
             xend = rv$hr_HDI$CI_high,
             y = 0, yend = 0, col = "est",
             linetype = "est"),
-          size = .8) +
+          size = .8) %>% 
+        suppressWarnings() +
         
         { if (is_dur) hr_p4 } +
         
@@ -1900,13 +1904,15 @@ mod_tab_report_server <- function(id, rv) {
           mapping = ggplot2::aes(
             x = rv$report$ds1_hr[["median"]], y = 0,
             col = "est", shape = "est"),
-          size = 6) +
+          size = 6) %>% 
+        suppressWarnings() +
         
         { if (!is.null(rv$hrErr)) 
           ggplot2::geom_point(
             ggplot2::aes(x = mean(rv$hrErr$est, na.rm = TRUE),
                          y =  0, col = "now", shape = "now"),
-            size = 6, alpha = .7)
+            size = 6, alpha = .7) %>% 
+            suppressWarnings()
         } +
         
         ggplot2::scale_x_continuous(labels = scales::percent) +
@@ -2747,7 +2753,7 @@ mod_tab_report_server <- function(id, rv) {
             "These are based on aggregated information from",
             "pre-run simulations, so values may not match.",
             "Evaluate with",
-            wrap_none("caution", class = "cl-dgr", "."))
+            wrap_none("caution", css = "cl-dgr", "."))
           
         },
         "Speed & distance" = {
@@ -2775,7 +2781,7 @@ mod_tab_report_server <- function(id, rv) {
             "These are based on aggregated information from",
             "pre-run simulations, so values may not match.",
             "Evaluate with",
-            wrap_none("caution", class = "cl-dgr", "."))
+            wrap_none("caution", css = "cl-dgr", "."))
           
         },
         stop(paste0("No handler for ",

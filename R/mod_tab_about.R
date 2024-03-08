@@ -268,6 +268,7 @@ mod_tab_about_ui <- function(id) {
 mod_tab_about_server <- function(id, rv) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    pal <- load_pal()
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     

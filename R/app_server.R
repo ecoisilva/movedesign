@@ -58,7 +58,9 @@ app_server <- function(input, output, session) {
     ctsdList = list(),
     akdeList = list(),
     pathList = list(),
-    indvar = FALSE,
+    
+    meanfit = NULL, 
+    is_emulate = FALSE,
     
     is_isotropic = NULL,
     is_analyses = FALSE,

@@ -292,10 +292,10 @@ mod_comp_pars_server <- function(id, rv, set_type) {
                    plot = FALSE) -> out
       req(out)
       
-      nms <- out$names
       out <- out$meta
       
-      pars <- extract_pars(data = datList, obj = fitList, name = name)
+      pars <- extract_pars(fitList, name = name, si_units = TRUE)
+      nms <- names(pars)
       pars <- do.call(rbind, pars)
       pars$m <- rep(nms, each = 3)
       
@@ -303,13 +303,29 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       pars <- pars %>% tidyr::pivot_wider(
         names_from = variable,
         values_from = value) %>% 
-        dplyr::mutate(m = as.factor(m)) %>%
+        dplyr::mutate(m = as.factor(m))
+      
+      max_index <- which.max(
+        sapply(seq_along(pars$est),
+               function(i) pars$est[i] %#% pars$unit[i]))
+      
+      out_unit <- fix_unit(pars[max_index, "est"][[1]],
+                           unit = pars[max_index, "unit"][[1]],
+                           convert = TRUE)$unit
+      
+      for (i in 1:nrow(pars)) {
+        pars[i, "est"] <- out_unit %#% pars[i, "est"][[1]]
+        pars[i, "low"] <- out_unit %#% pars[i, "low"][[1]]
+        pars[i, "high"] <- out_unit %#% pars[i, "high"][[1]]
+      }
+      pars[, "unit"] <- rep(out_unit, nrow(pars))
+      pars <- pars %>%
         dplyr::add_row(
-          unit = pars$unit[1],
+          unit = out_unit,
           m = "All",
-          low  = pars$unit[1] %#% out[1, 1],
-          est  = pars$unit[1] %#% out[1, 2],
-          high = pars$unit[1] %#% out[1, 3])
+          low  = out_unit %#% out[1, 1],
+          est  = out_unit %#% out[1, 2],
+          high = out_unit %#% out[1, 3])
       
       if (rv$grouped) {
         pars <- pars %>%
@@ -339,11 +355,10 @@ mod_comp_pars_server <- function(id, rv, set_type) {
                               scales = "free_y") } +
         
         ggplot2::labs(x = x_label, y = "") +
-        ggplot2::scale_x_log10() +
+        # ggplot2::scale_x_log10() +
         ggplot2::scale_color_manual(values = x_color) +
         
         theme_movedesign() +
-        
         { if (!rv$grouped)
           ggplot2::theme(axis.text.y =
                            ggplot2::element_text(

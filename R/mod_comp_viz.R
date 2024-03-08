@@ -526,7 +526,10 @@ mod_comp_viz_server <- function(id, rv) {
       set_id <- 1
       if (!is.null(rv$id)) {
         if (length(rv$id) == 1) set_id <- rv$id
-      } else set_id <- input$vizInput_id
+      }
+      
+      if (!is.null(input$vizInput_id))
+        set_id <- input$vizInput_id
       
       dat <- rv$datList[[set_id]]
       req(all(!is.na(dat$x), !is.na(dat$y), !is.null(dat$timestamp)))
@@ -700,6 +703,17 @@ mod_comp_viz_server <- function(id, rv) {
       out_sum[, sum_col2] <- round(out_sum[sum_col2], 1)
       out_sum <- dplyr::select(out_sum, -longitude, -latitude)
       
+      if (!is.null(rv$fitList)) {
+        
+        out_sum$mod <- lapply(rv$fitList, function(x) 
+          stringr::word(summary(x)$name, 1))
+        out_sum$N_area <- round(
+          do.call(c, extract_dof(rv$fitList, name = "area")), 1)
+        out_sum$N_speed <- round(
+          do.call(c, extract_dof(rv$fitList, name = "speed")), 1)
+        
+      }
+      
       if (anyNA(id)) id <- NULL
       reactable::reactable(
         out_sum,
@@ -719,7 +733,20 @@ mod_comp_viz_server <- function(id, rv) {
           longitude = reactable::colDef(
             format = reactable::colFormat(digits = 3)),
           latitude = reactable::colDef(
-            format = reactable::colFormat(digits = 3))))
+            format = reactable::colFormat(digits = 3)),
+          N1 = if ("N_area" %in% names(out_sum)) {
+            reactable::colDef(
+              minWidth = 80, name = "N (area)",
+              style = format_num,
+              format = reactable::colFormat(separators = TRUE,
+                                            digits = 1)) },
+          N2 = if ("N_speed" %in% names(out_sum)) {
+            reactable::colDef(
+              minWidth = 80, name = "N (speed)",
+              style = format_num,
+              format = reactable::colFormat(separators = TRUE,
+                                            digits = 1)) }
+        ))
       
     }) # end of renderReactable
     

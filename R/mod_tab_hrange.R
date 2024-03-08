@@ -445,6 +445,13 @@ mod_tab_hrange_server <- function(id, rv) {
       
       if (length(rv$simList) == 1) {
         shinyjs::hide(id = "hr_nsim")
+        div(class = "sims-irs",
+            shinyWidgets::updateSliderTextInput(
+              session = session,
+              inputId = "hr_nsim",
+              label = "Show simulation no.:",
+              choices = seq(1, length(rv$simList), by = 1),
+              selected = 1))
       } else {
         shinyjs::show(id = "hr_nsim")
         div(class = "sims-irs",
@@ -1596,6 +1603,7 @@ mod_tab_hrange_server <- function(id, rv) {
           rv$simList, input$hr_nsim,
           length(rv$akdeList) > 0)
       req(length(rv$simList) == length(rv$akdeList))
+      req(input$hr_nsim <= length(rv$simList))
       
       if (!is.null(input$hr_truth)) {
         show_truth <- ifelse(input$hr_truth, TRUE, FALSE)

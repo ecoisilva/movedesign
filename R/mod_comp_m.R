@@ -61,18 +61,7 @@ mod_comp_m_ui <- function(id) {
           fluidRow(
             column(width = 12,
                    verbatimTextOutput(outputId = ns("txt_ratio"))
-            )) #,
-          
-          ##TODO
-          # p(style = "margin-top: 10px;"),
-          # fluidRow(
-          #   column(width = 12, align = "center",
-          #          shinyWidgets::awesomeCheckbox(
-          #            inputId = ns("add_individual_var"),
-          #            label = span("Simulate",
-          #                         span("individual variation",
-          #                              class = "cl-jgl")),
-          #            value = FALSE)))
+            ))
           
         ) # end of fluidRow
         
@@ -401,9 +390,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       start <- Sys.time()
       tmpList <- list()
-      
       num_sims <- input$nsims - length(rv$simList)
       if (rv$grouped) num_sims <- num_sims / 2
+      req(length(num_sims) > 0)
       req(num_sims > 0)
       
       for (i in seq_len(num_sims)) {
@@ -413,17 +402,18 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         # If there is data loss:
         
-        if (!is.null(input$device_loss))
-          if (req(input$device_loss) > 0) {
+        if (!is.null(rv$lost))
+          if (rv$lost$perc > 0) {
+            
             to_keep <- round(sapply(simList, function(x)
-              nrow(x) * (1 - rv$lost$perc/100)))
+              nrow(x) * (1 - rv$lost$perc)))
             
             simList <- lapply(simList, function(x) {
               to_keep_vec <- sort(sample(1:nrow(x),
-                                         to_keep, replace = TRUE))
+                                         to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
-          } # end of input$device_loss
+          } # end of input$device_fixsuccess
         
         # If there are errors associated with each location:
         
@@ -760,17 +750,18 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         # If there is data loss:
         
-        if (!is.null(input$device_loss))
-          if (req(input$device_loss) > 0) {
+        if (!is.null(rv$lost))
+          if (rv$lost$perc > 0) {
+            
             to_keep <- round(sapply(simList, function(x)
-              nrow(x) * (1 - rv$lost$perc/100)))
+              nrow(x) * (1 - rv$lost$perc)))
             
             simList <- lapply(simList, function(x) {
               to_keep_vec <- sort(sample(1:nrow(x),
-                                         to_keep, replace = TRUE))
+                                         to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
-          } # end of input$device_loss
+          } # end of input$device_fixsuccess
         
         # If there are errors associated with each location:
         
@@ -891,6 +882,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         n <- nrow(rv$simList[[x]]))
       
       for (i in seq_for) {
+        if (i > length(rv$simfitList)) next
+        
         group <- 1
         if (rv$grouped) {
           nm <- names(rv$simList)[[i]]
@@ -899,6 +892,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         }
         
         N1 <- extract_dof(rv$simfitList[[i]], "area")[[1]]
+        
         if (N1 < 0.001) {
           out_est <- rep(NA, 3) 
           out_err <- rep(NA, 3)
@@ -1034,7 +1028,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       if (m < m_max) m_sets <- seq(m, m_max, by = m)
       
       # Initialize values:
-      threshold <- input$error_threshold/100 # default 10% error
+      threshold <- input$error_threshold/100 # default 10%
       err <- 1
       err_prev <- rep(err, 5)
       hex <- rep("grey50", 5)
@@ -1096,17 +1090,18 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         # If there is data loss:
         
-        if (!is.null(input$device_loss))
-          if (req(input$device_loss) > 0) {
+        if (!is.null(rv$lost))
+          if (rv$lost$perc > 0) {
+            
             to_keep <- round(sapply(simList, function(x)
-              nrow(x) * (1 - rv$lost$perc/100)))
+              nrow(x) * (1 - rv$lost$perc)))
             
             simList <- lapply(simList, function(x) {
               to_keep_vec <- sort(sample(1:nrow(x),
-                                         to_keep, replace = TRUE))
+                                         to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
-          } # end of input$device_loss
+          } # end of input$device_fixsuccess
         
         # If there are errors associated with each location:
         

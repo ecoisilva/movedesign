@@ -318,7 +318,7 @@ mod_tab_meta_server <- function(id, rv) {
     
     boxnames <- c("simulations",
                   "outputs",
-                  "summary",
+                  # "summary",
                   "err_hr",
                   "err_speed")
     
@@ -450,11 +450,13 @@ mod_tab_meta_server <- function(id, rv) {
     
     ## Show/hide summary table: -------------------------------------------
     
-    observe({
-      if (input$add_meta_table) shinyjs::toggle(id = "metaBox_summary")
-      
-    }) %>% # end of observe,
-      bindEvent(input$add_meta_table)
+    # observe({
+    #   req(input$add_meta_table)
+    #   if (input$add_meta_table) 
+    #        shinyjs::toggle(id = "metaBox_summary")
+    #   
+    # }) %>% # end of observe,
+    #   bindEvent(input$add_meta_table)
     
     ## Add notes explaining table outputs: --------------------------------
     
@@ -532,6 +534,7 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$is_meta, rv$which_m)
       
       if (rv$which_m == "get_m") {
+        # shinyjs::show(id = "metaBox_summary")
         
         return(tagList(
           column(
@@ -560,15 +563,11 @@ mod_tab_meta_server <- function(id, rv) {
         
       } else {
         
-        shinyjs::hide(id = "metaBox_summary")
+        # shinyjs::hide(id = "metaBox_summary")
         return(NULL)
       }
       
-    }) %>% # end of renderUI, "metaUI_footer",
-      bindEvent(input$run_meta)
-    
-    footer = uiOutput("metaUI_footer")
-   
+    }) # end of renderUI, "metaUI_footer"
     
     # OPERATIONS ----------------------------------------------------------
     ## Run meta-analyses: -------------------------------------------------
@@ -1104,14 +1103,15 @@ mod_tab_meta_server <- function(id, rv) {
       #   TRUE ~ as.character(pal$sea))
       
       if (rv$grouped) {
-      main_color <- ifelse(out$subpop, pal$sea, pal$dgr)
-      secondary_color <- ifelse(out[nrow(out), "subpop"],
-                                pal$sea, pal$dgr)
+        main_color <- ifelse(out$subpop, pal$sea, pal$dgr)
+        secondary_color <- ifelse(out[nrow(out), "subpop"],
+                                  pal$sea, pal$dgr)
       } else {
         main_color <- ifelse(out$subpop, pal$dgr, pal$sea)
         secondary_color <- ifelse(out[nrow(out), "subpop"],
                                   pal$dgr, pal$sea)
       }
+      
       p.optimal <- out %>%
         ggplot2::ggplot(
           ggplot2::aes(x = m, y = est, color = subpop)) +

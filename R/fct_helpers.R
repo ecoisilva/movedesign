@@ -225,13 +225,17 @@ fix_unit <- function(input,
   # Create data.frame with outputs:
   out <- data.frame(value = y, unit = x)
   
-  # Match all units to estimate unit (if length > 1):
+  # Match all units to one unit (if length > 1):
   if (match_all & length(value) > 1) {
-    out_unit <- out[2,2]
-    for (i in nrow(out)) {
+    
+    max_y <- sapply(seq_along(value),
+                    function(i) value[i] %#% unit[i])
+    max_index <- which.max(max_y)
+    
+    out_unit <- out[max_index, 2]
+    for (i in 1:nrow(out))
       out[i,1] <- out_unit %#% out[i,1] %#% out[i,2] 
-    }
-    out[,2] <- rep(out_unit, nrow(out))
+    out[, 2] <- rep(out_unit, nrow(out))
   }
   
   return(out)
@@ -365,6 +369,72 @@ calculate_ci <- function(data, level = 0.95) {
 }
 
 
+#' Extract sigma
+#'
+#' @description Extracting sigma from ctmm fit.
+#' @keywords internal
+#'
+#' @importFrom ctmm %#%
+#' @noRd
+get_sigma <- function(x, level = 0.95) {
+  
+  nant <- function(x, to) {
+    NAN <- is.na(x)
+    if (any(NAN)) {
+      to <- array(to, length(x))
+      x[NAN] <- to[NAN]
+    }
+    return(x)
+  }
+  
+  get_area_covm <- function(sigma, ave = TRUE) {
+    # sigma <- x$sigma
+    
+    if (ncol(sigma) == 1) {
+      sigma <- sigma@par["major"]
+    } else {
+      sigma <- attr(sigma, "par")[c("major", "minor")]
+      sigma <- sort(sigma, decreasing = TRUE)
+    }
+    DIM <- length(sigma)
+    sigma <- prod(sigma)
+    if (ave) sigma <- sigma^(1/DIM)
+    return(sigma)
+  }
+  
+  
+  if ("sigma" %!in% names(x)) {
+    return(NULL)
+  }
+  
+  alpha <- 1 - level
+  sigma <- x$sigma@par
+  AREA <- get_area_covm(x)
+  AREA
+  
+  if ("major" %!in% dimnames(x$COV)[[1]]) {
+    VAR <- Inf
+  } else if (x$isotropic[1]) {
+    VAR <- x$COV["major", "major"]
+  } else {
+    P <- c("major", "minor")
+    GRAD <- AREA/sigma[P]/2
+    VAR <- c(GRAD %*% x$COV[P, P] %*% GRAD)
+  }
+  
+  if (x$range) {
+    DOF <- nant(AREA^2/abs(VAR), 0)
+  } else {
+    DOF <- 0
+  } 
+  
+  DOF <- 2 * DOF
+  # VAR <- 2*AREA^2/DOF
+  AREA <- ctmm:::chisq.ci(AREA, DOF = DOF, alpha = alpha)
+  return(AREA)
+}
+
+
 #' Extract parameters.
 #'
 #' @description Extracting values and units from ctmm summaries.
@@ -373,7 +443,7 @@ calculate_ci <- function(data, level = 0.95) {
 #' @importFrom ctmm %#%
 #' @noRd
 extract_pars <- function(
-    obj, data = NULL,
+    obj, # data = NULL,
     name = c("position", "velocity", "sigma", "speed"),
     si_units = FALSE,
     meta = FALSE) {
@@ -384,10 +454,10 @@ extract_pars <- function(
   out <- NULL
   if (missing(obj)) 
     stop("`obj` argument not provided.")
-  if (name == "sigma" && missing(data))
-    stop("`data` argument not provided.")  
+  # if (name == "sigma" && missing(data))
+  #   stop("`data` argument not provided.")  
   if (class(obj)[1] != "list" && class(obj[[1]])[1] != "ctmm") {
-    if (!is.null(data)) data <- list(data)
+    # if (!is.null(data)) data <- list(data)
     obj <- list(obj)
   }
   
@@ -419,31 +489,47 @@ extract_pars <- function(
     sum.obj <- summary(obj[[x]], units = !si_units)
     nms.obj <- rownames(sum.obj$CI)
     
-    if (name == "sigma") {
-      name <- "area"
-      svf <- extract_svf(data[[x]], obj[[x]])
-      tmp <- c(max(svf$fit$svf_lower) %#% svf$y_unit,
-               var.covm(obj[[x]]$sigma, average = TRUE),
-               max(svf$fit$svf_upper) %#% svf$y_unit)
-      unit <- "m^2"
+    if (var == "area") {
+      tmp <- sum.obj$CI[grep(var, nms.obj), ]
+      unit <- extract_units(nms.obj[grep(var, nms.obj)])
       
-      return(data.frame(value = tmp, unit = unit,
+      if (!is.null(nrow(tmp))) 
+        if (nrow(tmp) > 1)
+          tmp <- subset(tmp, !grepl("^CoV", row.names(tmp)))[1,]
+      
+      tmp <- data.frame(value = tmp / -2 / log(0.05) / pi,
+                        unit = unit)
+                        
+      if (!si_units) tmp <- fix_unit(tmp, convert = TRUE)
+      
+      return(data.frame(tmp,
                         row.names = c("low", "est", "high")))
+      
+      # tmp <- get_sigma(obj[[x]])
+      # tmp <- fix_unit(data.frame(value = tmp, unit = "m^2"),
+      #                 convert = TRUE)
+      # 
+      # return(data.frame(tmp, row.names = c("low", "est", "high")))
     }
     
     # Special cases of movement processes:
+    tmp_name <- name
     tmp <- sum.obj$CI[grep(name, nms.obj), ]
-    if (!is.null(nrow(tmp))) 
-      if (nrow(tmp) > 1) 
-        tmp <- subset(tmp, !grepl("^CoV", row.names(tmp)))[1,]
     unit <- extract_units(nms.obj[grep(name, nms.obj)])
     
     if (length(obj[[x]]$tau) == 2 &&
-        all(obj[[x]]$tau[1] == obj[[x]]$tau[2])) { # (OUΩ and OUf):
-      tmp_name <- ifelse(any(grepl("decay", nms.obj)), "decay", "\u03C4")
+        all(obj[[x]]$tau[1] == obj[[x]]$tau[2])) {
+      
+      # (OUΩ and OUf):
+      tmp_name <- ifelse(any(grepl("decay", nms.obj)), 
+                         "decay", "\u03C4")
       tmp <- sum.obj$CI[grep(tmp_name, nms.obj), ]
-      unit <- extract_units(nms.obj[grep(tmp_name, nms.obj)])
     }
+    
+    if (!is.null(nrow(tmp))) 
+      if (nrow(tmp) > 1)
+        tmp <- subset(tmp, !grepl("^CoV", row.names(tmp)))[1,]
+    unit <- extract_units(nms.obj[grep(tmp_name, nms.obj)])
     
     if (length(tmp) == 0) return(NULL)
     if (si_units && !all(is.na(tmp))) tmp <- unit %#% tmp
@@ -1332,7 +1418,7 @@ extract_ratios <- function(x, rev = TRUE) {
 #       
 #       simList <- lapply(simList, function(x) {
 #         to_keep_vec <- sort(sample(1:nrow(x),
-#                                    to_keep, replace = TRUE))
+#                                    to_keep, replace = FALSE))
 #         x[to_keep_vec, ] })
 #       
 #     } # end of input$device_loss

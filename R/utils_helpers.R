@@ -804,32 +804,32 @@ plotting_outlier <- function(data) {
     VAR.d <- D[, 2]
     rm(D)
     
-    if ("z" %in% names(data[[x]])) {
-      error <- UERE$UERE[, "vertical"]
-      names(error) <- rownames(UERE$UERE)
-      error <- ctmm(error = error, axes = c("z"))
-      error <- get.error(data[[x]], error, calibrate = TRUE)
-      Vz <- assign_speeds(data[[x]], UERE = error, DT = DT,
-                          axes = "z")
-      vz <- Vz$v.t
-      VAR.vz <- Vz$VAR.t
-      dz <- get.telemetry(data[[x]], axes = c("z"))
-      dz <- dz - stats::median(data[[x]]$z)
-      dz <- abs(dz)
-      DZ <- distanceMLE(dz, error, axes = "z", 
-                        return.VAR = TRUE)
-      dz <- DZ[, 1]
-      VAR.dz <- DZ[, 2]
-      rm(DZ)
-    }
+    # if ("z" %in% names(data[[x]])) {
+    #   error <- UERE$UERE[, "vertical"]
+    #   names(error) <- rownames(UERE$UERE)
+    #   error <- ctmm::ctmm(error = error, axes = c("z"))
+    #   error <- ctmm::get.error(data[[x]], error, calibrate = TRUE)
+    #   Vz <- ctmm::assign_speeds(data[[x]], UERE = error, DT = DT,
+    #                       axes = "z")
+    #   vz <- Vz$v.t
+    #   VAR.vz <- Vz$VAR.t
+    #   dz <- ctmm:::get.telemetry(data[[x]], axes = c("z"))
+    #   dz <- dz - stats::median(data[[x]]$z)
+    #   dz <- abs(dz)
+    #   DZ <- ctmm::distanceMLE(dz, error, axes = "z", 
+    #                     return.VAR = TRUE)
+    #   dz <- DZ[, 1]
+    #   VAR.dz <- DZ[, 2]
+    #   rm(DZ)
+    # }
     
     lwd <- Vs$v.dt
     if (diff(range(lwd))) lwd <- lwd / max(lwd) else lwd <- 0
     if (diff(range(d))) cex <- d/max(d) * 4 else cex <- 0
     
     # col <- grDevices::rgb(cex, 0, 0, cex)
-    palette <- colorRampPalette(c("white", 
-                                  "red"))(length(cex))
+    palette <- colorRampPalette(c("white",
+                                  "#dd4b39"))(length(cex))
     
     ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
     
@@ -862,7 +862,6 @@ plotting_outlier <- function(data) {
   })
   
   return(list(data = out_data, plot = out_plot))
-  
 }
 
 

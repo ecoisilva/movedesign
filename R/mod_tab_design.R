@@ -57,13 +57,14 @@ mod_tab_design_ui <- function(id) {
                   onInitialize = I('function() { this.setValue(""); }')))),
           
           shinyWidgets::checkboxGroupButtons(
-            inputId = ns("which_limits"),
+            inputId = ns("which_limitations"),
             label = p("What limitations do you want to consider?") %>%
               tagAppendAttributes(
                 class = 'label_center no-bottom'),
-            choices = c("Storage limit" = "max",
-                        "Fail rate" = "loss",
-                        "Location error" = "error"),
+            choices = c("Fix success rate" = "loss",
+                        "Device failure" = "failure",
+                        "Location error" = "error",
+                        "Storage limits" = "max"),
             selected = character(0),
             checkIcon = list(yes = icon("ok", lib = "glyphicon"),
                              no = icon("remove", lib = "glyphicon"))),
@@ -221,7 +222,7 @@ mod_tab_design_ui <- function(id) {
               cellWidths = c("92%", "15px"),
               
               p(HTML("&nbsp;"),
-                "Simulate data loss (%):") %>%
+                "Fix success rate (%):") %>%
                 tagAppendAttributes(class = 'label_split'),
               
               actionButton(
@@ -236,10 +237,10 @@ mod_tab_design_ui <- function(id) {
             ),
             
             shinyWidgets::sliderTextInput(
-              inputId = ns("device_loss"),
+              inputId = ns("device_fixsuccess"),
               label = NULL,
               choices = seq(0, 100, by = 1),
-              from_min = 0, from_max = 95, selected = 0,
+              from_min = 5, from_max = 100, selected = 100,
               grid = FALSE,
               post = "%",
               width = "100%"),
@@ -685,12 +686,13 @@ mod_tab_design_server <- function(id, rv) {
       n <- length(t0)
       rv$dev$n <- list(n)
       
-      if (!is.null(input$device_loss)) {
-        req(input$device_loss)
-        n_loss <- round(n * (input$device_loss/100), 0)
+      if (!is.null(input$device_fixsuccess)) {
+        req(input$device_fixsuccess < 100)
+        n_loss <- round(n * (1 - input$device_fixsuccess/100), 0)
         n <- length(t0) - n_loss
-        rv$lost <- data.frame(perc = input$device_loss,
-                              n = n_loss)
+        rv$lost <- data.frame(
+          perc = 1 - input$device_fixsuccess/100,
+          n = n_loss)
       }
       
       if (input$est_type == 1) {
@@ -709,7 +711,8 @@ mod_tab_design_server <- function(id, rv) {
         N1 <- lapply(seq_along(rv$simList), function(x) {
           n <- nrow(rv$simList[[x]])
           tmpnms <- names(summary(rv$simfitList[[x]])$DOF)
-          N1 <- summary(rv$simfitList[[x]])$DOF[grep('area', tmpnms)][[1]]
+          N1 <- summary(rv$simfitList[[x]])$
+            DOF[grep('area', tmpnms)][[1]]
           return(N1)
         })
       }
@@ -738,12 +741,12 @@ mod_tab_design_server <- function(id, rv) {
       n <- length(t0)
       rv$dev$n <- list(n)
       
-      if (!is.null(input$device_loss)) {
-        req(input$device_loss)
-        n_loss <- round(n * (input$device_loss/100), 0)
+      if (!is.null(input$device_fixsuccess)) {
+        n_loss <- round(n * (1 - input$device_fixsuccess/100), 0)
         n <- length(t0) - n_loss
-        rv$lost <- data.frame(perc = input$device_loss,
-                              n = n_loss)
+        rv$lost <- data.frame(
+          perc = 1 - input$device_fixsuccess/100,
+          n = n_loss)
       }
       
       r <- dti / tauv
@@ -790,7 +793,7 @@ mod_tab_design_server <- function(id, rv) {
       shinyjs::hide(id = paste0("devBox_", boxnames[i]))
     }
     
-    shinyjs::hide(id = "which_limits")
+    shinyjs::hide(id = "which_limitations")
     shinyjs::hide(id = "min_frq")
     
     device_inputs <- reactive({
@@ -847,7 +850,7 @@ mod_tab_design_server <- function(id, rv) {
       rv$device_type <- input$device_type
       
       shinyjs::show(id = "devBox_sampling")
-      shinyjs::show(id = "which_limits")
+      shinyjs::show(id = "which_limitations")
       
       switch(
         input$device_type,
@@ -876,12 +879,13 @@ mod_tab_design_server <- function(id, rv) {
       switch(
         input$device_type,
         GPS = {
-          opt_limits <- c("Storage limit" = "max",
-                          "Fail rate" = "loss",
-                          "Location error" = "error")
+          opt_limits <- c("Fix success rate" = "loss",
+                          "Device failure" = "failure",
+                          "Location error" = "error",
+                          "Storage limits" = "max")
         },
         VHF = {
-          opt_limits <- c("Data loss" = "loss",
+          opt_limits <- c("Fix success rate" = "loss",
                           "Location error" = "error")
         },
         stop(paste0("No handler for ", input$device_type, "."))
@@ -889,7 +893,7 @@ mod_tab_design_server <- function(id, rv) {
       
       shinyWidgets::updateCheckboxGroupButtons(
         session = session,
-        inputId = "which_limits",
+        inputId = "which_limitations",
         choices = opt_limits,
         checkIcon = list(yes = icon("ok", lib = "glyphicon"),
                          no = icon("remove", lib = "glyphicon")))
@@ -898,25 +902,26 @@ mod_tab_design_server <- function(id, rv) {
       bindEvent(input$device_type)
     
     observe({
-      rv$which_limits <- input$which_limits
+      rv$which_limitations <- input$which_limitations
       
-      if ("loss" %in% input$which_limits) {
+      if ("loss" %in% input$which_limitations ||
+          "failure" %in% input$which_limitations) {
         shinyjs::show(id = "devBox_loss")
       } else { shinyjs::hide(id = "devBox_loss") }
       
-      if ("error" %in% input$which_limits) {
+      if ("error" %in% input$which_limitations) {
         shinyjs::show(id = "devBox_error")
       } else { shinyjs::hide(id = "devBox_error") }
       
-      if ("max" %in% input$which_limits) {
+      if ("max" %in% input$which_limitations) {
         shinyjs::show(id = "device_max")
       } else { shinyjs::hide(id = "device_max") }
       
     }) %>% # end of observe,
-      bindEvent(input$which_limits)
+      bindEvent(input$which_limitations)
     
     observe({
-      if (is.null(input$which_limits)) {
+      if (is.null(input$which_limitations)) {
         shinyjs::hide(id = "devBox_loss")
         shinyjs::hide(id = "devBox_error")
         shinyjs::hide(id = "device_max") }
@@ -1588,6 +1593,7 @@ mod_tab_design_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'device')
       next_step <- TRUE
+      rv$lost <- NULL
       
       # Check if questions were set:
       if (is.null(rv$which_question)) {
@@ -1629,7 +1635,7 @@ mod_tab_design_server <- function(id, rv) {
       req(!is.null(input$gps_from_plot))
       
       # Check if inputs were selected:
-      
+
       rv$dev$is_valid <- FALSE
       if ((!input$gps_from_plot && is.null(input$gps_dti)) ||
           (input$gps_from_plot && is.null(input$devPlot_gps_selected))
@@ -1679,7 +1685,6 @@ mod_tab_design_server <- function(id, rv) {
         } # end of if (rv$dur < 1 %#% "days")
       }
       
-      
     }) %>% # end of observer,
       bindEvent(input$validate_gps)
     
@@ -1688,12 +1693,12 @@ mod_tab_design_server <- function(id, rv) {
     observe({
       req(rv$dev$is_valid,
           rv$dev$n,
-          rv$which_limits,
+          rv$which_limitations,
           input$device_max)
       
       # Check GPS storage limit (if selected):
       
-      if (("max" %in% rv$which_limits) &&
+      if (("max" %in% rv$which_limitations) &&
           rv$dev$n > rv$storage) {
         
         shinyalert::shinyalert(
@@ -1727,6 +1732,7 @@ mod_tab_design_server <- function(id, rv) {
     # Alert if user did NOT select fix rate before validation:
     
     observe({
+      rv$lost <- NULL
       
       # Check if inputs were selected:
       
@@ -1881,6 +1887,11 @@ mod_tab_design_server <- function(id, rv) {
     
     ## Simulating new conditional data: -----------------------------------
     
+    emulate_seeded <- function(obj, seed) {
+      set.seed(seed)
+      return(ctmm::emulate(obj, fast = TRUE))
+    }
+    
     ### Prepare parameters:
     
     simulating_data <- reactive({
@@ -1892,33 +1903,26 @@ mod_tab_design_server <- function(id, rv) {
       if (rv$data_type == "simulated") {
         fit <- fitA <- rv$modList[[1]]
         if (rv$grouped) fitB <- rv$modList[[2]]
+      }
+      
+      if (rv$data_type != "simulated") {
         
-      } else if (rv$data_type != "simulated") {
-        
-        fit <- prepare_mod(
-          tau_p = rv$tau_p[[1]][2, ],
-          tau_v = rv$tau_v[[1]][2, ],
-          sigma = rv$sigma[[1]][2, ],
-          mu = rv$mu[[1]])
-        
-        # fit <- tryCatch( # error
-        #   ctmm:::mean.ctmm(x = rv$fitList[rv$id]) %>% 
-        #     suppressMessages() %>% 
-        #     suppressWarnings() %>% 
-        #     quiet(),
-        #   error = function(e) e)
-        # 
-        # if (inherits(fit, "error")) {
-        #   msg_log(
-        #     style = "danger",
-        #     message = paste0(
-        #       "Mean fit ", msg_danger("failed"), "."))
-        #   return(NULL)
-        # }
-        
-        # Recenter to 0,0 (not needed if using prepare_mod):
-        fit$mu[[1, "x"]] <- 0
-        fit$mu[[1, "y"]] <- 0
+        if (rv$is_emulate) {
+          req(rv$meanfitList)
+          fit <- emulate_seeded(rv$meanfitList[[1]], rv$seed0)
+          
+          # Recenter to 0,0:
+          fit$mu[["x"]] <- 0
+          fit$mu[["y"]] <- 0
+          
+        } else {
+          fit <- prepare_mod(
+            tau_p = rv$tau_p[[1]][2, ],
+            tau_v = rv$tau_v[[1]][2, ],
+            sigma = rv$sigma[[1]][2, ],
+            mu = rv$mu[[1]])
+          
+        }
         
         if ("compare" %in% rv$which_meta) {
           if (length(rv$tau_p) == 3 ||
@@ -1926,34 +1930,29 @@ mod_tab_design_server <- function(id, rv) {
               length(rv$sigma) == 3 || length(rv$mu) == 3) {
             req(rv$groups)
             
-            # fitA <- prepare_mod(
-            #   tau_p = rv$tau_p[[2]][2, ],
-            #   tau_v = rv$tau_v[[2]][2, ],
-            #   sigma = rv$sigma[[2]][2, ],
-            #   mu = rv$mu[[2]])
-            # fitB <- prepare_mod(
-            #   tau_p = rv$tau_p[[3]][2, ],
-            #   tau_v = rv$tau_v[[3]][2, ],
-            #   sigma = rv$sigma[[3]][2, ],
-            #   mu = rv$mu[[3]])
+            if (rv$is_emulate) {
+              fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
+              fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
+              
+              # Recenter to 0,0:
+              fitA$mu[["x"]] <- 0
+              fitA$mu[["y"]] <- 0
+              fitB$mu[["x"]] <- 0
+              fitB$mu[["y"]] <- 0
+              
+            } else {
+              fitA <- prepare_mod(
+                tau_p = rv$tau_p[[2]][2, ],
+                tau_v = rv$tau_v[[2]][2, ],
+                sigma = rv$sigma[[2]][2, ],
+                mu = rv$mu[[2]])
+              fitB <- prepare_mod(
+                tau_p = rv$tau_p[[3]][2, ],
+                tau_v = rv$tau_v[[3]][2, ],
+                sigma = rv$sigma[[3]][2, ],
+                mu = rv$mu[[3]])
+            }
             
-            fitA <- ctmm:::mean.ctmm(
-              rv$fitList[rv$groups[[1]][["A"]]]) %>% 
-              suppressMessages() %>% 
-              suppressWarnings() %>% 
-              quiet()
-            
-            fitB <- ctmm:::mean.ctmm(
-              rv$fitList[rv$groups[[1]][["B"]]]) %>% 
-              suppressMessages() %>% 
-              suppressWarnings() %>% 
-              quiet()
-            
-            # Recenter to 0,0 (not needed if using prepare_mod):
-            fitA$mu[[1, "x"]] <- 0
-            fitA$mu[[1, "y"]] <- 0
-            fitB$mu[[1, "x"]] <- 0
-            fitB$mu[[1, "y"]] <- 0
           }
         }
         
@@ -2105,17 +2104,17 @@ mod_tab_design_server <- function(id, rv) {
       
       # If there is data loss:
 
-      if (!is.null(input$device_loss))
-        if (req(input$device_loss) > 0) {
+      if (!is.null(input$device_fixsuccess))
+        if (req(input$device_fixsuccess) < 100) {
           to_keep <- round(sapply(simList, function(x)
-            nrow(x) * (1 - rv$lost$perc/100)))
+            nrow(x) * (1 - rv$lost$perc)))
           
           simList <- lapply(simList, function(x) {
             to_keep_vec <- sort(sample(1:nrow(x),
-                                       to_keep, replace = TRUE))
+                                       to_keep, replace = FALSE))
             x[to_keep_vec, ] })
           
-        } # end of input$device_loss
+        } # end of input$device_fixsuccess
       
       # If there are errors associated with each location:
       
@@ -2788,11 +2787,9 @@ mod_tab_design_server <- function(id, rv) {
     output$devBlock_n <- renderUI({
       req(rv$dev$n[[1]])
       
-      n <- rv$dev$n[[1]]
-      
       perc_n <- NULL
       icon_n <- FALSE
-      if (req(rv$lost$perc) > 0) {
+      if (req(rv$lost$perc) < 1) {
         perc_n <- span(paste0("-", rv$lost$perc, "%"))
         icon_n <- TRUE
       }
@@ -2801,7 +2798,7 @@ mod_tab_design_server <- function(id, rv) {
         type = "n",
         percentage = perc_n,
         icon = icon_n,
-        value = n,
+        value = rv$dev$n[[1]],
         rightBorder = FALSE,
         marginBottom = TRUE)
       
@@ -2831,11 +2828,14 @@ mod_tab_design_server <- function(id, rv) {
     ## Data loss: -------------------------------------------------------
     
     output$devBlock_loss <- renderUI({
-      req(rv$lost$n, input$device_loss > 0)
+      req(input$device_fixsuccess < 100)
       
+      n_loss <- round(rv$dev$n[[1]] *
+                        (1 - input$device_fixsuccess/100), 0)
+    
       parBlock(
         header = "Fixes lost:",
-        value = rv$lost$n)
+        value = n_loss)
       
     }) # end of renderUI // devBlock_loss
     

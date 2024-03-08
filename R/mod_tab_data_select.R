@@ -323,7 +323,7 @@ mod_tab_data_select_server <- function(id, rv) {
           
           shiny::actionButton(
             inputId = ns("selectButton_reset"),
-            label = span("Reset", span("all values", class = "cl-sea")),
+            label = span("Reset", span("values", class = "cl-sea")),
             icon = icon("trash-can"),
             class = "btn-primary",
             width = "120px")
@@ -340,30 +340,45 @@ mod_tab_data_select_server <- function(id, rv) {
       req(rv$which_question)
       req(rv$datList, rv$fitList, rv$id, rv$is_valid)
       req(rv$id %in% names(rv$datList))
+      req(rv$is_emulate)
+      # meta() can handle less well-tracked individuals, mean() cannot
       
       add_ui <- FALSE
       ui_N_area <- NULL
       ui_N_speed <- NULL
       
+      txt_if_hr <- NULL
       if (length(rv$which_question) > 1) {
         req(rv$tau_p[[1]], rv$tau_v[[1]])
         
         N1 <- do.call(c, extract_dof(rv$fitList[rv$id], name = "area"))
         N2 <- do.call(c, extract_dof(rv$fitList[rv$id], name = "speed"))
         
+        ifelse(sum(N1 < 5) == 1, "individual", "individuals") 
+        ifelse(sum(N2 < 5) == 1, "individual", "individuals") 
+        
         add_word <- NULL
         if (any(N1 <= 5) || mean(N1) < 5) {
           ui_N_area <- span(
             span("N[area]", class = "cl-dgr"),
-            "is below 5 for some or all of your individuals.")
+            "is < 5 for", sum(N1 < 5),
+            ifelse(sum(N1 < 5) == 1, "individual.", "individuals."))
           add_word <- "also"
           add_ui <- TRUE
+          
+          txt_if_hr <- wrap_none(
+            "Please select only those individuals with ",
+            "larger effective sample sizes (ideally > 30), ",
+            "and those who meet the range residency ",
+            "assumption, before proceeding", css = "cl-dgr",
+            end = ".")
         }
         
         if (any(N2 <= 5) || mean(N2) < 5) {
           ui_N_speed <- span(
             span("N[speed]", class = "cl-dgr"), "is", add_word,
-            "below 5 for some or all of your individuals.")
+            "< 5 for", sum(N2 < 5),
+            ifelse(sum(N2 < 5) == 1, "individual.", "individuals."))
           add_ui <- TRUE
         }
         
@@ -379,8 +394,16 @@ mod_tab_data_select_server <- function(id, rv) {
             if (any(N1 <= 5) || mean(N1) < 5) {
               ui_N_area <- span(
                 span("N[area]", class = "cl-dgr"),
-                "is below 5 for some or all of your individuals.")
+                "is < 5 for", sum(N1 < 5),
+                ifelse(sum(N1 < 5) == 1, "individual.", "individuals."))
               add_ui <- TRUE
+              
+              txt_if_hr <- wrap_none(
+                "Please select only those individuals with ",
+                "larger effective sample sizes (ideally > 30), ",
+                "and those who meet the range residency ",
+                "assumption, before proceeding", css = "cl-dgr",
+                end = ".")
             }
             
           },
@@ -392,7 +415,8 @@ mod_tab_data_select_server <- function(id, rv) {
             if (any(N2 <= 5) || mean(N2) < 5) {
               ui_N_speed <- span(
                 span("N[speed]", class = "cl-sea"),
-                "is below 5 for some or all of your individuals.")
+                "is < 5 for", sum(N2 < 5),
+                ifelse(sum(N2 < 5) == 1, "individual.", "individuals."))
             }
             
           },
@@ -412,12 +436,7 @@ mod_tab_data_select_server <- function(id, rv) {
             ui_N_speed,
             "Very small effective sample sizes may lead to",
             "negatively biased estimates.",
-            wrap_none(
-              span("Please select only those individuals with",
-                   "larger effective sample sizes (ideally > 30),",
-                   "and those who meet the range residency",
-                   "assumption, before proceeding"), css = "cl-dgr", 
-              end = ".")))
+            txt_if_hr))
         
         rv$add_note <- TRUE
       }
@@ -737,10 +756,6 @@ mod_tab_data_select_server <- function(id, rv) {
         shinyjs::show(id = "selectBox_regime")
         shinyjs::show(id = "selectBox_sizes")
         
-        dat0 <- rv$datList[rv$id]
-        fit0 <- rv$fitList[rv$id]
-        get_meta <- ifelse(length(rv$id) == 1, FALSE, TRUE)
-        
         shinybusy::show_modal_spinner(
           spin = "fading-circle",
           color = "var(--sea)",
@@ -749,22 +764,135 @@ mod_tab_data_select_server <- function(id, rv) {
             wrap_none(span("parameters", class = "cl-sea"),
                       span("...", style = "color: #797979;"))))
         
-        rv$sigma <- extract_pars(
-          obj = fit0, data = dat0, name = "sigma", meta = get_meta)
-        rv$tau_p <- extract_pars(
-          obj = fit0, name = "position", meta = get_meta)
-        rv$tau_v <- extract_pars(
-          obj = fit0, name = "velocity", meta = get_meta)
-        rv$speed <- extract_pars(
-          obj = fit0, name = "speed", meta = get_meta)
         
-        if (rv$grouped) rv$proceed <- TRUE
-  
-        if (length(rv$id) == 1) rv$mu <- list(fit0[[1]]$mu)
+        rv$meanfitList <- NULL
+        dat0 <- rv$datList[rv$id]
+        fit0 <- rv$fitList[rv$id]
+        
+        nm_mods <- lapply(rv$fitList, function(x) summary(x)$name)
+        n_OUf <- sum(grepl("^OUf", nm_mods))
+        
+        # to_filter <- "^OUF"
+        
+        to_filter <- "^IOU|^OUF|^OU(?!f)"
+        if ("Home range" == rv$which_question) {
+          # does assume range residency for rv$id
+          msg_log(
+            style = "danger",
+            message = paste0(
+              "Verify ", msg_danger("range residency"), ","),
+            detail = paste("Assuming all selected individuals",
+                           "are range resident."))
+          to_filter <- "^OU(?!f)|^OUF"
+        }
+        
+        if ("Speed & distance" == rv$which_question) {
+          to_filter <- "^IOU|^OUF"
+        }
+        
+        fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
+        length(fit0)
+        
+        if (length(fit0) == 0 && n_OUf == 0) {
+          msg_log(
+            style = "error",
+            message = paste0(
+              "Extraction ", msg_danger("failed"), ","),
+            detail = paste("No individuals left after",
+                           "filtering for movement processes."))
+          shinybusy::remove_modal_spinner()
+          return(NULL)
+        }
+        
+        if (rv$is_emulate) {
+          
+          meanfit0 <- tryCatch(
+            mean(x = fit0) %>%
+              suppressMessages() %>%
+              suppressWarnings() %>%
+              quiet(),
+            error = function(e) e)
+          
+          if (inherits(meanfit0, "error")) {
+            msg_log(
+              style = "danger",
+              message = paste0(
+                "Cannot add ", msg_danger("population variation"), ","),
+              detail = "Reverting to population mean estimates only.")
+            
+            fit0 <- rv$fitList[rv$id]
+            get_meta <- ifelse(length(rv$id) == 1, FALSE, TRUE)
+            rv$sigma <- extract_pars(fit0, "sigma", meta = get_meta)
+            rv$tau_p <- extract_pars(fit0, "position", meta = get_meta)
+            rv$tau_v <- extract_pars(fit0, "velocity", meta = get_meta)
+            rv$speed <- extract_pars(fit0, "speed", meta = get_meta)
+            rv$is_emulate <- FALSE
+            
+          } else {
+            rv$sigma <- extract_pars(meanfit0, name = "sigma")
+            rv$tau_p <- extract_pars(meanfit0, name = "position")
+            rv$tau_v <- extract_pars(meanfit0, name = "velocity")
+            rv$speed <- extract_pars(meanfit0, name = "speed")
+            rv$meanfitList <- list(meanfit0)
+            names(rv$meanfitList) <- c("All")
+            
+          }
+          
+        } else {
+          
+          fit0 <- rv$fitList[rv$id]
+          get_meta <- ifelse(length(rv$id) == 1, FALSE, TRUE)
+          rv$sigma <- extract_pars(fit0, "sigma", meta = get_meta)
+          rv$tau_p <- extract_pars(fit0, "position", meta = get_meta)
+          rv$tau_v <- extract_pars(fit0, "velocity", meta = get_meta)
+          rv$speed <- extract_pars(fit0, "speed", meta = get_meta)
+          
+          if (n_OUf >= 1)
+            msg_log(
+              style = "danger",
+              message = paste0(
+                "OUf process(es) ", msg_danger("selected"), ","),
+              detail = paste("Cannot distinguish between",
+                             "autocorrelation timescales."))
+        }
+        
+        if (rv$grouped) {
+          meanfitA <- tryCatch(
+            mean(rv$fitList[rv$groups[[1]][["A"]]]) %>% 
+              suppressMessages() %>% 
+              suppressWarnings() %>% 
+              quiet(),
+            error = function(e) e)
+          
+          meanfitB <- tryCatch(
+            mean(rv$fitList[rv$groups[[1]][["B"]]]) %>% 
+              suppressMessages() %>% 
+              suppressWarnings() %>% 
+              quiet(),
+            error = function(e) e)
+          
+          if (inherits(fitA, "error") ||
+              inherits(fitB, "error")) {
+            
+            msg_log(
+              style = "danger",
+              message = paste0(
+                "Extraction ", msg_danger("failed"), 
+                "for one of the groups."))
+            return(NULL)
+          }
+          
+          rv$meanfitList <- c(rv$meanfitList, meanfitA, meanfitB)
+          names(rv$meanfitList) <- c("All", "A", "B")
+          rv$proceed <- TRUE
+        }
+        
+        if (length(rv$id) == 1) 
+          rv$mu <- list(rv$fitList[[1]]$mu)
         else rv$mu <- list(array(0, dim = 2, 
                                  dimnames = list(c("x", "y"))))
         
-        rv$svfList <- extract_svf(dat0, fit0)
+        rv$svfList <- extract_svf(dat0, rv$fitList[rv$id])
         
         rv$tmp$sp_common <- rv$species_common
         rv$tmp$sp <- rv$species_binom
@@ -825,7 +953,7 @@ mod_tab_data_select_server <- function(id, rv) {
       
       lapply(1:2, function(x) {
         extract_pars(
-          obj = fit[[x]], data = dat[[x]], 
+          obj = fit[[x]],
           name = "sigma", meta = TRUE)[[1]]
       }) %>% c(rv$sigma, .) -> rv$sigma
       names(rv$sigma) <- c("All", "A", "B") 
