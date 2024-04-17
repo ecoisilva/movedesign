@@ -390,12 +390,12 @@ mod_tab_hrange_server <- function(id, rv) {
       req(length(rv$mu) == 3,
           length(rv$sigma) == 3)
       
-      truth <- estimating_truth()
-      ratio <- truth[["area"]][[2]]/truth[["area"]][[3]]
+      # truth <- estimating_truth()
+      # ratio <- truth[["area"]][[2]]/truth[["area"]][[3]]
       # message("Group A's home range is ", round(ratio, 2),
       #         " times the size of Group B's home range.")
       
-      rv$ratio[["hr"]] <- ratio
+      # rv$ratio[["hr"]] <- ratio
       shinyjs::hide(id = "hrBox_regime_footer")
       
     }) # end of observe
@@ -931,110 +931,28 @@ mod_tab_hrange_server <- function(id, rv) {
       bindEvent(input$hrButton_compare)
     
     # ESTIMATIONS ---------------------------------------------------------
-    
-    # Calculate true home range:
-    estimating_truth <- reactive({
-      
-      mean_x <- 0 # rv$mu[[1]][1]
-      mean_y <- 0 # rv$mu[[1]][2]
-      
-      if (rv$is_isotropic) {
-        sig <- rv$sigma[[1]]$value[2] %#% rv$sigma[[1]]$unit[2]
-        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
-        
-      } else {
-        fit <- rv$modList[[1]]
-        sig1 <- fit$sigma@par["major"][[1]]
-        sig2 <- fit$sigma@par["minor"][[1]]
-        sig <- sqrt(det(fit$sigma))
-        
-        radius_x <- sqrt(-2 * log(0.05) * sig1)
-        radius_y <- sqrt(-2 * log(0.05) * sig2)
-      }
-      
-      area <- -2 * log(0.05) * pi * sig
-      
-      truth <- data.frame(
-        id = rep(1, each = 100),
-        angle = seq(0, 2 * pi, length.out = 100))
-      truth$x <- unlist(lapply(
-        mean_x, function(x) x + radius_x * cos(truth$angle)))
-      truth$y <- unlist(lapply(
-        mean_y, function(x) x + radius_y * sin(truth$angle)))
-      
-      if ("compare" %in% rv$which_meta) {
-        
-        # mean_xA <- rv$mu[[1]][1]
-        # mean_yB <- rv$mu[[1]][2]
-         
-        if (rv$is_isotropic) {
-          sigA <- rv$sigma[[2]]$value[2] %#% rv$sigma[[2]]$unit[2]
-          sigB <- rv$sigma[[3]]$value[2] %#% rv$sigma[[3]]$unit[2]
-          
-          radius_xA <- radius_yA <- sqrt(-2 * log(0.05) * sigA)
-          radius_xB <- radius_yB <- sqrt(-2 * log(0.05) * sigB)
-          
-        } else {
-          fitA <- rv$modList_groups[["A"]]
-          sigA1 <- fitA$sigma@par["major"][[1]]
-          sigA2 <- fitA$sigma@par["minor"][[1]]
-          fitB <- rv$modList_groups[["B"]]
-          sigB1 <- fitB$sigma@par["major"][[1]]
-          sigB2 <- fitB$sigma@par["minor"][[1]]
-          sigA <- sqrt(det(fitA$sigma))
-          sigB <- sqrt(det(fitB$sigma))
-          
-          radius_xA <- sqrt(-2 * log(0.05) * sigA1)
-          radius_yA <- sqrt(-2 * log(0.05) * sigA2)
-          
-          radius_xB <- sqrt(-2 * log(0.05) * sigB1)
-          radius_yB <- sqrt(-2 * log(0.05) * sigB2)
-        }
-        
-        areaA <- -2 * log(0.05) * pi * sigA
-        areaB <- -2 * log(0.05) * pi * sigB
-        
-        truthA <- data.frame(
-          id = rep(1, each = 100),
-          angle = seq(0, 2 * pi, length.out = 100))
-        truthA$x <- unlist(lapply(
-          mean_x, function(x) x + radius_xA * cos(truthA$angle)))
-        truthA$y <- unlist(lapply(
-          mean_y, function(x) x + radius_yA * sin(truthA$angle)))
-        
-        truthB <- data.frame(
-          id = rep(1, each = 100),
-          angle = seq(0, 2 * pi, length.out = 100))
-        truthB$x <- unlist(lapply(
-          mean_x, function(x) x + radius_xB * cos(truthB$angle)))
-        truthB$y <- unlist(lapply(
-          mean_y, function(x) x + radius_yB * sin(truthB$angle)))
-        
-        area <- list("All" = area, "A" = areaA, "B" = areaB)
-        truth <- list("All" = truth, "A" = truthA, "B" = truthB)
-      } else {
-        area <- list("All" = area)
-        truth <- list("All" = truth)
-      }
-      
-      hr_truth <- list(area = area, data = truth)
-      rv$truth$hr <- hr_truth
-      return(hr_truth)
-      
-    }) # end of reactive, estimating_truth()
-    
     ## Estimating for initial sampling design: ----------------------------
     
     estimating_hr <- reactive({
       
       start_hr <- Sys.time()
-      if (length(rv$simList) == 1) {
+      if ((length(rv$simList) == 1) ||
+          (rv$grouped && length(rv$simList) == 2)) {
         
         hr <- tryCatch(
           ctmm::akde(rv$simList[[1]], rv$simfitList[[1]]),
           warning = function(w) NULL,
           error = function(e) NULL)
         hr <- list(hr)
+        
+        if (rv$grouped) {
+          hr2 <- tryCatch(
+            ctmm::akde(rv$simList[[2]], rv$simfitList[[2]]),
+            warning = function(w) NULL,
+            error = function(e) NULL)
+          hr <- list(hr[[1]], hr2)
+        }
+        
         rv$akdeList <- hr
         
       } else {
@@ -1081,7 +999,7 @@ mod_tab_hrange_server <- function(id, rv) {
             hr[[j]] <- tryCatch(
               ctmm::akde(rv$simList[[i]], rv$simfitList[[i]]),
               warning = function(w) { w; return(NULL) },
-              error = function(e) NULL)
+              error = function(e) return(NULL))
             rv$akdeList[[length(rv$akdeList) + 1]] <- hr[[j]]
             
             msg_log(
@@ -1146,11 +1064,20 @@ mod_tab_hrange_server <- function(id, rv) {
       loading_modal("Estimating home range")
       
       hrList <- estimating_hr()
-      hr_truth <- estimating_truth()
-      req(hr_truth)
-      hr_truth <- hr_truth[["area"]][[1]]
+      truthList <- get_true_hr(
+        data = rv$simList,
+        seed = rv$seedList,
+        sigma = rv$sigma,
+        
+        emulated = rv$is_emulate,
+        fit = if (rv$is_emulate) rv$meanfitList else NULL,
+        
+        grouped = rv$grouped,
+        groups = if (rv$grouped) rv$groups[[2]] else NULL)
+      rv$truth$hr <- truthList
+      req(hrList)
       
-      # If tiny DOF[area]
+      # If tiny DOF[area]:
       N1 <- extract_dof(rv$simfitList, "area")
       if (all(N1 < 0.001)) {
         proceed <- NULL
@@ -1177,10 +1104,11 @@ mod_tab_hrange_server <- function(id, rv) {
         req(proceed)
       }
       
-      if (is.null(hr_truth) || is.null(hrList)) {
+      # If home range estimation failed:
+      if (is.null(hrList)) {
         proceed <- NULL
         shinybusy::remove_modal_spinner()
-        
+
         shinyalert::shinyalert(
           type = "error",
           title = "Error",
@@ -1188,7 +1116,7 @@ mod_tab_hrange_server <- function(id, rv) {
             style = "text-align: justify !important;",
             "Home range estimation failed.")),
           html = TRUE, size = "s")
-        
+
         msg_log(
           style = "danger",
           message = paste(
@@ -1217,17 +1145,22 @@ mod_tab_hrange_server <- function(id, rv) {
         if (rv$grouped) {
           nm <- names(rv$simList)[[sim_no]]
           group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
-          hr_truth <- rv$truth$hr[["area"]][[group]]
         }
         
+        seed <- as.character(rv$seedList[[sim_no]])
+        hr_truth <- rv$truth$hr[[seed]]$area
         N1 <- extract_dof(rv$simfitList[[sim_no]], "area")[[1]]
         
         tmpsum <- tryCatch(
           summary(rv$akdeList[[i]]),
+          # warning = function(w) return(NULL),
           error = function(e) e)
         
         if (is.null(rv$akdeList[[sim_no]]) || 
+            is.null(tmpsum) || length(tmpsum) == 0 ||
+            any(tmpsum[[1]] == 0) ||
             inherits(tmpsum, "error") || N1 < 0.001) {
+          
           out_est_df <- out_est_df %>%
             dplyr::add_row(
               seed = rv$seedList[[sim_no]],
@@ -1243,8 +1176,6 @@ mod_tab_hrange_server <- function(id, rv) {
                   group = if (rv$grouped) group else NA,
                   data = rv$simList[[sim_no]], 
                   tau_p = rv$tau_p[[group]],
-                  dur = rv$dur,
-                  dti = rv$dti,
                   fit = rv$simfitList[[sim_no]],
                   area = out_est_df[i, ],
                   error = out_err_df[i, ]))
@@ -1274,8 +1205,6 @@ mod_tab_hrange_server <- function(id, rv) {
                 group = if (rv$grouped) group else NA,
                 data = rv$simList[[sim_no]], 
                 tau_p = rv$tau_p[[group]],
-                dur = rv$dur,
-                dti = rv$dti,
                 fit = rv$simfitList[[sim_no]],
                 area = out_est_df[i, ],
                 error =  out_err_df[i, ]))
@@ -1616,13 +1545,12 @@ mod_tab_hrange_server <- function(id, rv) {
               size = 5,
               color = "grey50",
               fill = NA, label.color = NA,
-              label = paste0("[Effective sample size *too low*]"),
-              family = "Roboto Condensed") + 
+              label = paste0("[Effective sample size *too low*]")) + 
             ggplot2::theme_void()
         
       } else {
         
-        truth <- estimating_truth()[["data"]][[1]]
+        truth <- rv$truth$hr[[input$hr_nsim]]$data
         ext <- ctmm::extent(list(rv$simList[[input$hr_nsim]],
                                  rv$akdeList[[input$hr_nsim]],
                                  truth))
@@ -1646,7 +1574,8 @@ mod_tab_hrange_server <- function(id, rv) {
           show_truth = show_truth,
           contours = input$hr_contours,
           color = pal$sea,
-          extent = ext)
+          extent = ext,
+          font_available = rv$is_font)
       }
       
       ggiraph::girafe(
@@ -1692,7 +1621,8 @@ mod_tab_hrange_server <- function(id, rv) {
         show_both = input$hr_datasets,
         contours = input$hr_contours_new,
         color = pal$dgr,
-        extent = ext)
+        extent = ext,
+        font_available = rv$is_font)
       
       ggiraph::girafe(
         ggobj = ud_sim,

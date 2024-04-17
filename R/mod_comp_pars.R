@@ -358,7 +358,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         # ggplot2::scale_x_log10() +
         ggplot2::scale_color_manual(values = x_color) +
         
-        theme_movedesign() +
+        theme_movedesign(font_available = rv$is_font) +
         { if (!rv$grouped)
           ggplot2::theme(axis.text.y =
                            ggplot2::element_text(

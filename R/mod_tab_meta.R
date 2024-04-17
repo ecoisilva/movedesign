@@ -46,9 +46,8 @@ mod_tab_meta_ui <- function(id) {
                                class = "cl-jgl"), ".")),
               
               p(style = "text-align: center;",
-                "If meta-analyses are your goal,", br(),
-                "then click the",
-                icon("paper-plane", class = "cl-mdn"),
+                "If population-level inferences are your goal,", br(), 
+                "then click the", icon("paper-plane", class = "cl-mdn"),
                 wrap_none(span("Run meta-analyses", class = "cl-mdn")),
                 "button."),
               
@@ -144,7 +143,8 @@ mod_tab_meta_ui <- function(id) {
             solidHeader = FALSE,
             collapsible = TRUE,
             
-            mod_blocks_ui(ns("metaBlock_hr"))
+            mod_blocks_ui(ns("metaBlock_hr")),
+            uiOutput(ns("metaBlock_hr_ratio"))
             
           ), # end of box // metaBox_err_hr
           
@@ -156,7 +156,8 @@ mod_tab_meta_ui <- function(id) {
             solidHeader = FALSE,
             collapsible = TRUE,
             
-            mod_blocks_ui(ns("metaBlock_speed"))
+            mod_blocks_ui(ns("metaBlock_speed")),
+            uiOutput(ns("metaBlock_speed_ratio"))
             
           ) # end of box // metaBox_err_speed
           
@@ -238,45 +239,21 @@ mod_tab_meta_ui <- function(id) {
           # Table: --------------------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Tables:", class = "ttl-box"),
+            title = span("Optimal number of tracked individuals:",
+                         class = "ttl-box"),
             id = ns("metaBox_summary"),
             width = NULL,
             solidHeader = FALSE,
             
-            # tabsetPanel(
-            #   id = ns("metaTabs_tables"),
-            #   
-            #   tabPanel(
-            #     value = ns("metaPanel_estimates"),
-            #     title = tagList(
-            #       icon("filter", class = "cl-sea"),
-            #       span("Individual", class = "ttl-panel")
-            #     ),
-            #     
-            #     p(style = "margin-top: 10px;"),
-            #     reactable::reactableOutput(ns("metaTable_m"))
-            #     
-            #   ), # end of panels (1 out of 2)
-            #   
-            #   tabPanel(
-            #     value = ns("metaPanel_groups"),
-            #     title = tagList(
-            #       icon("paw", class = "cl-sea"),
-            #       span("Dataset", class = "ttl-panel")
-            #     ),
-            
             p(style = "margin-top: 10px;"),
-            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-7",
+            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
                 ggiraph::girafeOutput(
                   outputId = ns("metaPlot_m_optimal"),
                   width = "100%", height = "100%")),
             
-            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-5",
+            div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
                 reactable::reactableOutput(
                   ns("metaTable_m_optimal")))
-            
-            # ) # end of panels (2 out of 2)
-            # ) # end of tabs // metaTabs_tables
             
           ) # end of box // metaBox_summary
           
@@ -308,7 +285,10 @@ mod_tab_meta_server <- function(id, rv) {
         rv$set_analysis <- input$metaInput_type
       }
       
-    }) # end of observe
+    }) %>% # end of observe,
+      bindEvent(list(rv$which_question,
+                     input$metaInput_type,
+                     input$run_meta))
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at the start: ----------------------------------------
@@ -365,9 +345,10 @@ mod_tab_meta_server <- function(id, rv) {
     
     
     observe({
-      req(rv$metaList_groups, rv$set_analysis)
-    
-      out <- rv$metaList_groups[[rv$set_analysis]]$mods
+      req(rv$grouped)
+      req(rv$metaList_groups[[3]], rv$set_analysis)
+      
+      out <- rv$metaList_groups[[2]][[rv$set_analysis]]$mods
       req(length(out) == 4)
       
       mod_choices <- as.list(names(out))
@@ -385,16 +366,15 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of observe
     
-    
     observe({
       hideTab(inputId = "metaTabs_outputs",
               target = ns("metaPanel_groups"))
-      if (!is.null(rv$metaList_groups))
+      req(rv$metaList_groups)
+      if (rv$metaList_groups[[3]])
         showTab(inputId = "metaTabs_outputs",
                 target = ns("metaPanel_groups"))
       
     }) # end of observe
-    
     
     output$nsims_total <- renderText({
       if (!is.null(rv$simList)) return(length(rv$simList))
@@ -405,21 +385,26 @@ mod_tab_meta_server <- function(id, rv) {
     ## Render new text (for effect size): ---------------------------------
     
     output$txt_hr_ratio <- renderText({
-      req("compare" %in% rv$which_meta, rv$ratio[["hr"]])
+      req("compare" %in% rv$which_meta, rv$metaList_groups[[2]])
       
       out_txt <- NULL
       var <- "home range area"
       diff <- c("smaller", "larger")
       
-      if (rv$ratio[["hr"]] == 1) out_txt <- paste0(
+      meta <- rv$metaList_groups[[2]][["hr"]]
+      req(meta)
+      ratio <- round(extract_ratios(meta)$est, 1)
+      ratio
+      
+      if (ratio == 1) out_txt <- paste0(
         "Group A's ", var, " is equal to Group B's.")
-      else if (rv$ratio[["hr"]] < 1) out_txt <- paste0(
+      else if (ratio < 1) out_txt <- paste0(
         "Group A's ", var, " is ",
-        round(abs(100 - rv$ratio[["hr"]] * 100), 1),
+        round(abs(100 - ratio * 100), 1),
         "% ", diff[1], " than Group B's.")
-      else if (rv$ratio[["hr"]] > 1) out_txt <- paste0(
+      else if (ratio > 1) out_txt <- paste0(
         "Group A's ", var, " area is ",
-        round(abs(100 - rv$ratio[["hr"]] * 100), 1),
+        round(abs(100 - ratio * 100), 1),
         "% ", diff[2], " than Group B's.")
       
       return(out_txt)
@@ -427,21 +412,26 @@ mod_tab_meta_server <- function(id, rv) {
     }) # end of renderText, "txt_hr_ratio"
     
     output$txt_sd_ratio <- renderText({
-      req("compare" %in% rv$which_meta, rv$ratio[["ctsd"]])
+      req("compare" %in% rv$which_meta, rv$metaList_groups[[2]])
       
       out_txt <- NULL
       var <- "speed"
       diff <- c("slower", "faster")
       
-      if (rv$ratio[["ctsd"]] == 1) out_txt <- paste0(
+      meta <- rv$metaList_groups[[2]][["ctsd"]]
+      req(meta)
+      ratio <- round(extract_ratios(meta)$est, 1)
+      ratio
+      
+      if (ratio == 1) out_txt <- paste0(
         "Group A's ", var, " is equal to Group B's.")
-      else if (rv$ratio[["ctsd"]] < 1) out_txt <- paste0(
+      else if (ratio < 1) out_txt <- paste0(
         "Group A's ", var, " is ",
-        round(abs(100 - rv$ratio[["ctsd"]] * 100), 1),
+        round(abs(100 - ratio * 100), 1),
         "% ", diff[1], " than Group B's.")
-      else if (rv$ratio[["ctsd"]] > 1) out_txt <- paste0(
+      else if (ratio > 1) out_txt <- paste0(
         "Group A's ", var, " area is ",
-        round(abs(100 - rv$ratio[["ctsd"]] * 100), 1),
+        round(abs(100 - ratio * 100), 1),
         "% ", diff[2], " than Group B's.")
       
       return(out_txt)
@@ -461,34 +451,80 @@ mod_tab_meta_server <- function(id, rv) {
     ## Add notes explaining table outputs: --------------------------------
     
     output$metaUI_legend_all <- renderUI({
-      req(rv$grouped, rv$metaList, rv$set_analysis)
+      req(rv$grouped, rv$metaList, rv$set_analysis,
+          rv$metaList)
       
       out <- rv$metaList[[rv$set_analysis]]
-      subpop_detected <- out$logs$subpop_detected
+      is_subpop_detected <- out$logs$subpop_detected
       
-      if (rv$grouped && subpop_detected) {
-        ui_extra <- tagList(span(
-          "Sub-populations were", 
-          span("correctly", class = "cl-sea"),
+      txt <- txt_evidence <- NULL
+      col_subpop <- ifelse(is_subpop_detected, "cl-sea-d", "cl-dgr")
+      
+      txt_match <- "correctly"
+      if (rv$grouped) {
+        meta_truth <- rv$metaList_groups[[1]][[rv$set_analysis]]
+        is_subpop <- meta_truth$logs$subpop_detected
+        
+        if (is_subpop == is_subpop_detected) {
+          txt_match <- "correctly"
+          col_subpop <- "cl-sea"
+        } else {
+          txt_match <- "incorrectly"
+          col_subpop <- "cl-dgr"
+        }
+        
+        if (is_subpop) {
+          txt_evidence <- span(
+            span(ifelse(
+              meta_truth$mods$subpop_detected[[2,2]] > 2,
+              "strong", "weak"), "evidence", class = col_subpop),
+            "of sub-populations.")
+          
+        } else {
+          txt_evidence <- span(
+            span("no evidence", class = col_subpop),
+            "of sub-populations",
+            ifelse(meta_truth$mods$subpop_detected[[2,2]] < 2, 
+                   "(though with \u0394AICc \uFF1C 2).",
+                   "(\u0394AICc \uFF1E 2)."))
+        }
+        
+        txt <- span(
+          style = paste("font-size: 14px;",
+                        "font-family: var(--monosans);"),
+          "The initial dataset from the",
+          shiny::icon("paw", class = "cl-sea"),
+          span("Species", class = "cl-sea"), "tab had",
+          txt_evidence)
+        
+      } else {
+        # txt_method <- span(
+        #   "Model selection is performed between the \u03C7\u00B2-IG",
+        #   "population model (with population mean and variance) and",
+        #   "the Dirac-\u03B4 population model (population mean only).")
+      }
+      
+      if (rv$grouped && is_subpop_detected) {
+        txt_subpop <- tagList(span(
+          "In the simulated dataset, sub-populations were", 
+          span(txt_match, class = col_subpop),
           "detected."))
-      } else if (!rv$grouped && !subpop_detected) {
-        ui_extra <- tagList(span(
-          "A single population was", 
-          span("correctly", class = "cl-sea"),
+      } else if (!rv$grouped && !is_subpop_detected) {
+        txt_subpop <- tagList(span(
+          "In the simulated dataset, a single population was", 
+          span(txt_match, class = col_subpop),
           "detected. No evidence of sub-populations in the",
           "current dataset."))
-      } else if (rv$grouped && !subpop_detected) {
-        ui_extra <- tagList(span(
-          "Sub-populations were", 
-          wrap_none(span("not detected", class = "cl-dgr"), ","),
-          "even though simulations were based on",
-          "two sets of parameters."))
-      } else if (!rv$grouped && subpop_detected) {
-        ui_extra <- tagList(span(
-          "Sub-populations were", 
-          wrap_none(span("detected", class = "cl-dgr"), ","),
-          "even though simulations were based on",
-          "a single set of parameters."))
+      } else if (rv$grouped && !is_subpop_detected) {
+        txt_subpop <- tagList(span(
+          "In the simulated dataset, sub-populations were", 
+          wrap_none(span("not detected", class = col_subpop), ".")))
+      } else if (!rv$grouped && is_subpop_detected) {
+        txt_subpop <- tagList(span(
+          "In the simulated dataset, sub-populations were", 
+          wrap_none(span("detected", class = col_subpop), ".")))
+          # "even though simulations were based on",
+          # "a single set of parameters."))
       }
       
       ui <- tagList(
@@ -498,18 +534,16 @@ mod_tab_meta_server <- function(id, rv) {
              
              fontawesome::fa("circle-exclamation", fill = pal$dgr),
              span("Note:", class = "help-block-note"),
-             "Model selection is performed between the \u03C7\u00B2-IG",
-             "population model (with population mean and variance) and",
-             "the Dirac-\u03B4 population model (population mean only).",
-             br(), ui_extra
+             # txt_method, br(),
+             txt, txt_subpop
         ))
       
       return(ui)
       
-    }) # end of renderUI, "metaUI_legend"
+    }) # end of renderUI, "metaUI_legend_all"
 
     output$metaUI_legend <- renderUI({
-      req(rv$metaList_groups)
+      req(rv$metaList_groups[[3]])
       
       ui <- tagList(
         p(style = "margin-top: 35px;"),
@@ -534,7 +568,7 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$is_meta, rv$which_m)
       
       if (rv$which_m == "get_m") {
-        # shinyjs::show(id = "metaBox_summary")
+        shinyjs::show(id = "metaBox_summary")
         
         return(tagList(
           column(
@@ -562,14 +596,35 @@ mod_tab_meta_server <- function(id, rv) {
         ) # end of return
         
       } else {
-        
-        # shinyjs::hide(id = "metaBox_summary")
+        shinyjs::hide(id = "metaBox_summary")
         return(NULL)
       }
       
     }) # end of renderUI, "metaUI_footer"
     
     # OPERATIONS ----------------------------------------------------------
+    
+    get_sets <- function(input) {
+      num_sets <- ceiling(length(input) / 2)
+      if (length(input) %% 2 != 0)
+        out <- c(1, rep(seq_len(num_sets - 1), each = 2,
+                        length.out = length(input) - 1))
+      else 
+        out <- rep(seq_len(num_sets), each = 2,
+                   length.out = length(input))
+      
+      return(list(out = out, sets = max(unique(out))))
+    }
+    
+    get_groups <- function(x, groups) {
+      group_A <- x[groups[["A"]]]
+      group_A[sapply(group_A, is.null)] <- NULL
+      group_B <- x[groups[["B"]]]
+      group_B[sapply(group_B, is.null)] <- NULL
+      return(list(A = group_A,
+                  B = group_B))
+    }
+    
     ## Run meta-analyses: -------------------------------------------------
     
     observe({
@@ -603,9 +658,6 @@ mod_tab_meta_server <- function(id, rv) {
       rv$metaEst_groups <- NULL
       rv$metaErr_groups <- NULL
       
-      # TODO TOCHECK two workflows in the same session
-      # lead to repeat values on plots
-      
       start <- Sys.time()
       shinybusy::show_modal_spinner(
         spin = "fading-circle",
@@ -635,10 +687,10 @@ mod_tab_meta_server <- function(id, rv) {
       metaList <- list()
       if ("Home range" %in% rv$which_question) {
         req(rv$akdeList)
-        x <- rv$akdeList
-        x[sapply(x, is.null)] <- NULL
+        x_hr <- rv$akdeList
+        x_hr[sapply(x_hr, is.null)] <- NULL
         metaList[["hr"]] <- capture_meta(
-          x,
+          x_hr,
           variable = "area",
           units = TRUE, 
           verbose = FALSE,
@@ -648,10 +700,10 @@ mod_tab_meta_server <- function(id, rv) {
       
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$ctsdList)
-        x <- rv$ctsdList
-        x[sapply(x, is.null)] <- NULL
+        x_sd <- rv$ctsdList
+        x_sd[sapply(x_sd, is.null)] <- NULL
         metaList[["ctsd"]] <- capture_meta(
-          x,
+          x_sd,
           variable = "speed",
           units = TRUE, 
           verbose = FALSE,
@@ -664,19 +716,10 @@ mod_tab_meta_server <- function(id, rv) {
             length(rv$groups[[2]]$B) > 0)
         
         outList <- list()
-        create_groups <- function(x, groups = rv$groups[[2]]) {
-          group_A <- x[groups[["A"]]]
-          group_A[sapply(group_A, is.null)] <- NULL
-          group_B <- x[groups[["B"]]]
-          group_B[sapply(group_B, is.null)] <- NULL
-          return(list(A = group_A,
-                      B = group_B))
-        }
-        
         metaList_groups <- list()
         if ("Home range" %in% rv$which_question) {
           req(rv$akdeList)
-          outList <- create_groups(rv$akdeList)
+          outList <- get_groups(rv$akdeList, rv$groups[[2]])
           metaList_groups[["hr"]] <- capture_meta(
             outList,
             units = TRUE, 
@@ -687,7 +730,10 @@ mod_tab_meta_server <- function(id, rv) {
             suppressWarnings() %>% 
             quiet()
           
-          if (is.null(metaList_groups[["hr"]]))
+          rv$metaList_groups[[2]][["hr"]] <- 
+            metaList_groups[["hr"]]
+          
+          if (is.null(metaList_groups[["hr"]])) {
             msg_log(
               style = "danger",
               message = paste0(
@@ -695,11 +741,12 @@ mod_tab_meta_server <- function(id, rv) {
                 " meta-analyses for groups ",
                 msg_danger("failed"), ","),
               detail = "Run more simulations in the appropriate tab.")
+          }
         }
         
         if ("Speed & distance" %in% rv$which_question) {
           req(rv$ctsdList)
-          outList <- create_groups(rv$ctsdList)
+          outList <- get_groups(rv$ctsdList, rv$groups[[2]])
           metaList_groups[["ctsd"]] <- capture_meta(
             outList,
             units = TRUE, 
@@ -709,6 +756,9 @@ mod_tab_meta_server <- function(id, rv) {
             suppressMessages() %>% 
             suppressWarnings() %>% 
             quiet()
+          
+          rv$metaList_groups[[2]][["ctsd"]] <- 
+            metaList_groups[["ctsd"]]
           
           if (is.null(metaList_groups[["ctsd"]]))
             msg_log(
@@ -730,10 +780,37 @@ mod_tab_meta_server <- function(id, rv) {
         nms.obj <- rownames(sum.obj)
         tmp <- sum.obj[grep(name, nms.obj), ]
         tmpunit <- extract_units(nms.obj[grep(name, nms.obj)])
-        if (out$type == "hr")
-          truth <- rv$truth$hr[["area"]][["All"]]
-        if (out$type == "ctsd")
-          truth <- rv$truth$ctsd[["All"]]
+        
+        if (out$type == "hr") {
+          if (rv$is_emulate) {
+            fit <- rv$meanfitList[["All"]]
+            sig <- var.covm(fit$sigma, average = TRUE)            
+          } else {
+            sig <- rv$sigma[["All"]]$value[2] %#% rv$sigma[["All"]]$unit[2]
+          }
+          truth <- -2 * log(0.05) * pi * sig
+        }
+        
+        if (out$type == "ctsd") {
+          
+          truth_summarized <- get_true_speed(
+            data = rv$simList,
+            seed = rv$seedList,
+            
+            tau_p = rv$tau_p,
+            tau_v = rv$tau_v,
+            sigma = rv$sigma,
+            
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL,
+            
+            summarized = TRUE)
+          
+          truth <- truth_summarized[["All"]]
+        }
         
         rv$metaEst <<- rbind(rv$metaEst, data.frame(
           type = out$type,
@@ -766,13 +843,39 @@ mod_tab_meta_server <- function(id, rv) {
           tmpunitB <- extract_units(nms.objB[grep(name, nms.objB)])
           
           if (out_groups$type == "hr") {
-            truth_A <- rv$truth$hr[["area"]][["A"]]
-            truth_B <- rv$truth$hr[["area"]][["B"]]
+            if (rv$is_emulate) {
+              fitA <- rv$meanfitList[["A"]]
+              fitB <- rv$meanfitList[["B"]]
+              sigA <- var.covm(fitA$sigma, average = TRUE)            
+              sigB <- var.covm(fitB$sigma, average = TRUE)            
+            } else {
+              sigA <- rv$sigma[["A"]]$value[2] %#% rv$sigma[["A"]]$unit[2]
+              sigB <- rv$sigma[["B"]]$value[2] %#% rv$sigma[["B"]]$unit[2]
+            }
+            truth_A <- -2 * log(0.05) * pi * sigA
+            truth_B <- -2 * log(0.05) * pi * sigB
           }
 
           if (out_groups$type == "ctsd") {
-            truth_A <- rv$truth$ctsd[["A"]]
-            truth_B <- rv$truth$ctsd[["B"]]
+            
+            truth_summarized <- get_true_speed(
+              data = rv$simList,
+              seed = rv$seedList,
+              
+              tau_p = rv$tau_p,
+              tau_v = rv$tau_v,
+              sigma = rv$sigma,
+              
+              emulated = rv$is_emulate,
+              fit = if (rv$is_emulate) rv$meanfitList else NULL,
+              
+              grouped = rv$grouped,
+              groups = if (rv$grouped) rv$groups[[2]] else NULL,
+              
+              summarized = TRUE)
+            
+            truth_A <- truth_summarized[["A"]]
+            truth_B <- truth_summarized[["B"]]
           }
           
           rv$metaEst_groups <<- rbind(rv$metaEst_groups, data.frame(
@@ -836,13 +939,153 @@ mod_tab_meta_server <- function(id, rv) {
       
       rv$is_meta <- TRUE
       rv$metaList <- metaList
-      if (rv$grouped) rv$metaList_groups <- metaList_groups
+      if (rv$grouped) rv$metaList_groups[[3]] <- TRUE
       
       shinybusy::remove_modal_spinner()
       
-    }) %>% # end of observe,
+    }, priority = 0) %>% # end of observe,
       bindEvent(input$run_meta)
+    
+    ## Run meta-analyses (for each set of simulations): -------------------
+    ## For metaPlot_m_optimal
+    
+    observe({
+      req(rv$which_question,
+          !is.null(rv$grouped),
+          rv$set_analysis)
       
+      inList <- NULL
+      if (rv$set_analysis == "hr") {
+        req(rv$akdeList)
+        variable <- "area"
+        inList <- rv$akdeList
+      }
+      if (rv$set_analysis == "ctsd") {
+        req(rv$ctsdList)
+        variable <- "speed"
+        inList <- rv$ctsdList
+      }
+      
+      req(!is.null(inList))
+      req(length(inList) > 2)
+      
+      rv$meta_tbl <- NULL
+      
+      dt_meta <- data.frame(
+        "type" = character(0),
+        "m" = numeric(0),
+        "lci" = numeric(0),
+        "est" = numeric(0),
+        "uci" = numeric(0),
+        "overlaps" = logical(0),
+        "subpop" = logical(0),
+        "group" = character(0))
+      
+      groups <- 1
+      nm_groups <- "All"
+      if (rv$grouped) {
+        req(rv$groups)
+        groups <- length(rv$groups$final)
+        inList <- get_groups(inList, groups = rv$groups[[2]])
+        nm_groups <- c("A", "B")
+      } else {
+        inList <- list(inList)
+      }
+      
+      # group <- 1
+      for (group in seq_len(groups)) {
+        input <- inList[[group]]
+        if (length(input) == 0) break
+        
+        if (rv$set_analysis == "hr") {
+          if (rv$is_emulate) {
+            fit <- rv$meanfitList[[nm_groups[group]]]
+            sig <- var.covm(fit$sigma, average = TRUE)  
+          } else {
+            sig <- rv$sigma[[nm_groups[group]]]$value[2] %#%
+              rv$sigma[[nm_groups[group]]]$unit[2]
+          }
+          truth <- -2 * log(0.05) * pi * sig
+        }
+        
+        if (rv$set_analysis == "ctsd") {
+          
+          truth_summarized <- get_true_speed(
+            data = rv$simList,
+            seed = rv$seedList,
+            
+            tau_p = rv$tau_p,
+            tau_v = rv$tau_v,
+            sigma = rv$sigma,
+            
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL,
+            
+            summarized = TRUE)
+          
+          truth <- truth_summarized[[nm_groups[group]]]
+        }
+        
+        arg <- get_sets(input)
+        for (set in seq_len(arg$sets)) {
+          input_subset <- input[arg$out <= set]
+          out_meta <- capture_meta(input_subset,
+                                   sort = TRUE,
+                                   units = FALSE,
+                                   verbose = TRUE,
+                                   plot = FALSE)
+          
+          if (!is.null(out_meta)) {
+            
+            tmpname <- rownames(out_meta$meta)
+            tmpunit <- extract_units(tmpname[grep("^mean", tmpname)])
+            
+            out_est <- c(
+              "lci" = out_meta$meta[1, 1] %#% tmpunit,
+              "est" = out_meta$meta[1, 2] %#% tmpunit,
+              "uci" = out_meta$meta[1, 3] %#% tmpunit)
+            out_err <- c(
+              "lci" = ((out_est[["lci"]] %#% tmpunit) - truth) / truth,
+              "est" = ((out_est[["est"]] %#% tmpunit) - truth) / truth,
+              "uci" = ((out_est[["uci"]] %#% tmpunit) - truth) / truth)
+            
+            dt_meta <- dt_meta %>% dplyr::add_row(
+              type = rv$set_analysis,
+              m = length(input_subset),
+              lci = out_err[[1]],
+              est = out_err[[2]],
+              uci = out_err[[3]],
+              overlaps = dplyr::between(truth,
+                                        out_meta$meta[1, 1],
+                                        out_meta$meta[1, 3]),
+              subpop = out_meta$logs$subpop_detected,
+              group = nm_groups[group])
+            
+          } else {
+            
+            dt_meta <- dt_meta %>% dplyr::add_row(
+              type = rv$set_analysis,
+              m = length(input_subset),
+              lci = NA, est = NA, uci = NA,
+              overlaps = NA,
+              subpop = NA,
+              group = nm_groups[group])
+            
+          } # end of if statement (!is.null(out_meta))
+          
+        } # end of loop (set)
+      } # end of loop (group)
+      
+      rv$meta_tbl <<- rbind(rv$meta_tbl, 
+                            dplyr::distinct(dt_meta))
+      
+    }, priority = 1) %>% # end of observe,
+      bindEvent(list(input$run_meta,
+                     rv$set_analysis))
+    
     # PLOTS ---------------------------------------------------------------
     ## Rendering meta plot at the individual-level: -----------------------
     
@@ -854,7 +1097,8 @@ mod_tab_meta_server <- function(id, rv) {
     }) # end of observe
     
     output$metaPlot_all <- ggiraph::renderGirafe({
-      req(rv$which_question, rv$simList, rv$simfitList, rv$truth)
+      req(rv$which_question, rv$simList, rv$simfitList,
+          rv$truth, !is.null(rv$is_emulate))
       req(length(rv$simList) == length(rv$simfitList))
       req(length(rv$simfitList) > 1)
       
@@ -879,80 +1123,198 @@ mod_tab_meta_server <- function(id, rv) {
       }
       
       req(proceed)
-      datList <- rv$simList
-      fitList <- rv$simfitList
       
       if (set_analysis == "hr") {
         req(rv$akdeList)
         outList <- rv$akdeList
         x_label <- "Home range area (in "
-        truth <- rv$truth$hr[["area"]][[1]]
-        name <- "hr"
+        
+        if (rv$is_emulate) {
+          fit <- rv$meanfitList[["All"]]
+          if (rv$grouped) fitA <- rv$meanfitList[["A"]]
+          if (rv$grouped) fitB <- rv$meanfitList[["B"]]
+          sig <- var.covm(fit$sigma, average = TRUE)            
+          if (rv$grouped) sigA <- var.covm(fitA$sigma, average = TRUE)            
+          if (rv$grouped) sigB <- var.covm(fitB$sigma, average = TRUE)            
+        } else {
+          sig <- rv$sigma[["All"]]$value[2] %#% rv$sigma[["All"]]$unit[2]
+          if (rv$grouped) sigA <- rv$sigma[["A"]]$value[2] %#% 
+              rv$sigma[["A"]]$unit[2]
+          if (rv$grouped) sigB <- rv$sigma[["B"]]$value[2] %#% 
+              rv$sigma[["B"]]$unit[2]
+        }
+        
+        truth <- -2 * log(0.05) * pi * sig
+        if (rv$grouped) truth_A <- -2 * log(0.05) * pi * sigA
+        if (rv$grouped) truth_B <- -2 * log(0.05) * pi * sigB
       }
       
       if (set_analysis == "ctsd") {
         req(rv$ctsdList)
         outList <- rv$ctsdList
         x_label <- "Movement speed (in "
-        truth <- rv$truth$ctsd[[1]]
-        name <- "ctsd"
+        
+        truth_summarized <- get_true_speed(
+          data = rv$simList,
+          seed = rv$seedList,
+          
+          tau_p = rv$tau_p,
+          tau_v = rv$tau_v,
+          sigma = rv$sigma,
+          
+          emulated = rv$is_emulate,
+          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          
+          summarized = TRUE)
+        
+        truth <- truth_summarized[["All"]]
+        if (rv$grouped) {
+          truth_A <- truth_summarized[["A"]]
+          truth_B <- truth_summarized[["B"]]
+        }
       }
       
       outList[sapply(outList, is.null)] <- NULL # drop NULLs
-      out <- extract_outputs(outList,
-                             name = name,
-                             si_units = FALSE, 
-                             meta = TRUE)
+      out <- extract_outputs(
+        outList,
+        name = set_analysis,
+        groups = if (rv$grouped) rv$groups[[2]] else NULL,
+        si_units = FALSE, 
+        meta = TRUE)
+      req(out)
+      
+      if (rv$grouped) x_shape <- c(15, 16, 17)
+      else x_shape <- c(15, 16)
+      
       truth <- out$unit[[1]] %#% truth
       
+      if (rv$is_emulate) {
+        if (set_analysis == "hr") {
+          truthList <- get_true_hr(
+            data = rv$simList,
+            seed = rv$seedList,
+            sigma = rv$sigma,
+            
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL)
+          
+          true_value <- lapply(seq_along(truthList), function(x) {
+            out$unit[[1]] %#% truthList[[x]]$area
+          })
+          names(true_value) <- names(truthList)
+        }
+        
+        if (set_analysis == "ctsd") {
+          true_value <- get_true_speed(
+            data = rv$simList,
+            seed = rv$seedList,
+            sigma = rv$sigma,
+            
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL)
+          
+          tmp_names <- names(true_value)
+          tmp_list <- list()
+          for (x in seq_along(true_value)) {
+            tmp_list[[x]] <- out$unit[[1]] %#% true_value[[x]]
+          }
+          true_value <- tmp_list
+          names(true_value) <- do.call(c, rv$seedList)
+        }
+        
+        out_truth <- out
+        for (id in names(true_value)) {
+          out_truth$true_value[out$id == id] <- true_value[[id]]
+        }
+      }
+      
       if (rv$grouped) {
-        x_color <- c("black", 
-                       sapply(seq_along(rv$simList), function(x) {
-                         nm <- names(rv$simList)[[x]]
-                         return(ifelse(nm %in% rv$groups[[2]]$A,
-                                       pal$grn_d, pal$grn))
-                       }))
-        x_color <- rev(x_color)
+        x_color <- c("black", "#77b131", "#009da0")
+        truth_A <- out$unit[[1]] %#% truth_A
+        truth_B <- out$unit[[1]] %#% truth_B
+        out$group <- factor(out$group,
+                            levels = c("All", "A", "B"))
       } else {
-        x_color <- c(rep(pal$sea, length(datList)), "black")
+        x_color <- c("black", "#009da0")
       }
       
       f <- .3
       x_label <- paste0(x_label, out$unit[[1]], ")")
-      p.all <- out %>% 
+      p.all <- out %>%
         ggplot2::ggplot(
           ggplot2::aes(x = est,
                        y = id,
-                       # y = as.factor(reorder(id, est)), 
-                       color = id)) +
+                       group = as.factor(group),
+                       color = as.factor(group))) +
         
         ggplot2::geom_vline(xintercept = truth,
                             color = "black",
-                            linewidth = 0.5,
+                            linewidth = 0.8,
                             linetype = "solid") +
         
-        ggplot2::geom_point(size = 3) +
-        ggplot2::geom_linerange(ggplot2::aes(xmin = lci,
-                                             xmax = uci),
-                                linetype = "dotted") +
-        ggplot2::facet_grid(group ~ ., 
+        { if (rv$grouped)
+          ggplot2::geom_vline(xintercept = truth_A,
+                              color = "#77b131",
+                              linewidth = 0.7,
+                              linetype = "solid")
+        } +
+        { if (rv$grouped)
+          ggplot2::geom_vline(xintercept = truth_B,
+                              color = pal$sea,
+                              linewidth = 0.7,
+                              linetype = "solid")
+        } +
+        
+        ggplot2::geom_point(
+          ggplot2::aes(shape = as.factor(group)),
+          size = 3) +
+        
+        ggplot2::geom_linerange(
+          ggplot2::aes(xmin = lci, xmax = uci),
+          linewidth = 2,
+          alpha = 0.5) +
+        
+        ggplot2::facet_grid(subject ~ ., 
                             switch = "y",
                             scales = "free_y",
                             space = "free_y") +
-        # ggplot2::scale_x_log10() +
-        ggplot2::scale_color_manual(values = x_color) +
+        
+        { if (rv$is_emulate)
+          ggplot2::geom_point(
+            data = out_truth,
+            mapping = ggplot2::aes(x = as.numeric(true_value),
+                                   y = id,
+                                   group = as.factor(group),
+                                   fill = "True area"),
+            size = 3,
+            shape = 4) } +
+        
+        { if (rv$is_emulate)
+        ggplot2::scale_fill_manual(
+          "Truth:", values = c("True area" = "black")) } +
+        
+        ggplot2::scale_color_manual("Group:", values = x_color) +
+        ggplot2::scale_shape_manual("Group:", values = x_shape) +
         ggplot2::labs(x = x_label, y = "") +
         
-        theme_movedesign() +
+        theme_movedesign(font_available = rv$is_font) +
         ggplot2::theme(
           strip.placement = "outside",
           legend.position = "none",
           axis.text.y = ggplot2::element_blank()) %>%
-        suppressWarnings()
+        suppressWarnings() +
+        ggplot2::theme(legend.position = "bottom")
       
       ggiraph::girafe(
         ggobj = suppressWarnings(p.all),
-        width_svg = 5.5, height_svg = max(2, length(datList) * f),
+        width_svg = 5.5, height_svg = max(2, length(rv$simList) * f),
         options = list(
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
@@ -967,11 +1329,11 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of renderGirafe, "metaPlot_all"
     
-    ## Rendering meta plot at the group-level: ----------------------------
+    ## Rendering meta plot at the group-level (if available): -------------
     
     output$metaPlot_groups <- ggiraph::renderGirafe({
-      req(rv$grouped, rv$truth)
-      req(rv$metaEst, rv$metaList_groups, rv$metaEst_groups)
+      req(rv$grouped, rv$truth, !is.null(rv$metaList_groups))
+      req(rv$metaEst, rv$metaList_groups[[3]], rv$metaEst_groups)
       
       if (length(rv$which_question) == 2) {
         req(rv$set_analysis)
@@ -982,97 +1344,129 @@ mod_tab_meta_server <- function(id, rv) {
                                "Speed & distance" = "ctsd")
       }
       
-      datList <- rv$simList
-      fitList <- rv$simfitList
+      # out <- rbind(rv$metaErr, rv$metaErr_groups) %>% 
+      #   dplyr::filter(type == set_analysis)
+      #  out$truth <- rep(0, nrow(out))
       
-      x_label <- "Error (%)"
+      out <- rbind(rv$metaEst, rv$metaEst_groups) %>%
+        dplyr::filter(type == set_analysis)
       
+      # x_label <- "Error (%)"
       if (set_analysis == "hr") {
         req(rv$akdeList)
         outList <- rv$akdeList
         name <- "area"
-        # x_label <- "Home range area (in "
-        # truth <- rv$truth$hr[["area"]]
+        x_label <- "Home range area (in "
+        
+        if (rv$is_emulate) {
+          fit <- rv$meanfitList[["All"]]
+          fitA <- rv$meanfitList[["A"]]
+          fitB <- rv$meanfitList[["B"]]
+          sig <- var.covm(fit$sigma, average = TRUE)            
+          sigA <- var.covm(fitA$sigma, average = TRUE)            
+          sigB <- var.covm(fitB$sigma, average = TRUE)            
+        } else {
+          sig <- rv$sigma[["All"]]$value[2] %#% rv$sigma[["All"]]$unit[2]
+          sigA <- rv$sigma[["A"]]$value[2] %#% 
+            rv$sigma[["A"]]$unit[2]
+          sigB <- rv$sigma[["B"]]$value[2] %#% 
+            rv$sigma[["B"]]$unit[2]
+        }
+        
+        truth <- out$unit[[1]] %#% (-2 * log(0.05) * pi * sig)
+        truth_A <- out$unit[[1]] %#% (-2 * log(0.05) * pi * sigA)
+        truth_B <- out$unit[[1]] %#% (-2 * log(0.05) * pi * sigB)
+        
       }
       
       if (set_analysis == "ctsd") {
         req(rv$ctsdList)
         outList <- rv$ctsdList
         name <- "speed"
-        # x_label <- "Movement speed (in "
-        # truth <- rv$truth$ctsd
+        x_label <- "Movement speed (in "
+        
+        truth_summarized <- get_true_speed(
+          data = rv$simList,
+          seed = rv$seedList,
+          
+          tau_p = rv$tau_p,
+          tau_v = rv$tau_v,
+          sigma = rv$sigma,
+          
+          emulated = rv$is_emulate,
+          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          
+          summarized = TRUE)
+        
+        truth <- out$unit[[1]] %#% truth_summarized[["All"]]
+        truth_A <- out$unit[[1]] %#% truth_summarized[["A"]]
+        truth_B <- out$unit[[1]] %#% truth_summarized[["B"]]
       }
       
-      out <- rbind(rv$metaErr, rv$metaErr_groups) %>% 
-        dplyr::filter(type == set_analysis)
+      out <- out %>%
+        dplyr::mutate(
+          group = dplyr::recode(
+            group, "A" = "Group A", "B" = "Group B")) %>%
+        dplyr::mutate(
+          group = factor(group, levels = c("All", "Group A", "Group B")))
       
-      out$truth <- rep(0, nrow(out))
-      # out$truth <- sapply(1:nrow(out), function(x) {
-      #   group <- out$group[x]
-      #   truth_group <- truth[[group]]
-      #   return(out$unit[x] %#% truth_group)
-      # })
-      
-      # truth_group_A <- out$unit[1] %#% truth[["A"]]
-      # truth_group_B <- out$unit[1] %#% truth[["B"]]
-      # truth <- out$unit[1] %#% truth[["All"]]
-      
-      out <- out %>% 
-        dplyr::mutate(group = dplyr::recode(group,
-                                            "A" = "Group A",
-                                            "B" = "Group B"))
-      
-      # x_label <- paste0(x_label, as.character(out$unit[1]), ")")
-      # x_color <- c(pal$sea, "black", "grey50")
-      # x_linetype <- c("solid", "dotted", "dotted")
-      
-      x_color <- c("black", pal$grn_d, pal$grn)
+      x_label <- paste0(x_label, as.character(out$unit[1]), ")")
+      x_color <- c("black", "#77b131", pal$sea)
+      x_shape <- c(15,16,17)
       x_linetype <- c("solid", "dotted", "dotted")
       f <- .65
       
       p.groups <- out %>% 
         ggplot2::ggplot(
-          ggplot2::aes(x = est, y = group, color = group)) +
+          ggplot2::aes(x = est,
+                       y = id, 
+                       shape = as.factor(group),
+                       group = as.factor(group),
+                       color = as.factor(group))) +
         
         ggplot2::geom_vline(
-          ggplot2::aes(xintercept = truth),
+          xintercept = truth,
           color = "black",
-          linewidth = 0.5,
+          linewidth = 0.8,
           linetype = "solid") +
-
-        # ggplot2::geom_vline(
-        #   data = dplyr::filter(out, group == "All"),
-        #   ggplot2::aes(xintercept = truth),
-        #   color = x_color[1],
-        #   linewidth = 0.5,
-        #   linetype = "solid") +
-        # ggplot2::geom_vline(
-        #   data = dplyr::filter(out, group == "Group A"),
-        #   ggplot2::aes(xintercept = truth_group_A),
-        #   color = x_color[2],
-        #   linewidth = 0.5,
-        #   linetype = "solid") +
-        # ggplot2::geom_vline(
-        #   data = dplyr::filter(out, group == "Group B"),
-        #   ggplot2::aes(xintercept = truth_group_B),
-        #   color = x_color[3],
-        #   linewidth = 0.5,
-        #   linetype = "solid") +
-        ggplot2::facet_wrap(group ~ ., dir = "v", scales = "free_y") +
         
-        ggplot2::geom_point(size = 3) +
+        ggplot2::geom_vline(xintercept = truth_A,
+                            color = "#77b131",
+                            linewidth = 0.7,
+                            linetype = "solid") +
+        ggplot2::geom_vline(xintercept = truth_B,
+                            color = pal$sea,
+                            linewidth = 0.7,
+                            linetype = "solid") +
+        
+        ggplot2::geom_point(size = 4.5) +
         ggplot2::geom_linerange(ggplot2::aes(xmin = lci,
-                                             xmax = uci,
-                                             linetype = group)) +
+                                             xmax = uci),
+                                linewidth = 3,
+                                alpha = 0.5) +
+        
+        ggplot2::facet_grid(group ~ .,
+                            switch = "y",
+                            scales = "fixed",
+                            space = "fixed") +
         
         ggplot2::labs(x = x_label, y = "") +
-        # ggplot2::scale_x_log10() +
-        ggplot2::scale_x_continuous(labels = scales::percent) +
-        ggplot2::scale_color_manual(values = x_color) +
-        # ggplot2::scale_linetype_manual(values = x_linetype) +
         
-        theme_movedesign() +
-        ggplot2::theme(legend.position = "none")
+        # ggplot2::scale_x_continuous(labels = scales::percent) +
+        ggplot2::scale_color_manual("Group:", values = x_color) +
+        ggplot2::scale_shape_manual("Group:", values = x_shape) +
+        
+        theme_movedesign(font_available = rv$is_font) +
+        ggplot2::theme(
+          panel.spacing = ggplot2::unit(0, "lines"),
+          strip.placement = "outside",
+          legend.position = "none",
+          axis.text.y = ggplot2::element_blank()) %>%
+        suppressWarnings() +
+        ggplot2::theme(legend.position = "bottom")
       
       ggiraph::girafe(
         ggobj = p.groups,
@@ -1094,45 +1488,67 @@ mod_tab_meta_server <- function(id, rv) {
     ## Rendering error plot of optimal search outputs: --------------------
     
     output$metaPlot_m_optimal <- ggiraph::renderGirafe({
-      req(rv$meta_tbl)
+      req(rv$meta_tbl, rv$which_m, rv$which_meta, rv$set_analysis)
       
       out <- rv$meta_tbl
-      # main_color <- dplyr::case_when(
-      #   abs(mean(out$est)) > .5 ~ as.character(pal$dgr),
-      #   abs(mean(out$est)) > .1 ~ as.character(pal$gld),
-      #   TRUE ~ as.character(pal$sea))
+      req(all(!is.na(out$est)))
       
-      if (rv$grouped) {
-        main_color <- ifelse(out$subpop, pal$sea, pal$dgr)
-        secondary_color <- ifelse(out[nrow(out), "subpop"],
-                                  pal$sea, pal$dgr)
-      } else {
-        main_color <- ifelse(out$subpop, pal$dgr, pal$sea)
-        secondary_color <- ifelse(out[nrow(out), "subpop"],
-                                  pal$dgr, pal$sea)
+      if (rv$which_meta == "mean") {
+        req(rv$error_threshold)
+        p_error1 <- ggplot2::geom_hline(
+          yintercept = rv$error_threshold,
+          color = "black",
+          linetype = "dotted")
+        p_error2 <-  ggplot2::geom_hline(
+          yintercept = -rv$error_threshold,
+          color = "black",
+          linetype = "dotted")
       }
+      
+      out$var_color <- out$overlap
+      var_color_title <- "Overlaps with truth:"
+      
+      # TODO
+      # if (rv$which_meta == "compare") {
+      #   out$var_color <- out$subpop
+      #   var_color_title <- "Sub-population detected?"
+      # } # Note: this refers to finding subpops within each group
+      ## need to change to finding subpops within the population.
+      
+      if (all(out$var_color)) truth_values <- pal$sea
+      else if (all(out$var_color == FALSE)) truth_values <- pal$dgr
+      else truth_values <- c(pal$dgr, pal$sea)
       
       p.optimal <- out %>%
         ggplot2::ggplot(
-          ggplot2::aes(x = m, y = est, color = subpop)) +
-        ggplot2::geom_hline(yintercept = mean(out$est),
-                            color = secondary_color,
-                            linetype = "dotted") +
-        ggplot2::geom_hline(yintercept = 0,
-                            linewidth = 0.3,
-                            linetype = "solid") +
-        ggplot2::geom_point() +
+          ggplot2::aes(x = as.factor(m), y = est,
+                       group = group,
+                       shape = group,
+                       color = var_color)) +
+        
+        { if (rv$which_meta == "mean") p_error1 } +
+        { if (rv$which_meta == "mean") p_error2 } +
+        
+        ggplot2::geom_hline(
+          yintercept = 0,
+          linewidth = 0.3,
+          linetype = "solid") +
+        ggplot2::geom_point(
+          size = 4,
+          position = ggplot2::position_dodge(width = .25)) +
         ggplot2::geom_linerange(
           ggplot2::aes(ymin = lci,
-                       ymax = uci)) +
+                       ymax = uci),
+          position = ggplot2::position_dodge(width = .25)) +
         
         ggplot2::labs(x = "Number of individuals", y = "Error (%)") +
-        ggplot2::scale_y_continuous(
-          labels = scales::percent) +
-        ggplot2::scale_color_manual(values = main_color) +
         
-        theme_movedesign() +
-        ggplot2::theme(legend.position = "none")
+        ggplot2::scale_y_continuous(labels = scales::percent) +
+        ggplot2::scale_color_manual(var_color_title,
+                                    values = truth_values) +
+        ggplot2::scale_shape_manual("Group:", values = c(16,17)) +
+        theme_movedesign(font_available = rv$is_font) +
+        ggplot2::theme(legend.position = "bottom")
       
       ggiraph::girafe(
         ggobj = p.optimal,
@@ -1156,6 +1572,7 @@ mod_tab_meta_server <- function(id, rv) {
     
     output$metaTable_all <- reactable::renderReactable({
       req(rv$metaList, rv$sigma)
+      req(length(rv$metaList) > 0)
       
       if ("Home range" %in% rv$which_question) req(rv$akdeList)
       if ("Speed & distance" %in% rv$which_question) req(rv$ctsdList)
@@ -1220,11 +1637,11 @@ mod_tab_meta_server <- function(id, rv) {
     ## Rendering meta-analyses outputs (for groups): ----------------------
     
     output$metaTable_groups <- reactable::renderReactable({
-      req(rv$metaList_groups, 
+      req(rv$metaList_groups[[3]], 
           rv$set_analysis,
           input$metaInput_mod)
       
-      out <- rv$metaList_groups[[rv$set_analysis]]$mods
+      out <- rv$metaList_groups[[2]][[rv$set_analysis]]$mods
       req(length(out) == 4)
       
       dt_out <- out[[input$metaInput_mod]]
@@ -1369,15 +1786,23 @@ mod_tab_meta_server <- function(id, rv) {
       
       dt_meta <- rv$meta_tbl %>%
         dplyr::select(-overlaps, -type) %>%
-        dplyr::mutate(subpop = as.logical(subpop))
-
+        dplyr::mutate(subpop = as.logical(subpop)) %>% 
+        dplyr::select(m, lci, est, uci, group, subpop)
+      
+      dt_meta$subpop <- ifelse(dt_meta$subpop, "Yes", "No")
+      
       nms <- list(
         m = "M",
-        lci = "Error (95% LCI)",
-        est = "Error",
-        uci = "Error (95% UCI)",
-        subpop = "Subpop detected?"
+        lci = "95% LCI",
+        est = "Est",
+        uci = "95% UCI",
+        subpop = "Detected?",
+        group = "Group"
       )
+      
+      colgroups <- list(
+        reactable::colGroup(
+          name = "Error", columns = c("lci", "est", "uci")))
       
       reactable::reactable(
         data = dt_meta,
@@ -1390,7 +1815,8 @@ mod_tab_meta_server <- function(id, rv) {
         showPageSizeOptions = TRUE,
         pageSizeOptions = c(5, 10, 20),
         showPageInfo = FALSE,
-        defaultSorted = list(m = "desc"),
+        
+        defaultSorted = list(group ="asc", m = "asc"),
         defaultColDef = reactable::colDef(
           headerClass = "rtable_header",
           align = "center",
@@ -1408,17 +1834,24 @@ mod_tab_meta_server <- function(id, rv) {
             style = format_perc,
             format = reactable::colFormat(percent = TRUE, digits = 1)),
           uci = reactable::colDef(
-             name = nms[["uci"]],
+            name = nms[["uci"]],
             style = format_perc,
             format = reactable::colFormat(percent = TRUE, digits = 1)),
           subpop = reactable::colDef(
-            name = nms[["subpop"]])
-        ))
+            name = nms[["subpop"]]),
+          group = reactable::colDef(
+            name = nms[["group"]])),
+        
+        columnGroups = colgroups
+        
+      ) # end of reactable
       
     }) %>% # end of renderReactable, "metaTable_m_optimal"
       bindEvent(list(input$add_meta_table, 
                      rv$ctsdList,
-                     rv$akdeList))
+                     rv$akdeList,
+                     rv$meta_tbl,
+                     rv$set_analysis))
     
     # BLOCKS --------------------------------------------------------------
     ## Outputs: -----------------------------------------------------------
@@ -1430,9 +1863,31 @@ mod_tab_meta_server <- function(id, rv) {
       mod_blocks_server(
         id = "metaBlock_hr",
         rv = rv, type = "hr", name = "metaErr")
-      # TODO BUGFIX filtering type == type wasn't working, maybe fixed?
       
     }) # end of observe
+    
+    output$metaBlock_hr_ratio <- shiny::renderUI({
+      req(rv$grouped, rv$metaList_groups[[3]])
+      
+      meta <- rv$metaList_groups[[2]][["hr"]]
+      req(!is.null(meta))
+      
+      observed_ratio <- extract_ratios(meta)
+      observed_ratio
+      
+      return(tagList(
+        p(style = "margin-top: 10px;"),
+        parBlock(
+          icon = "divide",
+          header = "Ratio",
+          value = paste0(round(observed_ratio$est, 1), ":1"),
+          subtitle = paste0(
+            scales::label_comma(.1)(observed_ratio$lower),
+            ":1 \u2014 ", scales::label_comma(.1)
+            (observed_ratio$upper), ":1"))
+      ))
+      
+    }) # end of renderUI, "metaBlock_hr_ratio"
     
     observe({
       req(rv$metaErr,
@@ -1441,9 +1896,31 @@ mod_tab_meta_server <- function(id, rv) {
       mod_blocks_server(
         id = "metaBlock_speed",
         rv = rv, type = "ctsd", name = "metaErr")
-      # TODO BUGFIX filtering type == type wasn't working, maybe fixed?
       
     }) # end of observe
+    
+    output$metaBlock_speed_ratio <- shiny::renderUI({
+      req(rv$grouped, rv$metaList_groups[[3]])
+      
+      meta <- rv$metaList_groups[[2]][["ctsd"]]
+      req(!is.null(meta))
+      
+      observed_ratio <- extract_ratios(meta)
+      observed_ratio
+      
+      return(tagList(
+        p(style = "margin-top: 10px;"),
+        parBlock(
+          icon = "divide",
+          header = "Ratio",
+          value = paste0(round(observed_ratio$est, 1), ":1"),
+          subtitle = paste0(
+            scales::label_comma(.1)(observed_ratio$lower),
+            ":1 \u2014 ", scales::label_comma(.1)
+            (observed_ratio$upper), ":1"))
+      ))
+      
+    }) # end of renderUI, "metaBlock_speed_ratio"
     
   }) # end of moduleServer
 }

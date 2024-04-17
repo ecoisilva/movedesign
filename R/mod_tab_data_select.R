@@ -94,16 +94,7 @@ mod_tab_data_select_ui <- function(id) {
               verbatimTextOutput(outputId = ns("binomial_name"))
             ),
             
-            shiny::selectizeInput(
-              inputId = ns("id_selected"),
-              label = NULL,
-              choices = "",
-              selected = NULL,
-              multiple = TRUE,
-              options = list(
-                placeholder = "Pick an individual",
-                onInitialize = I('function() { this.setValue(""); }'))
-            ),
+            uiOutput(ns("selectUI_id")),
             
             footer = splitLayout(
               uiOutput(ns("selectUI_validate")),
@@ -227,6 +218,32 @@ mod_tab_data_select_server <- function(id, rv) {
     pal <- load_pal()
     
     # MAIN REACTIVE VALUES ------------------------------------------------
+    
+    output$selectUI_id <- renderUI({
+      req(rv$which_meta)
+      if (rv$which_meta == "none") {
+        shiny::selectizeInput(
+          inputId = ns("id_selected"),
+          label = NULL,
+          choices = "",
+          selected = NULL,
+          multiple = FALSE,
+          options = list(
+            placeholder = "Pick an individual",
+            onInitialize = I('function() { this.setValue(""); }')))
+      } else {
+        shiny::selectizeInput(
+          inputId = ns("id_selected"),
+          label = NULL,
+          choices = "",
+          selected = NULL,
+          multiple = TRUE,
+          options = list(
+            placeholder = "Pick an individual",
+            onInitialize = I('function() { this.setValue(""); }')))
+      }
+    }) # end of renderUI, "selectUI_id"
+    
     ## Matching id for input, plot and table: -----------------------------
     
     id_debounced <- reactive({
@@ -341,7 +358,6 @@ mod_tab_data_select_server <- function(id, rv) {
       req(rv$datList, rv$fitList, rv$id, rv$is_valid)
       req(rv$id %in% names(rv$datList))
       req(rv$is_emulate)
-      # meta() can handle less well-tracked individuals, mean() cannot
       
       add_ui <- FALSE
       ui_N_area <- NULL
@@ -584,6 +600,7 @@ mod_tab_data_select_server <- function(id, rv) {
       rv$fitList <- lapply(seq_along(fitList), function(x)
         fitList[[x]][[1]])
       names(rv$fitList) <- names(isolate(rv$datList))
+      rv$is_isotropic <- rv$fitList[[1]]$sigma@isotropic[[1]]
       
     }) %>% # end of observe,
       bindEvent(rv$species)
@@ -775,19 +792,21 @@ mod_tab_data_select_server <- function(id, rv) {
         # to_filter <- "^OUF"
         
         to_filter <- "^IOU|^OUF|^OU(?!f)"
-        if ("Home range" == rv$which_question) {
-          # does assume range residency for rv$id
-          msg_log(
-            style = "danger",
-            message = paste0(
-              "Verify ", msg_danger("range residency"), ","),
-            detail = paste("Assuming all selected individuals",
-                           "are range resident."))
-          to_filter <- "^OU(?!f)|^OUF"
-        }
-        
-        if ("Speed & distance" == rv$which_question) {
-          to_filter <- "^IOU|^OUF"
+        if (length(rv$which_question) == 1) {
+          if ("Home range" == rv$which_question) {
+            # does assume range residency for rv$id
+            msg_log(
+              style = "danger",
+              message = paste0(
+                "Verify ", msg_danger("range residency"), ","),
+              detail = paste("Assuming all selected individuals",
+                             "are range resident."))
+            to_filter <- "^OU(?!f)|^OUF"
+          }
+          
+          if ("Speed & distance" == rv$which_question) {
+            to_filter <- "^IOU|^OUF"
+          }
         }
         
         fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
@@ -804,10 +823,11 @@ mod_tab_data_select_server <- function(id, rv) {
           return(NULL)
         }
         
+        rv$is_isotropic <- c("All" = TRUE)
         if (rv$is_emulate) {
           
           meanfit0 <- tryCatch(
-            mean(x = fit0) %>%
+            mean(x = fit0, sample = TRUE) %>%
               suppressMessages() %>%
               suppressWarnings() %>%
               quiet(),
@@ -835,7 +855,7 @@ mod_tab_data_select_server <- function(id, rv) {
             rv$speed <- extract_pars(meanfit0, name = "speed")
             rv$meanfitList <- list(meanfit0)
             names(rv$meanfitList) <- c("All")
-            
+            rv$is_isotropic <- c("All" = meanfit0$sigma@isotropic[[1]])
           }
           
         } else {
@@ -856,41 +876,57 @@ mod_tab_data_select_server <- function(id, rv) {
                              "autocorrelation timescales."))
         }
         
+        rv$mu <- list(array(0, dim = 2, 
+                            dimnames = list(c("x", "y"))))
+        
+        names(rv$sigma) <- c("All")
+        names(rv$tau_p) <- c("All")
+        names(rv$tau_v) <- c("All")
+        names(rv$speed) <- c("All")
+        names(rv$mu) <- c("All")
+        
         if (rv$grouped) {
+          
+          rv$is_isotropic <- c(rv$is_isotropic, "A" = TRUE, "B" = TRUE)
+          fitA <- rv$fitList[rv$groups[[1]][["A"]]]
+          fitB <- rv$fitList[rv$groups[[1]][["B"]]]
+          
           meanfitA <- tryCatch(
-            mean(rv$fitList[rv$groups[[1]][["A"]]]) %>% 
+            mean(fitA) %>% 
               suppressMessages() %>% 
               suppressWarnings() %>% 
               quiet(),
             error = function(e) e)
           
           meanfitB <- tryCatch(
-            mean(rv$fitList[rv$groups[[1]][["B"]]]) %>% 
+            mean(fitB) %>% 
               suppressMessages() %>% 
               suppressWarnings() %>% 
               quiet(),
             error = function(e) e)
           
-          if (inherits(fitA, "error") ||
-              inherits(fitB, "error")) {
+          if (inherits(meanfitA, "error") ||
+              inherits(meanfitB, "error")) {
             
             msg_log(
               style = "danger",
               message = paste0(
                 "Extraction ", msg_danger("failed"), 
-                "for one of the groups."))
-            return(NULL)
+                "for one or both groups."))
+            
+          } else {
+            rv$meanfitList <- list(rv$meanfitList[[1]],
+                                   meanfitA, meanfitB)
+            names(rv$meanfitList) <- c("All", "A", "B")
+            rv$is_isotropic <- c(
+              rv$is_isotropic[[1]],
+              "A" = meanfitA$sigma@isotropic[[1]],
+              "B" = meanfitB$sigma@isotropic[[1]])
           }
           
-          rv$meanfitList <- c(rv$meanfitList, meanfitA, meanfitB)
-          names(rv$meanfitList) <- c("All", "A", "B")
+          rv$mu <- list(rv$mu[[1]], rv$mu[[1]], rv$mu[[1]])
           rv$proceed <- TRUE
         }
-        
-        if (length(rv$id) == 1) 
-          rv$mu <- list(rv$fitList[[1]]$mu)
-        else rv$mu <- list(array(0, dim = 2, 
-                                 dimnames = list(c("x", "y"))))
         
         rv$svfList <- extract_svf(dat0, rv$fitList[rv$id])
         
@@ -988,18 +1024,6 @@ mod_tab_data_select_server <- function(id, rv) {
       names(rv$mu) <- c("All", "A", "B") 
       
       rv$proceed <- NULL
-      
-      # modA <- prepare_mod(
-      #   tau_p = rv$tau_p[[2]][2, ],
-      #   tau_v = rv$tau_v[[2]][2, ],
-      #   sigma = rv$sigma[[2]][2, ],
-      #   mu = rv$mu[[2]])
-      # modB <- prepare_mod(
-      #   tau_p = rv$tau_p[[3]][2, ],
-      #   tau_v = rv$tau_v[[3]][2, ],
-      #   sigma = rv$sigma[[3]][2, ],
-      #   mu = rv$mu[[3]])
-      # rv$modList <- X
       
     }) %>% # end of observe,
       bindEvent(rv$proceed)

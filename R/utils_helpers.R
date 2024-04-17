@@ -509,23 +509,48 @@ help_modal <- function(input, file) {
 #'
 #' @param ft_size Base font size.
 #' @noRd
-theme_movedesign <- function(ft_size = 13) {
-  font <- "Roboto Condensed" # assign font family
-
-  ggplot2::theme_minimal() %+replace% # replace elements
+theme_movedesign <- function(ft_size = 13,
+                             font = "Roboto Condensed",
+                             font_available = TRUE) {
+  
+  if (!font_available)
+    ggplot2::theme_minimal() %+replace% # replace elements
     ggplot2::theme(
-
-      text = ggplot2::element_text(family = font, size = ft_size),
-
+      
+      text = ggplot2::element_text(size = ft_size),
+      
       plot.title = ggplot2::element_text(
         size = ft_size + 3, vjust = 1.2, hjust = .5),
       plot.subtitle = ggplot2::element_text(
         color = "#666666", hjust = .5),
       plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
-
+      
       panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
       panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
-
+      
+      axis.text.x = ggplot2::element_text(colour = "#878787"),
+      axis.text.y = ggplot2::element_text(colour = "#878787"),
+      axis.title.x = ggplot2::element_text(
+        hjust = 1, vjust = -1),
+      axis.title.y = ggplot2::element_text(
+        angle = 90, vjust = 2)) %>% 
+    suppressWarnings()
+  
+  else
+    ggplot2::theme_minimal() %+replace% # replace elements
+    ggplot2::theme(
+      
+      text = ggplot2::element_text(family = font, size = ft_size),
+      
+      plot.title = ggplot2::element_text(
+        size = ft_size + 3, vjust = 1.2, hjust = .5),
+      plot.subtitle = ggplot2::element_text(
+        color = "#666666", hjust = .5),
+      plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
+      
+      panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
+      panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
+      
       axis.text.x = ggplot2::element_text(colour = "#878787"),
       axis.text.y = ggplot2::element_text(colour = "#878787"),
       axis.title.x = ggplot2::element_text(
@@ -533,6 +558,7 @@ theme_movedesign <- function(ft_size = 13) {
       axis.title.y = ggplot2::element_text(
         family = font, angle = 90, vjust = 2)) %>% 
     suppressWarnings()
+  
 }
 
 
@@ -549,7 +575,8 @@ plotting_hr <- function(input1,
                         show_truth,
                         contours,
                         color,
-                        extent) {
+                        extent,
+                        font_available = TRUE) {
   
   id <- NULL
   if (!is.list(input1)) stop("Input is not a list.")
@@ -598,6 +625,9 @@ plotting_hr <- function(input1,
       linetype = "dotted", alpha = .2)
   }
   
+  p2 <- ggplot2::geom_sf(
+    data = ud[2, ],
+    fill = pal[1], color = NA, alpha = .1)
   if ("est" %in% contours) {
     p2 <- ggplot2::geom_sf(
       data = ud[2, ],
@@ -631,7 +661,7 @@ plotting_hr <- function(input1,
       color = pal[2], size = 1, alpha = .3) +
     
     { if ("uci" %in% contours) p1 } +
-    { if ("est" %in% contours) p2 } +
+    p2 + # TODO TO CHECK
     { if ("lci" %in% contours) p3 } +
     
     { if (show_both)
@@ -654,7 +684,7 @@ plotting_hr <- function(input1,
         extent$y[2] + abs(diff(range(extent$y))) * .01)) +
     
     ggplot2::labs(x = "X coordinate", y = "Y coordinate") +
-    theme_movedesign() +
+    theme_movedesign(font_available = font_available) +
     ggplot2::theme(legend.position = "none")
   
   return(p)
@@ -673,7 +703,8 @@ plotting_svf <- function(data, fill,
                          fraction = .5,
                          add_fit = FALSE,
                          x_unit = "days",
-                         y_unit = "km^2") {
+                         y_unit = "km^2",
+                         font_available = TRUE) {
   out <- list()
   if (class(data[[1]])[1] != "list") data <- list(data)
   m <- length(data)
@@ -740,7 +771,8 @@ plotting_svf <- function(data, fill,
       ggplot2::labs(
         x = "Time lag (in days)",
         y = y_lab) +
-      theme_movedesign(ft_size = ft_size)
+      theme_movedesign(font_available = font_available,
+                       ft_size = ft_size)
     
     return(p)
     
@@ -757,7 +789,8 @@ plotting_svf <- function(data, fill,
 #'
 #' @importFrom dplyr %>%
 #' @noRd
-plotting_outlier <- function(data) {
+plotting_outlier <- function(data,
+                             font_available = TRUE) {
   
   m <- length(data)
   out_data <- quiet(ctmm::outlie(data, plot = FALSE)) %>% 
@@ -855,7 +888,8 @@ plotting_outlier <- function(data) {
       
       ggplot2::scale_size_identity() +
       ggplot2::labs(x = NULL, y = NULL) +
-      theme_movedesign(ft_size = ft_size) +
+      theme_movedesign(font_available = font_available,
+                       ft_size = ft_size) +
       ggplot2::theme(legend.position = "none")
     
     return(p)
@@ -1007,7 +1041,7 @@ loading_modal <- function(x,
           p("\u2248", out_txt_range,
             style = time_css), p(),
           
-          p(span("*Does not account for parallelization,",
+          p(span("Parallelization not fully accounted for;",
                  "run time may be substantially lower.",
                  class = "cl-dgr"), 
             style = "font-size: 14px; line-height: 1;"))
@@ -1301,7 +1335,36 @@ create_modal <- function(var, id) {
 
     ) # end of fluidRow
   } # end of loss
-
+  
+  if (var == "failure") {
+    out_title <- shiny::h4(
+      span("Transmitter or tag failure", class = "cl-sea"), ":")
+    
+    out_body <- fluidRow(
+      style = paste("margin-right: 20px;",
+                    "margin-left: 20px;"),
+      
+      p("Some devices stop collecting information in the field.",
+        "This could be due to a myriad of factors:",
+        wrap_none(span("signal loss", class = "cl-dgr"), ","),
+        "animal mortality or premature detachment, exhaustion",
+        "of batteries, antenna breakage, among others.", br(),
+        "Setting this input to 5%, for example, means that there",
+        "is a 5% chance that the simulated tags stop recording",
+        span("locations", class = "cl-dgr"),
+        "at some point during the simulation.",
+        "For illustrative purposes, the initial tags/simulations",
+        "created in the", 
+        fontawesome::fa("stopwatch", fill = "#009da0"),
+        span("Sampling design", class = "cl-sea-l"), "tab",
+        "will never fail, this will only be applicable to any",
+        "subsequent simulation in the",
+        fontawesome::fa("compass-drafting", fill = "#009da0"),
+        span("Analyses", class = "cl-sea-l"), "tabs."
+      )
+      
+    ) # end of fluidRow
+  } # end of failure
 
   if (var == "error") {
     out_title <- shiny::h4(
@@ -1495,7 +1558,7 @@ as_tele_list <- function(object) {
 #'
 #' @noRd
 #'
-as_tele_dt <- function(object) {
+tele_to_dt <- function(object) {
   
   .I <- id <- row_name <- row_no <- NULL
   
@@ -1527,8 +1590,8 @@ as_tele_dt <- function(object) {
 devRow <- function(seed, 
                    group = NULL,
                    device, 
-                   dur, 
-                   dti,
+                   dur = NULL, 
+                   dti = NULL,
                    data,
                    fit) {
   
@@ -1545,9 +1608,14 @@ devRow <- function(seed,
   
   out$device <- device
   
+  if (is.null(dur))
+    dur <- extract_sampling(data, name = "period")[[1]]
   dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
+    
+  if (is.null(dti))
+    dti <- extract_sampling(data, name = "interval")[[1]]
   dti <- fix_unit(dti$value, dti$unit)
-  
+    
   out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
   out$dti <- paste(dti[1], abbrv_unit(dti[,2]))
   
@@ -1565,8 +1633,8 @@ hrRow <- function(seed,
                   fit = NULL,
                   N = NULL,
                   tau_p,
-                  dur,
-                  dti,
+                  dur = NULL,
+                  dti = NULL,
                   area, 
                   error) {
   
@@ -1591,15 +1659,19 @@ hrRow <- function(seed,
     scales::label_comma(.1)(tau_p$value[2]),
     abbrv_unit(tau_p$unit[2]))
   
+  if (is.null(dur))
+    dur <- extract_sampling(data, name = "period")[[1]]
   out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
   out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
   
+  if (is.null(dti))
+    dti <- extract_sampling(data, name = "interval")[[1]]
   out_dti <- fix_unit(dti$value, dti$unit)
   out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
   
-  out_area <- scales::label_comma(.1)(area$est)
-  if (is.na(out_area)) out$area <- NA
-  else out$area <- paste(out_area, abbrv_unit(area$unit))
+  if (is.na(area$est)) out$area <- NA
+  else out$area <- paste(
+    scales::label_comma(.1)(area$est), abbrv_unit(area$unit))
   
   return(out)
   
@@ -1612,8 +1684,8 @@ sdRow <- function(seed,
                   fit = NULL, 
                   N = NULL,
                   tau_v,
-                  dur,
-                  dti,
+                  dur = NULL,
+                  dti = NULL,
                   speed,
                   speed_error,
                   distance, 
@@ -1642,9 +1714,13 @@ sdRow <- function(seed,
     scales::label_comma(.1)(tau_v$value[2]),
     abbrv_unit(tau_v$unit[2]))
   
+  if (is.null(dur))
+    dur <- extract_sampling(data, name = "period")[[1]]
   out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
   out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
   
+  if (is.null(dti))
+    dti <- extract_sampling(data, name = "interval")[[1]]
   out_dti <- fix_unit(dti$value, dti$unit)
   out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
   

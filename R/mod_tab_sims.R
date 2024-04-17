@@ -530,8 +530,7 @@ mod_tab_sims_server <- function(id, rv) {
     rv$sims <- reactiveValues(
       m = 0,
       tbl = NULL,
-      grouped = FALSE
-    )
+      grouped = FALSE)
     
     sims_debounced <- reactive({
       state <- reactable::getReactableState("simTable")
@@ -545,11 +544,13 @@ mod_tab_sims_server <- function(id, rv) {
       
     }) %>% debounce(1000)
     
+    ## Save reactive values (for groups): ---------------------------------
+    
     observe({
       req(rv$datList,
           !rv$sims$grouped,
-          rv$report_sims_yn,
-          rv$active_tab == 'sims', 
+          # rv$report_sims_yn,
+          rv$active_tab == 'sims',
           rv$which_meta == "compare",
           rv$data_type == "simulated")
       
@@ -564,16 +565,24 @@ mod_tab_sims_server <- function(id, rv) {
         rv$tau_p <- c(rv$tau_p[1], rv$tau_p0[selected_m])
         rv$tau_v <- c(rv$tau_v[1], rv$tau_v0[selected_m])
         rv$sigma <- c(rv$sigma[1], rv$sigma0[selected_m])
-        rv$mu <- list(array(0, dim = 2, 
+        rv$mu <- list(array(0, dim = 2,
                             dimnames = list(c("x", "y"))),
-                      array(0, dim = 2, 
+                      array(0, dim = 2,
                             dimnames = list(c("x", "y"))),
-                      array(0, dim = 2, 
+                      array(0, dim = 2,
                             dimnames = list(c("x", "y"))))
-        names(rv$tau_p) <- c("All", "A", "B") 
-        names(rv$tau_v) <- c("All", "A", "B") 
-        names(rv$sigma) <- c("All", "A", "B") 
-        names(rv$mu) <- c("All", "A", "B") 
+        
+        names(rv$tau_p) <- c("All", "A", "B")
+        names(rv$tau_v) <- c("All", "A", "B")
+        names(rv$sigma) <- c("All", "A", "B")
+        names(rv$mu) <- c("All", "A", "B")
+        
+        rv$modList <- rv$modList0[selected_m]
+        rv$seedList <- rv$seedList0[selected_m]
+        rv$is_isotropic <- TRUE
+        
+        names(rv$modList) <- c("A", "B")
+        
         rv$sims$grouped <- TRUE
         
         shinyalert::shinyalert(
@@ -593,7 +602,7 @@ mod_tab_sims_server <- function(id, rv) {
         msg_log(
           style = "danger",
           message = paste0("Number of groups exceeds ",
-                           msg_danger("limits"), "."),
+                           msg_danger("limit"), "."),
           detail = "Select two groups only.")
         
         shinyalert::shinyalert(
@@ -637,14 +646,7 @@ mod_tab_sims_server <- function(id, rv) {
     
     to_rerun <- reactive({
       list(input$repeat_sim,
-           input$generateSeed)
-    })
-    
-    ## Stored parameters:
-    
-    saved_pars <- reactive({
-      
-      list(input$generateSeed,
+           input$generateSeed,
            input$tau_p0,
            input$tau_p0_units,
            input$tau_v0,
@@ -652,14 +654,16 @@ mod_tab_sims_server <- function(id, rv) {
            input$sigma0)
     })
     
-    ## Reset values from import or select data tabs:
+    ## Stored parameters:
     
-    observe({
-      req(rv$active_tab == 'sims')
-      reset_reactiveValues(rv) # reset rv between data tabs
-      
-    }) %>% # end of observe,
-      bindEvent(input$generateSeed)
+    saved_pars <- reactive({
+      list(input$generateSeed,
+           input$tau_p0,
+           input$tau_p0_units,
+           input$tau_v0,
+           input$tau_v0_units,
+           input$sigma0)
+    })
     
     ## Calculate deterministic speed: -------------------------------------
     
@@ -674,7 +678,7 @@ mod_tab_sims_server <- function(id, rv) {
       } else {
         v <- sqrt((input$sigma0 %#% input$sigma0_units) * pi/2) / 
           sqrt(prod((input$tau_v0 %#% input$tau_v0_units), 
-                      (input$tau_p0 %#% input$tau_p0_units)))
+                    (input$tau_p0 %#% input$tau_p0_units)))
         
         v <- fix_unit(v, "m/s", convert = TRUE)
       }
@@ -775,8 +779,12 @@ mod_tab_sims_server <- function(id, rv) {
     ## Generate random seed: ----------------------------------------------
     
     observe({
-      rv$seed0 <- generate_seed()
-    }) %>% bindEvent(to_rerun(), ignoreInit = TRUE)
+      
+      if (is.null(rv$seedList0)) rv$seed0 <- generate_seed()
+      else rv$seed0 <- generate_seed(rv$seedList0)
+      
+    }) %>% bindEvent(to_rerun(), ignoreInit = TRUE) %>% 
+      debounce(100)
     
     output$seedvalue <- renderPrint({
       req(rv$seed0)
@@ -786,10 +794,11 @@ mod_tab_sims_server <- function(id, rv) {
     ## Prepare model and run simulation: ----------------------------------
     
     simulating_data <- reactive({
-      
+      if (rv$sims$m == 0) reset_reactiveValues(rv) 
+        
       rv$sims$m <- rv$sims$m + 1
       rv$tau_p <- list(
-        All = data.frame(value = c(NA, input$tau_p0, NA),
+        "All" = data.frame(value = c(NA, input$tau_p0, NA),
                          unit = rep(input$tau_p0_units, 3),
                          row.names = c("low", "est", "high")))
       
@@ -797,7 +806,7 @@ mod_tab_sims_server <- function(id, rv) {
       names(rv$tau_p0)[[length(rv$tau_p0)]] <- as.character(rv$sims$m)
       
       rv$tau_v <- list(
-        All = data.frame(value = c(NA, input$tau_v0, NA),
+        "All" = data.frame(value = c(NA, input$tau_v0, NA),
                          unit = rep(input$tau_v0_units, 3),
                          row.names = c("low", "est", "high")))
       
@@ -805,14 +814,14 @@ mod_tab_sims_server <- function(id, rv) {
       names(rv$tau_v0)[[length(rv$tau_v0)]] <- as.character(rv$sims$m)
       
       rv$sigma <- list(
-        All = data.frame(value = c(NA, input$sigma0, NA),
+        "All" = data.frame(value = c(NA, input$sigma0, NA),
                          unit = rep(input$sigma0_units, 3),
                          row.names = c("low", "est", "high")))
       
       rv$sigma0 <<- c(rv$sigma0, rv$sigma)
       names(rv$sigma0)[[length(rv$sigma0)]] <- as.character(rv$sims$m)
       
-      rv$mu <- list(All = array(0, dim = 2, 
+      rv$mu <- list("All" = array(0, dim = 2, 
                                 dimnames = list(c("x", "y"))))
       
       rv$is_run <- FALSE
@@ -828,13 +837,13 @@ mod_tab_sims_server <- function(id, rv) {
       rv$dur0 <- dplyr::case_when(
         tmp_taup >= ("days" %#% tmp_tauv) ~ 
           ifelse(tmp_taup > 1,
-                 round(tmp_taup * 20, 1), 20),
+                 round(tmp_taup * 10, 1), 10),
         TRUE ~ 
           ifelse(("days" %#% tmp_tauv) > 1,
-                 round("days" %#% tmp_tauv * 20, 1), 20)
+                 round("days" %#% tmp_tauv * 10, 1), 10)
       )
       rv$dur0_units <- "days"
-
+      
       rv$dti0 <- dplyr::case_when(
         tmp_tauv <= 120 ~ 1,
         tmp_tauv <= 3600 ~ round("minutes" %#% tmp_tauv/4, 0),
@@ -852,28 +861,20 @@ mod_tab_sims_server <- function(id, rv) {
         seed = rv$seed0)
       rv$sims$grouped <- FALSE
       
-      if (is.null(rv$modList)) {
-        rv$modList <- list(mod)
-        names(rv$modList) <- as.character(rv$sims$m)
+      if (is.null(rv$modList0)) {
+        rv$modList0 <- list(mod)
+        names(rv$modList0) <- as.character(rv$sims$m)
+        rv$seedList0 <- list(rv$seed0)
+        
       } else {
-        rv$modList <<- c(rv$modList, mod)
-        names(rv$modList)[[length(rv$modList)]] <- 
+        rv$modList0[[length(rv$modList0) + 1]] <- mod
+        names(rv$modList0)[[length(rv$modList0)]] <- 
           as.character(rv$sims$m)
+        
+        rv$seedList0 <<- c(rv$seedList0, rv$seed0)
       }
       
       names(out) <- as.character(rv$sims$m)
-      
-      # TODO (check if needed)
-      # if (!rv$grouped) {
-      #   rv$seedList <- list(rv$seed0)
-      #   names(out) <- c(rv$seed0)
-      # } else {
-      #   rv$seedList <- list(rv$seed0, rv$seed0 + 1)
-      #   rv$groups[[2]] <- list(A = as.character(rv$seed0), 
-      #                          B = as.character(rv$seed0 + 1))
-      #   names(out) <- c(rv$seed0, rv$seed0 + 1)
-      # }
-      
       return(out)
       
     }) %>% # end of reactive, simulating_data()
@@ -973,7 +974,7 @@ mod_tab_sims_server <- function(id, rv) {
         rv$sd <- NULL
         
         time_sim0 <- difftime(Sys.time(), start_sim, units = "secs")
-
+        
         msg_log(
           style = "success",
           message = paste0("Simulation ",
@@ -981,45 +982,45 @@ mod_tab_sims_server <- function(id, rv) {
           run_time = time_sim0)
         
         rv$is_valid <- TRUE
-        shinybusy::remove_modal_spinner()
+        # shinybusy::remove_modal_spinner()
         
         ### Run model fit: ------------------------------------------------
         
-        shinybusy::show_modal_spinner(
-          spin = "fading-circle",
-          color = pal$sea,
-          
-          text = span(
-            style = "font-size: 18px;",
-            span("Fitting", style = "color: #797979;"),
-            HTML(paste0(span("movement model", class = "cl-sea"),
-                        span(".", style = "color: #797979;"))),
-            p("This may take a while...",
-              style = paste("color: #797979;",
-                            "font-size: 16px;",
-                            "text-align: center;")),
-            p())
-          
-        ) # end of show_modal_spinner
-        
-        rv$needs_fit <- FALSE
-        
-        msg_log(
-          style = "warning",
-          message = paste0("...", msg_warning("Fitting"),
-                           " movement model."),
-          detail = "Please wait for model fit to finish.")
-        
-        rv$fitList <- fitting_ctmm()
+        # shinybusy::show_modal_spinner(
+        #   spin = "fading-circle",
+        #   color = pal$sea,
+        #   
+        #   text = span(
+        #     style = "font-size: 18px;",
+        #     span("Fitting", style = "color: #797979;"),
+        #     HTML(paste0(span("movement model", class = "cl-sea"),
+        #                 span(".", style = "color: #797979;"))),
+        #     p("This may take a while...",
+        #       style = paste("color: #797979;",
+        #                     "font-size: 16px;",
+        #                     "text-align: center;")),
+        #     p())
+        #   
+        # ) # end of show_modal_spinner
+        # 
+        # rv$needs_fit <- FALSE
+        # 
+        # msg_log(
+        #   style = "warning",
+        #   message = paste0("...", msg_warning("Fitting"),
+        #                    " movement model."),
+        #   detail = "Please wait for model fit to finish.")
+        # 
+        # rv$fitList <- fitting_ctmm()
         
         rv$time_sims <- difftime(Sys.time(), start_sim,
-                                   units = "mins")
+                                 units = "mins")
         
-        msg_log(
-          style = "success",
-          message = paste0("Model fitting ",
-                           msg_success("completed"), "."),
-          run_time = rv$time_sims)
+        # msg_log(
+        #   style = "success",
+        #   message = paste0("Model fitting ",
+        #                    msg_success("completed"), "."),
+        #   run_time = rv$time_sims)
         
         shinyjs::enable("simButton_save")
         shinyjs::show(id = "simBox_misc")
@@ -1027,7 +1028,6 @@ mod_tab_sims_server <- function(id, rv) {
         shinyjs::show(id = "simBox_viz")
         
         shinybusy::remove_modal_spinner()
-        
         
       } else {
         
@@ -1126,7 +1126,7 @@ mod_tab_sims_server <- function(id, rv) {
                      max(newdat$time)),
           labels = c("Start", "End")) +
         
-        theme_movedesign() +
+        theme_movedesign(font_available = rv$is_font) +
         ggplot2::guides(
           color = ggplot2::guide_colorbar(
             title.vjust = 1.02)) +
@@ -1158,10 +1158,10 @@ mod_tab_sims_server <- function(id, rv) {
     ## Preparing data for animation plot: ---------------------------------
     
     data_animated <- reactive({
-      req(rv$datList, rv$fitList, rv$data_type == "simulated")
+      req(rv$datList, rv$modList, rv$data_type == "simulated")
       
       dat <- ctmm::simulate(rv$datList[[1]], 
-                            CTMM = rv$fitList[[1]],
+                            CTMM = rv$modList[[length(rv$modList)]],
                             dt = 15 %#% "minutes")
       
       t_origin <- "1111-10-31 23:06:32"
@@ -1288,7 +1288,7 @@ mod_tab_sims_server <- function(id, rv) {
           name = "Tracking time:",
           option = "mako", direction = -1, trans = "time") +
         
-        theme_movedesign() +
+        theme_movedesign(font_available = rv$is_font) +
         ggplot2::theme(legend.position = "none")
       
       ggiraph::girafe(
@@ -1349,22 +1349,37 @@ mod_tab_sims_server <- function(id, rv) {
       out$mdist <- paste(scales::label_comma(
         accuracy = .1)(mdist), "m")
       
-      tmpnames <- rownames(summary(rv$fitList[[1]])$CI)
-      speed <- summary(rv$fitList[[1]])$CI[
-        grep("speed", tmpnames), 2]
-      
-      speedunits <- tmpnames[grep("speed", tmpnames)] %>%
-        extract_units() %>% abbrv_unit()
+      if (is.null(rv$fitList)) {
+        
+        speed <- sqrt((sig$value %#% sig$unit) * pi/2) / 
+          sqrt(prod(
+            (rv$tau_p[[1]]$value[2]) %#%
+              (rv$tau_p[[1]]$unit[2]),
+            (rv$tau_v[[1]]$value[2]) %#%
+              (rv$tau_v[[1]]$unit[2])))
+        
+        speed <- fix_unit(speed, "m/s", convert = TRUE)
+        speedunits <- abbrv_unit(speed$unit)
+        speed <- speed$value
+        
+      } else {
+        req(rv$fitList)
+        
+        tmpnames <- rownames(summary(rv$fitList[[1]])$CI)
+        speed <- summary(rv$fitList[[1]])$CI[grep("speed", tmpnames), 2]
+        speedunits <- tmpnames[grep("speed", tmpnames)] %>%
+          extract_units() %>% abbrv_unit()
+      }
       
       out$speed <- paste(scales::label_comma(
-          accuracy = .1)(speed), speedunits)
+        accuracy = .1)(speed), speedunits)
       
       return(out)
       
     }) %>% bindEvent(to_run())
     
     observe({
-      req(rv$fitList)
+      req(rv$modList0)
       shinyjs::show(id = "simBox_summary")
       shinyjs::disable("simButton_save")
       shinyjs::disable("simTable_save")
@@ -1395,20 +1410,20 @@ mod_tab_sims_server <- function(id, rv) {
       
       columnList <- list(
         taup = reactable::colDef(
-          name = columnNames[["taup"]],
+          minWidth = 100, name = columnNames[["taup"]],
           style = list(fontWeight = "bold")),
         tauv = reactable::colDef(
-          name = columnNames[["tauv"]],
+          minWidth = 100, name = columnNames[["tauv"]],
           style = list(fontWeight = "bold")),
         sigma = reactable::colDef(
-          minWidth = 60, name = columnNames[["sigma"]],
+          minWidth = 100, name = columnNames[["sigma"]],
           style = list(fontWeight = "bold")),
         time_elapsed = reactable::colDef(
           minWidth = 100, name = columnNames[["time_elapsed"]]),
         tdist = reactable::colDef(
-          minWidth = 85, name = columnNames[["tdist"]]),
+          minWidth = 100, name = columnNames[["tdist"]]),
         mdist = reactable::colDef(
-          minWidth = 85, name = columnNames[["mdist"]]),
+          minWidth = 100, name = columnNames[["mdist"]]),
         speed = reactable::colDef(
           minWidth = 100, name = columnNames[["speed"]]))
       
@@ -1639,7 +1654,7 @@ mod_tab_sims_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'sims')
       req(length(rv$tau_p) == 3, length(rv$tau_v) == 3)
-    
+      
       mod_blocks_server(
         id = "simBlock_taupA", 
         rv = rv, type = "tau", name = "tau_p", group = "A",
@@ -1756,7 +1771,8 @@ mod_tab_sims_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'sims', 
           rv$data_type == "simulated",
-          rv$fitList)
+          rv$modList)
+      
       rv$report_sims_yn <- FALSE
       rv$report_sims <- simRow()
     })

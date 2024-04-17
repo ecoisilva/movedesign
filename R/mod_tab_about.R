@@ -145,8 +145,8 @@ mod_tab_about_ui <- function(id) {
                                    style = "font-size: 16px;"),
                       choiceNames = c(
                         tagList(span(
-                          "Single", span("individual",
-                                         class = "cl-sea"))),
+                          span("Individual",
+                               class = "cl-sea"), "estimate")),
                         tagList(span(
                           "Mean of",
                           span("sampled population",
@@ -184,11 +184,24 @@ mod_tab_about_ui <- function(id) {
                                      style = "color: var(--jungle);"),
                         no = tags$i(class = "fa fa-square-o",
                                     style = "color: var(--danger);")),
-                      direction = "vertical"))
-            
+                      direction = "vertical")),
+
+                p(style = "margin-top: 10px;"),
+                fluidRow(
+                  column(width = 12, align = "center",
+                         shinyWidgets::awesomeCheckbox(
+                           inputId = ns("is_emulate"),
+                           label = span(
+                             "Propagate",
+                             span("uncertainty", class = "cl-sea"),
+                             style = "font-size: 15px;"),
+                           value = FALSE))),
+                
+                uiOutput(ns("aboutUI_pop_var"))
+
             ) # end of div
           ) # end of fluidRow
-
+          
         ) # end of column
       ), # end of box // tour
 
@@ -273,6 +286,22 @@ mod_tab_about_server <- function(id, rv) {
     # MAIN REACTIVE VALUES ------------------------------------------------
     
     observe({
+      
+      font_available <- tryCatch({
+        sysfonts::font_add_google(name = "Roboto Condensed",
+                                  family = "Roboto Condensed")
+      }, error = function(e) {
+        warning("Font failed.")
+      })
+      
+      rv$is_font <- TRUE
+      if (inherits(font_available, "error")) {
+        rv$is_font <- FALSE
+      }
+      
+    }) # end of observe
+   
+    observe({
       rv$which_data <- input$which_data
       rv$which_question <- input$which_question
       rv$which_meta <- input$which_meta
@@ -287,6 +316,10 @@ mod_tab_about_server <- function(id, rv) {
     observe({
       rv$overwrite_active <- input$overwrite_active
     }, label = "o-about_overwrite")
+    
+    observe({
+      rv$is_emulate <- input$is_emulate
+    }, label = "o-about_emulate")
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
@@ -320,10 +353,10 @@ mod_tab_about_server <- function(id, rv) {
           html = TRUE,
           size = "xs")
         
-        # shinyWidgets::updateCheckboxGroupButtons(
-        #   session = session,
-        #   inputId = "which_question",
-        #   selected = character(0))
+        shinyWidgets::updateCheckboxGroupButtons(
+          session = session,
+          inputId = "which_question",
+          selected = character(0))
         
         rv$which_question <- NULL
       }
@@ -351,6 +384,57 @@ mod_tab_about_server <- function(id, rv) {
       
     }) # end of observe
     
+    # shinyjs::hide(id = "is_emulate")
+    
+    observe({
+      req(rv$which_data)
+      
+      if (rv$which_data == "Simulate") {
+        shinyjs::hide(id = "is_emulate")
+        shinyWidgets::updateAwesomeCheckbox(
+          session = session,
+          inputId = "is_emulate",
+          value = FALSE)
+        
+      } else {
+        shinyjs::show(id = "is_emulate")
+      }
+      
+
+    }) # end of observe
+    
+    output$aboutUI_pop_var <- renderUI({
+      req(rv$which_question, rv$which_meta, rv$is_emulate == TRUE)
+      
+      ui <- ui_txt <- NULL
+      
+      if (length(rv$which_question) > 1) {
+        ui_txt <- "home range and speed & distance estimation."
+      } else {
+        ui_txt <- paste(
+          switch(
+            rv$which_question,
+            "Home range" = { "home range" },
+            "Speed & distance" = { "speed & distance" }),
+          "estimation.")
+      }
+      
+      if (rv$which_meta == "mean" || rv$which_meta == "compare") {
+        ui <- tagList(
+          p(style = "max-width: 685px;",
+            span(
+              class = "help-block",
+              style = "text-align: center !important;",
+              
+              fontawesome::fa("circle-exclamation", fill = pal$dgr),
+              span("Note:", class = "help-block-note"),
+              "Requires careful selection of which individuals",
+              "to inform subsequent simulations. All selected",
+              "individuals must fit the assumptions for ", ui_txt)))
+      }
+      return(ui)
+      
+    }) # end of renderUI, "aboutUI_pop_var"
     
     # SETTINGS ------------------------------------------------------------
     ## Generating seed: ---------------------------------------------------

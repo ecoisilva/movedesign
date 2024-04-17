@@ -205,13 +205,13 @@ mod_blocks_server <- function(id,
                    
                    # Credible intervals:
                    ci <- suppressWarnings(bayestestR::ci(
-                     rv[[name]]$est, ci = .95, method = "HDI"))
+                     out$est, ci = .95, method = "HDI"))
                    lci <- ci$CI_low
                    uci <- ci$CI_high
                    
                  } else {
-                   lci <- mean(rv[[name]]$lci, na.rm = TRUE)
-                   uci <- mean(rv[[name]]$uci, na.rm = TRUE)
+                   lci <- mean(out$lci, na.rm = TRUE)
+                   uci <- mean(out$uci, na.rm = TRUE)
                  }
                  
                  value <- c(lci, est, uci)

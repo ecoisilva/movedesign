@@ -396,12 +396,6 @@ mod_tab_ctsd_server <- function(id, rv) {
         req(rv$modList_groups)
       }
       
-      truth <- estimating_truth()
-      ratio <- truth[[2]]/truth[[3]]
-      message("Group A's speed is ", round(ratio, 2),
-              " times that of Group B's.")
-
-      rv$ratio[["ctsd"]] <- ratio
       shinyjs::hide(id = "sdBox_regime_footer")
       
     }) # end of observe
@@ -1067,101 +1061,6 @@ mod_tab_ctsd_server <- function(id, rv) {
       bindEvent(input$sdButton_compare)
     
     # ESTIMATIONS ---------------------------------------------------------
-    
-    # Estimate fine-scale trajectory:
-    estimating_truth <- reactive({
-      
-      dur <- rv$dur$value %#% rv$dur$unit
-      tau_p <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
-      tau_v <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
-      sigma <- rv$sigma[[1]]$value[2] %#% rv$sigma[[1]]$unit[2]
-      
-      if ("compare" %in% req(rv$which_meta)) {
-        
-        tau_pA <- rv$tau_p[[2]]$value[2] %#% rv$tau_p[[2]]$unit[2]
-        tau_vA <- rv$tau_v[[2]]$value[2] %#% rv$tau_v[[2]]$unit[2]
-        sigmaA <- rv$sigma[[2]]$value[2] %#% rv$sigma[[2]]$unit[2]
-        
-        tau_pB <- rv$tau_p[[3]]$value[2] %#% rv$tau_p[[3]]$unit[2]
-        tau_vB <- rv$tau_v[[3]]$value[2] %#% rv$tau_v[[3]]$unit[2]
-        sigmaB <- rv$sigma[[3]]$value[2] %#% rv$sigma[[3]]$unit[2]
-      }
-      
-      # fit <- tryCatch(
-      #   quiet(mean(rv$fitList)) %>% 
-      #     suppressMessages() %>% 
-      #     suppressWarnings(),
-      #   error = function(e) e)
-      # if (inherits(fit, "error")) {
-      #   msg_log(
-      #     style = "danger",
-      #     message = paste0(
-      #       "Fine-scale trajectory ", 
-      #       msg_danger("failed"), "."))
-      #   return(NULL)
-      # }
-      
-      fit <- rv$modList[[1]]
-      
-      if (rv$grouped && rv$data_type == "simulated") {
-        fitA <- rv$modList[[1]]
-        fitB <- rv$modList[[2]]
-      } else if (rv$grouped && rv$data_type != "simulated") {
-        fitA <- rv$modList_groups[["A"]]
-        fitB <- rv$modList_groups[["B"]]
-      }
-      
-      if (fit$mean == "stationary") {
-        v <- sqrt(sigma * pi/2)
-        v <- v/sqrt(prod(tau_p, tau_v)) # error ~ 0.01
-        
-        if ("compare" %in% req(rv$which_meta)) {
-          vA <- sqrt(sigmaA * pi/2)/sqrt(prod(tau_pA, tau_vA))
-          vB <- sqrt(sigmaB * pi/2)/sqrt(prod(tau_pB, tau_vB))
-        }
-        
-      } else {
-        weighted_average_speed <- function(tau_v, fit, seed) {
-          err <- 0.01
-          cor.min <- 0.5
-          dt.max <- -log(cor.min) * tau_v
-          
-          dt <- tau_v * (err/10)^(1/3) # O(error/10) inst error
-          t <- seq(0, tau_v/err^2, dt) # O(error) est error
-          dat <- ctmm::simulate(fit, t = t, 
-                                seed = seed,
-                                precompute = FALSE)
-          v <- sqrt(dat$vx^2 + dat$vy^2)
-          
-          w <- diff(t)
-          w <- w * (w <= dt.max)
-          w <- c(0,w) + c(w,0)
-          w <- w * (t >= range(dat$t)[1] & t <= range(dat$t)[2])
-          v <- sum(w * v)/sum(w) # weighted average speed
-          return(data.frame(speed = v))
-        }
-        
-        v <- weighted_average_speed(tau_v, fit, rv$seed0)
-        if ("compare" %in% req(rv$which_meta)) {
-          vA <- weighted_average_speed(tau_vA, fitA, rv$seed0)
-          vB <- weighted_average_speed(tau_vB, fitB, rv$seed0)
-        }
-      }
-      
-      if ("compare" %in% req(rv$which_meta)) {
-        ctsd_truth <- list("All" = v, "A" = vA, "B" = vB)
-      } else {
-        ctsd_truth <- list("All" = v)
-      }
-      
-      rv$truth$ctsd <- ctsd_truth
-      return(ctsd_truth)
-      
-    }) %>% # end of reactive, estimating_truth()
-      bindCache(c(rv$groups,
-                  rv$dur,
-                  rv$dti))
-    
     ## Estimating for initial sampling design: ----------------------------
     
     timing_speed <- reactive({
@@ -1221,8 +1120,10 @@ mod_tab_ctsd_server <- function(id, rv) {
                           rv$simfitList[1],
                           seed = rv$seedList[1],
                           parallel = rv$parallel)
-        ctsd <- list(ctsd)
+        
+        rv$ctsdList <- list()
         rv$ctsdList[[1]] <- ctsd
+        names(rv$ctsdList) <- rv$seedList[1]
         
       } else {
         
@@ -1250,6 +1151,7 @@ mod_tab_ctsd_server <- function(id, rv) {
             parallel = rv$parallel)
           
           rv$ctsdList <<- c(rv$ctsdList, ctsd)
+          names(rv$ctsdList) <- do.call(c, rv$seedList)
           
           msg_log(
             style = 'success',
@@ -1261,7 +1163,7 @@ mod_tab_ctsd_server <- function(id, rv) {
           
           ctsd <- list()
           for (i in seq_for_est) {
-            
+              
             shinyFeedback::showToast(
               type = "info",
               message = paste0("Estimation ", i, " out of ",
@@ -1307,6 +1209,8 @@ mod_tab_ctsd_server <- function(id, rv) {
       }
       
       names(rv$ctsdList) <- names(rv$simList)
+      
+      if ("DOF" %in% names(ctsd)) ctsd <- list(ctsd)
       return(ctsd)
       
     }) %>% # end of reactive, estimating_speed()
@@ -1327,57 +1231,40 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       expt <- timing_speed()
       rv$sd$expt_time <- expt
-      
-      N <- extract_dof(rv$simfitList, "speed")
-      
-      req(N)
       max_time <- as.numeric(expt$max) %#% expt$unit
       num_cores <- parallel::detectCores(logical = FALSE)
-    
+      
       if (rv$parallel) 
         ttl_time <- max_time / 
         ifelse(length(rv$simList) < num_cores,
                length(rv$simList), num_cores)
       else ttl_time <- max_time
       
+      N <- extract_dof(rv$simfitList, "speed")
+      req(N)
+      
       rv$sd$proceed_to_ctsd <- NULL
-      if (ttl_time > 15 %#% "minutes") {
+      if (ttl_time > 15 %#% "minutes" || all(N < 10)) {
         ttl_time <- fix_unit(expt$unit %#% ttl_time,
                              expt$unit, convert = TRUE)
+        min_time <- fix_unit(ttl_time$unit %#% expt$min %#% expt$unit,
+                             ttl_time$unit)
         
-        if (N > 10) out_txt <- tagList(span(
+        if (all(N > 10)) out_txt <- tagList(span(
           "Expected run time for estimation",
           "could be on average", span(
-            paste0(expt$min, "\u2013",
-                   ttl_time$value, " ", expt$unit),
+            paste0(min_time$value, "\u2013",
+                   ttl_time$value, " ", ttl_time$unit),
             class = "cl-dgr"),
           "but may take \u003E", 
           wrap_none(
-            expt$max, " ", expt$unit,
-            css = "cl-dgr", end = ".")
-        ))
+            ttl_time$value, " ", ttl_time$unit,
+            css = "cl-dgr", end = ".")))
         else out_txt <- tagList(span(
           "Expected run time for estimation",
-          "could be on average", span(
-            paste0(expt$min, "\u2013",
-                   ttl_time$value, " ", expt$unit),
-            class = "cl-dgr"),
-          "but may fail completely due to low sample size."
-        ))
-        
-        # else
-        #   out_txt <- tagList(span(
-        #     "Expected run time for estimation",
-        #     "could be on average", span(
-        #       paste0(expt$min, "\u2013",
-        #              expt$mean, " ", expt$unit),
-        #       class = "cl-dgr"),
-        #     "but may take \u003E",
-        #     span(expt$max, expt$unit, class = "cl-dgr"),
-        #     "per simulation, for a total of",
-        #     wrap_none(
-        #       span(ttl_time$value, ttl_time$unit,
-        #            class = "cl-dgr"), ".")))
+          "cannot be obtained and may fail completely",
+          "due to", wrap_none("low effective sample sizes", 
+                              color = pal$dgr, end = ".")))
         
         shinyalert::shinyalert(
           className = "modal_warning",
@@ -1425,9 +1312,16 @@ mod_tab_ctsd_server <- function(id, rv) {
         message = paste0("Estimating ",
                          msg_warning("speed & distance"), "..."))
       
-      loading_modal("Estimating speed & distance", 
-                    exp_time = rv$sd$expt_time,
-                    n = num_sims)
+      N <- extract_dof(rv$simfitList, "speed")
+      req(N)
+      
+      if (all(N < 5))
+        loading_modal("Estimating speed & distance")
+      else
+        loading_modal("Estimating speed & distance", 
+                      exp_time = rv$sd$expt_time,
+                      n = num_sims)
+      
       msg_log(
         style = "warning",
         message = paste0("Simulating for ",
@@ -1436,8 +1330,21 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       sdList <- estimating_speed()
       dataList <- estimating_speeds()
-      ctsd_truth <- estimating_truth()
-      req(ctsd_truth)
+      
+      truthList <- get_true_speed(
+        data = rv$simList,
+        seed = rv$seedList,
+        
+        tau_p = rv$tau_p,
+        tau_v = rv$tau_v,
+        sigma = rv$sigma,
+        
+        emulated = rv$is_emulate,
+        fit = if (rv$is_emulate) rv$meanfitList else NULL,
+        
+        grouped = rv$grouped,
+        groups = if (rv$grouped) rv$groups[[2]] else NULL)
+      rv$truth$ctsd <- truthList
       
       # If speed() returns NULL (1 simulation only)
       if (is.null(sdList) && length(rv$simList) == 1) {
@@ -1524,7 +1431,9 @@ mod_tab_ctsd_server <- function(id, rv) {
           nm <- names(rv$simList)[[sim_no]]
           group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
         }
-        truth <- ctsd_truth[[group]]
+        
+        seed <- as.character(rv$seedList[[sim_no]])
+        sd_truth <- rv$truth$ctsd[[seed]]
         
         out_est_df <- out_est_df %>%
           dplyr::add_row(seed = rv$seedList[[sim_no]],
@@ -1536,9 +1445,9 @@ mod_tab_ctsd_server <- function(id, rv) {
         out_err_df <- out_err_df %>%
           dplyr::add_row(
             seed = rv$seedList[[sim_no]],
-            lci = ((sdList[[i]][[1]] %#% tmpunit) - truth) / truth,
-            est = ((sdList[[i]][[2]] %#% tmpunit) - truth) / truth,
-            uci = ((sdList[[i]][[3]] %#% tmpunit) - truth) / truth)
+            lci = ((sdList[[i]][[1]] %#% tmpunit) - sd_truth) / sd_truth,
+            est = ((sdList[[i]][[2]] %#% tmpunit) - sd_truth) / sd_truth,
+            uci = ((sdList[[i]][[3]] %#% tmpunit) - sd_truth) / sd_truth)
       }
       
       rv$speedDatList <- dataList
@@ -1634,8 +1543,8 @@ mod_tab_ctsd_server <- function(id, rv) {
                 group = if (rv$grouped) group else NA,
                 data = rv$simList[[sim_no]],
                 tau_v = rv$tau_v[[group]],
-                dur = rv$dur,
-                dti = rv$dti,
+                # dur = rv$dur,
+                # dti = rv$dti,
                 fit = rv$simfitList[[sim_no]],
                 speed = rv$speedEst[sim_no, ],
                 speed_error = rv$speedErr[sim_no, ],
@@ -1645,6 +1554,8 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       # Add to dt_meta (for get_m, and if available):
       if (rv$is_meta && rv$which_m == "get_m") {
+        
+        browser()
         in_list <- rv$ctsdList
         in_list[sapply(in_list, is.null)] <- NULL
         out_meta <- capture_meta(in_list,
@@ -1656,7 +1567,22 @@ mod_tab_ctsd_server <- function(id, rv) {
         if (!is.null(out_meta)) {
           tmpname <- rownames(out_meta$meta)
           tmpunit <- extract_units(tmpname[grep("^mean", tmpname)])
-          truth <- rv$truth[["ctsd"]][[1]]
+          truth <- get_true_speed(
+            data = rv$simList,
+            seed = rv$seedList,
+            
+            tau_p = rv$tau_p,
+            tau_v = rv$tau_v,
+            sigma = rv$sigma,
+            
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL,
+            
+            summarized = TRUE)[["All"]]
+          
           out_meta_est <- c(
             "lci" = out_meta$meta[1, 1] %#% tmpunit,
             "est" = out_meta$meta[1, 2] %#% tmpunit,
@@ -1959,10 +1885,6 @@ mod_tab_ctsd_server <- function(id, rv) {
       bindEvent(input$run_sd_new)
     
     observe({
-      print(rv$sd$proceed_to_ctsd_new) #TODO
-    }) %>% bindEvent(rv$sd$proceed_to_ctsd_new)
-    
-    observe({
       req(rv$sd$simList,
           rv$sd$fitList)
       
@@ -2208,7 +2130,7 @@ mod_tab_ctsd_server <- function(id, rv) {
                      max(newdat$time)),
           labels = c("Start", "End")) +
 
-        theme_movedesign() +
+        theme_movedesign(font_available = rv$is_font) +
         ggplot2::guides(
           color = ggplot2::guide_colorbar(
             title.vjust = 1.02)) +
@@ -2282,7 +2204,7 @@ mod_tab_ctsd_server <- function(id, rv) {
     }) # end of reactive, preparing_speed()
     
     output$sdPlot_speed <- ggiraph::renderGirafe({
-      req(rv$speedEst, 
+      req(rv$speedEst,
           rv$truth,
           rv$sd_nsim,
           input$show_speeds,
@@ -2340,7 +2262,7 @@ mod_tab_ctsd_server <- function(id, rv) {
         ggplot2::labs(
           x = "Time lag",
           y = "Speed estimate (meters/second)") +
-        theme_movedesign()
+        theme_movedesign(font_available = rv$is_font)
       
       ggiraph::girafe(ggobj = p)
       
@@ -2629,7 +2551,8 @@ mod_tab_ctsd_server <- function(id, rv) {
     ### Movement metrics: -------------------------------------------------
     
     observe({
-      req(rv$ctsdList, rv$distEst)
+      req(rv$ctsdList, rv$speedEst, rv$distEst)
+      req(any(!is.na(rv$speedEst$est)))
       
       mod_blocks_server(
         id = "distBlock_est",
@@ -2641,7 +2564,8 @@ mod_tab_ctsd_server <- function(id, rv) {
     }) # end of observe
 
     observe({
-      req(rv$sd$ctsdList, rv$distEst_new)
+      req(rv$sd$ctsdList, rv$speedEst_new, rv$distEst_new)
+      req(any(!is.na(rv$speedEst_new$est)))
       
       mod_blocks_server(
         id = "distBlock_est_new",

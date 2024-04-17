@@ -348,13 +348,23 @@ mod_comp_viz_server <- function(id, rv) {
                                  B = group_B),
                             variable = name,
                             units = FALSE, 
-                            verbose = FALSE, 
+                            verbose = TRUE, 
                             plot = FALSE) %>% 
           suppressMessages() %>% 
-          suppressWarnings() %>% 
+          suppressWarnings() %>%
           quiet()
         
         req(out)
+        
+        if (name == "area") rv$metaList_groups <- list(
+          "intro" = list("hr" = out, "ctsd" = NULL),
+          "final" = list("hr" = NULL, "ctsd" = NULL),
+          "is_final" = FALSE)
+        if (name == "speed") rv$metaList_groups <- list(
+          "intro" = list("hr" = NULL, "ctsd" = out),
+          "final" = list("hr" = NULL, "ctsd" = NULL),
+          "is_final" = FALSE)
+          
         detected <- out$logs$subpop_detected
         if (detected) {
           ui_extra <- tagList(span(
@@ -373,7 +383,7 @@ mod_comp_viz_server <- function(id, rv) {
                                     B = group_B),
                                variable = "area",
                                units = FALSE, 
-                               verbose = FALSE, 
+                               verbose = TRUE, 
                                plot = FALSE) %>% 
           suppressMessages() %>% 
           suppressWarnings() %>% 
@@ -383,13 +393,20 @@ mod_comp_viz_server <- function(id, rv) {
                                     B = group_B),
                                variable = "speed",
                                units = FALSE, 
-                               verbose = FALSE, 
+                               verbose = TRUE, 
                                plot = FALSE) %>% 
           suppressMessages() %>% 
           suppressWarnings() %>% 
           quiet()
         
         req(out_hr, out_sd)
+        
+        rv$metaList_groups <- list(
+          "intro" = list("hr" = out_hr, "ctsd" = out_sd),
+          "final" = list("hr" = NULL, "ctsd" = NULL),
+          "is_final" = FALSE
+        )
+        
         detected_hr <- out_hr$logs$subpop_detected
         detected_sd <- out_sd$logs$subpop_detected
         
@@ -492,7 +509,7 @@ mod_comp_viz_server <- function(id, rv) {
           limits = c(ymin, ymax)) +
         ggplot2::scale_color_grey() +
 
-        theme_movedesign() +
+        theme_movedesign(font_available = rv$is_font) +
         ggplot2::theme(legend.position = "none")
       
       ggiraph::girafe(
@@ -579,7 +596,7 @@ mod_comp_viz_server <- function(id, rv) {
                      max(newdat$t)),
           labels = c("Start", "End")) +
 
-        theme_movedesign() +
+        theme_movedesign(font_available = rv$is_font) +
         ggplot2::guides(
           color = ggplot2::guide_colorbar(
             title.vjust = 1.02)) +
@@ -624,8 +641,19 @@ mod_comp_viz_server <- function(id, rv) {
         else dat <- dat[rv$id]
       }
       
-      out <- plotting_outlier(dat)
+      out <- plotting_outlier(dat, rv$is_font)
       ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
+      
+      # shinyFeedback::showToast(
+      #   type = "success",
+      #   message = "Outlier plots completed!",
+      #   .options = list(
+      #     timeOut = 3000,
+      #     extendedTimeOut = 3500,
+      #     progressBar = FALSE,
+      #     closeButton = TRUE,
+      #     preventDuplicates = TRUE,
+      #     positionClass = "toast-bottom-right"))
       
       ggiraph::girafe(
         ggobj = suppressWarnings(
@@ -660,7 +688,8 @@ mod_comp_viz_server <- function(id, rv) {
         svf, fill = rep(pal$dgr, length(rv$datList[rv$id])),
         add_fit = ifelse(is.null(input$vizInput_add_fit),
                          FALSE, input$vizInput_add_fit),
-        fraction = input$vizInput_fraction / 100)
+        fraction = input$vizInput_fraction / 100,
+        font_available = rv$is_font)
       
       ggiraph::girafe(
         ggobj = suppressWarnings(ggpubr::ggarrange(plotlist = p)),
@@ -678,7 +707,8 @@ mod_comp_viz_server <- function(id, rv) {
     ## Table for summary of all individuals: ----------------------------
 
     output$vizTable_all <- reactable::renderReactable({
-      req(rv$datList)
+      req(rv$datList, rv$which_meta)
+      
       if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
       if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
       
@@ -705,20 +735,42 @@ mod_comp_viz_server <- function(id, rv) {
       
       if (!is.null(rv$fitList)) {
         
-        out_sum$mod <- lapply(rv$fitList, function(x) 
-          stringr::word(summary(x)$name, 1))
-        out_sum$N_area <- round(
-          do.call(c, extract_dof(rv$fitList, name = "area")), 1)
-        out_sum$N_speed <- round(
-          do.call(c, extract_dof(rv$fitList, name = "speed")), 1)
+        out_sum$mod <- lapply(rownames(out_sum), function(name) {
+          if (name %!in% names(rv$fitList)) { return("N/A") } else {
+            stringr::word(summary(rv$fitList[[name]])$name, 1)
+          }
+        })
         
+        out_sum$N_area <- lapply(rownames(out_sum), function(name) {
+          if (name %!in% names(rv$fitList)) { return("N/A") } else {
+            round(
+              do.call(c, 
+                      extract_dof(rv$fitList[[name]],
+                                  name = "area")), 1)
+          }
+        })
+        
+        out_sum$N_speed <- lapply(rownames(out_sum), function(name) {
+          if (name %!in% names(rv$fitList)) { return("N/A") } else {
+            round(
+              do.call(c, 
+                      extract_dof(rv$fitList[[name]],
+                                  name = "speed")), 1)
+          }
+        })
+      }
+      
+      is_selection <- "multiple"
+      if (rv$which_meta == "none") {
+        is_selection <- "single"
+        if(length(id) > 1) id <- NULL
       }
       
       if (anyNA(id)) id <- NULL
       reactable::reactable(
         out_sum,
         onClick = "select",
-        selection = "multiple",
+        selection = is_selection,
         searchable = TRUE,
         highlight = TRUE,
         compact = FALSE,
@@ -765,7 +817,7 @@ mod_comp_viz_server <- function(id, rv) {
       
       req(rv$datList[set_id][[1]])
       tmpdat <- NULL
-      tmpdat <- as_tele_dt(rv$datList[set_id])
+      tmpdat <- tele_to_dt(rv$datList[set_id])
       
       tmpdat <- tmpdat %>% dplyr::select(input$show_vars)
       if (!is.null(tmpdat$timestamp)) {

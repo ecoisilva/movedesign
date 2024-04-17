@@ -851,6 +851,7 @@ mod_tab_data_upload_server <- function(id, rv) {
     observe({
       req(rv$which_question,
           rv$id, rv$datList, rv$species_binom)
+      req(input$sp_uploaded != "")
       
       ### Model fitting:
       
@@ -913,7 +914,7 @@ mod_tab_data_upload_server <- function(id, rv) {
         
         names(fitList) <- names(rv$datList[rv$id])
         rv$fitList <- fitList
-        
+        rv$is_isotropic <- fitList[[1]]$sigma@isotropic[[1]]
       }
       
       req(rv$fitList)
@@ -1067,19 +1068,21 @@ mod_tab_data_upload_server <- function(id, rv) {
       # to_filter <- "^OUF"
       
       to_filter <- "^IOU|^OUF|^OU(?!f)"
-      if ("Home range" == rv$which_question) {
-        # does assume range residency for rv$id
-        msg_log(
-          style = "danger",
-          message = paste0(
-            "Verify ", msg_danger("range residency"), ","),
-          detail = paste("Assuming all selected individuals",
-                         "are range resident."))
-        to_filter <- "^OU(?!f)|^OUF"
-      }
-      
-      if ("Speed & distance" == rv$which_question) {
-        to_filter <- "^IOU|^OUF"
+      if (length(rv$which_question) == 1) {
+        if ("Home range" == rv$which_question) {
+          # does assume range residency for rv$id
+          msg_log(
+            style = "danger",
+            message = paste0(
+              "Verify ", msg_danger("range residency"), ","),
+            detail = paste("Assuming all selected individuals",
+                           "are range resident."))
+          to_filter <- "^OU(?!f)|^OUF"
+        }
+        
+        if ("Speed & distance" == rv$which_question) {
+          to_filter <- "^IOU|^OUF"
+        }
       }
       
       fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
@@ -1096,6 +1099,7 @@ mod_tab_data_upload_server <- function(id, rv) {
         return(NULL)
       }
       
+      rv$is_isotropic <- c("All" = TRUE)
       if (rv$is_emulate) {
         
         meanfit0 <- tryCatch(
@@ -1127,6 +1131,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           rv$speed <- extract_pars(meanfit0, name = "speed")
           rv$meanfitList <- list(meanfit0)
           names(rv$meanfitList) <- c("All")
+          rv$is_isotropic <- c("All" = meanfit0$sigma@isotropic[[1]])
         }
         
       } else {
@@ -1147,16 +1152,30 @@ mod_tab_data_upload_server <- function(id, rv) {
                            "autocorrelation timescales."))
       }
       
+      rv$mu <- list(array(0, dim = 2, 
+                          dimnames = list(c("x", "y"))))
+      
+      names(rv$sigma) <- c("All")
+      names(rv$tau_p) <- c("All")
+      names(rv$tau_v) <- c("All")
+      names(rv$speed) <- c("All")
+      names(rv$mu) <- c("All")
+      
       if (rv$grouped) {
+        
+        rv$is_isotropic <- c(rv$is_isotropic, "A" = TRUE, "B" = TRUE)
+        fitA <- rv$fitList[rv$groups[[1]][["A"]]]
+        fitB <- rv$fitList[rv$groups[[1]][["B"]]]
+        
         meanfitA <- tryCatch(
-          mean(rv$fitList[rv$groups[[1]][["A"]]]) %>% 
+          mean(fitA) %>% 
             suppressMessages() %>% 
             suppressWarnings() %>% 
             quiet(),
           error = function(e) e)
         
         meanfitB <- tryCatch(
-          mean(rv$fitList[rv$groups[[1]][["B"]]]) %>% 
+          mean(fitB) %>% 
             suppressMessages() %>% 
             suppressWarnings() %>% 
             quiet(),
@@ -1170,18 +1189,21 @@ mod_tab_data_upload_server <- function(id, rv) {
             message = paste0(
               "Extraction ", msg_danger("failed"), 
               "for one of the groups."))
-          return(NULL)
+          rv$is_emulate <- FALSE
+          
+        } else {
+          rv$meanfitList <- list(rv$meanfitList[[1]],
+                                 meanfitA, meanfitB)
+          names(rv$meanfitList) <- c("All", "A", "B")
+          rv$is_isotropic <- c(
+            rv$is_isotropic[[1]],
+            "A" = meanfitA$sigma@isotropic[[1]],
+            "B" = meanfitB$sigma@isotropic[[1]])
         }
         
-        rv$meanfitList <- c(rv$meanfitList, meanfitA, meanfitB)
-        names(rv$meanfitList) <- c("All", "A", "B")
+        rv$mu <- list(rv$mu[[1]], rv$mu[[1]], rv$mu[[1]])
         rv$proceed <- TRUE
       }
-      
-      if (length(rv$id) == 1) 
-        rv$mu <- list(rv$fitList[[1]]$mu)
-      else rv$mu <- list(array(0, dim = 2, 
-                               dimnames = list(c("x", "y"))))
       
       shinybusy::remove_modal_spinner()
       

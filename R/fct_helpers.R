@@ -260,7 +260,8 @@ fix_unit <- function(input,
 prepare_mod <- function(tau_p, tau_p_unit = NULL,
                         tau_v, tau_v_unit = NULL,
                         sigma, sigma_unit = NULL,
-                        mu = NULL) {
+                        mu = NULL,
+                        isotropic = TRUE) {
   
   if (missing(tau_p)) stop("tau_p is required.")
   if (missing(tau_p_unit)) {
@@ -282,7 +283,7 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
 
   if (is.null(tau_v)) {
     mod <- ctmm::ctmm(tau = taup,
-                      isotropic = TRUE,
+                      isotropic = isotropic,
                       sigma = sig,
                       mu = mu)
     return(mod)
@@ -299,7 +300,7 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
   # Generate movement model:
   
   mod <- ctmm::ctmm(tau = c(taup, tauv),
-                    isotropic = TRUE,
+                    isotropic = isotropic,
                     sigma = sig,
                     mu = mu)
   return(mod)
@@ -346,6 +347,200 @@ simulate_data <- function(data = NULL,
   dat$index <- 1:nrow(dat)
 
   return(list(dat))
+}
+
+#' ctmm::emulate() but (seeded)
+#' @noRd
+emulate_seeded <- function(obj, seed) {
+  set.seed(seed)
+  return(ctmm::emulate(obj, fast = TRUE))
+}
+
+#' Get true home ranges
+#' 
+#' @importFrom ctmm %#%
+#' @noRd
+get_true_hr <- function(data,
+                        seed,
+                        sigma,
+                        
+                        emulated = TRUE,
+                        fit = NULL,
+                        
+                        grouped = FALSE,
+                        groups = NULL) {
+  
+  get_circle <- function(radius_x, radius_y) {
+    
+    mean_x <- 0 # fit$mu[[1]][1]
+    mean_y <- 0 # fit$mu[[1]][2]
+    
+    truth <- data.frame(
+      id = rep(1, each = 100),
+      angle = seq(0, 2 * pi, length.out = 100))
+    truth$x <- unlist(lapply(
+      mean_x, function(x) x + radius_x * cos(truth$angle)))
+    truth$y <- unlist(lapply(
+      mean_y, function(x) x + radius_y * sin(truth$angle)))
+    return(truth)
+  }
+  
+  out <- lapply(seq_along(seed), function(x) {
+    if (grouped) {
+      nm <- names(data)[[x]]
+      group <- ifelse(nm %in% groups[["A"]], "A", "B")
+    } else group <- "All"
+    
+    if (emulated) {
+      fit <- emulate_seeded(fit[[group]], seed[[x]])
+      sig <- var.covm(fit$sigma, average = TRUE)
+      
+      if (fit$isotropic[["sigma"]]) {
+        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+      } else {
+        sig1 <- fit$sigma@par["major"][[1]]
+        sig2 <- fit$sigma@par["minor"][[1]]
+        radius_x <- sqrt(-2 * log(0.05) * sig1)
+        radius_y <- sqrt(-2 * log(0.05) * sig2)
+        
+      } # end of if (is_isotropic)
+      
+    } else {
+      
+      sig <- sigma[[group]]$value[2] %#% sigma[[group]]$unit[2]
+      radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+      
+    } # end of if (is_emulate)
+    
+    area <- -2 * log(0.05) * pi * sig
+    truth <- get_circle(radius_x, radius_y)
+    
+    return(list(area = area, data = truth))
+    
+  }) # end of lapply (x)
+  
+  names(out) <- seed
+  return(out)
+  
+}
+
+#' Get weighted average speed (for get_true_speed())
+#' 
+#' @noRd
+weighted_average_speed <- function(tau_v, fit, seed, 
+                                   err = 0.01, cor.min = 0.5) {
+  
+  dt.max <- -log(cor.min) * tau_v
+  
+  dt <- tau_v * (err/10)^(1/3) # O(error/10) inst error
+  t <- seq(0, tau_v/err^2, dt) # O(error) est error
+  dat <- ctmm::simulate(fit, t = t,
+                        seed = seed,
+                        precompute = FALSE)
+  v <- sqrt(dat$vx^2 + dat$vy^2)
+  
+  w <- diff(t)
+  w <- w * (w <= dt.max)
+  w <- c(0,w) + c(w,0)
+  w <- w * (t >= range(dat$t)[1] & t <= range(dat$t)[2])
+  v <- sum(w * v)/sum(w) # weighted average speed
+  return(v)
+}
+
+#' Get true home ranges
+#' 
+#' @importFrom ctmm %#%
+#' @noRd
+get_true_speed <- function(data,
+                           seed,
+                           
+                           tau_p,
+                           tau_v,
+                           sigma,
+                           
+                           emulated = TRUE,
+                           fit = NULL,
+                           
+                           grouped = FALSE,
+                           groups = NULL,
+                           
+                           summarized = FALSE) {
+  if (summarized) {
+    
+    out <- lapply(names(tau_p), function(x) {
+      
+      if (emulated) {
+        fit <- fit[[x]]
+        sigma <- var.covm(fit$sigma, average = TRUE)
+        tau_p <- extract_pars(fit, "position")[[1]]
+        tau_v <- extract_pars(fit, "velocity")[[1]]
+        tau_p <- tau_p$value[[2]] %#% tau_p$unit[[2]]
+        tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]]
+        
+        if (fit$mean == "stationary") {
+          truth <- sqrt(sigma * pi/2)
+          truth <- truth/sqrt(prod(tau_p, tau_v))
+        } else {
+          truth <- weighted_average_speed(tau_v, fit, seed[[1]])
+        }
+        
+      } else {
+        sigma <- sigma[[x]]$value[2] %#% sigma[[x]]$unit[2]
+        tau_p <- tau_p[[x]]$value[2] %#% tau_p[[x]]$unit[2]
+        tau_v <- tau_v[[x]]$value[2] %#% tau_v[[x]]$unit[2]
+        
+        truth <- sqrt(sigma * pi/2)
+        truth <- truth/sqrt(prod(tau_p, tau_v)) # error ~ 0.01
+      }
+      
+    }) # end of lapply (x)
+    
+    names(out) <- names(tau_p)
+    return(out)
+    
+  } else {
+    out <- lapply(seq_along(seed), function(x) {
+      if (grouped) {
+        nm <- names(data)[[x]]
+        group <- ifelse(nm %in% groups[["A"]], "A", "B")
+      } else group <- "All"
+      
+      if (emulated) {
+        fit <- emulate_seeded(fit[[group]], seed[[x]])
+        sigma <- var.covm(fit$sigma, average = TRUE)
+        
+        tau_p <- extract_pars(fit, "position")[[1]]
+        tau_v <- extract_pars(fit, "velocity")[[1]]
+        tau_p <- tau_p$value[[2]] %#% tau_p$unit[[2]]
+        tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]]
+        
+        if (fit$mean == "stationary") {
+          v <- sqrt(sigma * pi/2)
+          v <- v/sqrt(prod(tau_p, tau_v)) # error ~ 0.01
+          
+        } else {
+          v <- weighted_average_speed(tau_v, fit, seed[[x]])
+        }
+        
+      } else {
+        sigma <- sigma[[group]]$value[2] %#% sigma[[group]]$unit[2]
+        tau_p <- tau_p[[group]]$value[2] %#% tau_p[[group]]$unit[2]
+        tau_v <- tau_v[[group]]$value[2] %#% tau_v[[group]]$unit[2]
+        
+        v <- sqrt(sigma * pi/2)
+        v <- v/sqrt(prod(tau_p, tau_v)) # error ~ 0.01
+        
+      }
+      
+      return(v)
+      
+    }) # end of lapply (x)
+    
+    names(out) <- seed
+    return(out)
+    
+  } # end of if (summarized)
+  
 }
 
 
@@ -726,6 +921,7 @@ extract_svf <- function(data, fit = NULL,
 #' @noRd
 extract_outputs <- function(obj,
                             name = c("hr", "ctsd"),
+                            groups = NULL,
                             si_units = TRUE,
                             meta = TRUE) {
   
@@ -752,12 +948,13 @@ extract_outputs <- function(obj,
                       "uci" = out_meta$meta[1, 3],
                       "unit" = unit)
     out_meta <- cbind(data.frame(id = "All",
+                                 subject = "All",
                                  group = "All"),
                                  tmp)
   }
-
-  x <- 1
+  
   out <- lapply(seq_along(obj), function(x) {
+    
     if (name == "area") sum.obj <- summary(obj[[x]])
     if (name == "speed") sum.obj <- obj[[x]]
     tmpname <- rownames(sum.obj$CI)
@@ -777,16 +974,26 @@ extract_outputs <- function(obj,
     
   }) # end of lapply
   
-  out <- cbind(data.frame(id = names(obj),
-                          group = "Individuals",
-                          do.call(rbind, out)))
+  if (!is.null(groups))
+    obj_groups <- sapply(seq_along(obj), function(x) {
+      nm <- names(obj)[[x]]
+      return(ifelse(nm %in% groups[["A"]], "A", "B")) })
+  
+  out <- cbind(
+    data.frame(id = names(obj),
+               subject = "Individuals",
+               group = if (is.null(groups)) NA else obj_groups,
+               do.call(rbind, out)))
+  
   out <- dplyr::arrange(out, as.numeric(id))
   out <- out %>% 
     dplyr::mutate(lci = as.numeric(lci),
                   est = as.numeric(est),
                   uci = as.numeric(uci))
   if (meta && length(obj) > 1) out <- rbind(out, out_meta)
-  
+  if (!is.null(groups)) out <- out %>%
+    dplyr::mutate(group = as.factor(group))
+  else out$group <- out$subject
   return(out)
 }
 
@@ -1379,6 +1586,7 @@ capture_meta <- function(x,
       "subpop_detected")
     
     return(list(meta = ctmm::meta(x, 
+                                  variable = variable,
                                   units = units, 
                                   verbose = verbose, 
                                   plot = plot) %>% quiet(),
@@ -1389,6 +1597,15 @@ capture_meta <- function(x,
   }
 }
 
+#' Extract ratios
+#'
+#' @description Extract ratios calculated with the ctmm::meta() function.
+#' @keywords internal
+#'
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
+#' @noRd
+#'
 extract_ratios <- function(x, rev = TRUE) {
   if (is.null(names(x$meta))) stop("No subgroups evaluated.")
   if (length(x$names) != 2) stop("Only two groups accepted.")

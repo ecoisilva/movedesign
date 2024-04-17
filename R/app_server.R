@@ -66,8 +66,8 @@ app_server <- function(input, output, session) {
     is_analyses = FALSE,
     is_report = FALSE,
     is_meta = FALSE,
-    
-    add_note = NULL,
+    is_font = TRUE,
+    add_note = FALSE,
     
     time = c(0, 0),
     tour_active = FALSE,
