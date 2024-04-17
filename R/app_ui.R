@@ -17,7 +17,7 @@ app_ui <- function(request) {
       options = list(sidebarExpandOnHover = TRUE),
       title = "Study design of movement ecology studies",
       skin = "black",
-
+      
       # HEADER ------------------------------------------------------------
 
       header = shinydashboardPlus::dashboardHeader(
@@ -169,7 +169,7 @@ app_ui <- function(request) {
         right = tags$div(
           HTML(paste('<i class="fa fa-copyright"',
                      'style = "color:#222d32;"> </i>',
-                     "2022-2023")))
+                     "2024")))
 
       ) # end of dashboardFooter
     ) # end of dashboardPage
@@ -210,6 +210,7 @@ golem_add_external_resources <- function() {
       "https://fonts.googleapis.com/css?",
       "family=",
       "Plus+Jakarta+Sans", "|",
+      "Rubik:ital,wght@0,300..900;1,300..900", "|",
       "Roboto+Condensed", "|",
       "Roboto+Condensed:wght@700", "|",
       "Fira+Mono", "|",

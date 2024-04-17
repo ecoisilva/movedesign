@@ -976,10 +976,11 @@ font-size: 12px;
   display: none
 }
 
-#tab_sims_1-simBox_submit  .box-header,
-#tab_sims_1-simBox_repeat  .box-header,
-#tab_design_1-devBox_type  .box-header,
-#tab_design_1-devBox_loss  .box-header,
+#tab_sims_1-simBox_submit .box-header,
+#tab_sims_1-simBox_repeat .box-header,
+#tab_design_1-devBox_type .box-header,
+#tab_design_1-devBox_loss .box-header,
+#tab_design_1-devBox_failure .box-header,
 #tab_design_1-devBox_error .box-header {
   display: none
 }

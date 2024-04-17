@@ -44,6 +44,7 @@ Imports:
     shinyWidgets,
     stats,
     stringr,
+    sysfonts,
     terra,
     tidyr,
     utils,
@@ -51,8 +52,7 @@ Imports:
 Suggests: 
     knitr,
     rmarkdown,
-    shinytest2,
-    testthat
+    shinytest2
 VignetteBuilder: 
     knitr
 Config/testthat/edition: 3

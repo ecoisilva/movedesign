@@ -5,11 +5,13 @@
 
 <!-- badges: start -->
 
+![Static Badge](https://img.shields.io/badge/version-0.3.0-blue)
 [![DOI](https://zenodo.org/badge/474098792.svg)](https://zenodo.org/badge/latestdoi/474098792)<br>
 [![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)<br>
 [![Project Status: Active – The project has reached a stable, usable
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)<br>
 <!-- [![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)](http://hits.dwyl.com/ecoisilva/movedesign)<br> -->
 <!-- [![Codecov test coverage](https://codecov.io/gh/ecoisilva/movedesign/branch/main/graph/badge.svg)](https://app.codecov.io/gh/ecoisilva/movedesign?branch=main) -->
 <!-- badges: end --> <br>
@@ -65,9 +67,9 @@ movedesign::run_app()
 
 Run the guided tutorial in the “Home” tab (see the
 [vignette](https://ecoisilva.github.io/movedesign/articles/tutorial.html)
-for how to begin), and check out the preprint
-[here](https://www.biorxiv.org/content/10.1101/2023.01.27.525894v1) for
-further details.
+for how to begin), and check out the
+[manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153)
+for further details.
 
 ## Getting help
 
