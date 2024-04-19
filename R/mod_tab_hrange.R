@@ -513,7 +513,7 @@ mod_tab_hrange_server <- function(id, rv) {
     ## Sample size boxes for comparing sampling designs: ------------------
     
     output$hrUI_compare_n <- renderUI({
-      req(rv$simList, input$hr_dur, input$hr_dti)
+      req(rv$simList, input$hr_dur, input$hr_dti, rv$sd_nsim)
       
       device <- movedesign::fixrates
       dti <- device$dti[match(input$hr_dti, device$dti_notes)]
@@ -525,7 +525,7 @@ mod_tab_hrange_server <- function(id, rv) {
       splitLayout(
         parBlock(header = "Initial sampling design:",
                  value = span(scales::label_comma(
-                   accuracy = 1)(nrow(rv$simList[[1]])), #TODO
+                   accuracy = 1)(nrow(rv$simList[[rv$sd_nsim]])),
                    "locations", class = "cl-mdn")),
         
         parBlock(header = "Modified sampling design:",

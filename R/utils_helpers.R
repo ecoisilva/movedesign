@@ -661,7 +661,7 @@ plotting_hr <- function(input1,
       color = pal[2], size = 1, alpha = .3) +
     
     { if ("uci" %in% contours) p1 } +
-    p2 + # TODO TO CHECK
+    p2 +
     { if ("lci" %in% contours) p3 } +
     
     { if (show_both)

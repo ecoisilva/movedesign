@@ -361,7 +361,7 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$which_question, rv$which_meta)
       req(rv$which_meta == "none")
       
-      # TODO show if tau values of pre-run sims apply
+      # TODO show if tau values of pre-run sims match
       if ("Home range" %in% rv$which_question) {
         
         out <- out_hr <- shinyWidgets::pickerInput(
@@ -1467,7 +1467,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if (!is.list(get_truth)) get_truth <- list(get_truth)
       if (!is.list(get_HDI)) get_HDI <- list(get_HDI)
-      if (!is.list(get_CI)) get_HDI <- list(get_CI)
+      if (!is.list(get_CI)) get_CI <- list(get_CI)
       
       # i <- 1
       for (i in seq_along(type)) {
@@ -1637,7 +1637,7 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       if (!is.list(get_HDI)) get_HDI <- list(get_HDI)
-      if (!is.list(get_CI)) get_HDI <- list(get_CI)
+      if (!is.list(get_CI)) get_CI <- list(get_CI)
       
       # i <- 1
       for (i in seq_along(type)) {
@@ -2918,7 +2918,6 @@ mod_tab_report_server <- function(id, rv) {
           dplyr::mutate(dur = round("days" %#% dur, 1))
         out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
         out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
-        # TODO TOCHECK
       }
       
       dt_sd <- movedesign::sims_speed[[1]] %>%

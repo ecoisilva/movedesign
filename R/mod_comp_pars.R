@@ -169,7 +169,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       } else {
         out_ui <- column(
           align = "center", width = 12, 
-          NULL) #TODO
+          NULL) # TODO
       }
       
       out <- tagList(

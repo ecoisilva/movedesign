@@ -435,12 +435,20 @@ mod_tab_ctsd_server <- function(id, rv) {
     ## Update based on number of simulations: -----------------------------
     
     observe({
-      req(rv$simList)
+      req(rv$active_tab == 'ctsd',
+          rv$simList, rv$ctsdList)
+      req(length(rv$simList) == length(rv$ctsdList))
       rv$sd_nsim <- 1
       
       if (length(rv$simList) == 1) {
         shinyjs::hide(id = "sd_nsim")
-        
+        div(class = "sims-irs",
+            shinyWidgets::updateSliderTextInput(
+              session = session,
+              inputId = "sd_nsim",
+              label = "Show simulation no.:",
+              choices = seq(1, length(rv$simList), by = 1),
+              selected = 1))
       } else {
         shinyjs::show(id = "sd_nsim")
         div(class = "sims-irs",
@@ -452,8 +460,7 @@ mod_tab_ctsd_server <- function(id, rv) {
               selected = length(rv$simList)))
       }
       
-    }) %>% # end of observer
-      bindEvent(rv$simList)
+    }) # end of observer
     
     observe({
       req(rv$simList,
@@ -503,7 +510,7 @@ mod_tab_ctsd_server <- function(id, rv) {
     ## Sample size boxes for comparing sampling designs: ------------------
     
     output$sdUI_compare_n <- renderUI({
-      req(rv$simList, input$sd_dur, input$sd_dti)
+      req(rv$simList, input$sd_dur, input$sd_dti, rv$sd_nsim)
       
       device <- movedesign::fixrates
       dti <- device$dti[match(input$sd_dti, device$dti_notes)]
@@ -515,7 +522,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       splitLayout(
         parBlock(header = "Initial sampling design:",
                  value = span(scales::label_comma(
-                   accuracy = 1)(nrow(rv$simList[[1]])), #TODO
+                   accuracy = 1)(nrow(rv$simList[[rv$sd_nsim]])),
                    "locations", class = "cl-mdn")),
         
         parBlock(header = "Modified sampling design:",
