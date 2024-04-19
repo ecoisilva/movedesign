@@ -1244,13 +1244,13 @@ mod_tab_ctsd_server <- function(id, rv) {
       req(N)
       
       rv$sd$proceed_to_ctsd <- NULL
-      if (ttl_time > 15 %#% "minutes" || all(N < 10)) {
+      if (ttl_time > 15 %#% "minutes" || all(N < 15)) {
         ttl_time <- fix_unit(expt$unit %#% ttl_time,
                              expt$unit, convert = TRUE)
         min_time <- fix_unit(ttl_time$unit %#% expt$min %#% expt$unit,
                              ttl_time$unit)
         
-        if (all(N > 10)) out_txt <- tagList(span(
+        if (all(N > 15)) out_txt <- tagList(span(
           "Expected run time for estimation",
           "could be on average", span(
             paste0(min_time$value, "\u2013",
@@ -1262,7 +1262,7 @@ mod_tab_ctsd_server <- function(id, rv) {
             css = "cl-dgr", end = ".")))
         else out_txt <- tagList(span(
           "Expected run time for estimation",
-          "cannot be obtained and may fail completely",
+          "cannot be obtained and may fail",
           "due to", wrap_none("low effective sample sizes", 
                               color = pal$dgr, end = ".")))
         
@@ -1315,7 +1315,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       N <- extract_dof(rv$simfitList, "speed")
       req(N)
       
-      if (all(N < 5))
+      if (all(N < 15))
         loading_modal("Estimating speed & distance")
       else
         loading_modal("Estimating speed & distance", 
