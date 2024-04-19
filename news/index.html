@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">movedesign</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,11 +56,33 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.0" id="movedesign-030">movedesign 0.3.0<a class="anchor" aria-label="anchor" href="#movedesign-030"></a></h2>
+<ul><li>Third release of movedesign.</li>
+</ul><div class="section level3">
+<h3 id="new-features-0-3-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-3-0"></a></h3>
+<ul><li>Now fully supports multiple simulations within the same workflow.</li>
+<li>Added meta-analyses tab. Users can get mean estimates or compare estimates for two different groups (e.g. females/males).</li>
+<li>Users can test a specific number of tags, or get the minimum number of tags for a specific output.</li>
+<li>Users can propagate estimate uncertainty from the initial dataset into the simulated dataset.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="minor-improvements-0-3-0">Minor improvements<a class="anchor" aria-label="anchor" href="#minor-improvements-0-3-0"></a></h3>
+<ul><li>Added outlier plots to Data tabs.</li>
+<li>Added warning messages in case of very low effective sample sizes.</li>
+<li>Report tab also highlights outputs from meta-analyses.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-3-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-3-0"></a></h3>
+<ul><li>Fixed issue during data upload due to missing argument (<a href="https://github.com/ecoisilva/movedesign/issues/3" class="external-link">#3</a>).</li>
+<li>Fixed Report tab bug, should now display the correct CIs (<a href="https://github.com/ecoisilva/movedesign/issues/3" class="external-link">#3</a>).</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="movedesign-020">movedesign 0.2.0<a class="anchor" aria-label="anchor" href="#movedesign-020"></a></h2>
 <ul><li>Second release of movedesign.</li>
 </ul><div class="section level3">
 <h3 id="new-features-0-2-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
-<ul><li>Now supports running multiple simulations within the same workflow.</li>
+<ul><li>Began support for multiple simulations within the same workflow.</li>
 <li>Expected errors will update to show the mean (and CIs if applicable) for multiple simulations.</li>
 <li>Can switch plots for each simulation (both for HR and trajectories).</li>
 </ul></div>
