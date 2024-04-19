@@ -5,12 +5,14 @@
 ## New features
 
 -   Now fully supports multiple simulations within the same workflow.
--   Added meta-analyses tab. Users can compare estimates for two different groups (e.g. females/males).
+-   Added meta-analyses tab. Users can get mean estimates or compare estimates for two different groups (e.g. females/males).
 -   Users can test a specific number of tags, or get the minimum number of tags for a specific output.
+-   Users can propagate estimate uncertainty from the initial dataset into the simulated dataset.
 
 ## Minor improvements
 -  Added outlier plots to Data tabs.
 -  Added warning messages in case of very low effective sample sizes.
+-  Report tab also highlights outputs from meta-analyses.
 
 ## Bug fixes
 

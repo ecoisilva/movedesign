@@ -58,6 +58,8 @@
 .cl-dgr-l { color: var(--danger-light) !important; }
 .cl-dgr-d { color: var(--danger-dark) !important; }
 
+.cl-gld { color: var(--gold-dark) !important; }
+
 .cl-blk { color: #000 !important; }
 .cl-wht { color: #fff !important; }
 .cl-grey { color: var(--grey-300) !important; }
