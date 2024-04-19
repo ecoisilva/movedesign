@@ -360,15 +360,17 @@ emulate_seeded <- function(obj, seed) {
 #' 
 #' @importFrom ctmm %#%
 #' @noRd
-get_true_hr <- function(data,
-                        seed,
+get_true_hr <- function(data = NULL,
+                        seed = NULL,
                         sigma,
                         
                         emulated = TRUE,
                         fit = NULL,
                         
                         grouped = FALSE,
-                        groups = NULL) {
+                        groups = NULL,
+                        
+                        summarized = FALSE) {
   
   get_circle <- function(radius_x, radius_y) {
     
@@ -385,46 +387,96 @@ get_true_hr <- function(data,
     return(truth)
   }
   
-  out <- lapply(seq_along(seed), function(x) {
-    if (grouped) {
-      nm <- names(data)[[x]]
-      group <- ifelse(nm %in% groups[["A"]], "A", "B")
-    } else group <- "All"
+  if (summarized) {
     
-    if (emulated) {
-      fit <- emulate_seeded(fit[[group]], seed[[x]])
-      sig <- var.covm(fit$sigma, average = TRUE)
+    out <- lapply(names(sigma), function(x) {
       
-      if (fit$isotropic[["sigma"]]) {
-        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
-      } else {
-        sig1 <- fit$sigma@par["major"][[1]]
-        sig2 <- fit$sigma@par["minor"][[1]]
-        radius_x <- sqrt(-2 * log(0.05) * sig1)
-        radius_y <- sqrt(-2 * log(0.05) * sig2)
+      if (emulated) {
         
-      } # end of if (is_isotropic)
+        if (fit[[x]]$isotropic[["sigma"]]) {
+          sig <- var.covm(fit[[x]]$sigma, average = TRUE)
+          radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+          area <- -2 * log(0.05) * pi * sig
+          
+        } else {
+          sig1 <- fit[[x]]$sigma@par["major"][[1]]
+          sig2 <- fit[[x]]$sigma@par["minor"][[1]]
+          radius_x <- sqrt(-2 * log(0.05) * sig1)
+          radius_y <- sqrt(-2 * log(0.05) * sig2)
+          
+          fit_ellipse <- ellipse::ellipse(fit[[x]]$sigma, level = 0.95)
+          semi_axis_1 <- max(fit_ellipse[,1])/2 - min(fit_ellipse[,1])/2
+          semi_axis_2 <- max(fit_ellipse[,2])/2 - min(fit_ellipse[,2])/2
+          area <- pi * semi_axis_1 * semi_axis_2
+          
+        } # end of if (is_isotropic)
+        
+      } else {
+        
+        sig <- sigma[[x]]$value[2] %#% sigma[[x]]$unit[2]
+        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+        area <- -2 * log(0.05) * pi * sig
+        
+      } # end of if (is_emulate)
       
-    } else {
+      truth <- get_circle(radius_x, radius_y)
+      return(list(area = area, data = truth))
       
-      sig <- sigma[[group]]$value[2] %#% sigma[[group]]$unit[2]
-      radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+    }) # end of lapply (x)
+    
+    names(out) <- names(sigma)
+    return(out)
+    
+  } else {
+    
+    out <- lapply(seq_along(seed), function(x) {
+      if (grouped) {
+        nm <- names(data)[[x]]
+        group <- ifelse(nm %in% groups[["A"]], "A", "B")
+      } else group <- "All"
       
-    } # end of if (is_emulate)
+      if (emulated) {
+        fit <- emulate_seeded(fit[[group]], seed[[x]])
+        
+        if (fit$isotropic[["sigma"]]) {
+          sig <- var.covm(fit$sigma, average = TRUE)
+          radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+          area <- -2 * log(0.05) * pi * sig
+          
+        } else {
+          sig1 <- fit$sigma@par["major"][[1]]
+          sig2 <- fit$sigma@par["minor"][[1]]
+          radius_x <- sqrt(-2 * log(0.05) * sig1)
+          radius_y <- sqrt(-2 * log(0.05) * sig2)
+          
+          fit_ellipse <- ellipse::ellipse(fit$sigma, level = 0.95)
+          semi_axis_1 <- max(fit_ellipse[,1])/2 - min(fit_ellipse[,1])/2
+          semi_axis_2 <- max(fit_ellipse[,2])/2 - min(fit_ellipse[,2])/2
+          area <- pi * semi_axis_1 * semi_axis_2
+          
+        } # end of if (is_isotropic)
+        
+      } else {
+        
+        sig <- sigma[[group]]$value[2] %#% sigma[[group]]$unit[2]
+        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
+        area <- -2 * log(0.05) * pi * sig
+        
+      } # end of if (is_emulate)
+      
+      truth <- get_circle(radius_x, radius_y)
+      return(list(area = area, data = truth))
+      
+    }) # end of lapply (x)
     
-    area <- -2 * log(0.05) * pi * sig
-    truth <- get_circle(radius_x, radius_y)
+    names(out) <- seed
+    return(out)
     
-    return(list(area = area, data = truth))
-    
-  }) # end of lapply (x)
-  
-  names(out) <- seed
-  return(out)
+  } # end of if (summarized)
   
 }
 
-#' Get weighted average speed (for get_true_speed())
+#' Get weighted average speed (approximate only)
 #' 
 #' @noRd
 weighted_average_speed <- function(tau_v, fit, seed, 
@@ -465,22 +517,40 @@ get_true_speed <- function(data,
                            groups = NULL,
                            
                            summarized = FALSE) {
+  
+  clamp <- function (num, min = 0, max = 1) {
+    ifelse(num < 0, 0, ifelse(num > 1, 1, num))
+  }
+  
   if (summarized) {
     
     out <- lapply(names(tau_p), function(x) {
       
       if (emulated) {
         fit <- fit[[x]]
-        sigma <- var.covm(fit$sigma, average = TRUE)
-        tau_p <- extract_pars(fit, "position")[[1]]
-        tau_v <- extract_pars(fit, "velocity")[[1]]
-        tau_p <- tau_p$value[[2]] %#% tau_p$unit[[2]]
-        tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]]
+        sigma <- fit$sigma
+        tau <- fit$tau
+        
+        if (fit$range) {
+          sigma <- sigma/prod(fit$tau) # OUF
+        } else { sigma <- sigma/fit$tau[2] } # IOU
         
         if (fit$mean == "stationary") {
-          truth <- sqrt(sigma * pi/2)
-          truth <- truth/sqrt(prod(tau_p, tau_v))
+          sigma <- eigen(sigma)$values
+          if (fit$isotropic[["sigma"]] || sigma[1] == sigma[2]) {
+            truth <- sqrt(sigma[1] * pi/2)
+          } else {
+            truth <- sqrt(2/pi) * sqrt(sigma[1]) *
+              pracma::ellipke(1 - clamp(sigma[2]/sigma[1]))$e 
+          }
+          
         } else {
+          if (is.null(tau[["velocity"]])) {
+            tau_v <- extract_pars(fit, "velocity")[[1]]
+            tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]]
+          } else {
+            tau_v <- tau[["velocity"]]
+          }
           truth <- weighted_average_speed(tau_v, fit, seed[[1]])
         }
         
@@ -499,6 +569,7 @@ get_true_speed <- function(data,
     return(out)
     
   } else {
+    
     out <- lapply(seq_along(seed), function(x) {
       if (grouped) {
         nm <- names(data)[[x]]
@@ -509,17 +580,30 @@ get_true_speed <- function(data,
         fit <- emulate_seeded(fit[[group]], seed[[x]])
         sigma <- var.covm(fit$sigma, average = TRUE)
         
-        tau_p <- extract_pars(fit, "position")[[1]]
-        tau_v <- extract_pars(fit, "velocity")[[1]]
-        tau_p <- tau_p$value[[2]] %#% tau_p$unit[[2]]
-        tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]]
+        sigma <- fit$sigma
+        tau <- fit$tau
+        
+        if (fit$range) {
+          sigma <- sigma/prod(fit$tau) # OUF
+        } else { sigma <- sigma/fit$tau[2] } # IOU
         
         if (fit$mean == "stationary") {
-          v <- sqrt(sigma * pi/2)
-          v <- v/sqrt(prod(tau_p, tau_v)) # error ~ 0.01
+          sigma <- eigen(sigma)$values
+          if (fit$isotropic[["sigma"]] || sigma[1] == sigma[2]) {
+            truth <- sqrt(sigma[1] * pi/2)
+          } else {
+            truth <- sqrt(2/pi) * sqrt(sigma[1]) *
+              pracma::ellipke(1 - clamp(sigma[2]/sigma[1]))$e 
+          }
           
         } else {
-          v <- weighted_average_speed(tau_v, fit, seed[[x]])
+          if (is.null(tau[["velocity"]])) {
+            tau_v <- extract_pars(fit, "velocity")[[1]]
+            tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]]
+          } else {
+            tau_v <- tau[["velocity"]]
+          }
+          truth <- weighted_average_speed(tau_v, fit, seed[[1]])
         }
         
       } else {
@@ -527,12 +611,11 @@ get_true_speed <- function(data,
         tau_p <- tau_p[[group]]$value[2] %#% tau_p[[group]]$unit[2]
         tau_v <- tau_v[[group]]$value[2] %#% tau_v[[group]]$unit[2]
         
-        v <- sqrt(sigma * pi/2)
-        v <- v/sqrt(prod(tau_p, tau_v)) # error ~ 0.01
-        
+        truth <- sqrt(sigma * pi/2)
+        truth <- truth/sqrt(prod(tau_p, tau_v)) # error ~ 0.01
       }
       
-      return(v)
+      return(truth)
       
     }) # end of lapply (x)
     
@@ -907,7 +990,6 @@ extract_svf <- function(data, fit = NULL,
   }) # end of lapply
   
   if (!single) names(out) <- nms
-  if (length(out) == 1) out <- out[[1]]
   return(out)
   
 }
