@@ -168,11 +168,18 @@ mod_comp_viz_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      if (length(req(input$set_groups)$A) != 0 &&
-          length(req(input$set_groups)$B) != 0) {
-        rv$groups[[1]] <- input$set_groups
-        rv$grouped <- TRUE
+      req(rv$which_meta)
+      
+      if (rv$which_meta != "compare") {
+        rv$grouped <- FALSE
+      } else {
+        if (length(req(input$set_groups)$A) != 0 &&
+            length(req(input$set_groups)$B) != 0) {
+          rv$groups[[1]] <- input$set_groups
+          rv$grouped <- TRUE
+        }
       }
+      
     }) # end of observe
     
     ## Summarize data: ----------------------------------------------------

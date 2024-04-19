@@ -239,6 +239,7 @@ mod_tab_hrange_ui <- function(id) {
                     p(class = "fluid-padding"),
                     
                     mod_blocks_ui(ns("hrBlock_est")),
+                    p(style = "margin-top: 35px;"),
                     mod_blocks_ui(ns("hrBlock_err")),
                     uiOutput(ns("hrUI_errLegend"))
                     
@@ -298,6 +299,7 @@ mod_tab_hrange_ui <- function(id) {
                     uiOutput(ns("hrText_new")),
                     
                     mod_blocks_ui(ns("hrBlock_est_new")),
+                    p(style = "margin-top: 35px;"),
                     mod_blocks_ui(ns("hrBlock_err_new"))
                     
                 ) # end of div()
@@ -1828,20 +1830,20 @@ mod_tab_hrange_server <- function(id, rv) {
       
     }) # end of observe
     
-    ## Outputs: -----------------------------------------------------------
-    ### Home range area and error: ----------------------------------------
-
+    ## Home range outputs: ------------------------------------------------
+    
     observe({
-      req(rv$simList, rv$akdeList)
+      req(rv$active_tab == 'hr')
+      req(rv$simList, rv$akdeList, rv$hr_nsim)
       req(nrow(rv$hrEst) == length(rv$simList),
           nrow(rv$hrErr) == length(rv$simList))
       
       mod_blocks_server(
         id = "hrBlock_est",
-        rv = rv, type = "hr", name = "hrEst")
+        rv = rv, type = "hr", name = "hrEst", get_id = rv$hr_nsim)
       mod_blocks_server(
         id = "hrBlock_err",
-        rv = rv, type = "hr", name = "hrErr")
+        rv = rv, type = "hr", name = "hrErr", get_id = rv$hr_nsim)
     
     }) # end of observe
     

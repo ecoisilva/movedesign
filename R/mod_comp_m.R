@@ -134,36 +134,30 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         }
         
         if ("compare" %in% rv$which_meta) {
-          if (length(rv$tau_p) == 3 ||
-              length(rv$tau_v) == 3 ||
-              length(rv$sigma) == 3 || 
-              length(rv$mu) == 3) {
-            req(rv$groups)
+          req(rv$groups)
+          
+          if (rv$is_emulate) {
+            fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
+            fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
             
-            if (rv$is_emulate) {
-              fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
-              fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
-              
-              # Recenter to 0,0:
-              fitA$mu[["x"]] <- 0
-              fitA$mu[["y"]] <- 0
-              fitB$mu[["x"]] <- 0
-              fitB$mu[["y"]] <- 0
-              
-            } else {
-              fitA <- prepare_mod(
-                tau_p = rv$tau_p[[2]][2, ],
-                tau_v = rv$tau_v[[2]][2, ],
-                sigma = rv$sigma[[2]][2, ],
-                mu = rv$mu[[2]])
-              
-              fitB <- prepare_mod(
-                tau_p = rv$tau_p[[3]][2, ],
-                tau_v = rv$tau_v[[3]][2, ],
-                sigma = rv$sigma[[3]][2, ],
-                mu = rv$mu[[3]])
-            }
+            # Recenter to 0,0:
+            fitA$mu[["x"]] <- 0
+            fitA$mu[["y"]] <- 0
+            fitB$mu[["x"]] <- 0
+            fitB$mu[["y"]] <- 0
             
+          } else {
+            fitA <- prepare_mod(
+              tau_p = rv$tau_p[[2]][2, ],
+              tau_v = rv$tau_v[[2]][2, ],
+              sigma = rv$sigma[[2]][2, ],
+              mu = rv$mu[[2]])
+            
+            fitB <- prepare_mod(
+              tau_p = rv$tau_p[[3]][2, ],
+              tau_v = rv$tau_v[[3]][2, ],
+              sigma = rv$sigma[[3]][2, ],
+              mu = rv$mu[[3]])
           }
         }
         
@@ -305,7 +299,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     observe({
       req(rv$which_meta, rv$is_analyses)
       
-      if (rv$is_analyses && (rv$which_meta != "none"))
+      if (rv$is_analyses && rv$which_meta != "none")
         shinyjs::show(id = "mBox_nsims") else
           shinyjs::hide(id = "mBox_nsims")
       
@@ -664,9 +658,13 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         current_dur <- rv$dur$value %#% rv$dur$unit
         optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
-                          rv$tau_p[[1]]$unit[2]) * 3
+                          rv$tau_p[[1]]$unit[2]) * 10
         
-        if (optimal_dur < current_dur)
+        current_dti <- rv$dti$value %#% rv$dti$unit
+        optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
+                          rv$tau_v[[1]]$unit[2]) / 3
+        
+        if (optimal_dur <= current_dur && current_dti <= optimal_dti)
           simfitList <- tryCatch(
             par.ctmm.fit(simList, guessList, parallel = rv$parallel),
             error = function(e) e)
@@ -675,14 +673,21 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             par.ctmm.select(simList, guessList, parallel = rv$parallel),
             error = function(e) e)
         
-        if (num_sims == 1) simfitList <- list(simfitList)
+        if (num_sims == 1) {
+          simfitList <- list(simfitList)
+        }
         
-        if (inherits(simfitList, "error")) {
-          msg_log(
-            style = "danger",
-            message = paste0(
-              "Model selection ", msg_danger("failed"), "."))
-          return(NULL)
+        N_type <- ifelse(rv$set_analysis == "hr", "area", "speed")
+        N <- extract_dof(simfitList, N_type)
+        to_rerun <- which(N < 0.1)
+        
+        if (any(N < 0.1)) {
+          for (z in seq_along(to_rerun)) {
+            simfitList[[z]] <- par.ctmm.select(
+              simList[to_rerun[[z]]], 
+              guessList[to_rerun[[z]]],
+              parallel = rv$parallel)
+          }
         }
         
         lapply(seq_along(simfitList), function (x) {
@@ -704,7 +709,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             group = if (rv$grouped)
               ifelse(nm %in% rv$groups[[2]]$A, "A", "B") else NA,
             device = rv$device_type,
-            # dur = rv$dur, dti = rv$dti,
             data = simList[[x]], 
             fit = simfitList[[x]])
           rv$dev$tbl <<- rbind(rv$dev$tbl, newrow)
@@ -846,7 +850,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       # Initialize values:
       threshold <- input$error_threshold/100 # default 5%
       err <- 1
-      err_prev <- rep(err, 5)
       hex <- rep("grey50", 5)
       
       start_time <- Sys.time()
@@ -888,21 +891,23 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           # Running one extra simulation at the beginning:
           rv$seed0 <- generate_seed(rv$seedList)
           simList <- simulating_data()
+          seedList <- list(rv$seed0)
           rv$seedList <- c(rv$seedList, rv$seed0)
         } else {
-          if (rv$grouped) { 
+          if (rv$grouped) {
             rv$seed0 <- generate_seed(rv$seedList)
             simList <- simulating_data()
-            for (x in seq_along(simList))
-              simList[[x]] <- ctmm:::pseudonymize(simList[[x]])
+            seedList <- list(rv$seed0, rv$seed0 + 1)
             rv$seedList <- c(rv$seedList, rv$seed0, rv$seed0 + 1)
-          } else { 
+            
+          } else {
             simList <- lapply(seq_len(m), function(x) {
               rv$seed0 <- generate_seed(rv$seedList)
               out <- simulating_data()[[1]]
-              out <- ctmm:::pseudonymize(out)
               rv$seedList <- c(rv$seedList, rv$seed0)
-              return(out) })
+              return(out) 
+            })
+            seedList <- tail(rv$seedList, m)
           }
         }
         
@@ -965,9 +970,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             
           } # end of input$device_error
         
-        if (rv$grouped) seedList <- list(rv$seed0, rv$seed0 + 1)
-        else seedList <- list(rv$seed0)
-        
         tmpnames <- names(rv$simList)
         rv$simList <- c(rv$simList, simList)
         if (rv$grouped) {
@@ -978,11 +980,15 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         current_dur <- rv$dur$value %#% rv$dur$unit
         optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
-                          rv$tau_p[[1]]$unit[2]) * 3 # reduce run time
+                          rv$tau_p[[1]]$unit[2]) * 10
+        
+        current_dti <- rv$dti$value %#% rv$dti$unit
+        optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
+                          rv$tau_v[[1]]$unit[2]) / 3
         
         fitList <- lapply(seq_along(simList), function(x) {
           guess <- ctmm::ctmm.guess(simList[[x]], interactive = F)
-          if (optimal_dur < current_dur)
+          if (optimal_dur <= current_dur && current_dti <= optimal_dti)
             out <- ctmm::ctmm.fit(simList[[x]], guess, trace = F)
           else
             out <- ctmm::ctmm.select(simList[[x]], guess, trace = F)
@@ -1010,6 +1016,30 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                                    units = FALSE,
                                    verbose = TRUE,
                                    plot = FALSE)
+          
+          if (rv$which_meta == "compare") {
+            
+            get_groups <- function(x, groups) {
+              group_A <- x[groups[["A"]]]
+              # group_A[sapply(group_A, is.null)] <- NULL
+              group_B <- x[groups[["B"]]]
+              # group_B[sapply(group_B, is.null)] <- NULL
+              return(list(A = group_A,
+                          B = group_B))
+            }
+            
+            out_meta_groups <- capture_meta(
+              get_groups(rv$akdeList, rv$groups[[2]]),
+              variable = "area",
+              units = TRUE, 
+              verbose = TRUE,
+              plot = FALSE,
+              type = "hr") %>% 
+              suppressMessages() %>% 
+              suppressWarnings() %>% 
+              quiet()
+          }
+          
         } else {
           out_meta <- NULL
         }
@@ -1022,13 +1052,14 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           tmpname <- rownames(out_meta$meta)
           tmpunit <- extract_units(tmpname[grep("^mean", tmpname)])
           
-          if (rv$is_emulate) {
-            fit <- rv$meanfitList[["All"]]
-            sig <- var.covm(fit$sigma, average = TRUE)            
-          } else {
-            sig <- rv$sigma[["All"]]$value[2] %#% rv$sigma[["All"]]$unit[2]
-          }
-          truth <- -2 * log(0.05) * pi * sig
+          truth_summarized <- get_true_hr(
+            sigma = rv$sigma,
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL,
+            summarized = TRUE)
+          truth <- truth_summarized[["All"]]$area
           
           out_est <- c(
             "lci" = out_meta$meta[1, 1] %#% tmpunit, 
@@ -1050,7 +1081,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             subpop = out_meta$logs$subpop_detected,
             group = "All")
         } else {
-          err <- err_prev[length(err_prev)]
+          err <- rv$err_prev[length(rv$err_prev)]
           dt_meta <- dt_meta %>% dplyr::add_row(
             type = "hr",
             m = length(rv$simList),
@@ -1080,30 +1111,56 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             preventDuplicates = TRUE,
             positionClass = "toast-bottom-right"))
         
-        err_prev <- c(err_prev, abs(err))
-        last_values <- (length(err_prev)-5):length(err_prev)
-        mean_err <- mean(abs(err_prev)[last_values])
+        rv$err_prev <- c(rv$err_prev, abs(err))
+        last_values <- (length(rv$err_prev)-4):length(rv$err_prev)
         
-        cov <- Inf
-        if (abs(err) < threshold) {
-          if (!is.na(dt_meta[nrow(dt_meta), ]$est)) {
-            cov <- out_meta$meta[grep("CoV",
-                                      rownames(out_meta$meta)), 2]
-          }
+        if (rv$which_meta == "mean") {
           
-          # if cov -> infinity,
-          # still sensitive to small changes in the mean.
-          if (!is.infinite(cov[[2]])) {
-            pop_mean <- out_meta$meta[
-              grep("mean", rownames(out_meta$meta)), ]
-            moe <- (pop_mean[[3]] - pop_mean[[1]]) / pop_mean[[2]]
+          if (all(rv$err_prev[last_values] < threshold)) {
+            if (!is.null(out_meta)) {
+              
+              means <- out_meta$meta[
+                grep("mean", rownames(out_meta$meta)), ]
+              tmpunit <- extract_units(rownames(out_meta$meta)[[1]])
+              
+              overlaps_with_truth <- dplyr::between(
+                truth,
+                means[1, "low"] %#% tmpunit,
+                means[1, "high"] %#% tmpunit)
+              
+              if (overlaps_with_truth) {
+                broke <- TRUE
+                break
+              }
+            }
+          }
+        } # end of if (rv$which_meta == "mean")
+        
+        if (rv$which_meta == "compare") {
+          
+          cov <- Inf
+          if (all(rv$err_prev[last_values] < threshold)) {
+            if (!is.na(dt_meta[nrow(dt_meta), ]$est)) {
+              cov <- out_meta$meta[
+                grep("CoV", rownames(out_meta$meta)), 2][[2]]
+            }
             
-            if (moe < threshold) {
+            if (!is.null(out_meta_groups)) {
+              meta_truth <- rv$metaList_groups[[1]][["hr"]]
+              overlaps_with_truth <- dplyr::between(
+                extract_ratios(out_meta_groups)$est,
+                extract_ratios(meta_truth)$lower, 
+                extract_ratios(meta_truth)$upper)
+            }
+            
+            # if cov -> infinity,
+            # still sensitive to small changes in the mean.
+            if (!is.infinite(cov) && overlaps_with_truth) {
               broke <- TRUE
               break
             }
           }
-        }
+        } # end of if (rv$which_meta == "compare")
         
       } # end of while()
       
@@ -1180,8 +1237,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                 error = out_err_df))
       }
       
-      rv$hrEst <- out_est_df
-      rv$hrErr <- out_err_df
+      rv$hrEst <<- rbind(rv$hrEst, out_est_df)
+      rv$hrErr <<- rbind(rv$hrErr, out_err_df)
+      
       N1 <- extract_dof(rv$simfitList, "area")
       
       if (rv$set_analysis == "hr") rv$hr_completed <- TRUE
@@ -1275,7 +1333,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       # Initialize values:
       threshold <- input$error_threshold/100 # default 5%
       err <- 1
-      err_prev <- rep(err, 5)
       hex <- rep("grey50", 5)
       
       trace <- TRUE
@@ -1317,22 +1374,25 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           # Running one extra simulation at the beginning:
           rv$seed0 <- generate_seed(rv$seedList)
           simList <- simulating_data()
+          
+          seedList <- list(rv$seed0)
           rv$seedList <- c(rv$seedList, rv$seed0)
         } else {
           if (rv$grouped) {
             rv$seed0 <- generate_seed(rv$seedList)
             simList <- simulating_data()
-            for (x in seq_along(simList))
-              simList[[x]] <- ctmm:::pseudonymize(simList[[x]])
+            
+            seedList <- list(rv$seed0, rv$seed0 + 1)
             rv$seedList <- c(rv$seedList, rv$seed0, rv$seed0 + 1)
+            
           } else {
             simList <- lapply(seq_len(m), function(x) {
               rv$seed0 <- generate_seed(rv$seedList)
               out <- simulating_data()[[1]]
-              out <- ctmm:::pseudonymize(out)
               rv$seedList <- c(rv$seedList, rv$seed0)
               return(out) 
             })
+            seedList <- tail(rv$seedList, m)
           }
         }
         
@@ -1395,26 +1455,27 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             
           } # end of input$device_error
         
-        if (rv$grouped) seedList <- list(rv$seed0, rv$seed0 + 1)
-        else seedList <- list(rv$seed0)
-        
         tmpnames <- names(rv$simList)
         rv$simList <- c(rv$simList, simList)
         if (rv$grouped) {
           names(simList) <- c(rv$seed0, rv$seed0 + 1)
           names(rv$simList) <- c(tmpnames, rv$seed0, rv$seed0 + 1)
         } else {
-          names(simList) <- c(rv$seed0)
+          names(simList) <- unlist(seedList)
           names(rv$simList) <- unlist(rv$seedList)
         }
         
         current_dur <- rv$dur$value %#% rv$dur$unit
         optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
-                          rv$tau_p[[1]]$unit[2]) * 3 # reduce run time
+                          rv$tau_p[[1]]$unit[2]) * 10
+        
+        current_dti <- rv$dti$value %#% rv$dti$unit
+        optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
+                          rv$tau_v[[1]]$unit[2]) / 3
         
         fitList <- lapply(seq_along(simList), function(x) {
           guess <- ctmm::ctmm.guess(simList[[x]], interactive = F)
-          if (optimal_dur < current_dur)
+          if (optimal_dur <= current_dur && current_dti <= optimal_dti)
             out <- ctmm::ctmm.fit(simList[[x]], guess, trace = F)
           else
             out <- ctmm::ctmm.select(simList[[x]], guess, trace = F)
@@ -1457,8 +1518,33 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                                    units = FALSE,
                                    verbose = TRUE,
                                    plot = FALSE)
+          
+          if (rv$which_meta == "compare") {
+            
+            get_groups <- function(x, groups) {
+              group_A <- x[groups[["A"]]]
+              # group_A[sapply(group_A, is.null)] <- NULL
+              group_B <- x[groups[["B"]]]
+              # group_B[sapply(group_B, is.null)] <- NULL
+              return(list(A = group_A,
+                          B = group_B))
+            }
+            
+            out_meta_groups <- capture_meta(
+              get_groups(rv$ctsdList, rv$groups[[2]]),
+              variable = "speed",
+              units = TRUE, 
+              verbose = TRUE,
+              plot = FALSE,
+              type = "hr") %>% 
+              suppressMessages() %>% 
+              suppressWarnings() %>% 
+              quiet()
+          }
+          
         } else {
           out_meta <- NULL
+          out_meta_groups <- NULL
         }
         
         if (!is.null(out_meta)) {
@@ -1507,7 +1593,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             group = "All")
           
         } else {
-          err <- err_prev[length(err_prev)]
+          err <- rv$err_prev[length(rv$err_prev)]
           dt_meta <- dt_meta %>% dplyr::add_row(
             type = "hr",
             m = length(rv$simList),
@@ -1537,36 +1623,59 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             preventDuplicates = TRUE,
             positionClass = "toast-bottom-right"))
         
-        err_prev <- c(err_prev, abs(err))
-        last_values <- (length(err_prev)-5):length(err_prev)
-        mean_err <- mean(abs(err_prev)[last_values])
+        rv$err_prev <- c(rv$err_prev, abs(err))
+        last_values <- (length(rv$err_prev)-4):length(rv$err_prev)
         
-        # if (i >= 5 && abs(err) < threshold) break
-        # if (i >= 5 && all((
-        #   abs(err_prev)[last_values] - mean_err) < 0.02))
-        #   break
+        # Break conditions:
         
-        cov <- Inf
-        if (abs(err) < threshold) {
-          if (!is.na(dt_meta[nrow(dt_meta), ]$est)) {
-            cov <- out_meta$meta[grep("CoV",
-                                      rownames(out_meta$meta)), 2]
-          }
+        if (rv$which_meta == "mean") {
           
-          # if cov -> infinity,
-          # still sensitive to small changes in the mean.
-          if (!is.infinite(cov[[2]])) {
-            pop_mean <- out_meta$meta[
-              grep("mean", rownames(out_meta$meta)), ]
-            moe <- (pop_mean[[3]] - pop_mean[[1]]) / pop_mean[[2]]
+          if (all(rv$err_prev[last_values] < threshold)) {
+            if (!is.null(out_meta)) {
+              
+              means <- out_meta$meta[
+                grep("mean", rownames(out_meta$meta)), ]
+              tmpunit <- extract_units(rownames(out_meta$meta)[[1]])
+              
+              overlaps_with_truth <- dplyr::between(
+                truth,
+                means[1, "low"] %#% tmpunit,
+                means[1, "high"] %#% tmpunit)
+              
+              if (overlaps_with_truth) {
+                broke <- TRUE
+                break
+              }
+            }
+          }
+        } # end of if (rv$which_meta == "mean")
+        
+        if (rv$which_meta == "compare") {
+          
+          cov <- Inf
+          if (all(rv$err_prev[last_values] < threshold)) {
+            if (!is.na(dt_meta[nrow(dt_meta), ]$est)) {
+              cov <- out_meta$meta[
+                grep("CoV", rownames(out_meta$meta)), 2][[2]]
+            }
             
-            if (moe < threshold) {
+            if (!is.null(out_meta_groups)) {
+              meta_truth <- rv$metaList_groups[[1]][["ctsd"]]
+              overlaps_with_truth <- dplyr::between(
+                extract_ratios(out_meta_groups)$est,
+                extract_ratios(meta_truth)$lower, 
+                extract_ratios(meta_truth)$upper)
+            }
+            
+            # if cov -> infinity,
+            # still sensitive to small changes in the mean.
+            if (!is.infinite(cov) && overlaps_with_truth) {
               broke <- TRUE
               break
             }
           }
-        }
-        
+        } # end of if (rv$which_meta == "compare")
+      
       } # end of while()
       
       truthList <- get_true_hr(
@@ -1717,8 +1826,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                 group = if (rv$grouped) group else NA,
                 data = rv$simList[[i]],
                 tau_v = rv$tau_v[[group]],
-                # dur = rv$dur,
-                # dti = rv$dti,
                 fit = rv$simfitList[[i]],
                 speed = rv$speedEst[i, ],
                 speed_error = rv$speedErr[i, ],

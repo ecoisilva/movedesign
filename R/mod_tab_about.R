@@ -148,11 +148,12 @@ mod_tab_about_ui <- function(id) {
                           span("Individual",
                                class = "cl-sea"), "estimate")),
                         tagList(span(
-                          "Mean of",
+                          "Mean estimate of",
                           span("sampled population",
                                class = "cl-sea"))),
                         tagList(span(
-                          "Compare", span("two", class = "cl-sea"),
+                          "Compare estimates of",
+                          span("two", class = "cl-sea"),
                           "sampled populations"))),
                       choiceValues = list("none", "mean", "compare"),
                       selected = character(0),
@@ -311,6 +312,7 @@ mod_tab_about_server <- function(id, rv) {
     
     observe({
       rv$which_m <- input$which_m
+      if (req(rv$which_meta) == "none") rv$which_m <- NULL
     }, label = "o-about_m")
     
     observe({

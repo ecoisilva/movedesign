@@ -136,7 +136,7 @@ mod_tab_meta_ui <- function(id) {
           # Error: --------------------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Home range:", class = "ttl-box"),
+            title = span("Mean home range:", class = "ttl-box"),
             id = ns("metaBox_err_hr"),
             status = "info",
             width = NULL,
@@ -149,7 +149,7 @@ mod_tab_meta_ui <- function(id) {
           ), # end of box // metaBox_err_hr
           
           shinydashboardPlus::box(
-            title = span("Speed:", class = "ttl-box"),
+            title = span("Mean speed:", class = "ttl-box"),
             id = ns("metaBox_err_speed"),
             status = "info",
             width = NULL,
@@ -618,9 +618,9 @@ mod_tab_meta_server <- function(id, rv) {
     
     get_groups <- function(x, groups) {
       group_A <- x[groups[["A"]]]
-      group_A[sapply(group_A, is.null)] <- NULL
+      # group_A[sapply(group_A, is.null)] <- NULL
       group_B <- x[groups[["B"]]]
-      group_B[sapply(group_B, is.null)] <- NULL
+      # group_B[sapply(group_B, is.null)] <- NULL
       return(list(A = group_A,
                   B = group_B))
     }
@@ -782,17 +782,19 @@ mod_tab_meta_server <- function(id, rv) {
         tmpunit <- extract_units(nms.obj[grep(name, nms.obj)])
         
         if (out$type == "hr") {
-          if (rv$is_emulate) {
-            fit <- rv$meanfitList[["All"]]
-            sig <- var.covm(fit$sigma, average = TRUE)            
-          } else {
-            sig <- rv$sigma[["All"]]$value[2] %#% rv$sigma[["All"]]$unit[2]
-          }
-          truth <- -2 * log(0.05) * pi * sig
+          truth_summarized <- get_true_hr(
+            sigma = rv$sigma,
+            
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL,
+            summarized = TRUE)
+          truth <- truth_summarized[["All"]]$area
         }
         
         if (out$type == "ctsd") {
-          
           truth_summarized <- get_true_speed(
             data = rv$simList,
             seed = rv$seedList,
@@ -808,7 +810,6 @@ mod_tab_meta_server <- function(id, rv) {
             groups = if (rv$grouped) rv$groups[[2]] else NULL,
             
             summarized = TRUE)
-          
           truth <- truth_summarized[["All"]]
         }
         
@@ -843,17 +844,17 @@ mod_tab_meta_server <- function(id, rv) {
           tmpunitB <- extract_units(nms.objB[grep(name, nms.objB)])
           
           if (out_groups$type == "hr") {
-            if (rv$is_emulate) {
-              fitA <- rv$meanfitList[["A"]]
-              fitB <- rv$meanfitList[["B"]]
-              sigA <- var.covm(fitA$sigma, average = TRUE)            
-              sigB <- var.covm(fitB$sigma, average = TRUE)            
-            } else {
-              sigA <- rv$sigma[["A"]]$value[2] %#% rv$sigma[["A"]]$unit[2]
-              sigB <- rv$sigma[["B"]]$value[2] %#% rv$sigma[["B"]]$unit[2]
-            }
-            truth_A <- -2 * log(0.05) * pi * sigA
-            truth_B <- -2 * log(0.05) * pi * sigB
+            
+            truth_summarized <- get_true_hr(
+              sigma = rv$sigma,
+              emulated = rv$is_emulate,
+              fit = if (rv$is_emulate) rv$meanfitList else NULL,
+              grouped = rv$grouped,
+              groups = if (rv$grouped) rv$groups[[2]] else NULL,
+              summarized = TRUE)
+            
+            truth_A <- truth_summarized[["A"]]$area
+            truth_B <- truth_summarized[["B"]]$area
           }
 
           if (out_groups$type == "ctsd") {
@@ -998,18 +999,19 @@ mod_tab_meta_server <- function(id, rv) {
         if (length(input) == 0) break
         
         if (rv$set_analysis == "hr") {
-          if (rv$is_emulate) {
-            fit <- rv$meanfitList[[nm_groups[group]]]
-            sig <- var.covm(fit$sigma, average = TRUE)  
-          } else {
-            sig <- rv$sigma[[nm_groups[group]]]$value[2] %#%
-              rv$sigma[[nm_groups[group]]]$unit[2]
-          }
-          truth <- -2 * log(0.05) * pi * sig
+          truth_summarized <- get_true_hr(
+            sigma = rv$sigma,
+            
+            emulated = rv$is_emulate,
+            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL,
+            summarized = TRUE)
+          
+          truth <- truth_summarized[[nm_groups[group]]]$area
         }
         
         if (rv$set_analysis == "ctsd") {
-          
           truth_summarized <- get_true_speed(
             data = rv$simList,
             seed = rv$seedList,
@@ -1020,7 +1022,6 @@ mod_tab_meta_server <- function(id, rv) {
             
             emulated = rv$is_emulate,
             fit = if (rv$is_emulate) rv$meanfitList else NULL,
-            
             grouped = rv$grouped,
             groups = if (rv$grouped) rv$groups[[2]] else NULL,
             
@@ -1129,24 +1130,19 @@ mod_tab_meta_server <- function(id, rv) {
         outList <- rv$akdeList
         x_label <- "Home range area (in "
         
-        if (rv$is_emulate) {
-          fit <- rv$meanfitList[["All"]]
-          if (rv$grouped) fitA <- rv$meanfitList[["A"]]
-          if (rv$grouped) fitB <- rv$meanfitList[["B"]]
-          sig <- var.covm(fit$sigma, average = TRUE)            
-          if (rv$grouped) sigA <- var.covm(fitA$sigma, average = TRUE)            
-          if (rv$grouped) sigB <- var.covm(fitB$sigma, average = TRUE)            
-        } else {
-          sig <- rv$sigma[["All"]]$value[2] %#% rv$sigma[["All"]]$unit[2]
-          if (rv$grouped) sigA <- rv$sigma[["A"]]$value[2] %#% 
-              rv$sigma[["A"]]$unit[2]
-          if (rv$grouped) sigB <- rv$sigma[["B"]]$value[2] %#% 
-              rv$sigma[["B"]]$unit[2]
-        }
+        truth_summarized <- get_true_hr(
+          sigma = rv$sigma,
+          emulated = rv$is_emulate,
+          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          summarized = TRUE)
         
-        truth <- -2 * log(0.05) * pi * sig
-        if (rv$grouped) truth_A <- -2 * log(0.05) * pi * sigA
-        if (rv$grouped) truth_B <- -2 * log(0.05) * pi * sigB
+        truth <- truth_summarized[["All"]]$area
+        if (rv$grouped) {
+          truth_A <- truth_summarized[["A"]]$area
+          truth_B <- truth_summarized[["B"]]$area
+        }
       }
       
       if (set_analysis == "ctsd") {
@@ -1226,7 +1222,7 @@ mod_tab_meta_server <- function(id, rv) {
             tmp_list[[x]] <- out$unit[[1]] %#% true_value[[x]]
           }
           true_value <- tmp_list
-          names(true_value) <- do.call(c, rv$seedList)
+          names(true_value) <- tmp_names
         }
         
         out_truth <- out
@@ -1358,25 +1354,17 @@ mod_tab_meta_server <- function(id, rv) {
         name <- "area"
         x_label <- "Home range area (in "
         
-        if (rv$is_emulate) {
-          fit <- rv$meanfitList[["All"]]
-          fitA <- rv$meanfitList[["A"]]
-          fitB <- rv$meanfitList[["B"]]
-          sig <- var.covm(fit$sigma, average = TRUE)            
-          sigA <- var.covm(fitA$sigma, average = TRUE)            
-          sigB <- var.covm(fitB$sigma, average = TRUE)            
-        } else {
-          sig <- rv$sigma[["All"]]$value[2] %#% rv$sigma[["All"]]$unit[2]
-          sigA <- rv$sigma[["A"]]$value[2] %#% 
-            rv$sigma[["A"]]$unit[2]
-          sigB <- rv$sigma[["B"]]$value[2] %#% 
-            rv$sigma[["B"]]$unit[2]
-        }
+        truth_summarized <- get_true_hr(
+          sigma = rv$sigma,
+          emulated = rv$is_emulate,
+          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          grouped = rv$grouped,
+          groups = rv$groups[[2]],
+          summarized = TRUE)
         
-        truth <- out$unit[[1]] %#% (-2 * log(0.05) * pi * sig)
-        truth_A <- out$unit[[1]] %#% (-2 * log(0.05) * pi * sigA)
-        truth_B <- out$unit[[1]] %#% (-2 * log(0.05) * pi * sigB)
-        
+        truth <- out$unit[[1]] %#% truth_summarized[["All"]]$area
+        truth_A <- out$unit[[1]] %#% truth_summarized[["A"]]$area
+        truth_B <- out$unit[[1]] %#% truth_summarized[["B"]]$area
       }
       
       if (set_analysis == "ctsd") {
@@ -1397,7 +1385,7 @@ mod_tab_meta_server <- function(id, rv) {
           fit = if (rv$is_emulate) rv$meanfitList else NULL,
           
           grouped = rv$grouped,
-          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          groups = rv$groups[[2]],
           
           summarized = TRUE)
         

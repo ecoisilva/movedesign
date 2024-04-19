@@ -2200,10 +2200,13 @@ mod_tab_design_server <- function(id, rv) {
       
       current_dur <- rv$dur$value %#% rv$dur$unit
       optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
-                        rv$tau_p[[1]]$unit[2]) * 3
-      # TODO add optimal dti (< tau_v / 3) for OUF
+                        rv$tau_p[[1]]$unit[2]) * 10
       
-      if (optimal_dur < current_dur) {
+      current_dti <- rv$dti$value %#% rv$dti$unit
+      optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
+                        rv$tau_v[[1]]$unit[2]) / 3
+      
+      if (optimal_dur <= current_dur && current_dti <= optimal_dti) {
         out <- tryCatch(
           par.ctmm.fit(simList, guessList, parallel = rv$parallel),
           warning = function(w) w,
@@ -2214,21 +2217,30 @@ mod_tab_design_server <- function(id, rv) {
           error = function(e) e)
       }
       
-      if (optimal_dur < current_dur && inherits(out, "warning"))
-        out <- tryCatch(
-          par.ctmm.select(simList, guessList, parallel = rv$parallel),
-          error = function(e) e)
-      
-      if (inherits(out, "error")) {
-        msg_log(
-          style = "danger",
-          message = paste0(
-            "Model selection ", msg_danger("failed"), "."))
-        return(NULL)
+      if (length(simList) == 1) {
+        if (inherits(out, "error")) {
+          msg_log(
+            style = "danger",
+            message = paste0(
+              "Model selection ", msg_danger("failed"), "."))
+          return(NULL)
+        }
+        out <- list(out)
       }
       
-      if (length(simList) == 1) return(list(out))
-      else return(out)
+      N <- extract_dof(out, "area")
+      to_rerun <- which(N < 0.1)
+      
+      if (any(N < 0.1)) {
+        for (z in seq_along(to_rerun)) {
+          out[[z]] <- par.ctmm.select(
+            simList[to_rerun[[z]]], 
+            guessList[to_rerun[[z]]],
+            parallel = rv$parallel)
+        }
+      }
+      
+      return(out)
       
     }) %>% # end of reactive, fitting_ctmm()
       bindCache(rv$datList,

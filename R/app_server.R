@@ -69,6 +69,8 @@ app_server <- function(input, output, session) {
     is_font = TRUE,
     add_note = FALSE,
     
+    err_prev = rep(1, 5),
+    
     time = c(0, 0),
     tour_active = FALSE,
     alert_active = TRUE,

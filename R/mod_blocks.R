@@ -18,16 +18,19 @@ mod_blocks_ui <- function(id) {
 #'
 #' @noRd 
 mod_blocks_server <- function(id,
+                              
                               rv, 
                               type,
                               name = NULL,
-                              group = 1,
+                              get_id = 1,
+                              get_group = 1,
                               
                               n = NULL,
                               N = NULL,
                               
                               data = NULL,
                               fit = NULL,
+                              
                               input_name = NULL, 
                               input_modal = NULL,
                               class = NULL,
@@ -62,7 +65,7 @@ mod_blocks_server <- function(id,
              # Timescale, spatial parameters and velocity:
              "species" = {
                
-               out <- rv[[name]][[group]]
+               out <- rv[[name]][[get_group]]
                if (!is.numeric(out["est", 1])) return(NULL)
                
                if (type == "tau" || type == "speed") {
@@ -164,57 +167,53 @@ mod_blocks_server <- function(id,
              "outputs" = {
                
                out <- rv[[name]]
-               is_multiple <- ifelse(nrow(out) > 1, TRUE, FALSE)
                
                if (grepl("Est", name)) {
+                 out <- fix_unit(
+                   data.frame(value = unlist(out[get_id, 2:4]), 
+                              unit = out[get_id, 5]), 
+                   ui = TRUE, convert = TRUE)
                  
-                 out <- data.frame(
-                     value = as.vector(
-                       colMeans(out[,2:4], na.rm = TRUE)),
-                     unit = out$unit[1])
-                 out <- fix_unit(out, ui = TRUE, convert = TRUE)
-                 
-                 if (type == "ctsd")
+                 if (type == "ctsd") 
                    out$unit[2] <- abbrv_unit(out$unit[2])
                  
-                 c <- ifelse((out$value[2] %% 1) * 10 == 0, .1, 1)
-                 value <- scales::label_comma(c)(out$value[2])
-                 value <- paste(value, out$unit[2])
-                 
+                 value <- paste(scales::label_comma(
+                   ifelse((out$value[2] %% 1) * 10 == 0, .1, 1))
+                   (out$value[2]), out$unit[2])
                  subtitle <- paste(
-                   scales::label_comma(.1)(out$value[1]),
-                   "\u2014", scales::label_comma(.1)(out$value[3]))
+                   scales::label_comma(0.1)(out$value[1]), 
+                   "\u2014", scales::label_comma(0.1)(out$value[3]))
                
                } # end of outputs (estimate)
                
                if (grepl("Err", name)) {
+                 is_multiple <- ifelse(nrow(out) > 1, TRUE, FALSE)
                  
                  if (grepl("meta", name)) {
                    out <- out[grep(type, out$type), ]
                    out <- out[nrow(out), ]
-                   is_multiple <- FALSE
-                 }
-                 
-                 est <- mean(out$est, na.rm = TRUE)
-                 
-                 if (is_multiple) {
-                   # Confidence intervals:
-                   # ci <- calculate_ci(rv[[name]]$est, level = 0.95)
-                   # lci <- ci$CI_low
-                   # uci <- ci$CI_high
                    
-                   # Credible intervals:
-                   ci <- suppressWarnings(bayestestR::ci(
-                     out$est, ci = .95, method = "HDI"))
-                   lci <- ci$CI_low
-                   uci <- ci$CI_high
-                   
+                   value <- c(out[get_id, "lci"],
+                              out[get_id, "est"],
+                              out[get_id, "uci"])
                  } else {
-                   lci <- mean(out$lci, na.rm = TRUE)
-                   uci <- mean(out$uci, na.rm = TRUE)
+                   
+                   if (is_multiple) {
+                     ci <- bayestestR::ci(
+                       out$est, ci = .95, method = "HDI") %>% 
+                       suppressWarnings() %>% 
+                       suppressMessages() %>% 
+                       quiet()
+                     
+                     value <- c(ci$CI_low,
+                                mean(out$est, na.rm = TRUE),
+                                ci$CI_high)
+                   } else {
+                     value <- c(out[get_id, "lci"],
+                                out[get_id, "est"],
+                                out[get_id, "uci"])
+                   }
                  }
-                 
-                 value <- c(lci, est, uci)
                  
                } # end of outputs (error)
                
