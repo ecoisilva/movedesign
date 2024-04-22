@@ -392,12 +392,6 @@ mod_tab_hrange_server <- function(id, rv) {
       req(length(rv$mu) == 3,
           length(rv$sigma) == 3)
       
-      # truth <- estimating_truth()
-      # ratio <- truth[["area"]][[2]]/truth[["area"]][[3]]
-      # message("Group A's home range is ", round(ratio, 2),
-      #         " times the size of Group B's home range.")
-      
-      # rv$ratio[["hr"]] <- ratio
       shinyjs::hide(id = "hrBox_regime_footer")
       
     }) # end of observe
@@ -1149,6 +1143,15 @@ mod_tab_hrange_server <- function(id, rv) {
           group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
         }
         
+        if (rv$is_emulate) {
+          tau_p <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], 
+                           rv$seedList[[sim_no]]),
+            "position")[[1]]
+        } else {
+          tau_p <- rv$tau_p[[group]]
+        }
+        
         seed <- as.character(rv$seedList[[sim_no]])
         hr_truth <- rv$truth$hr[[seed]]$area
         N1 <- extract_dof(rv$simfitList[[sim_no]], "area")[[1]]
@@ -1174,11 +1177,12 @@ mod_tab_hrange_server <- function(id, rv) {
           
           rv$hr$tbl <<- rbind(
             rv$hr$tbl, 
-            hrRow(seed = rv$seedList[[sim_no]],
-                  group = if (rv$grouped) group else NA,
+            hrRow(group = if (rv$grouped) group else NA,
                   data = rv$simList[[sim_no]], 
-                  tau_p = rv$tau_p[[group]],
+                  seed = rv$seedList[[sim_no]],
                   fit = rv$simfitList[[sim_no]],
+                  tau_p = tau_p,
+                  
                   area = out_est_df[i, ],
                   error = out_err_df[i, ]))
           next
@@ -1203,14 +1207,14 @@ mod_tab_hrange_server <- function(id, rv) {
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          hrRow(seed = rv$seedList[[sim_no]],
-                group = if (rv$grouped) group else NA,
+          hrRow(group = if (rv$grouped) group else NA,
                 data = rv$simList[[sim_no]], 
-                tau_p = rv$tau_p[[group]],
+                seed = rv$seedList[[sim_no]],
                 fit = rv$simfitList[[sim_no]],
+                tau_p = tau_p,
+                
                 area = out_est_df[i, ],
                 error =  out_err_df[i, ]))
-        
       }
       
       rv$hrEst <<- rbind(rv$hrEst, out_est_df)
@@ -1255,21 +1259,63 @@ mod_tab_hrange_server <- function(id, rv) {
       if (!is.null(rv$hr_nsim)) set_id <- rv$hr_nsim
       
       dat <- rv$simList[[set_id]]
-      mod <- rv$modList[[set_id]]
       seed <- rv$seedList[[set_id]]
-      
-      # fit <- rv$simfitList[[set_id]]
-      # fit$mu[[1, "x"]] <- 0
-      # fit$mu[[1, "y"]] <- 0 # center to 0,0
-      # fit$tau <- mod$tau
-      # fit$sigma <- mod$sigma
       
       dur <- rv$hr$dur$value %#% rv$hr$dur$unit
       dti <- rv$hr$dti$value %#% rv$hr$dti$unit
       t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
+      if (rv$data_type == "simulated") {
+        fit <- fitA <- rv$modList[[1]]
+        if (rv$grouped) fitB <- rv$modList[[2]]
+      }
+      
+      if (rv$is_emulate) {
+        req(rv$meanfitList)
+        fit <- emulate_seeded(rv$meanfitList[["All"]], seed)
+        
+        # Recenter to 0,0:
+        fit$mu[["x"]] <- 0
+        fit$mu[["y"]] <- 0
+        
+      } else {
+        fit <- prepare_mod(
+          tau_p = rv$tau_p[[1]][2, ],
+          tau_v = rv$tau_v[[1]][2, ],
+          sigma = rv$sigma[[1]][2, ],
+          mu = rv$mu[[1]])
+        
+      }
+      
+      if ("compare" %in% rv$which_meta) {
+        req(rv$groups)
+        
+        get_group <- function(seed, groups) {
+          if (as.character(seed) %in% groups[["A"]]) { 
+            return("A") } else { return("B") }
+        }
+        
+        group <- get_group(seed, rv$groups[[2]])
+        rv$hr$groups <- stats::setNames(list(seed), group)
+        
+        if (rv$is_emulate) {
+          fit <- emulate_seeded(rv$meanfitList[[group]], seed)
+          
+          # Recenter to 0,0:
+          fit$mu[["x"]] <- 0
+          fit$mu[["y"]] <- 0
+          
+        } else {
+          fit <- prepare_mod(
+            tau_p = rv$tau_p[[group]][2, ],
+            tau_v = rv$tau_v[[group]][2, ],
+            sigma = rv$sigma[[group]][2, ],
+            mu = rv$mu[[group]])
+        }
+      }
+      
       # Fill in the gaps of original dataset + new duration:
-      sim <- ctmm::simulate(dat, mod, t = t_new, seed = seed)
+      sim <- ctmm::simulate(dat, fit, t = t_new, seed = seed)
       sim <- pseudonymize(sim)
       sim$index <- 1:nrow(sim)
       return(list(sim))
@@ -1330,6 +1376,9 @@ mod_tab_hrange_server <- function(id, rv) {
     
     observe({
       req(rv$simList, rv$simfitList)
+      
+      set_id <- 1
+      if (!is.null(rv$hr_nsim)) set_id <- rv$hr_nsim
       
       # Capture new sampling duration and interval:
       
@@ -1463,13 +1512,23 @@ mod_tab_hrange_server <- function(id, rv) {
           detail = "This may take a while...")
         
         akde_new <- estimating_hr_new()
-        truth <- estimating_truth()[["area"]][[1]]
+        truthList <- get_true_hr(
+          data = rv$hr$simList[[1]],
+          seed = rv$seedList[[set_id]],
+          sigma = rv$sigma,
+          
+          emulated = rv$is_emulate,
+          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$hr$groups else NULL)
+        truth <- truthList[[1]]$area
         
         tmpsumm <- summary(akde_new[[1]])
         tmpname <- rownames(tmpsumm$CI)
         tmpunit <- extract_units(tmpname[grep('^area', tmpname)])
         
-        out_est <- c( 
+        out_est <- c(
           "lci" = tmpsumm$CI[1], 
           "est" = tmpsumm$CI[2], 
           "uci" = tmpsumm$CI[3]) 
@@ -1492,17 +1551,35 @@ mod_tab_hrange_server <- function(id, rv) {
                               est = out_err[[2]], 
                               uci = out_err[[3]])
         
+        group <- "All"
+        if (rv$grouped) {
+          get_group <- function(seed, groups) {
+            if (as.character(seed) %in% groups[["A"]]) { 
+              return("A") } else { return("B") }
+          }
+          group <- get_group(rv$seedList[[set_id]], rv$groups[[2]])
+        }
+        
+        if (rv$is_emulate) {
+          tau_p <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], 
+                           rv$seedList[[set_id]]),
+            "position")[[1]]
+        } else {
+          tau_p <- rv$tau_p[[group]]
+        }
+        
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          hrRow(seed = rv$seedList[[set_id]],
-                data_type = "Modified",
-                data = rv$hr$simList[[1]], 
-                tau_p = rv$tau_p[[1]],
-                dur = rv$hr$dur,
-                dti = rv$hr$dti,
-                N = rv$N1_new[[1]], 
-                area = rv$hrEst_new[[1]],
-                error = rv$hrErr_new[[1]]))
+          hrRow(data_type = "Modified",
+                group = group,
+                data = rv$hr$simList[[1]],
+                seed = rv$seedList[[set_id]],
+                fit = rv$sd$fitList[[1]],
+                tau_p = tau_p,
+
+                area = out_est[1, ],
+                error = out_err[1, ]))
         
         rv$hrEst_new <- out_est
         rv$hrErr_new <- out_err
@@ -1606,8 +1683,18 @@ mod_tab_hrange_server <- function(id, rv) {
       } else { show_truth <- FALSE }
       
       # Rendering home range estimate plot:
+      truthList <- get_true_hr(
+        data = rv$hr$simList[[1]],
+        seed = rv$seedList[[rv$hr_nsim]],
+        sigma = rv$sigma,
+        
+        emulated = rv$is_emulate,
+        fit = if (rv$is_emulate) rv$meanfitList else NULL,
+        
+        grouped = rv$grouped,
+        groups = if (rv$grouped) rv$hr$groups else NULL)
+      truth <- truthList[[1]]$data
       
-      truth <- estimating_truth()[["data"]][[1]]
       ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]], 
                                rv$hr$simList[[1]],
                                rv$akdeList[[rv$hr_nsim]], 
@@ -1656,7 +1743,7 @@ mod_tab_hrange_server <- function(id, rv) {
     ## New sampling design: -----------------------------------------------
     
     observe({
-      req(rv$hr$fitList, rv$hrEst_new)
+      req(rv$hr$tbl, rv$hr$fitList, rv$hrEst_new)
       rv$hr$tbl <- dplyr::distinct(rv$hr$tbl)
       
     }) %>% # end of observe
@@ -1667,10 +1754,12 @@ mod_tab_hrange_server <- function(id, rv) {
     output$hrTable <- reactable::renderReactable({
       req(rv$hr$tbl)
       
-      dt_hr <- rv$hr$tbl[, -1]
+      dt_hr <- dplyr::select(rv$hr$tbl, -seed)
+      if (!rv$grouped) dt_dev <- dplyr::select(dt_dev, -group)
       
       nms <- list(
-        data = "Data:",
+        data = "Data",
+        group = "Group",
         taup = "\u03C4\u209A",
         dur = "Duration",
         dti = "Interval",
@@ -1678,8 +1767,20 @@ mod_tab_hrange_server <- function(id, rv) {
         N1 = "N (area)",
         area = "Area",
         area_err = "Error",
-        area_err_min = "Error (95% LCI)",
-        area_err_max = "Error (95% UCI)")
+        area_err_min = "95% LCI",
+        area_err_max = "95% UCI")
+      
+      nms_sizes <- reactable::colGroup(
+        name = "Sample sizes", 
+        columns = c("n", "N1"))
+      nms_error <- reactable::colGroup(
+        name = "Home range",
+        columns = c("area",
+                    "area_err",
+                    "area_err_min",
+                    "area_err_max"))
+      
+      colgroups <- list(nms_sizes, nms_error)
       
       reactable::reactable(
         data = dt_hr,
@@ -1702,6 +1803,8 @@ mod_tab_hrange_server <- function(id, rv) {
         columns = list(
           data = reactable::colDef(
             name = nms[["data"]]),
+          group = reactable::colDef(
+            name = nms[["group"]]),
           taup = reactable::colDef(
             minWidth = 80, name = nms[["taup"]],
             style = list(fontWeight = "bold")),
@@ -1738,8 +1841,8 @@ mod_tab_hrange_server <- function(id, rv) {
             minWidth = 80, name = nms[["area_err_max"]],
             style = format_perc,
             format = reactable::colFormat(percent = TRUE,
-                                          digits = 1))
-        ))
+                                          digits = 1))),
+        columnGroups = colgroups)
       
     }) %>% # end of renderReactable, "hrTable"
       bindEvent(list(input$add_hr_table, rv$akdeList))

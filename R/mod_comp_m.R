@@ -161,11 +161,11 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           }
         }
         
-        rv$modList <- list(fit)
+        # rv$modList <- list(fit)
       }
       
       if (rv$grouped) {
-        rv$modList_groups <- list(A = fitA, B = fitB)
+        # rv$modList_groups <- list(A = fitA, B = fitB)
         simA <- ctmm::simulate(fitA, t = t_new, seed = rv$seed0)
         simB <- ctmm::simulate(fitB, t = t_new, seed = rv$seed0 + 1)
         simA <- pseudonymize(simA)
@@ -368,6 +368,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       req("compare" %in% rv$which_meta)
       req(rv$metaList_groups[[1]],
           rv$set_analysis)
+      req(rv$set_analysis == set_analysis)
       
       meta <- rv$metaList_groups[[1]][[rv$set_analysis]]
       req(meta)
@@ -385,8 +386,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         var <- "speed"
         txt_diff <- c("slower", "faster")
       }
-      
-      req(txt_diff[[1]], txt_diff[[2]])
       
       if (ratio == 1) {
         out_txt <- paste0(
@@ -496,7 +495,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               to_keep_vec <- rep(1, nrow(x))
               if (failure_occurred) {
                 to_keep_vec <- c(rep(1, 10), cumprod(
-                  1 - rbinom(nrow(x) - 10, 1, prob = 0.01)))
+                  1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
                 if (!any(to_keep_vec == 0))
                   failure_occurred <- FALSE
                 
@@ -704,13 +703,44 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         lapply(seq_along(simList), function(x) {
           nm <- names(rv$simList)[[(rv$nsims - num_sims) + x]]
+          
+          group <- 1
+          if (rv$grouped) {
+            group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
+          }
+          
+          if (rv$is_emulate) {
+            tau_p <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+              "position")[[1]]
+            tau_v <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+              "velocity")[[1]]
+            sigma <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+              "sigma")[[1]]
+            
+          } else {
+            tau_p <- rv$tau_p[[group]]
+            tau_v <- rv$tau_v[[group]]
+            sigma <- rv$sigma[[group]]
+          }
+          
           newrow <- devRow(
-            seed = rv$seedList[[(rv$nsims - num_sims) + x]],
-            group = if (rv$grouped)
-              ifelse(nm %in% rv$groups[[2]]$A, "A", "B") else NA,
             device = rv$device_type,
+            group = if (rv$grouped) group else NA,
+            
             data = simList[[x]], 
-            fit = simfitList[[x]])
+            seed = rv$seedList[[(rv$nsims - num_sims) + x]],
+            fit = simfitList[[x]],
+            
+            tau_p = tau_p,
+            tau_v = tau_v,
+            sigma = sigma)
+          
           rv$dev$tbl <<- rbind(rv$dev$tbl, newrow)
         })
         
@@ -732,14 +762,45 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           rv$dev$N2 <- c(rv$dev$N2, extract_dof(fit, "speed"))
           
           nm <- names(rv$simList)[[(rv$nsims - num_sims) + i]]
+          
+          group <- 1
+          if (rv$grouped) {
+            group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
+          }
+          
+          if (rv$is_emulate) {
+            tau_p <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+              "position")[[1]]
+            tau_v <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+              "velocity")[[1]]
+            sigma <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+              "sigma")[[1]]
+            
+          } else {
+            tau_p <- rv$tau_p[[group]]
+            tau_v <- rv$tau_v[[group]]
+            sigma <- rv$sigma[[group]]
+          }
+          
+          
           newrow <- devRow(
-            seed = rv$seedList[[(rv$nsims - num_sims) + i]],
-            group = if (rv$grouped)
-              ifelse(nm %in% rv$groups[[2]]$A, "A", "B") else NA,
             device = rv$device_type,
-            # dur = rv$dur, dti = rv$dti,
+            group = if (rv$grouped) group else NA,
+            
             data = simList[[i]], 
-            fit = fit)
+            seed = rv$seedList[[(rv$nsims - num_sims) + i]],
+            fit = fit,
+            
+            tau_p = tau_p,
+            tau_v = tau_v,
+            sigma = sigma)
+          
           rv$dev$tbl <<- rbind(rv$dev$tbl, newrow)
           
           msg_log(
@@ -907,7 +968,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               rv$seedList <- c(rv$seedList, rv$seed0)
               return(out) 
             })
-            seedList <- tail(rv$seedList, m)
+            seedList <- utils::tail(rv$seedList, m)
           }
         }
         
@@ -927,7 +988,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               to_keep_vec <- rep(1, nrow(x))
               if (failure_occurred) {
                 to_keep_vec <- c(rep(1, 10), cumprod(
-                  1 - rbinom(nrow(x) - 10, 1, prob = 0.01)))
+                  1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
                 if (!any(to_keep_vec == 0))
                   failure_occurred <- FALSE
                 
@@ -1224,15 +1285,24 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           est = out_err[[2]], 
           uci = out_err[[3]])
         
+        if (rv$is_emulate) {
+          tau_p <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], 
+                           rv$seedList[[i]]),
+            "position")[[1]]
+        } else {
+          tau_p <- rv$tau_p[[group]]
+        }
+        
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          hrRow(seed = rv$seedList[[i]],
-                group = if (rv$grouped) group else NA,
+          hrRow(group = if (rv$grouped) group else NA,
+                
                 data = rv$simList[[i]], 
-                tau_p = rv$tau_p[[group]],
-                dur = rv$dur,
-                dti = rv$dti,
+                seed = rv$seedList[[i]],
                 fit = rv$simfitList[[i]],
+                tau_p = tau_p,
+                
                 area = out_est_df,
                 error = out_err_df))
       }
@@ -1392,7 +1462,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               rv$seedList <- c(rv$seedList, rv$seed0)
               return(out) 
             })
-            seedList <- tail(rv$seedList, m)
+            seedList <- utils::tail(rv$seedList, m)
           }
         }
         
@@ -1412,7 +1482,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               to_keep_vec <- rep(1, nrow(x))
               if (failure_occurred) {
                 to_keep_vec <- c(rep(1, 10), cumprod(
-                  1 - rbinom(nrow(x) - 10, 1, prob = 0.01)))
+                  1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
                 if (!any(to_keep_vec == 0))
                   failure_occurred <- FALSE
                 
@@ -1820,12 +1890,21 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         rv$distEst <<- rbind(rv$distEst, out_dist_est_df)
         rv$distErr <<- rbind(rv$distErr, out_dist_err_df)
         
+        if (rv$is_emulate) {
+          tau_v <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], 
+                           rv$seedList[[i]]),
+            "velocity")[[1]]
+        } else {
+          tau_v <- rv$tau_v[[group]]
+        }
+        
         rv$sd$tbl <<- rbind(
           rv$sd$tbl,
-          sdRow(seed = rv$seedList[[i]],
-                group = if (rv$grouped) group else NA,
+          sdRow(group = if (rv$grouped) group else NA,
                 data = rv$simList[[i]],
-                tau_v = rv$tau_v[[group]],
+                seed = rv$seedList[[i]],
+                tau_v = tau_v,
                 fit = rv$simfitList[[i]],
                 speed = rv$speedEst[i, ],
                 speed_error = rv$speedErr[i, ],

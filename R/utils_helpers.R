@@ -861,8 +861,8 @@ plotting_outlier <- function(data,
     if (diff(range(d))) cex <- d/max(d) * 4 else cex <- 0
     
     # col <- grDevices::rgb(cex, 0, 0, cex)
-    palette <- colorRampPalette(c("white",
-                                  "#dd4b39"))(length(cex))
+    palette <- grDevices::colorRampPalette(
+      c("white", "#dd4b39"))(length(cex))
     
     ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
     
@@ -1587,19 +1587,26 @@ tele_to_dt <- function(object) {
   return(data_dt)
 }
 
-devRow <- function(seed, 
-                   group = NULL,
-                   device, 
-                   dur = NULL, 
-                   dti = NULL,
+devRow <- function(group = NULL,
+                   device,
                    data,
-                   fit) {
+                   seed,
+                   fit,
+                   
+                   tau_p,
+                   tau_v,
+                   sigma) {
   
   if (is.null(group)) group <- NA
   out <- data.frame(
+    device = NA,
     seed = seed,
     group = group,
-    device = NA,
+    
+    taup = NA,
+    tauv = NA,
+    sigma = NA,
+    
     dur = NA,
     dti = NA,
     n = NA,
@@ -1608,12 +1615,22 @@ devRow <- function(seed,
   
   out$device <- device
   
-  if (is.null(dur))
-    dur <- extract_sampling(data, name = "period")[[1]]
+  out$taup <- paste(
+    scales::label_comma(.1)(tau_p$value[2]),
+    abbrv_unit(tau_p$unit[2]))
+  
+  out$tauv <- paste(
+    scales::label_comma(.1)(tau_v$value[2]),
+    abbrv_unit(tau_v$unit[2]))
+  
+  out$sigma <- paste(
+    scales::label_comma(.1)(sigma$value[2]),
+    abbrv_unit(sigma$unit[2]))
+  
+  dur <- extract_sampling(data, name = "period")[[1]]
   dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
     
-  if (is.null(dti))
-    dti <- extract_sampling(data, name = "interval")[[1]]
+  dti <- extract_sampling(data, name = "interval")[[1]]
   dti <- fix_unit(dti$value, dti$unit)
     
   out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
@@ -1626,25 +1643,24 @@ devRow <- function(seed,
   return(out)
 }
 
-hrRow <- function(seed,  
-                  data_type = "Initial",
+hrRow <- function(data_type = "Initial",
+                  
+                  group,
                   data,
-                  group = NULL,
-                  fit = NULL,
-                  N = NULL,
+                  seed,
+                  fit,
                   tau_p,
-                  dur = NULL,
-                  dti = NULL,
+                  
                   area, 
                   error) {
   
   if (is.null(group)) group <- NA
-  if (!is.null(fit)) N <- extract_dof(fit, name = "area")[[1]]
+  N <- extract_dof(fit, name = "area")[[1]]
   
   out <- data.frame(
     seed = seed,
-    group = group,
     data = data_type,
+    group = group,
     taup = NA,
     dur = NA,
     dti = NA,
@@ -1659,13 +1675,11 @@ hrRow <- function(seed,
     scales::label_comma(.1)(tau_p$value[2]),
     abbrv_unit(tau_p$unit[2]))
   
-  if (is.null(dur))
-    dur <- extract_sampling(data, name = "period")[[1]]
+  dur <- extract_sampling(data, name = "period")[[1]]
   out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
   out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
   
-  if (is.null(dti))
-    dti <- extract_sampling(data, name = "interval")[[1]]
+  dti <- extract_sampling(data, name = "interval")[[1]]
   out_dti <- fix_unit(dti$value, dti$unit)
   out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
   
@@ -1677,22 +1691,21 @@ hrRow <- function(seed,
   
 } # end of function, hrRow()
 
-sdRow <- function(seed, 
+sdRow <- function(data_type = "Initial",
+                  
                   group = NULL,
-                  data_type = "Initial", 
                   data,
-                  fit = NULL, 
-                  N = NULL,
+                  seed,
+                  fit,
                   tau_v,
-                  dur = NULL,
-                  dti = NULL,
+                  
                   speed,
                   speed_error,
                   distance, 
                   distance_error) {
   
   if (is.null(group)) group <- NA
-  if (!is.null(fit)) N <- extract_dof(fit, name = "speed")[[1]]
+  N <- extract_dof(fit, name = "speed")[[1]]
   
   out <- data.frame(
     seed = seed,
@@ -1714,13 +1727,11 @@ sdRow <- function(seed,
     scales::label_comma(.1)(tau_v$value[2]),
     abbrv_unit(tau_v$unit[2]))
   
-  if (is.null(dur))
-    dur <- extract_sampling(data, name = "period")[[1]]
+  dur <- extract_sampling(data, name = "period")[[1]]
   out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
   out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
   
-  if (is.null(dti))
-    dti <- extract_sampling(data, name = "interval")[[1]]
+  dti <- extract_sampling(data, name = "interval")[[1]]
   out_dti <- fix_unit(dti$value, dti$unit)
   out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
   

@@ -251,9 +251,11 @@ mod_tab_sims_ui <- function(id) {
                   span("Group A", class = "ttl-panel cl-jgl")
                 ),
                 
+                p(style = "margin-top: 10px;"),
                 fluidRow(
                   column(width = 12, mod_blocks_ui(ns("simBlock_taupA"))),
-                  column(width = 12, mod_blocks_ui(ns("simBlock_tauvA")))
+                  column(width = 12, mod_blocks_ui(ns("simBlock_tauvA"))),
+                  column(width = 12, mod_blocks_ui(ns("simBlock_sigA"))),
                 ) # end of fluidRow
                 
               ), # end of panels (1 out of 2)
@@ -264,9 +266,11 @@ mod_tab_sims_ui <- function(id) {
                   span("Group B", class = "ttl-panel cl-jgl")
                 ),
                 
+                p(style = "margin-top: 10px;"),
                 fluidRow(
                   column(width = 12, mod_blocks_ui(ns("simBlock_taupB"))),
-                  column(width = 12, mod_blocks_ui(ns("simBlock_tauvB")))
+                  column(width = 12, mod_blocks_ui(ns("simBlock_tauvB"))),
+                  column(width = 12, mod_blocks_ui(ns("simBlock_sigB")))
                 ) # end of fluidRow
                 
               ) # end of panels (2 out of 2)
@@ -1657,7 +1661,7 @@ mod_tab_sims_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "simBlock_taupA", 
-        rv = rv, type = "tau", name = "tau_p", group = "A",
+        rv = rv, type = "tau", name = "tau_p", get_group = "A",
         input_name = list(
           chr = "sims_taupA",
           html = wrap_none("Position autocorrelation ",
@@ -1665,11 +1669,19 @@ mod_tab_sims_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "simBlock_tauvA", 
-        rv = rv, type = "tau", name = "tau_v", group = "A",
+        rv = rv, type = "tau", name = "tau_v", get_group = "A",
         input_name = list(
           chr = "sims_tauvA",
           html = wrap_none("Velocity autocorrelation ",
                            "(\u03C4", tags$sub("v"), ")")))
+      
+      mod_blocks_server(
+        id = "simBlock_sigA", 
+        rv = rv, type = "sigma", name = "sigma", get_group = "A",
+        input_name = list(
+          chr = "sims_sigA",
+          html =  wrap_none("Location variance ",
+                            "(\u03C3", tags$sub("p"), ")")))
       
     }) # end of observe
     
@@ -1679,7 +1691,7 @@ mod_tab_sims_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "simBlock_taupB", 
-        rv = rv, type = "tau", name = "tau_p", group = "B",
+        rv = rv, type = "tau", name = "tau_p", get_group = "B",
         input_name = list(
           chr = "sims_taupB",
           html = wrap_none("Position autocorrelation ",
@@ -1687,12 +1699,19 @@ mod_tab_sims_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "simBlock_tauvB", 
-        rv = rv, type = "tau", name = "tau_v", group = "B",
+        rv = rv, type = "tau", name = "tau_v", get_group = "B",
         input_name = list(
           chr = "sims_tauvB",
           html = wrap_none("Velocity autocorrelation ",
                            "(\u03C4", tags$sub("v"), ")")))
       
+      mod_blocks_server(
+        id = "simBlock_sigB", 
+        rv = rv, type = "sigma", name = "sigma", get_group = "B",
+        input_name = list(
+          chr = "sims_sigB",
+          html =  wrap_none("Location variance ",
+                            "(\u03C3", tags$sub("p"), ")")))
     }) # end of observe
     
     # SETTINGS ------------------------------------------------------------

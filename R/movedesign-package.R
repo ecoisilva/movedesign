@@ -16,4 +16,8 @@
 #' @importFrom utils capture.output
 #' @importFrom utils head
 #' @importFrom utils read.table
+#' @importFrom grDevices colorRampPalette
+#' @importFrom stats rbinom
+#' @importFrom utils tail
+#' @importFrom stats setNames
 NULL

@@ -1575,13 +1575,14 @@ mod_tab_report_server <- function(id, rv) {
       rv$report$meta <- tagList(
         out_meta,
         p(style = paste("font-size: 16px;",
-                           "font-weight: 800;",
-                           "font-family: var(--monosans);"),
-             "Check the", shiny::icon("layer-group",
-                                      class = "cl-sea"),
-             span("Meta-analyses", class = "cl-sea"), "tab",
-             "for more detailed information."))
-
+                        "font-weight: 800;",
+                        "text-align: justify;",
+                        "font-family: var(--monosans);"),
+          "Check the", shiny::icon("layer-group",
+                                   class = "cl-sea"),
+          span("Meta-analyses", class = "cl-sea"), "tab",
+          "for more information."))
+      
     }) # end of observe
     
     #### Ratios of research target(s) -------------------------------------
@@ -1722,7 +1723,7 @@ mod_tab_report_server <- function(id, rv) {
           
           "The number of simulations is likely insufficient",
           "to obtain accurate", 
-          wrap_none(txt_type[[i]], color = pal$sea, " ratios."))
+          wrap_none(txt_type[[i]], color = pal$dgr, " ratios."))
         
         if (overlaps_with$truth &&
             (overlaps_with$one_expected == overlaps_with$one_observed) &&
@@ -1744,7 +1745,7 @@ mod_tab_report_server <- function(id, rv) {
             
             "The number of simulations is likely insufficient",
             "to obtain", # accurate", 
-            wrap_none(txt_type[[i]], color = pal$sea, " ratios."))
+            wrap_none(txt_type[[i]], color = pal$dgr, " ratios."))
         }
         
         if (i == 1 && length(type) == 1)
@@ -1790,11 +1791,12 @@ mod_tab_report_server <- function(id, rv) {
         out_groups,
         span(style = paste("font-size: 16px;",
                         "font-weight: 800;",
+                        "text-align: justify;",
                         "font-family: var(--monosans);"),
           "Check the", shiny::icon("layer-group",
                                    class = "cl-sea"),
           span("Meta-analyses", class = "cl-sea"), "for more",
-          "detailed information."))
+          "information."))
       
     }) # end of observe
     
@@ -3760,20 +3762,6 @@ mod_tab_report_server <- function(id, rv) {
       tmpdat <- dt_regs %>% dplyr::select(.data$seed:.data$N2)
       tmpdat <- suppressMessages(dplyr::full_join(dat, tmpdat))
       
-      tmpdat$taup <- paste(
-        scales::label_comma(accuracy = .1)(rv$tau_p[[1]]$value[2]),
-        abbrv_unit(rv$tau_p[[1]]$unit[2]))
-      
-      if (!is.null(rv$tau_v[[1]])) {
-        tmpdat$tauv <- paste(
-          scales::label_comma(accuracy = .1)(rv$tau_v[[1]]$value[2]),
-          abbrv_unit(rv$tau_v[[1]]$unit[2]))
-      }
-      
-      out <- fix_unit(rv$sigma[[1]]$value[2],
-                      rv$sigma[[1]]$unit[2], convert = TRUE)
-      tmpdat$sigma <- paste(out$value, abbrv_unit(out$unit))
-      
       if ("Home range" %in% rv$which_question) {
         tmphr <- dt_hr %>% dplyr::select(
           c(.data$seed, .data$taup:.data$area_err_max))
@@ -3838,7 +3826,7 @@ mod_tab_report_server <- function(id, rv) {
         req(rv$hr_completed, rv$sd_completed)
       
       choices <- choices_subset <- c(
-        "device",
+        "group",
         "taup",
         "tauv",
         "sigma",
@@ -3867,7 +3855,7 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       nms <- data.frame(
-        device = "Type",
+        group = "Group",
         taup = "\u03C4\u209A",
         tauv = "\u03C4\u1D65",
         sigma = "\u03C3\u209A",
@@ -3876,18 +3864,23 @@ mod_tab_report_server <- function(id, rv) {
         n = "n",
         N1 = "N (area)",
         N2 = "N (speed)",
-        area = "HR area",
+        area = "Area",
         area_err = "Error",
-        area_err_min = "Error (95% LCI)",
-        area_err_max = "Error (95% UCI)",
-        ctsd = "CTSD",
+        area_err_min = "95% LCI",
+        area_err_max = "95% UCI",
+        ctsd = "Speed",
         ctsd_err = "Error",
-        ctsd_err_min = "Error (95% LCI)",
-        ctsd_err_max = "Error (95% UCI)",
+        ctsd_err_min = "95% LCI",
+        ctsd_err_max = "95% UCI",
         dist = "Distance",
         dist_err = "Error")
       
-      dat <- rv$report$tbl[, -1]
+      dat <- rv$report$tbl %>% 
+        dplyr::select(-c(device, seed))
+      if (!rv$grouped) {
+        dat <- dplyr::select(dat, -group)
+        choices_subset <- choices_subset[-1]
+      }
       
       if (!is.null(choices_subset)) {
         dat <- dat %>% dplyr::select(choices_subset)
@@ -3939,9 +3932,9 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       namedcolumns <- list(
-        device = if ("device" %in% choices_subset) {
+        group = if ("group" %in% choices_subset) {
           reactable::colDef(
-            name = nms[1, "device"]) },
+            minWidth = 80, name = nms[1, "group"]) },
         taup = if ("taup" %in% choices_subset) {
           reactable::colDef(
             minWidth = 100, name = nms[1, "taup"],

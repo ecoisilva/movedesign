@@ -2452,16 +2452,52 @@ mod_tab_design_server <- function(id, rv) {
         rv$needs_fit <- FALSE
         rv$simfitList <- fitList
         
-        lapply(seq_along(fitList), function(x) {
+        lapply(seq_along(rv$simfitList), function(x) {
+          
+          group <- 1
+          if (rv$grouped) {
+            
+            get_group <- function(seed, groups) {
+              if (as.character(seed) %in% groups[["A"]]) { 
+                return("A") } else { return("B") }
+            }
+            
+            group <- get_group(rv$seedList[[x]], rv$groups[[2]])
+          }
+          
+          if (rv$is_emulate) {
+            tau_p <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[x]]),
+              "position")[[1]]
+            tau_v <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[x]]),
+              "velocity")[[1]]
+            sigma <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[x]]),
+              "sigma")[[1]]
+            
+          } else {
+            tau_p <- rv$tau_p[[group]]
+            tau_v <- rv$tau_v[[group]]
+            sigma <- rv$sigma[[group]]
+          }
+          
           rv$dev$tbl <<- rbind(
             rv$dev$tbl,
             devRow(
-              seed = rv$seedList[[x]],
-              group = if (rv$grouped) names(rv$groups[[2]])[x] else NA,
               device = input$device_type,
-              # dur = rv$dur, dti = rv$dti,
+              group = if (rv$grouped) group else NA,
+              
               data = rv$simList[[x]],
-              fit = rv$simfitList[[x]]))
+              seed = rv$seedList[[x]],
+              fit = rv$simfitList[[x]],
+              
+              tau_p = tau_p,
+              tau_v = tau_v,
+              sigma = sigma))
         })
         
         rv$report_dev_yn <- TRUE
@@ -2720,6 +2756,7 @@ mod_tab_design_server <- function(id, rv) {
         max(dat$y) + diff(range(dat$y)) * .2)
       
       if (rv$grouped) {
+        req(rv$groups, rv$simList[[2]])
         sim_new <- rv$simList[[2]]
         ymin <- min(ymin, min(sim_new$y) - diff(range(sim_new$y)) * .2)
         ymax <- max(ymax, max(sim_new$y) + diff(range(sim_new$y)) * .2)
@@ -2781,9 +2818,6 @@ mod_tab_design_server <- function(id, rv) {
       }
       
       p <- p +
-        # ggplot2::labs(
-        #   x = "x coordinate",
-        #   y = "y coordinate") +
         
         ggplot2::scale_x_continuous(
           labels = scales::comma) +
@@ -2833,7 +2867,8 @@ mod_tab_design_server <- function(id, rv) {
       # set_id <- 1
       # if (!is.null(rv$dev_nsim)) set_id <- rv$dev_nsim
       
-      rv$simsvfList <- extract_svf(rv$simList, rv$simfitList, fraction = 1)
+      rv$simsvfList <- extract_svf(rv$simList,
+                                   rv$simfitList, fraction = 1)
       
       if (length(rv$simList) == 1) hex_fill <- pal$dgr
       else hex_fill <- c(pal$grn, pal$sea)
@@ -2976,13 +3011,17 @@ mod_tab_design_server <- function(id, rv) {
       # bindEvent(input$devButton_save)
     
     output$devTable <- reactable::renderReactable({
-      req(rv$dev$tbl)
+      req(rv$which_question, rv$dev$tbl)
       
-      dt_dev <- rv$dev$tbl[, -1]
+      dt_dev <- dplyr::select(rv$dev$tbl, -seed)
       if (!rv$grouped) dt_dev <- dplyr::select(dt_dev, -group)
       
       nms <- list(
         device = "Type",
+        group = "Group",
+        taup = "\u03C4\u209A",
+        tauv = "\u03C4\u1D65",
+        sigma = "\u03C3\u209A",
         dur = "Duration",
         dti = "Interval",
         n = "n",
@@ -3002,8 +3041,7 @@ mod_tab_design_server <- function(id, rv) {
         pageSizeOptions = c(5, 10, 20),
         showPageInfo = FALSE,
         
-        defaultColDef =
-          reactable::colDef(
+        defaultColDef = reactable::colDef(
             headerClass = "rtable_header",
             align = "center",
             minWidth = 50),
@@ -3011,6 +3049,17 @@ mod_tab_design_server <- function(id, rv) {
         columns = list(
           device = reactable::colDef(
             name = nms[["device"]]),
+          group = if (rv$grouped) {
+            reactable::colDef(
+              minWidth = 80, name = nms[["group"]]) },
+          taup = reactable::colDef(
+              minWidth = 100, name = nms[["taup"]],
+              style = list(fontWeight = "bold")),
+          tauv = reactable::colDef(
+              minWidth = 100, name = nms[["tauv"]],
+              style = list(fontWeight = "bold")),
+          sigma = reactable::colDef(
+              minWidth = 100, name = nms[["sigma"]]),
           dur = reactable::colDef(
             minWidth = 80, name = nms[["dur"]],
             style = list(fontWeight = "bold")),

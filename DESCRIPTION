@@ -27,6 +27,7 @@ Imports:
     ggpubr,
     ggtext,
     golem (>= 0.3.2),
+    grDevices,
     parallel,
     parsedate,
     plyr,

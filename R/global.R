@@ -29,6 +29,7 @@ utils::globalVariables(
     
     "id",
     "x", "y",
+    "x0", "y0", "x1", "y1",
     "long", "lat",
     "longitude", "latitude",
     "time", "timestamp", "lag",
@@ -56,6 +57,8 @@ utils::globalVariables(
     "m",
     "subpop",
     "overlaps",
+    
+    "var_color",
     
     "buffalo",
     "coati",

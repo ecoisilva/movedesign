@@ -425,7 +425,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       shinyjs::hide(id = paste0("sdBox_", boxnames[i]))
     }
 
-    tabnames <- c("regime", "speed", "size", "dist", "viz")
+    tabnames <- c("regime", "speed", "sizes", "dist", "viz")
     for (i in 1:length(tabnames)) {
       tmp_id <- paste0("sdTabs_", tabnames[i])
       tmp_target <- paste0("sdPanel_", tabnames[i], "_new")
@@ -1540,85 +1540,32 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         group <- 1
         if (rv$grouped) {
-          nm <- names(rv$simList)[[sim_no]]
-          group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
+          group <- ifelse(
+            names(rv$simList)[[sim_no]] %in% rv$groups[[2]]$A,
+            "A", "B")
+        }
+        
+        if (rv$is_emulate) {
+          tau_v <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], 
+                           rv$seedList[[sim_no]]),
+            "velocity")[[1]]
+        } else {
+          tau_v <- rv$tau_v[[group]]
         }
         
         rv$sd$tbl <<- rbind(
           rv$sd$tbl, 
-          sdRow(seed = rv$seedList[[sim_no]],
-                group = if (rv$grouped) group else NA,
+          sdRow(group = if (rv$grouped) group else NA,
                 data = rv$simList[[sim_no]],
-                tau_v = rv$tau_v[[group]],
-                # dur = rv$dur,
-                # dti = rv$dti,
+                seed = rv$seedList[[sim_no]],
                 fit = rv$simfitList[[sim_no]],
+                tau_v = tau_v,
+                
                 speed = rv$speedEst[sim_no, ],
                 speed_error = rv$speedErr[sim_no, ],
                 distance = rv$distEst[sim_no, ],
                 distance_error = rv$distErr[sim_no, ]))
-      }
-      
-      # Add to dt_meta (for get_m, and if available):
-      if (rv$is_meta && rv$which_m == "get_m") {
-        
-        browser()
-        in_list <- rv$ctsdList
-        in_list[sapply(in_list, is.null)] <- NULL
-        out_meta <- capture_meta(in_list,
-                                 sort = TRUE,
-                                 units = FALSE,
-                                 verbose = TRUE,
-                                 plot = FALSE)
-        
-        if (!is.null(out_meta)) {
-          tmpname <- rownames(out_meta$meta)
-          tmpunit <- extract_units(tmpname[grep("^mean", tmpname)])
-          truth <- get_true_speed(
-            data = rv$simList,
-            seed = rv$seedList,
-            
-            tau_p = rv$tau_p,
-            tau_v = rv$tau_v,
-            sigma = rv$sigma,
-            
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
-            
-            grouped = rv$grouped,
-            groups = if (rv$grouped) rv$groups[[2]] else NULL,
-            
-            summarized = TRUE)[["All"]]
-          
-          out_meta_est <- c(
-            "lci" = out_meta$meta[1, 1] %#% tmpunit,
-            "est" = out_meta$meta[1, 2] %#% tmpunit,
-            "uci" = out_meta$meta[1, 3] %#% tmpunit)
-          out_meta_err <- c(
-            "lci" = ((out_meta_est[["lci"]] %#% tmpunit) - truth) / truth,
-            "est" = ((out_meta_est[["est"]] %#% tmpunit) - truth) / truth,
-            "uci" = ((out_meta_est[["uci"]] %#% tmpunit) - truth) / truth)
-          
-          dt_meta <- data.frame(
-            type = "ctsd",
-            m = length(rv$simList),
-            lci = out_meta_err[[1]],
-            est = out_meta_err[[2]],
-            uci = out_meta_err[[3]],
-            overlaps = dplyr::between(truth,
-                                      out_meta$meta[1, 1],
-                                      out_meta$meta[1, 3]),
-            subpop = out_meta$logs$subpop_detected)
-        } else {
-          out_meta <- NULL
-          dt_meta <- data.frame(
-            type = "ctsd",
-            m = length(rv$simList),
-            lci = NA, est = NA, uci = NA,
-            overlaps = NA,
-            subpop = NA)
-        }
-        rv$meta_tbl <<- rbind(rv$meta_tbl, dt_meta)
       }
       
       shinyjs::show(id = "sdBlock_est")
@@ -1678,24 +1625,64 @@ mod_tab_ctsd_server <- function(id, rv) {
     
     comparing_data <- reactive({
       
-      dur <- rv$sd$dur$value %#% rv$sd$dur$unit
-      dti <- rv$sd$dti$value %#% rv$sd$dti$unit
-      t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
-      
       set_id <- 1
       if (!is.null(rv$sd_nsim)) set_id <- rv$sd_nsim
       
       dat <- rv$simList[[set_id]]
-      fit <- rv$simfitList[[set_id]]
       seed <- rv$seedList[[set_id]]
       
-      fit$mu[[1, "x"]] <- 0
-      fit$mu[[1, "y"]] <- 0 # recenter to 0,0
+      dur <- rv$sd$dur$value %#% rv$sd$dur$unit
+      dti <- rv$sd$dti$value %#% rv$sd$dti$unit
+      t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       
-      # Correct parameters to fix model selection:
-      fit$tau[[1]] <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
-      fit$tau[[2]] <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
-      fit$sigma <- rv$modList[[1]]$sigma # force isotropic
+      if (rv$data_type == "simulated") {
+        fit <- fitA <- rv$modList[[1]]
+        if (rv$grouped) fitB <- rv$modList[[2]]
+      }
+      
+      if (rv$is_emulate) {
+        req(rv$meanfitList)
+        fit <- emulate_seeded(rv$meanfitList[["All"]], seed)
+        
+        # Recenter to 0,0:
+        fit$mu[["x"]] <- 0
+        fit$mu[["y"]] <- 0
+        
+      } else {
+        fit <- prepare_mod(
+          tau_p = rv$tau_p[[1]][2, ],
+          tau_v = rv$tau_v[[1]][2, ],
+          sigma = rv$sigma[[1]][2, ],
+          mu = rv$mu[[1]])
+        
+      }
+      
+      if ("compare" %in% rv$which_meta) {
+        req(rv$groups)
+        
+        get_group <- function(seed, groups) {
+          if (as.character(seed) %in% groups[["A"]]) { 
+            return("A") } else { return("B") }
+        }
+        
+        group <- get_group(seed, rv$groups[[2]])
+        rv$sd$groups <- stats::setNames(list(seed), group)
+        
+        if (rv$is_emulate) {
+          fit <- emulate_seeded(rv$meanfitList[[group]], seed)
+          
+          # Recenter to 0,0:
+          fit$mu[["x"]] <- 0
+          fit$mu[["y"]] <- 0
+          
+        } else {
+          fit <- prepare_mod(
+            tau_p = rv$tau_p[[group]][2, ],
+            tau_v = rv$tau_v[[group]][2, ],
+            sigma = rv$sigma[[group]][2, ],
+            mu = rv$mu[[group]])
+        }
+      }
       
       # Fill in the gaps of original dataset + new duration:
       sim <- ctmm::simulate(dat, fit, t = t_new, seed = seed)
@@ -1738,15 +1725,6 @@ mod_tab_ctsd_server <- function(id, rv) {
     
     estimating_speed_new <- reactive({
       
-      # dat <- rv$sd$simList
-      # 
-      # tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
-      # dti <- rv$dti$value %#% rv$dti$unit
-      # dur <- rv$dur$value %#% rv$dur$unit
-      # 
-      # if (dur >= 20 * tauv && dti < 3 * tauv)
-      #   dat <- dat[which(dat$t <= 20 * tauv), ]
-      
       ctsd_new <- list()
       ctsd_new[[1]] <- par.speed(rv$simList[1],
                                  rv$simfitList[1],
@@ -1761,6 +1739,9 @@ mod_tab_ctsd_server <- function(id, rv) {
     
     observe({
       req(rv$simList, rv$simfitList)
+      
+      set_id <- 1
+      if (!is.null(rv$sd_nsim)) set_id <- rv$sd_nsim
       
       # Capture new sampling duration and interval:
       
@@ -1895,6 +1876,9 @@ mod_tab_ctsd_server <- function(id, rv) {
       req(rv$sd$simList,
           rv$sd$fitList)
       
+      set_id <- 1
+      if (!is.null(rv$sd_nsim)) set_id <- rv$sd_nsim
+      
       ### 4. Run the speed/distance estimator (CTSD):
       
       fit <- rv$sd$fitList[[1]]
@@ -1974,7 +1958,21 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         tmpname <- rownames(ctsd_new[[1]])
         tmpunit <- extract_units(tmpname[grep("speed", tmpname)])
-        truth <- rv$truth$ctsd[["All"]]
+        
+        truthList <- get_true_speed(
+          data = rv$sd$simList[[1]],
+          seed = rv$seedList[[set_id]],
+          
+          tau_p = rv$tau_p,
+          tau_v = rv$tau_v,
+          sigma = rv$sigma,
+          
+          emulated = rv$is_emulate,
+          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$sd$groups else NULL)
+        truth <- truthList[[1]]
         
         out_est <- data.frame(
           seed = rv$seedList[[1]],
@@ -2177,7 +2175,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       dat <- dat %>%
         dplyr::mutate(timestamp = as.POSIXct(t, origin = t_origin),
                t_new = if (unit != "weeks") {
-                 as.POSIXct(round(timestamp, units = unit), 
+                 as.POSIXct(round.POSIXt(timestamp, units = unit), 
                             format = "%Y-%m-%d %H:%M:%OS")
                } else { format(timestamp, "%U") })
       
@@ -2305,19 +2303,38 @@ mod_tab_ctsd_server <- function(id, rv) {
       set_id <- 1
       if (!is.null(rv$hr_nsim)) set_id <- isolate(rv$hr_nsim)
       
+      group <- "All"
+      if (rv$grouped) {
+        get_group <- function(seed, groups) {
+          if (as.character(seed) %in% groups[["A"]]) { 
+            return("A") } else { return("B") }
+        }
+        group <- get_group(rv$seedList[[set_id]], rv$groups[[2]])
+      }
+      
+      if (rv$is_emulate) {
+          fit <- emulate_seeded(rv$meanfitList[[group]], 
+                                rv$seedList[[set_id]])
+          tau_v <- extract_pars(fit, "velocity")[[1]]
+      } else {
+        tau_v <- rv$tau_v[[group]]
+      }
+      
       rv$sd$tbl <<- rbind(
         rv$sd$tbl,
-        sdRow(seed = rv$seedList[[set_id]],
-              data_type = "Modified",
+        sdRow(data_type = "Modified",
+              group = group,
               data = rv$sd$simList[[1]],
+              seed = rv$seedList[[set_id]],
               fit = rv$sd$fitList[[1]],
+              tau_v = tau_v,
+              
               speed = rv$speedEst_new[1, ],
               speed_error = rv$speedErr_new[1, ],
               distance = rv$distEst_new[1, ],
               distance_error = rv$distErr_new[1, ]))
       
       rv$sd$tbl <- dplyr::distinct(rv$sd$tbl)
-      # rv$report_sd_yn <- TRUE
       
     }) %>% # end of observe
       bindEvent(input$add_sd_table)
@@ -2329,6 +2346,8 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       dt_sd <- rv$sd$tbl[, -1]
       
+      # need to add groups if rv$grouped
+      
       nms <- list(
         data = "Data:",
         tauv = "\u03C4\u1D65",
@@ -2338,8 +2357,8 @@ mod_tab_ctsd_server <- function(id, rv) {
         N2 = "N (speed)",
         ctsd = "Speed",
         ctsd_err = "Error",
-        ctsd_err_min = "Error (95% LCI)",
-        ctsd_err_max = "Error (95% UCI)",
+        ctsd_err_min = "95% LCI",
+        ctsd_err_max = "95% UCI",
         dist = "Distance",
         dist_err = "Error")
       
@@ -2348,12 +2367,11 @@ mod_tab_ctsd_server <- function(id, rv) {
         columns = c("n", "N2"))
       nms_ctsd <- reactable::colGroup(
         name = "Speed",
-        columns = c("ctsd",
-                    "ctsd_err",
+        columns = c("ctsd_err",
                     "ctsd_err_min",
                     "ctsd_err_max"))
       nms_dist <- reactable::colGroup(
-        name = "Distance",
+        name = "& Distance",
         columns = c("dist", "dist_err"))
       
       colgroups <- list(nms_sizes,
@@ -2383,7 +2401,7 @@ mod_tab_ctsd_server <- function(id, rv) {
           format = reactable::colFormat(separators = TRUE,
                                         digits = 1)),
         ctsd = reactable::colDef(
-          minWidth = 80, name = nms[["ctsd"]]),
+          minWidth = 120, name = nms[["ctsd"]]),
         ctsd_err = reactable::colDef(
           minWidth = 80, name = nms[["ctsd_err"]],
           style = format_perc,
