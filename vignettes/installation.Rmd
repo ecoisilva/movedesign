@@ -18,16 +18,6 @@ The `movedesign` package requires many non-default packages. If you are met with
 remotes::install_github("ecoisilva/movedesign", dependencies = TRUE) 
 ```
 
-<!-- ## Check if `rgdal` installed correctly: -->
-
-<!-- During installation in Linux systems (for example, Ubuntu 20.04), `rgdal` (one of the dependencies of `movedesign`) may fail to install correctly. One potential solution is to install `rgdal` through the terminal (not the R console!): -->
-
-<!-- ```bash -->
-<!-- # packages libgdal-dev and libproj-dev are also required: -->
-<!-- sudo apt-get install gdal-bin proj-bin libgdal-dev libproj-dev -->
-<!-- sudo apt install r-cran-rgdal  -->
-<!-- ``` -->
-
 ## Failed to install 'unknown package' from GitHub:
 
 **Step 1:** Generate a GitHub personal access token with the following command in the RStudio console:
