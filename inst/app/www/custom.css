@@ -40,9 +40,9 @@
  --black: #000;
 
  --sans: 'Plus Jakarta Sans', sans-serif;
- --monosans: 'Roboto Condensed', Consola, monospace, sans-serif;
- --monosans: 'Roboto Condensed', Consola, monospace, sans-serif;
- --mono: 'Fira Mono', Consola, monospace, sans-serif;
+ --monosans: 'Roboto Condensed', Consolas, monospace, sans-serif;
+ --monosans: 'Roboto Condensed', Consolas, monospace, sans-serif;
+ --mono: 'Fira Mono', Consolas, monospace, sans-serif;
 }
 
 .cl-mdn { color: var(--midnight) !important; }

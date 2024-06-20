@@ -66,7 +66,7 @@ app_server <- function(input, output, session) {
     is_analyses = FALSE,
     is_report = FALSE,
     is_meta = FALSE,
-    is_font = TRUE,
+    is_font = FALSE,
     add_note = FALSE,
     
     err_prev = rep(1, 5),

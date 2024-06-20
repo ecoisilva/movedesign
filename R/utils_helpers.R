@@ -295,6 +295,8 @@ staticBlock <- function(text,
 #' @noRd
 extract_units <- function(input, name = NULL) {
   
+  if (length(input) == 0) return(NULL)
+  
   # if (class(input)[1] != "list" && class(input[[1]])[1] != "ctmm") {
   #   input <- summary(input)
   # } else {
@@ -513,7 +515,9 @@ theme_movedesign <- function(ft_size = 13,
                              font = "Roboto Condensed",
                              font_available = TRUE) {
   
-  if (!font_available)
+  if (!font_available) {
+    # font <- "Consolas"
+    
     ggplot2::theme_minimal() %+replace% # replace elements
     ggplot2::theme(
       
@@ -536,7 +540,7 @@ theme_movedesign <- function(ft_size = 13,
         angle = 90, vjust = 2)) %>% 
     suppressWarnings()
   
-  else
+  } else {
     ggplot2::theme_minimal() %+replace% # replace elements
     ggplot2::theme(
       
@@ -558,7 +562,7 @@ theme_movedesign <- function(ft_size = 13,
       axis.title.y = ggplot2::element_text(
         family = font, angle = 90, vjust = 2)) %>% 
     suppressWarnings()
-  
+  }
 }
 
 

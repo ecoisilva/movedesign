@@ -802,6 +802,7 @@ extract_pars <- function(
       tmp_name <- ifelse(any(grepl("decay", nms.obj)), 
                          "decay", "\u03C4")
       tmp <- sum.obj$CI[grep(tmp_name, nms.obj), ]
+      unit <- extract_units(nms.obj[grep(tmp_name, nms.obj)])
     }
     
     if (!is.null(nrow(tmp))) 

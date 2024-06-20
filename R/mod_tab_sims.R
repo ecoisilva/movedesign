@@ -1246,14 +1246,14 @@ mod_tab_sims_server <- function(id, rv) {
         # Time elapsed:
         
         ggplot2::annotate(
-          "text", family = "Roboto Condensed",
+          "text", family = "Consolas", # family = "Roboto Condensed",
           col = pal$mdn,
           x = min(datfull$x) + diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
           fontface = 2, size = 5, lineheight = 1.5,
           label = paste("Time elapsed:\n")) +
         ggplot2::annotate(
-          "text", family = "Roboto Condensed",
+          "text", family = "Consolas", # family = "Roboto Condensed",
           col = pal$mdn,
           x = min(datfull$x) + diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
@@ -1263,14 +1263,14 @@ mod_tab_sims_server <- function(id, rv) {
         # Distance traveled:
         
         ggplot2::annotate(
-          "text", family = "Roboto Condensed",
+          "text", family = "Consolas", # family = "Roboto Condensed",
           col = pal$mdn,
           x = max(datfull$x) - diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
           fontface = 2, size = 5, lineheight = 1.5,
           label = paste("Distance traveled:\n")) +
         ggplot2::annotate(
-          "text", family = "Roboto Condensed",
+          "text", family = "Consolas", # family = "Roboto Condensed",
           col = pal$mdn,
           x = max(datfull$x) - diff(range(datfull$x)) * .2,
           y = ymax - diff(range(datfull$y)) * .1,
