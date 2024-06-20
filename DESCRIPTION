@@ -47,7 +47,7 @@ Imports:
     shinyWidgets,
     stats,
     stringr,
-    sysfonts,
+    gdtools,
     terra,
     tidyr,
     utils,

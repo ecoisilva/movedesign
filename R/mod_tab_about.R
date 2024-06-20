@@ -286,21 +286,19 @@ mod_tab_about_server <- function(id, rv) {
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
-    # observe({
-    #   
-    #   font_available <- tryCatch({
-    #     sysfonts::font_add_google(name = "Roboto Condensed",
-    #                               family = "Roboto Condensed")
-    #   }, error = function(e) {
-    #     warning("Font failed.")
-    #   })
-    #   
-    #   rv$is_font <- TRUE
-    #   if (inherits(font_available, "error")) {
-    #     rv$is_font <- FALSE
-    #   }
-    #   
-    # }) # end of observe
+    observe({
+
+      font_available <- tryCatch({
+        gdtools::register_gfont(family = "Roboto Condensed")
+      })
+      
+      if (inherits(font_available, "error")) {
+        rv$is_font <- FALSE
+      } else {
+        rv$is_font <- TRUE
+      }
+
+    }) # end of observe
    
     observe({
       rv$which_data <- input$which_data
