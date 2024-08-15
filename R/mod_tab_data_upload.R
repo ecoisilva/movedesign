@@ -616,6 +616,17 @@ mod_tab_data_upload_server <- function(id, rv) {
           error = function(e) e)
       }
       
+      if (any(grepl("ï..", colnames(out_file)))) {
+        out_file <- tryCatch(read.table(
+          file = input$file_csv$datapath,
+          header = TRUE,
+          sep = input$file_sep,
+          fileEncoding = "UTF-8-BOM",
+          quote = input$file_quote,
+          dec = input$file_dec),
+          error = function(e) e)
+      }
+      
       if (inherits(out_file, "error")) {
         msg_log(
           style = "warning",
@@ -645,9 +656,42 @@ mod_tab_data_upload_server <- function(id, rv) {
       }
       
       parsedate::parse_date("1111-11-11") # loading function
-      out_dataset <- tryCatch(
+      tmp_dataset <- tryCatch(
         ctmm::as.telemetry(out_dataset, timeformat = "auto"),
-        error = function(e) e)
+        error = function(e) e) %>%
+        suppressMessages() %>% 
+        suppressWarnings() %>% 
+        quiet()
+      
+      if (inherits(tmp_dataset, "error")) {
+          if (grepl("Could not identify location columns",
+                    tmp_dataset)) {
+            
+            if (any(grepl("UTM", names(out_dataset)))) {
+            } else {
+              msg_log(
+                style = "warning",
+                message = paste0(
+                  "Assuming ", msg_warning("latitude/longitude"), ","),
+                detail = paste(
+                  "If incorrect, please add missing easting,",
+                  "northing, and/or UTM zone columns."))
+              
+              if (any(grepl("x.", names(out_dataset)))) {
+                out_dataset$longitude <- out_dataset[
+                  , grepl("x.", names(out_dataset))]
+              }
+              if (any(grepl("y.", names(out_dataset)))) {
+                out_dataset$latitude <- out_dataset[
+                  , grepl("y.", names(out_dataset))]
+              }
+            }
+          }
+        
+        out_dataset <- tryCatch(
+          ctmm::as.telemetry(out_dataset, timeformat = "auto"),
+          error = function(e) e)
+      }
       
       if (inherits(out_dataset, "error")) {
         msg_log(
