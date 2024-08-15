@@ -34,6 +34,7 @@ utils::globalVariables(
     "longitude", "latitude",
     "time", "timestamp", "lag",
     
+    "device",
     "duration", "dur",
     "interval", "dti", "dti_notes",
     

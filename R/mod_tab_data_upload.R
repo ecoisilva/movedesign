@@ -616,7 +616,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           error = function(e) e)
       }
       
-      if (any(grepl("ï..", colnames(out_file)))) {
+      if (any(grepl("\u00EF..", colnames(out_file)))) {
         out_file <- tryCatch(read.table(
           file = input$file_csv$datapath,
           header = TRUE,
