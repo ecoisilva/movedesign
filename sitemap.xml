@@ -1,54 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/404.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/CODE_OF_CONDUCT.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/LICENSE.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/articles/index.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/articles/installation.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/articles/movedesign.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/articles/tutorial.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/authors.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/index.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/news/index.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/reference/fixrates.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/reference/movedesign-package.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/reference/movmods.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/reference/run_app.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/reference/sims_hrange.html</loc>
-  </url>
-  <url>
-    <loc>https://ecoisilva.github.io/movedesign/reference/sims_speed.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://ecoisilva.github.io/movedesign/404.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/CODE_OF_CONDUCT.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/LICENSE.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/articles/index.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/articles/installation.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/articles/movedesign.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/articles/tutorial.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/authors.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/index.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/news/index.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/fixrates.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/index.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/movedesign-package.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/movmods.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/run_app.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/sims_hrange.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/sims_speed.html</loc></url>
 </urlset>
+
