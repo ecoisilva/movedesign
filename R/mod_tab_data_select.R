@@ -798,7 +798,7 @@ mod_tab_data_select_server <- function(id, rv) {
             msg_log(
               style = "danger",
               message = paste0(
-                "Verify ", msg_danger("range residency"), ","),
+                "Assuming ", msg_danger("range residency"), ","),
               detail = paste("Assuming all selected individuals",
                              "are range resident."))
             to_filter <- "^OU(?!f)|^OUF"
@@ -810,7 +810,6 @@ mod_tab_data_select_server <- function(id, rv) {
         }
         
         fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
-        length(fit0)
         
         if (length(fit0) == 0 && n_OUf == 0) {
           msg_log(
@@ -826,6 +825,7 @@ mod_tab_data_select_server <- function(id, rv) {
         rv$is_isotropic <- c("All" = TRUE)
         if (rv$is_emulate) {
           
+          fit0[sapply(fit0, is.null)] <- NULL
           meanfit0 <- tryCatch(
             mean(x = fit0, sample = TRUE) %>%
               suppressMessages() %>%

@@ -1158,6 +1158,7 @@ simulate_gps <- function(data,
   while (abs(err) > threshold && i < max_attempts) {
 
     # Update the log-logistic function:
+    
     i <- i + 1
     f <- update_f(x = newdata$frq_hrs, init)
     y <- f$y

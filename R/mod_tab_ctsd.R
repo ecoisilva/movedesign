@@ -2344,12 +2344,12 @@ mod_tab_ctsd_server <- function(id, rv) {
     output$sdTable <- reactable::renderReactable({
       req(rv$sd$tbl)
       
-      dt_sd <- rv$sd$tbl[, -1]
-      
-      # need to add groups if rv$grouped
+      dt_sd <- dplyr::select(rv$sd$tbl, -seed)
+      if (!rv$grouped) dt_sd <- dplyr::select(dt_sd, -group)
       
       nms <- list(
-        data = "Data:",
+        data = "Data",
+        group = "Group",
         tauv = "\u03C4\u1D65",
         dur = "Duration",
         dti = "Interval",
@@ -2378,54 +2378,6 @@ mod_tab_ctsd_server <- function(id, rv) {
                         nms_ctsd,
                         nms_dist)
       
-      namedcolumns <- list(
-        data = reactable::colDef(
-          name = nms[["data"]]),
-        tauv = reactable::colDef(
-          minWidth = 80, name = nms[["tauv"]],
-          style = list(fontWeight = "bold")),
-        dur = reactable::colDef(
-          minWidth = 80, name = nms[["dur"]],
-          style = list(fontWeight = "bold")),
-        dti = reactable::colDef(
-          minWidth = 80, name = nms[["dti"]],
-          style = list(fontWeight = "bold")),
-        n = reactable::colDef(
-          name = nms[["n"]],
-          style = format_num,
-          format = reactable::colFormat(separators = TRUE,
-                                        digits = 0)),
-        N2 = reactable::colDef(
-          minWidth = 80, name = nms[["N2"]],
-          style = format_num,
-          format = reactable::colFormat(separators = TRUE,
-                                        digits = 1)),
-        ctsd = reactable::colDef(
-          minWidth = 120, name = nms[["ctsd"]]),
-        ctsd_err = reactable::colDef(
-          minWidth = 80, name = nms[["ctsd_err"]],
-          style = format_perc,
-          format = reactable::colFormat(percent = TRUE,
-                                        digits = 1)),
-        ctsd_err_min = reactable::colDef(
-          minWidth = 80, name = nms[["ctsd_err_min"]],
-          style = format_perc,
-          format = reactable::colFormat(percent = TRUE,
-                                        digits = 1)),
-        ctsd_err_max = reactable::colDef(
-          minWidth = 80, name = nms[["ctsd_err_max"]],
-          style = format_perc,
-          format = reactable::colFormat(percent = TRUE,
-                                        digits = 1)),
-        dist = reactable::colDef(
-          minWidth = 80, name = nms[["dist"]]),
-        dist_err = reactable::colDef(
-          minWidth = 80, name = nms[["dist_err"]],
-          style = format_perc,
-          format = reactable::colFormat(percent = TRUE,
-                                        digits = 1))
-      )
-      
       reactable::reactable(
         data = dt_sd,
         compact = TRUE,
@@ -2444,18 +2396,57 @@ mod_tab_ctsd_server <- function(id, rv) {
             align = "center",
             minWidth = 60),
         
-        columns = namedcolumns,
-        columnGroups = colgroups
-        
-      ) # end of reactable
+        columns = list(
+          data = reactable::colDef(
+            name = nms[["data"]]),
+          tauv = reactable::colDef(
+            minWidth = 80, name = nms[["tauv"]],
+            style = list(fontWeight = "bold")),
+          dur = reactable::colDef(
+            minWidth = 80, name = nms[["dur"]],
+            style = list(fontWeight = "bold")),
+          dti = reactable::colDef(
+            minWidth = 80, name = nms[["dti"]],
+            style = list(fontWeight = "bold")),
+          n = reactable::colDef(
+            name = nms[["n"]],
+            style = format_num,
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 0)),
+          N2 = reactable::colDef(
+            minWidth = 80, name = nms[["N2"]],
+            style = format_num,
+            format = reactable::colFormat(separators = TRUE,
+                                          digits = 1)),
+          ctsd = reactable::colDef(
+            minWidth = 120, name = nms[["ctsd"]]),
+          ctsd_err = reactable::colDef(
+            minWidth = 80, name = nms[["ctsd_err"]],
+            style = format_perc,
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)),
+          ctsd_err_min = reactable::colDef(
+            minWidth = 80, name = nms[["ctsd_err_min"]],
+            style = format_perc,
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)),
+          ctsd_err_max = reactable::colDef(
+            minWidth = 80, name = nms[["ctsd_err_max"]],
+            style = format_perc,
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1)),
+          dist = reactable::colDef(
+            minWidth = 80, name = nms[["dist"]]),
+          dist_err = reactable::colDef(
+            minWidth = 80, name = nms[["dist_err"]],
+            style = format_perc,
+            format = reactable::colFormat(percent = TRUE,
+                                          digits = 1))),
+        columnGroups = colgroups)
 
-    }) # end of renderReactable // sdTable
-
-    # observe({
-    #   rv$sd$tbl <- NULL
-    # }) %>% # end of observe,
-    #   bindEvent(input$sdTable_clear)
-
+    }) %>% # end of renderReactable, "sdTable"
+      bindEvent(list(input$add_sd_table, rv$ctsdList))
+    
     # BLOCKS --------------------------------------------------------------
     ## Tracking device: ---------------------------------------------------
     ### Initial sampling design: ------------------------------------------

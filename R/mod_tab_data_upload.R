@@ -656,16 +656,16 @@ mod_tab_data_upload_server <- function(id, rv) {
       }
       
       parsedate::parse_date("1111-11-11") # loading function
-      tmp_dataset <- tryCatch(
+      out_dataset <- tryCatch(
         ctmm::as.telemetry(out_dataset, timeformat = "auto"),
         error = function(e) e) %>%
         suppressMessages() %>% 
         suppressWarnings() %>% 
         quiet()
       
-      if (inherits(tmp_dataset, "error")) {
+      if (inherits(out_dataset, "error")) {
           if (grepl("Could not identify location columns",
-                    tmp_dataset)) {
+                    out_dataset)) {
             
             if (any(grepl("UTM", names(out_dataset)))) {
             } else {
@@ -1118,7 +1118,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           msg_log(
             style = "danger",
             message = paste0(
-              "Verify ", msg_danger("range residency"), ","),
+              "Assuming ", msg_danger("range residency"), ","),
             detail = paste("Assuming all selected individuals",
                            "are range resident."))
           to_filter <- "^OU(?!f)|^OUF"
@@ -1130,7 +1130,6 @@ mod_tab_data_upload_server <- function(id, rv) {
       }
       
       fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
-      length(fit0)
       
       if (length(fit0) == 0 && n_OUf == 0) {
         msg_log(
@@ -1146,8 +1145,9 @@ mod_tab_data_upload_server <- function(id, rv) {
       rv$is_isotropic <- c("All" = TRUE)
       if (rv$is_emulate) {
         
+        fit0[sapply(fit0, is.null)] <- NULL
         meanfit0 <- tryCatch(
-          mean(x = fit0) %>%
+          mean(x = fit0, sample = TRUE) %>%
             suppressMessages() %>%
             suppressWarnings() %>%
             quiet(),
