@@ -77,7 +77,7 @@ fixrates <- fixrates %>%
                  dti = 20 %#% "seconds",
                  common = "N", dti_scale = NA, dti_yn = "N") %>%
   dplyr::add_row(dti_notes = "1 fix every 15 seconds", 
-                 dti = 20 %#% "seconds",
+                 dti = 15 %#% "seconds",
                  common = "N", dti_scale = NA, dti_yn = "N") %>%
   dplyr::add_row(dti_notes = "1 fix every 10 seconds", 
                  dti = 10 %#% "seconds",

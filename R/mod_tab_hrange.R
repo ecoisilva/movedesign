@@ -1755,7 +1755,7 @@ mod_tab_hrange_server <- function(id, rv) {
       req(rv$hr$tbl)
       
       dt_hr <- dplyr::select(rv$hr$tbl, -seed)
-      if (!rv$grouped) dt_dev <- dplyr::select(dt_dev, -group)
+      if (!rv$grouped) dt_hr <- dplyr::select(dt_hr, -group)
       
       nms <- list(
         data = "Data",
