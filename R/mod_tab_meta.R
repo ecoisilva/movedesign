@@ -453,6 +453,7 @@ mod_tab_meta_server <- function(id, rv) {
     output$metaUI_legend_all <- renderUI({
       req(rv$grouped, rv$metaList, rv$set_analysis,
           rv$metaList)
+      req(!is.na(rv$grouped))
       
       out <- rv$metaList[[rv$set_analysis]]
       is_subpop_detected <- out$logs$subpop_detected

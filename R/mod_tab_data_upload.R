@@ -64,14 +64,14 @@ mod_tab_data_upload_ui <- function(id) {
           ) # end of box // upload_intro
       ), # end of div (top row)
       
-      # [left column] ----------------------------------------------------
+      # [left column] -----------------------------------------------------
       
       div(class = "col-xs-12 col-sm-4 col-md-4 col-lg-3",
           
-          # Submit file: --------------------------------------------------
+          # Submit data file: ---------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Upload file:", class = "ttl-box_solid"),
+            title = span("Upload data file:", class = "ttl-box_solid"),
             id = ns("uploadBox_file"),
             status = "primary",
             width = NULL,
@@ -138,6 +138,78 @@ mod_tab_data_upload_ui <- function(id) {
               width = "100%")
             
           ), # end of box // uploadBox_file
+          
+          # Submit calibration file: --------------------------------------
+          
+          # shinydashboardPlus::box(
+          #   title = span("Upload calibration file:",
+          #                class = "ttl-box_solid"),
+          #   id = ns("uploadBox_calibration"),
+          #   status = "primary",
+          #   width = NULL,
+          #   solidHeader = TRUE,
+          #   collapsible = TRUE,
+          #   
+          #   fileInput(
+          #     inputId = ns("calibration_csv"),
+          #     label = NULL,
+          #     multiple = FALSE,
+          #     accept = c("text/csv",
+          #                "text/comma-separated-values,text/plain",
+          #                ".csv")),
+          #   tags$hr(),
+          #   
+          #   shinyWidgets::radioGroupButtons(
+          #     inputId = ns("file_dec"),
+          #     label = "Decimals",
+          #     choices = c("Period (.)" = ".",
+          #                 "Comma (,)" = ","),
+          #     selected = ".",
+          #     checkIcon = list(
+          #       yes = tags$i(class = "fa fa-check-square", 
+          #                    style = "color: steelblue"),
+          #       no = tags$i(class = "fa fa-square-o", 
+          #                   style = "color: steelblue")),
+          #     direction = "vertical",
+          #     width = "100%"),
+          #   
+          #   shinyWidgets::radioGroupButtons(
+          #     inputId = ns("file_sep"),
+          #     label = "Separator",
+          #     choices = c("Comma (,)" = ",",
+          #                 "Semicolon (;)" = ";",
+          #                 "Tab" = "\t"),
+          #     selected = ",",
+          #     checkIcon = list(
+          #       yes = tags$i(class = "fa fa-check-square", 
+          #                    style = "color: steelblue"),
+          #       no = tags$i(class = "fa fa-square-o", 
+          #                   style = "color: steelblue")),
+          #     direction = "vertical",
+          #     width = "100%"),
+          #   
+          #   shinyWidgets::radioGroupButtons(
+          #     inputId = ns("file_quote"),
+          #     label = "Quote",
+          #     choices = c("None" = "",
+          #                 "Double quote (\")" = '"',
+          #                 "Single quote (\')" = "'"),
+          #     selected = '"',
+          #     checkIcon = list(
+          #       yes = tags$i(class = "fa fa-check-square", 
+          #                    style = "color: steelblue"),
+          #       no = tags$i(class = "fa fa-square-o", 
+          #                   style = "color: steelblue")),
+          #     direction = "vertical",
+          #     width = "100%"),
+          #   
+          #   footer = shiny::actionButton(
+          #     inputId = ns("confirm_upload"),
+          #     label = "Confirm",
+          #     icon =  icon("upload"),
+          #     width = "100%")
+          #   
+          # ), # end of box // uploadBox_calibration
           
           # Select species & individual: ----------------------------------
           
@@ -1131,7 +1203,10 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
       
-      if (length(fit0) == 0 && n_OUf == 0) {
+      # if (length(fit0) == 0 && n_OUf == 0) {}
+      # TODO
+      
+      if (length(fit0) == 0) {
         msg_log(
           style = "error",
           message = paste0(
@@ -1139,6 +1214,20 @@ mod_tab_data_upload_server <- function(id, rv) {
           detail = paste("No individuals left after",
                          "filtering for movement processes."))
         shinybusy::remove_modal_spinner()
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Individuals invalid",
+          text = tagList(span(
+            "No individuals left after filtering for",
+            "movement models with a",
+            wrap_none(
+              span(" signature of autocorrelation",
+                   class = "cl-dgr"), "."))),
+          confirmButtonText = "Dismiss",
+          html = TRUE,
+          size = "xs")
+        
         return(NULL)
       }
       
@@ -1200,9 +1289,9 @@ mod_tab_data_upload_server <- function(id, rv) {
                           dimnames = list(c("x", "y"))))
       
       names(rv$sigma) <- c("All")
-      names(rv$tau_p) <- c("All")
-      names(rv$tau_v) <- c("All")
-      names(rv$speed) <- c("All")
+      if (!is.null(rv$tau_p)) names(rv$tau_p) <- c("All")
+      if (!is.null(rv$tau_v)) names(rv$tau_v) <- c("All")
+      if (!is.null(rv$speed)) names(rv$speed) <- c("All")
       names(rv$mu) <- c("All")
       
       if (rv$grouped) {

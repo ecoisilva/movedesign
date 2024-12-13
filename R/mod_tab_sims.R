@@ -1125,7 +1125,8 @@ mod_tab_sims_server <- function(id, rv) {
           limits = c(ymin, ymax)) +
         viridis::scale_color_viridis(
           name = "Time:",
-          option = "D", trans = "time",
+          option = "mako",
+          trans = "time",
           breaks = c(min(newdat$time),
                      max(newdat$time)),
           labels = c("Start", "End")) +
@@ -1162,10 +1163,10 @@ mod_tab_sims_server <- function(id, rv) {
     ## Preparing data for animation plot: ---------------------------------
     
     data_animated <- reactive({
-      req(rv$datList, rv$modList, rv$data_type == "simulated")
+      req(rv$datList, rv$modList0, rv$data_type == "simulated")
       
       dat <- ctmm::simulate(rv$datList[[1]], 
-                            CTMM = rv$modList[[length(rv$modList)]],
+                            CTMM = rv$modList0[[length(rv$modList0)]],
                             dt = 15 %#% "minutes")
       
       t_origin <- "1111-10-31 23:06:32"
@@ -1290,7 +1291,9 @@ mod_tab_sims_server <- function(id, rv) {
           limits = c(ymin, ymax)) +
         viridis::scale_color_viridis(
           name = "Tracking time:",
-          option = "mako", direction = -1, trans = "time") +
+          option = "mako",
+          direction = -1,
+          trans = "time") +
         
         theme_movedesign(font_available = rv$is_font) +
         ggplot2::theme(legend.position = "none")

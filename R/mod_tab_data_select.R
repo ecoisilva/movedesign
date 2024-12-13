@@ -880,9 +880,9 @@ mod_tab_data_select_server <- function(id, rv) {
                             dimnames = list(c("x", "y"))))
         
         names(rv$sigma) <- c("All")
-        names(rv$tau_p) <- c("All")
-        names(rv$tau_v) <- c("All")
-        names(rv$speed) <- c("All")
+        if (!is.null(rv$tau_p)) names(rv$tau_p) <- c("All")
+        if (!is.null(rv$tau_v)) names(rv$tau_v) <- c("All")
+        if (!is.null(rv$speed)) names(rv$speed) <- c("All")
         names(rv$mu) <- c("All")
         
         if (rv$grouped) {

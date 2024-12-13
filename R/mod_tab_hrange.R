@@ -1752,7 +1752,7 @@ mod_tab_hrange_server <- function(id, rv) {
     ## Rendering output table: --------------------------------------------
     
     output$hrTable <- reactable::renderReactable({
-      req(rv$hr$tbl)
+      req(rv$hr$tbl, rv$akdeList)
       
       dt_hr <- dplyr::select(rv$hr$tbl, -seed)
       if (!rv$grouped) dt_hr <- dplyr::select(dt_hr, -group)
@@ -1845,7 +1845,7 @@ mod_tab_hrange_server <- function(id, rv) {
         columnGroups = colgroups)
       
     }) %>% # end of renderReactable, "hrTable"
-      bindEvent(list(input$add_hr_table, rv$akdeList))
+      bindEvent(list(input$add_hr_table, rv$hr$tbl))
     
     # BLOCKS --------------------------------------------------------------
     ## Tracking device: ---------------------------------------------------

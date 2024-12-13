@@ -234,7 +234,7 @@ mod_tab_about_ui <- function(id) {
           uiOutput(ns("saving_vals")),
 
           fileInput(ns("restore_state"),
-                    label = "Upload file:",
+                    label = "Upload saved settings file:",
                     accept = ".rds",
                     placeholder = ".rds file"),
 
