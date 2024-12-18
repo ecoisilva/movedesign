@@ -832,7 +832,7 @@ extract_pars <- function(
 #'
 #' @importFrom ctmm %#%
 #' @noRd
-extract_sampling <- function(obj, name) {
+extract_sampling <- function(obj, name, units = FALSE) {
   
   out <- unit <- NULL
   if (missing(obj)) stop("`obj` argument not provided.")
@@ -849,10 +849,15 @@ extract_sampling <- function(obj, name) {
       unit <- extract_units(nms.obj[grep(name, nms.obj)])
       tmp <- suppressWarnings(as.numeric(sum.obj[grep(name, nms.obj)]))
       
-      out[[i]] <- data.frame(
-        value = tmp, 
-        unit = extract_units(nms.obj[grep(name, nms.obj)]))
+      if (units) {
+        tmp <- tmp %#% unit
+        unit <- "seconds"
+      } else {
+        unit <- extract_units(nms.obj[grep(name, nms.obj)])
+      }
+      out[[i]] <- data.frame(value = tmp, unit = unit)
     }
+    
   } else stop("as.telemetry() obj required.")
   
   return(out)

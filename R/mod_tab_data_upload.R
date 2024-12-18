@@ -1181,7 +1181,11 @@ mod_tab_data_upload_server <- function(id, rv) {
       nm_mods <- lapply(rv$fitList, function(x) summary(x)$name)
       n_OUf <- sum(grepl("^OUf", nm_mods))
       
-      # to_filter <- "^OUF"
+      to_filter_out <- "^OUΩ" # paste0("\u03A9")
+      if (any(grep(to_filter_out, unlist(nm_mods), perl = TRUE))) {
+        fit0 <- fit0[-grep(to_filter_out, unlist(nm_mods), perl = TRUE)]
+        nm_mods <- lapply(fit0, function(x) summary(x)$name)
+      }
       
       to_filter <- "^IOU|^OUF|^OU(?!f)"
       if (length(rv$which_question) == 1) {
@@ -1203,8 +1207,8 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
       
-      # if (length(fit0) == 0 && n_OUf == 0) {}
       # TODO
+      # if (length(fit0) == 0 && n_OUf == 0) {}
       
       if (length(fit0) == 0) {
         msg_log(
@@ -1220,10 +1224,11 @@ mod_tab_data_upload_server <- function(id, rv) {
           title = "Individuals invalid",
           text = tagList(span(
             "No individuals left after filtering for",
-            "movement models with a",
+            "movement models with a signature of the relevant",
             wrap_none(
-              span(" signature of autocorrelation",
-                   class = "cl-dgr"), "."))),
+              span(" autocorrelation timescale",
+                   class = "cl-dgr"), "."),
+            "Please select different individuals to proceed.")),
           confirmButtonText = "Dismiss",
           html = TRUE,
           size = "xs")

@@ -104,19 +104,27 @@ mod_blocks_server <- function(id,
                if (type == "dur") name <- "period" 
                if (type == "dti") name <- "interval"
                
-               out <- extract_sampling(data, name = name)
+               out <- extract_sampling(data, name = name, units = TRUE)
+               
                if (length(out) > 1) out <- do.call(rbind, out)
                else out <- out[[1]]
                
                unit <- fix_unit(mean(out$value, na.rm = TRUE),
-                                out$unit[1])$unit
+                                out$unit[1], convert = TRUE)$unit
+               
+               tmpmeanvalue <- mean(out$value, na.rm = TRUE)
+               tmpmeanvalue <- unit %#% tmpmeanvalue
+
+               tmpmaxvalue <- max(out$value, na.rm = TRUE)
+               tmpmaxvalue <- unit %#% tmpmaxvalue
+               
+               tmpminvalue <- min(out$value, na.rm = TRUE)
+               tmpminvalue <- unit %#% tmpminvalue
+               
                out <- c(
-                 "mean" = fix_unit(
-                   mean(out$value, na.rm = TRUE), unit)$value,
-                 "min" = fix_unit(
-                   min(out$value, na.rm = TRUE), unit)$value,
-                 "max" = fix_unit(
-                   max(out$value, na.rm = TRUE), unit)$value)
+                 "mean" = fix_unit(tmpmeanvalue, unit)$value,
+                 "min" = fix_unit(tmpminvalue, unit)$value,
+                 "max" = fix_unit(tmpmaxvalue, unit)$value)
                
                if (length(data) != 1) 
                  subtitle <- span(ifelse(out[2] == 0, "0", out[2]), 
