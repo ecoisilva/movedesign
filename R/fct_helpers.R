@@ -349,7 +349,8 @@ simulate_data <- function(data = NULL,
   return(list(dat))
 }
 
-#' ctmm::emulate() but (seeded)
+#' ctmm::emulate() but seeded
+#' 
 #' @noRd
 emulate_seeded <- function(obj, seed) {
   set.seed(seed)
@@ -499,7 +500,7 @@ weighted_average_speed <- function(tau_v, fit, seed,
   return(v)
 }
 
-#' Get true home ranges
+#' Get true movement speed
 #' 
 #' @importFrom ctmm %#%
 #' @noRd
@@ -764,6 +765,7 @@ extract_pars <- function(
   
   out <- list()
   out <- lapply(seq_along(obj), function(x) {
+    
     sum.obj <- summary(obj[[x]], units = !si_units)
     nms.obj <- rownames(sum.obj$CI)
     

@@ -214,62 +214,28 @@ mod_tab_about_ui <- function(id) {
         width = 12,
         solidHeader = FALSE, headerBorder = FALSE,
         collapsible = FALSE, closable = FALSE,
+        
+        h5("Project contact:"),
+        p(style = "text-align: center;",
+          "In\u00EAs Silva,",
+          fontawesome::fa("envelope", fill = "var(--sea)"),
+          span("i.simoes-silva\u0040hzdr.de", class = "cl-sea")),
+        tags$hr(),
+        
+        h5("Institutional contact:"),
+        p(style = "font-size: 14px; text-align: center;",
+          "Center for Advanced Systems Understanding (CASUS),",
+          "Helmholtz-Zentrum Dresden-Rossendorf e.V. (HZDR),",
+          "Untermarkt 20, 02826, G\u00F6rlitz \u2014 Germany"),
+        p(),
+        
+        div(style = "text-align: center;", 
+            img(src = "www/logo_casus.png", height = "70px"),
+            p(),
+            a(href = "https://www.casus.science/",
+              "https://www.casus.science/"), 
+            p())
 
-        column(
-          align = "center", width = 6,
-          style = "border-right: 1px solid #ececec;",
-          
-          ## Restore application settings: --------------------------------
-
-          h5("Restore settings:"),
-
-          p("After using this app for the first time, you can save",
-            "your progress (and any previously defined values) to",
-            "your local environment, by accessing the",
-            icon("gears", class = "cl-mdn"),
-            "symbol on the",
-            HTML(paste0(span("upper right corner", class = "cl-blk"), "."))
-          ),
-
-          uiOutput(ns("saving_vals")),
-
-          fileInput(ns("restore_state"),
-                    label = "Upload saved settings file:",
-                    accept = ".rds",
-                    placeholder = ".rds file"),
-
-          p("Click", span("Browse...", class = "cl-blk"),
-            "and select a previously saved",
-            span(".rds", class = "cl-sea"),
-            "file to load stored values.")
-
-        ), # end of column (right)
-
-        ## Contact details: ---------------------------------------------
-
-        column(
-          align = "center", width = 6,
-
-          h5("Project contact:"),
-          p(style = "text-align: center;",
-            "In\u00EAs Silva,",
-            fontawesome::fa("envelope", fill = "var(--sea)"),
-            span("i.simoes-silva\u0040hzdr.de", class = "cl-sea")),
-          tags$hr(),
-
-          h5("Institutional contact:"),
-          p(style = "font-size: 14px; text-align: center;",
-              "Center for Advanced Systems Understanding (CASUS),",
-              "Helmholtz-Zentrum Dresden-Rossendorf e.V. (HZDR),",
-              "Untermarkt 20, 02826, G\u00F6rlitz \u2014 Germany"),
-          p(),
-          img(src = "www/logo_casus.png", height = "70px"),
-          p(),
-          a(href = "https://www.casus.science/",
-            "https://www.casus.science/"), 
-          p()
-
-        ) # end of column (right)
       ) # end of box
 
     ) # end of fluidRow
@@ -458,36 +424,6 @@ mod_tab_about_server <- function(id, rv) {
       
     }, label = "o-about_generate_seed") # end of observe
     
-    ## Restore settings/values (from previous session): -------------------
-    
-    observe({
-
-      validate(need(input$restore_state, message = FALSE))
-      restored_vals <- readRDS(
-        file = paste(input$restore_state$datapath))
-      rv$restored_vals <- restored_vals
-      rv$overwrite_all <- TRUE
-
-      shiny::showModal(
-        shiny::modalDialog(
-          title = "Previous parameters restored!",
-
-          p("Data status:"),
-          p("Type:", rv$restored_vals$"data_type"),
-          p("Number of simulations:", 
-            length(rv$restored_vals$"simList")),
-          
-          # p("Parameters:"),
-          # p("Seed:", rv$restored_vals$"seed0"),
-
-          footer = tagList(
-            modalButton("Dismiss")
-          ),
-          size = "s"))
-
-    }, label = "o-about_restore") %>% # end of observe,
-      bindEvent(input$restore_state)
-
   })
 }
 

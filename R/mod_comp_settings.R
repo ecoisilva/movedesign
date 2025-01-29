@@ -13,12 +13,6 @@ mod_comp_settings_ui <- function(id){
 
     column(
       width = 12, align = "center",
-      p(),
-      actionButton(ns("browser"),
-                   icon = shiny::icon("screwdriver-wrench"),
-                   label = "Browser console",
-                   style = "width: 100%"),
-      tags$script("$('#browser').hide();"),
       
       p(),
       shiny::downloadButton(
@@ -28,6 +22,37 @@ mod_comp_settings_ui <- function(id){
         style = "width: 100%"),
       p(),
       uiOutput(ns("text_save")),
+      
+      tags$hr(style = "border-color: #ffffff;"),
+      
+      h5("Restore settings:", style = "color: #fff;"),
+      p(style = "font-size: 14px; text-align: justify; color: #ffffff;",
+        
+        "After using this app for the first time, you can save",
+        "your progress (and any previously defined values) to",
+        "your local environment, by accessing the",
+        icon("gears", class = "cl-sea"),
+        "symbol on the",
+        HTML(paste0(span("upper right corner", class = "cl-sea"), "."))
+      ),
+      
+      uiOutput(ns("saving_vals")),
+      
+      fileInput(ns("restore_state"),
+                label = span("Upload saved settings file:",
+                     style = paste0(
+                       "color: #ffffff;",
+                       "font-size: 15px;",
+                       "letter-spacing: 0.5px;")),
+                accept = ".rds",
+                placeholder = ".rds file"),
+      
+      p(style = "font-size: 14px; text-align: justify; color: #ffffff;",
+        
+        "Click", span("Browse...", class = "cl-sea"),
+        "and select a previously saved",
+        span(".rds", class = "cl-sea"),
+        "file to load stored values."),
       
       # tags$hr(style = "border-color: #2c3b41;"),
       # h4("Language:"),
@@ -39,8 +64,9 @@ mod_comp_settings_ui <- function(id){
       #             selected = "EN",
       #             width = "80px",
       #             selectize = TRUE),
-
-      tags$hr(style = "border-color: #2c3b41;"),
+      
+      tags$hr(style = "border-color: #ffffff;"),
+      
       shinyWidgets::prettyCheckbox(
         inputId = ns("parallel"),
         label = span("Parallel mode",
@@ -49,17 +75,26 @@ mod_comp_settings_ui <- function(id){
                        "font-size: 15px;",
                        "letter-spacing: 0.5px;")),
         value = TRUE),
-      br(),
       shinyWidgets::autonumericInput(
         inputId = ns("ncores"),
-        label = "Number of cores:",
+        label = NULL,
         currencySymbol = " core(s)",
         currencySymbolPlacement = "s",
         decimalPlaces = 0,
         minimumValue = 1,
         maximumValue = 32,
         value = 1, wheelStep = 1),
-      br()
+      
+      p(),
+      tags$hr(style = "border-color: #ffffff;"),
+      
+      actionButton(ns("browser"),
+                   icon = shiny::icon("screwdriver-wrench"),
+                   label = "Browser console",
+                   style = "width: 100%"),
+      tags$script("$('#browser').hide();"),
+      
+      p(style = "margin-bottom: 15px;")
       
     ) # end of column
   ) # end of tagList
@@ -87,11 +122,14 @@ mod_comp_settings_server <- function(id, rv) {
     
     output$text_save <- renderUI({
       
-      out_text <- "Save all stored values to your local environment."
-      if (is.null(rv$dataList)) {
+      if (is.null(rv$datList)) {
+        shinyjs::disable("download_settings")
         out_text <- paste(
-          "Return here after running any analyses to save",
-          "all stored values to your local environment.")
+          "Return here after running through the workflow once to",
+          "save all stored values to your local environment.")
+      } else {
+        out_text <- "Save all stored values to your local environment."
+        shinyjs::enable("download_settings")
       }
       
       p(style = "font-size: 14px; text-align: justify; color: #ffffff;",
@@ -124,12 +162,43 @@ mod_comp_settings_server <- function(id, rv) {
       content = function(file) {
         if (is.null(rv$simList)) {
           shiny::showNotification(
-            "No data to save", type = "error", duration = 8)
+            "No data available to save!", type = "error", duration = 8)
         } else { saveRDS(reactiveValuesToList(rv), file = file) }
         
       } # end of content
     ) # end of output, "download_settings"
+    
+    ## Restore settings/values (from previous session): -------------------
+    
+    observe({
+      
+      validate(need(input$restore_state, message = FALSE))
+      restored_vals <- readRDS(
+        file = paste(input$restore_state$datapath))
+      rv$restored_vals <- restored_vals
+      rv$overwrite_all <- TRUE
+      
+      shiny::showModal(
+        shiny::modalDialog(
+          title = "Previous parameters restored!",
+          
+          p("Data status:"),
+          p("Type:", rv$restored_vals$"data_type"),
+          p("Number of simulations:", 
+            length(rv$restored_vals$"simList")),
+          
+          # p("Parameters:"),
+          # p("Seed:", rv$restored_vals$"seed0"),
+          
+          footer = tagList(
+            modalButton("Dismiss")
+          ),
+          size = "s"))
+      
+    }, label = "o-about_restore") %>% # end of observe,
+      bindEvent(input$restore_state)
 
+    
   }) # end of moduleServer
 }
 

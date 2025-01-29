@@ -97,8 +97,19 @@ body {
   background-color: #fff;
 }
 
+.control-sidebar.control-sidebar-open, 
+.control-sidebar.control-sidebar-open + .control-sidebar-bg {
+  z-index: 9999;
+}
+
 .control-sidebar-bg, .control-sidebar {
   height: fit-content !important;
+}
+.control-sidebar-dark {
+  background: #2d373b;
+}
+.control-sidebar-dark .nav-tabs.control-sidebar-tabs {
+  background: #2d373b;
 }
 
 .row {
@@ -226,6 +237,11 @@ body {
   font-size: 15px;
   margin: 0 0px 0px -11px;
 }
+
+.main-header {
+    z-index: 99999 !important;
+}
+  
 .navbar-custom-menu > .navbar-nav > li > .dropdown-menu {
   border: 1px solid var(--grey-000) !important;
 }
