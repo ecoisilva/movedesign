@@ -11,10 +11,12 @@
 [![Project Status: Active – The project has reached a stable, usable
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)<br>
-<!-- [![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)](http://hits.dwyl.com/ecoisilva/movedesign)<br> -->
+<!-- ![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)<br> -->
 <!-- [![Codecov test coverage](https://codecov.io/gh/ecoisilva/movedesign/branch/main/graph/badge.svg)](https://app.codecov.io/gh/ecoisilva/movedesign?branch=main) -->
-<!-- badges: end --> <br>
+
+<!-- badges: end -->
+
+<br>
 
 ## Overview
 
