@@ -34,15 +34,13 @@ run_meta_permutations(
 A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
 }
 \description{
-This function performs a meta-analysis on movement tracking data,
-for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population.
-It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters.
-This function helps to evaluate the significance of results under permutation testing.
+This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under permutation testing.
 }
 \examples{
-
+\dontrun{
 # Running:
-run_meta_permutations(rv, random = FALSE)
+run_meta_permutations(rv, set_target = "hr")
+}
 
 }
 \author{

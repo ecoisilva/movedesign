@@ -16,9 +16,8 @@ run_meta(rv, set_target = c("hr", "ctsd"), subpop = FALSE, trace = FALSE)
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
 }
 \value{
-The result of the `run_meta_permutations` for a single permutation.
+The outputs of the `run_meta_permutations` function for a single permutation.
 }
 \description{
-This function wraps around the `run_meta_permutations` function
-to run meta-analyses once (no permutations) for a quick evaluation.
+This function wraps around the `run_meta_permutations` function to run meta-analyses once (no permutations) for a quick evaluation.
 }
