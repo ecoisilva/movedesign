@@ -56,12 +56,12 @@ parBlock <- function(icon = NULL,
                      header = NULL,
                      value = NULL,
                      subtitle = NULL) {
-
+  
   cl <- "parblock"
-
+  
   shiny::tags$div(
     class = cl,
-
+    
     if (!is.null(icon)) {
       shiny::tags$span(
         class = paste0(cl, "-icon"), icon(icon), br()) },
@@ -173,7 +173,7 @@ errorBlock <- function(icon = NULL,
                        max = NULL,
                        nsims = NULL,
                        rightBorder = FALSE) {
-
+  
   cl <- "errorblock"
   if (isTRUE(rightBorder)) cl <- paste0(cl, " border-right")
   
@@ -250,12 +250,12 @@ errorBlock <- function(icon = NULL,
 staticBlock <- function(text,
                         type = "logical",
                         active = FALSE) {
-
+  
   if (type == "logical") {
     icon_T <- "square-check"
     icon_F <- "circle-xmark"
   }
-
+  
   if (type == "maximum" | type == "max") {
     icon_T <- "less-than-equal"
     icon_F <- "circle-xmark"
@@ -265,7 +265,7 @@ staticBlock <- function(text,
     icon_T <- "square-check"
     icon_F <- "square-check"
   }
-
+  
   if (active) {
     cl <- "staticblock_active"
     icon <- icon(name = icon_T)
@@ -273,10 +273,10 @@ staticBlock <- function(text,
     cl <- "staticblock"
     icon <- icon(name = icon_F)
   }
-
+  
   shiny::tags$div(
     class = cl,
-
+    
     tagList(
       shiny::tags$span(class = "staticblock-icon",
                        shiny::HTML("&nbsp;"), icon),
@@ -284,7 +284,7 @@ staticBlock <- function(text,
                        text)
     )
   )
-
+  
 }
 
 #' Extract units.
@@ -330,7 +330,7 @@ extract_units <- function(input, name = NULL) {
 help_text <- function(title, subtitle, content) {
   shiny::fluidRow(
     title, style = "margin-bottom: -14px;",
-
+    
     bsplus::shiny_iconlink(
       name = "circle-info",
       class = "icon_help") %>%
@@ -450,7 +450,7 @@ msg_step <- function(current, total, style) {
 #'
 #' @noRd
 reset_reactiveValues <- function(rv) {
-
+  
   rv$is_valid <- FALSE
   rv$is_analyses <- FALSE
   
@@ -513,55 +513,61 @@ help_modal <- function(input, file) {
 #' @noRd
 theme_movedesign <- function(ft_size = 13,
                              font = "Roboto Condensed",
-                             font_available = TRUE) {
+                             font_available = TRUE,
+                             title_y = TRUE) {
   
   if (!font_available) {
-    # font <- "Consolas"
+    # font <- "mono"
     
-    ggplot2::theme_minimal() %+replace% # replace elements
-    ggplot2::theme(
-      
-      text = ggplot2::element_text(size = ft_size),
-      
-      plot.title = ggplot2::element_text(
-        size = ft_size + 3, vjust = 1.2, hjust = .5),
-      plot.subtitle = ggplot2::element_text(
-        color = "#666666", hjust = .5),
-      plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
-      
-      panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
-      panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
-      
-      axis.text.x = ggplot2::element_text(colour = "#878787"),
-      axis.text.y = ggplot2::element_text(colour = "#878787"),
-      axis.title.x = ggplot2::element_text(
-        hjust = 1, vjust = -1),
-      axis.title.y = ggplot2::element_text(
-        angle = 90, vjust = 2)) %>% 
-    suppressWarnings()
-  
+    ggplot2::theme_minimal() %+replace%
+      ggplot2::theme(
+        
+        text = ggplot2::element_text(size = ft_size),
+        
+        plot.title = ggtext::element_markdown(
+          size = ft_size + 3, vjust = 1.2, hjust = .5),
+        plot.subtitle = ggtext::element_markdown(
+          color = "#666666", hjust = .5),
+        plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
+        
+        panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
+        panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
+        
+        axis.text.x = ggplot2::element_text(colour = "#878787"),
+        axis.text.y = ggplot2::element_text(colour = "#878787"),
+        axis.title.x = ggtext::element_markdown(
+          hjust = 1, margin = ggplot2::margin(t = 2.5)),
+        axis.title.y = ggtext::element_markdown(
+          angle = 90, margin = ggplot2::margin(r = 2.5))) %>% 
+      suppressWarnings()
+    
   } else {
-    ggplot2::theme_minimal() %+replace% # replace elements
-    ggplot2::theme(
-      
-      text = ggplot2::element_text(family = font, size = ft_size),
-      
-      plot.title = ggplot2::element_text(
-        size = ft_size + 3, vjust = 1.2, hjust = .5),
-      plot.subtitle = ggplot2::element_text(
-        color = "#666666", hjust = .5),
-      plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
-      
-      panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
-      panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
-      
-      axis.text.x = ggplot2::element_text(colour = "#878787"),
-      axis.text.y = ggplot2::element_text(colour = "#878787"),
-      axis.title.x = ggplot2::element_text(
-        family = font, hjust = 1, vjust = -1),
-      axis.title.y = ggplot2::element_text(
-        family = font, angle = 90, vjust = 2)) %>% 
-    suppressWarnings()
+    ggplot2::theme_minimal() %+replace%
+      ggplot2::theme(
+        
+        text = ggplot2::element_text(family = font, size = ft_size),
+
+        plot.title = ggtext::element_markdown(
+          size = ft_size + 3, vjust = 1.2, hjust = .5),
+        
+        plot.subtitle = ggtext::element_markdown(
+          color = "#666666", hjust = .5),
+        plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
+
+        panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
+        panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
+
+        axis.text.x = ggplot2::element_text(colour = "#878787"),
+        axis.text.y = ggplot2::element_text(colour = "#878787"),
+        axis.title.x = ggtext::element_markdown(
+          hjust = 1, margin = ggplot2::margin(t = 2.5)),
+        
+        if (title_y) {
+        axis.title.y = ggtext::element_markdown(
+          angle = 90, margin = ggplot2::margin(r = 2.5)) }
+
+        ) %>%
+      suppressWarnings()
   }
 }
 
@@ -577,6 +583,7 @@ plotting_hr <- function(input1,
                         show_both = FALSE,
                         truth,
                         show_truth,
+                        show_locations,
                         contours,
                         color,
                         extent,
@@ -654,15 +661,18 @@ plotting_hr <- function(input1,
         fill = "#353c42", alpha = .2)
     } +
     
-    ggplot2::geom_path(
-      data = data,
-      mapping = ggplot2::aes(x = x, y = y),
-      color = pal[2], linewidth = 0.4, alpha = .4) +
-    
-    ggplot2::geom_point(
-      data = data,
-      mapping = ggplot2::aes(x = x, y = y),
-      color = pal[2], size = 1, alpha = .3) +
+    { if (show_locations)
+      ggplot2::geom_path(
+        data = data,
+        mapping = ggplot2::aes(x = x, y = y),
+        color = pal[2], linewidth = 0.4, alpha = .4)
+    } +
+    { if (show_locations)
+      ggplot2::geom_point(
+        data = data,
+        mapping = ggplot2::aes(x = x, y = y),
+        color = pal[2], size = 1, alpha = .3)
+    } +
     
     { if ("uci" %in% contours) p1 } +
     p2 +
@@ -714,9 +724,9 @@ plotting_svf <- function(data, fill,
   m <- length(data)
   
   if (y_unit == "km^2") y_lab <- 
-      expression("Semi-variance"~"("*km^{"2"}*")")
+    expression("Semi-variance"~"("*km^{"2"}*")")
   if (y_unit == "m^2") y_lab <- 
-      expression("Semi-variance"~"("*m^{"2"}*")")
+    expression("Semi-variance"~"("*m^{"2"}*")")
   if (y_unit == "hectares") y_lab <- "Semi-variance (ha)"
   
   data[sapply(data, is.null)] <- NULL
@@ -731,7 +741,7 @@ plotting_svf <- function(data, fill,
         dplyr::slice_min(lag, prop = fraction)
       svf <- data[[x]]$data[data[[x]]$data$lag <= max(fit$lag), ]
     }
-      
+    
     ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
     
     p <- ggplot2::ggplot() +
@@ -773,6 +783,7 @@ plotting_svf <- function(data, fill,
       } +
       
       ggplot2::labs(
+        title = names(data)[[x]],
         x = "Time lag (in days)",
         y = y_lab) +
       theme_movedesign(font_available = font_available,
@@ -972,7 +983,7 @@ loading_modal <- function(x,
   if (!is.character(x))
     stop("`unit` argument must be a character string.")
   
-  note_parallel <- ifelse(parallel, "set", "simulation")
+  note_parallel <- ifelse(parallel, "core", "simulation")
   
   x <- stringr::str_split(x, " ")[[1]]
   num_words <- length(x)
@@ -990,7 +1001,6 @@ loading_modal <- function(x,
       stop(paste0("input must contain named columns 'mean'",
                   "'range', and 'unit'."))
     
-    
     header_css <- paste("background-color: #eaeaea;",
                         "color: #797979;",
                         "font-size: 16px;",
@@ -1007,7 +1017,7 @@ loading_modal <- function(x,
                          convert = TRUE)
     
     tmp <- max_time$unit %#% (
-        ifelse(exp_time$min == 0, .001, exp_time$min) * n) %#%
+      ifelse(exp_time$min == 0, .001, exp_time$min) * n) %#%
       exp_time$unit
     min_time <- fix_unit(ifelse(tmp <= 1, 2, tmp),
                          max_time$unit)
@@ -1015,9 +1025,23 @@ loading_modal <- function(x,
     out_txt_range <- paste0(min_time$value, 
                             "\u2013", max_time$value, 
                             " ", max_time$unit)
+    
+    out_txt_parallel <- span("")
     if (type == "fit") {
-      out_txt_range <- paste0(mean_time$value, 
-                              " ", mean_time$unit)
+      if (parallel) {
+        n_cores <- parallel::detectCores(logical = FALSE)/2
+        tmp_time <- fix_unit(mean_time$value / n_cores,
+                             mean_time$unit, convert = TRUE)
+        out_txt_range <- paste(tmp_time$value, tmp_time$unit)
+        out_txt_parallel <- p(
+          style = paste("font-size: 14px;",
+                        "line-height: 1;",
+                        "text-align: center;"),
+          span("[Running in parallel!].", class = "cl-sea"))
+        
+      } else {
+        out_txt_range <- paste(mean_time$value, mean_time$unit)
+      }
     }
     
     if (!is.null(n)) {
@@ -1033,6 +1057,12 @@ loading_modal <- function(x,
                         "text-align: center;")), br(),
         p(exp_time$range, style = time_css), p())
       
+      out_txt_total <- tagList(
+        p("Total run time:", 
+          style = header_css), br(),
+        p("\u2248", out_txt_range,
+          style = time_css), p())
+      
       if (n > 1) {
         out_txt <- tagList(
           p(),
@@ -1040,15 +1070,9 @@ loading_modal <- function(x,
             style = header_css), br(),
           p(exp_time$range, paste0("(per ", note_parallel, ")"), 
             style = time_css), p(),
-          p("Total run time:", 
-            style = header_css), br(),
-          p("\u2248", out_txt_range,
-            style = time_css), p(),
-          
-          p(span("Parallelization not fully accounted for;",
-                 "run time may be substantially lower.",
-                 class = "cl-dgr"), 
-            style = "font-size: 14px; line-height: 1;"))
+          if (!parallel) out_txt_total,
+          out_txt_parallel
+        )
       }
     }
   }
@@ -1077,9 +1101,9 @@ wrap_none <- function(text, ...,
                       end = "",
                       color = NULL,
                       css = NULL) {
-
+  
   out <- shiny::HTML(paste0(text, ...))
-
+  
   if (!is.null(css)) {
     out <- shiny::HTML(
       paste0(
@@ -1097,7 +1121,7 @@ wrap_none <- function(text, ...,
   }
   
   return(out)
-
+  
 }
 
 #' format_num
@@ -1165,7 +1189,7 @@ extract_limits <- function(data1, data2, data3 = NULL, scale = .1) {
 #'
 #' @noRd
 load_pal <- function() {
-
+  
   # Palette:
   out <- list(mdn = "#222d32",
               sea = "#009da0",
@@ -1176,7 +1200,7 @@ load_pal <- function() {
               dgr = "#dd4b39",
               gld = "#ffbf00",
               gld_d = "#ea8500")
-
+  
   return(out)
 }
 
@@ -1184,16 +1208,16 @@ load_pal <- function() {
 #'
 #' @noRd
 create_modal <- function(var, id) {
-
+  
   if (var == "taup") {
     out_title <- shiny::h4(
       span("Position autocorrelation", class = "cl-sea"),
       "parameter:")
-
+    
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
-
+      
       p("The", span("position autocorrelation", class = "cl-sea"),
         "timescale", HTML(paste0("(\u03C4", tags$sub("p"), ")")),
         "is the", HTML(paste0(span("home range crossing time",
@@ -1207,31 +1231,31 @@ create_modal <- function(var, id) {
         "increases, we can expect an animal to take longer to travel",
         "this linear extent. For example:"
       ),
-
+      
       column(
         width = 12,
         shiny::img(src = "www/explain_taup.gif",
                    width = "100%", align = "center")),
       p(HTML('&nbsp;')),
-
+      
       p("Typically, the",
         span("sampling duration",  class = "cl-dgr"),
         "needs to be at least as long as the home range crossing time",
         "(if not many times longer) for",
         span("home range", class = "cl-sea-d"), "estimation.")
-
+      
     ) # end of fluidRow
   } # end of taup
-
+  
   if (var == "tauv") {
     out_title <- shiny::h4(
       span("Velocity autocorrelation", class = "cl-sea"),
       "parameter:")
-
+    
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
-
+      
       p("The", span("velocity autocorrelation", class = "cl-sea"),
         "timescale", HTML(paste0("(\u03C4", tags$sub("v"), ")")),
         "is the", HTML(paste0(span("directional persistence",
@@ -1247,14 +1271,14 @@ create_modal <- function(var, id) {
         HTML(paste0("\u03C4", tags$sub("v"), " parameter.")),
         "For example:"
       ),
-
+      
       p(HTML('&nbsp;')),
       column(
         width = 12,
         shiny::img(src = "www/explain_tauv.gif",
                    width = "100%", align = "center")),
       p(HTML('&nbsp;')),
-
+      
       p("Typically, the",
         span("sampling interval", HTML("(\u0394t)"),
              class = "cl-dgr"),
@@ -1266,14 +1290,14 @@ create_modal <- function(var, id) {
         HTML(paste0("3\u03C4", tags$sub("v"))), "then no",
         "statistically significant signature of the animal's",
         "velocity will remain in the tracking dataset.")
-
+      
     ) # end of fluidRow
   } # end of tauv
   
   if (var == "sigma") {
     out_title <- shiny::h4(
       span("Location variance", class = "cl-sea"), "parameter:")
-
+    
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
@@ -1285,7 +1309,7 @@ create_modal <- function(var, id) {
         "and ultimately measures the spatial variability",
         "between any two locations."
       ),
-
+      
       p("We are simulating an",
         span("isotropic", class = "cl-sea-d"), "movement process,",
         "so", wrap_none("\u03C3", tags$sub("p")),
@@ -1293,7 +1317,7 @@ create_modal <- function(var, id) {
         "resulting in a circular", span("home range", class = "cl-sea-d"),
         "area."
       ),
-
+      
       p("As we are also modeling",
         span("range resident", class = "cl-sea-d"),
         "individuals (with a tendency to remain within their",
@@ -1302,7 +1326,7 @@ create_modal <- function(var, id) {
         "is sufficient, the average square distance between any two",
         "locations will be equal to the chosen",
         HTML("\u03C3\u209A"), "value.")
-
+      
     ) # end of fluidRow
   } # end of tauv
   
@@ -1323,11 +1347,11 @@ create_modal <- function(var, id) {
   if (var == "loss") {
     out_title <- shiny::h4(
       span("Missing data", class = "cl-sea"), "bias:")
-
+    
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
-
+      
       p("Many real-world issues can lead to animal locations",
         "being sampled", span("irregularly", class = "cl-dgr"),
         "in time: duty-cycling tags to avoid wasting battery",
@@ -1336,7 +1360,7 @@ create_modal <- function(var, id) {
         "Ultimately, missing data equate to",
         "a loss of", wrap_none(
           span("information", class = "cl-sea-d"), "."))
-
+      
     ) # end of fluidRow
   } # end of loss
   
@@ -1369,26 +1393,26 @@ create_modal <- function(var, id) {
       
     ) # end of fluidRow
   } # end of failure
-
+  
   if (var == "error") {
     out_title <- shiny::h4(
       span("Location error", class = "cl-sea"), "bias:")
-
+    
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
-
+      
       p("TBA")
-
+      
     ) # end of fluidRow
-
+    
   } # end of error
   
   out <- bsplus::bs_modal(
     id = paste0("modal_", var, "_", id),
     title = out_title,
     body = out_body, size = "medium")
-
+  
   return(out)
 }
 
@@ -1507,7 +1531,7 @@ pseudonymize <- function(data,
 #' @noRd
 #' 
 var.covm <- function(sigma, average = FALSE) {
- 
+  
   if (ncol(sigma) == 1) return(sigma@par["major"])
   
   sigma <- attr(sigma, "par")[c("major", "minor")]
@@ -1633,10 +1657,10 @@ devRow <- function(group = NULL,
   
   dur <- extract_sampling(data, name = "period")[[1]]
   dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
-    
+  
   dti <- extract_sampling(data, name = "interval")[[1]]
   dti <- fix_unit(dti$value, dti$unit)
-    
+  
   out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
   out$dti <- paste(dti[1], abbrv_unit(dti[,2]))
   
@@ -1829,10 +1853,10 @@ chooserInput <- function(inputId,
 
 shiny::registerInputHandler("shinyjsexamples.chooser", 
                             function(data, ...) {
-  if (is.null(data)) NULL
-  else list(A = as.character(data$left),
-            B = as.character(data$right))
-}, force = TRUE)
+                              if (is.null(data)) NULL
+                              else list(A = as.character(data$left),
+                                        B = as.character(data$right))
+                            }, force = TRUE)
 
 
 #' Parallel lapply
@@ -2066,10 +2090,10 @@ par.ctmm.fit <- function(data,
 #' @noRd
 #'
 par.akde <- function(data,
-                      fit,
-                      cores = NULL,
-                      trace = TRUE,
-                      parallel = TRUE) {
+                     fit,
+                     cores = NULL,
+                     trace = TRUE,
+                     parallel = TRUE) {
   
   if (class(fit)[1] != "list" && class(fit[[1]])[1] != "ctmm") {
     stop("'input' must be a list of ctmm objects.")
@@ -2097,9 +2121,9 @@ par.akde <- function(data,
     # Process multiple animals on multiple cores:
     internal_cores <- 1
     out_akde <- par.lapply(input,
-                            try_akde, 
-                            cores = cores,
-                            parallel = parallel)
+                           try_akde, 
+                           cores = cores,
+                           parallel = parallel)
   }
   
   if (any(has_error(out_akde))) {

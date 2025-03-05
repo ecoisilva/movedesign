@@ -61,6 +61,7 @@ app_server <- function(input, output, session) {
     
     meanfit = NULL, 
     is_emulate = FALSE,
+    random = FALSE,
     
     is_isotropic = NULL,
     is_analyses = FALSE,
@@ -79,8 +80,10 @@ app_server <- function(input, output, session) {
     
     highlight_dur = "",
     highlight_dti = "",
+    var_fraction = .5,
     
-    var_fraction = .5)
+    restored_rv = NULL,
+    restored = NULL)
   
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
 

@@ -1,3 +1,4 @@
+
 #' Abbreviate units
 #'
 #' @description Create abbreviations of units.
@@ -12,10 +13,10 @@
 #'
 #' @noRd
 abbrv_unit <- function(unit, ui_only = TRUE) {
-
+  
   if (missing(unit))
     stop("`unit` argument not provided.")
-
+  
   if (!is.character(unit))
     stop("`unit` argument must be a character string.")
   
@@ -50,10 +51,10 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
   if (x == "hour") out <- "hr"
   if (x == "minute") out <- "min"
   if (x == "second") out <- "sec"
-
+  
   if (x == "kilometer") out <- "km"
   if (x == "meter") out <- "m"
-
+  
   if (x == "square kilometer" || x == "km^2") 
     out <- ifelse(ui_only, "km\u00B2", "km^2")
   if (x == "square meter" || x == "m^2") 
@@ -64,9 +65,9 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
   if (x == "meters/second") out <- "m/s"
   if (x == "kilometers/day") out <- "km/day"
   if (x == "meters/day") out <- "m/day"
-
+  
   return(out)
-
+  
 }
 
 #' Fix values and units of space and time
@@ -205,7 +206,7 @@ fix_unit <- function(input,
       y[i] <- x_new %#% y[i]
       x[i] <- x_new
     }   
-
+    
     # Round value:
     y[i] <- ifelse((y[i] %% 1) * 10 == 0, 
                    round(y[i], 0),
@@ -280,7 +281,7 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
   } else { sig <- sigma %#% sigma_unit }
   
   if (is.null(mu)) mu <- c(0, 0) else mu <- c(mu[1], mu[2])
-
+  
   if (is.null(tau_v)) {
     mod <- ctmm::ctmm(tau = taup,
                       isotropic = isotropic,
@@ -288,7 +289,7 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
                       mu = mu)
     return(mod)
   }
-    
+  
   if (missing(tau_v)) stop("tau_v is required.")
   if (missing(tau_v_unit)) {
     
@@ -345,7 +346,7 @@ simulate_data <- function(data = NULL,
   
   dat <- pseudonymize(dat)
   dat$index <- 1:nrow(dat)
-
+  
   return(list(dat))
 }
 
@@ -395,20 +396,24 @@ get_true_hr <- function(data = NULL,
       if (emulated) {
         
         if (fit[[x]]$isotropic[["sigma"]]) {
+          
           sig <- var.covm(fit[[x]]$sigma, average = TRUE)
           radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig)
           area <- -2 * log(0.05) * pi * sig
           
         } else {
-          sig1 <- fit[[x]]$sigma@par["major"][[1]]
-          sig2 <- fit[[x]]$sigma@par["minor"][[1]]
-          radius_x <- sqrt(-2 * log(0.05) * sig1)
-          radius_y <- sqrt(-2 * log(0.05) * sig2)
           
-          fit_ellipse <- ellipse::ellipse(fit[[x]]$sigma, level = 0.95)
-          semi_axis_1 <- max(fit_ellipse[,1])/2 - min(fit_ellipse[,1])/2
-          semi_axis_2 <- max(fit_ellipse[,2])/2 - min(fit_ellipse[,2])/2
-          area <- pi * semi_axis_1 * semi_axis_2
+          sigma <- fit[[x]]$sigma
+          if (ncol(sigma) == 1) {
+            sigma <- sigma@par["major"]
+          } else {
+            sigma <- attr(sigma, "par")[c("major", "minor")]
+            sigma <- sort(sigma, decreasing = TRUE)
+          }
+          
+          radius_x <- sqrt(-2 * log(0.05) * sigma[["major"]])
+          radius_y <- sqrt(-2 * log(0.05) * sigma[["minor"]])
+          area <- pi * radius_x * radius_y
           
         } # end of if (is_isotropic)
         
@@ -638,7 +643,7 @@ calculate_ci <- function(data, level = 0.95) {
   margin <- qt(alpha, df = dof) * sd(data)/sqrt(length(data))
   lci <- mean(data) - margin
   uci <- mean(data) + margin
-
+  
   out <- data.frame(
     CI = level,
     CI_low = lci,
@@ -746,11 +751,11 @@ extract_pars <- function(
         if (name == "speed") var <- name
   
   if (meta && length(obj) > 1) {
-    capture_meta(obj, 
-                 variable = var,
-                 units = !si_units, 
-                 verbose = FALSE, 
-                 plot = FALSE) -> out
+    .capture_meta(obj, 
+                  variable = var,
+                  units = !si_units, 
+                  verbose = FALSE, 
+                  plot = FALSE) -> out
     if (is.null(out)) return(NULL)
     
     unit <- extract_units(rownames(out$meta)[1])
@@ -779,7 +784,7 @@ extract_pars <- function(
       
       tmp <- data.frame(value = tmp / -2 / log(0.05) / pi,
                         unit = unit)
-                        
+      
       if (!si_units) tmp <- fix_unit(tmp, convert = TRUE)
       
       return(data.frame(tmp,
@@ -1026,11 +1031,11 @@ extract_outputs <- function(obj,
   name <- ifelse(name == "hr", "area", "speed")
   
   if (meta && length(obj) > 1) {
-    capture_meta(obj, 
-                 variable = name,
-                 units = !si_units, 
-                 verbose = FALSE, 
-                 plot = FALSE) -> out_meta
+    .capture_meta(obj, 
+                  variable = name,
+                  units = !si_units, 
+                  verbose = FALSE, 
+                  plot = FALSE) -> out_meta
     if (is.null(out_meta)) return(NULL)
     unit <- extract_units(rownames(out_meta$meta)[1])
     tmp <- data.frame("lci" = out_meta$meta[1, 1],
@@ -1040,7 +1045,7 @@ extract_outputs <- function(obj,
     out_meta <- cbind(data.frame(id = "All",
                                  subject = "All",
                                  group = "All"),
-                                 tmp)
+                      tmp)
   }
   
   out <- lapply(seq_along(obj), function(x) {
@@ -1163,7 +1168,7 @@ simulate_gps <- function(data,
     TRUE ~ params[["b_max"]] * 0.02)
   
   while (abs(err) > threshold && i < max_attempts) {
-
+    
     # Update the log-logistic function:
     
     i <- i + 1
@@ -1298,27 +1303,30 @@ update_f <- function(x, init) {
 #' @importFrom dplyr %>%
 #' @noRd
 #' 
-guess_time <- function(data,
-                       type = "fit",
+guess_time <- function(type = "fit",
+                       data = NULL,
                        fit = NULL,
+                       dti = NULL,
+                       dur = NULL,
                        seed = NULL,
                        trace = FALSE,
                        parallel = TRUE) {
   
-  set_id <- 1 # only run first dataset
-  data <- data[[set_id]] 
+  set_id <- 1
   
   if (!type %in% c("fit", "speed"))
     stop("type =", type, " is not supported.", call. = FALSE)
   
-  if (missing(data)) stop("`data` not provided.")
   expt_unit <- "minute"
-  
   expt <- expt_max <- expt_min <- expt_rng <- 0
   outputs <- data.frame(expt, expt_min, expt_max, expt_unit, expt_rng)
   names(outputs) <- c("mean", "min", "max", "unit", "range")
   
   if (type == "fit") {
+    if (missing(data)) stop("`data` not provided.")
+    
+    data <- data[[set_id]] 
+    
     n <- 2500
     if (nrow(data) < n) {
       outputs$mean <- ifelse(nrow(data) < 1000, 1, 2)
@@ -1334,7 +1342,7 @@ guess_time <- function(data,
     fit <- par.ctmm.select(list(data[1:200, ]), 
                            list(guess),
                            trace = trace,
-                           parallel = TRUE)
+                           parallel = parallel)
     total_time <- difftime(Sys.time(), start, units = "sec")[[1]]
     expt <- expt_unit %#% (total_time * nrow(data) / 200)
     
@@ -1346,35 +1354,37 @@ guess_time <- function(data,
   } # end of if (type == "fit")
   
   if (type == "speed") {
-    if (!is.null(seed)) set.seed(seed[[set_id]])
-    if (missing(fit)) {
-      stop("ctmm `fit` object not provided.")
-    } else { fit <- fit[[set_id]] }
     
+    if (!is.null(seed)) set.seed(seed[[set_id]])
+    if (missing(fit)) stop("ctmm `fit` object not provided.")
+    
+    fit <- fit[[set_id]]
     if (is.null(summary(fit)$DOF["speed"])) return(outputs)
+    
     tauv <- extract_pars(fit, name = "velocity")[[1]]
     if (is.null(tauv)) return(outputs)
     if (tauv$value[2] == 0) return(outputs)
-    
-    dti <- data[[2, "t"]] - data[[1, "t"]]
-    dur <- extract_sampling(data, name = "period")[[1]]
     tauv <- tauv$value[2] %#% tauv$unit[2]
-    N <- summary(fit)$DOF["speed"]
+    
+    dti <- dti$value %#% dti$unit
+    dur <- "days" %#% dur$value %#% dur$unit
+    N <- summary(fit)$DOF[["speed"]]
     
     x1 <- log(N)
     x2 <- tauv/dti
-    x3 <- "days" %#% dur$value %#% dur$unit
+    x3 <- dur
     
     if (tauv/dti < 1) {
       y_min <- max(exp(1.3915 + 0.1195 * x1), 1)
       y <- exp(3.4924 - 0.1978 * x1) 
       
-      if (N < 30) {
+      if (N < 15) {
         y_max <- exp(4.15038 - 0.3159 * x1 + 0.01912 * x3)
-        if (N > 5 && N < 15) y_max <- y_max * 2
-        if (N <= 5) y_max <- y_max * 3
-      } else { y_max <- y }
-
+        if (N <= 5) y_max <- y_max * 2
+      } else {
+        y_max <- y
+      }
+      
       expt <- expt_min <- ceiling(expt_unit %#% y)
       expt_max <- ifelse(
         N > 30,
@@ -1426,11 +1436,11 @@ guess_time <- function(data,
 #' @noRd
 #'
 measure_distance <- function(data) {
-
+  
   tmpdat <- data.frame(
     x = data$x,
     y = data$y)
-
+  
   tmpdist <- list()
   for (i in 2:nrow(data)) {
     tmpdist[[i]] <-
@@ -1438,7 +1448,7 @@ measure_distance <- function(data) {
              (tmpdat$y[i] - tmpdat$y[i - 1])^2)
   }
   dist <- c(0, do.call("rbind", tmpdist))
-
+  
   # dist <- c(0, sqrt((data$x - lag(data$x))^2 +
   #                     (data$y - lag(data$y))^2)[-1])
   
@@ -1461,7 +1471,7 @@ estimate_trajectory <- function(data,
                                 seed) {
   
   grouped <- ifelse(is.null(groups), FALSE, TRUE)
-                    
+  
   if (class(data)[1] != "list" &&
       class(data[[1]])[1] != "ctmm") 
     stop("data argument needs to be a named list.")
@@ -1527,195 +1537,6 @@ convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
   
   return(out)
 }
-
-
-#' Capture meta() output
-#'
-#' @description Capture all outputs from the ctmm::meta() function.
-#' @keywords internal
-#'
-#' @importFrom ctmm %#%
-#' @importFrom dplyr %>%
-#' @noRd
-#'
-capture_meta <- function(x, 
-                         variable = "area",
-                         type = NULL,
-                         sort = TRUE, 
-                         units = FALSE,
-                         verbose = TRUE,
-                         plot = TRUE) {
-  
-  if (variable == "tau position" || variable == "tau velocity") {
-    type <- variable
-    x.new <- lapply(seq_along(x), function(i) {
-      if (variable == "tau position") E <- x[[i]]$tau[1]
-      if (variable == "tau velocity") E <- x[[i]]$tau[2]
-      if (is.null(E)) out <- NULL
-      else if (is.na(E)) out <- NULL
-      else out <- x[[i]]
-    })
-    names(x.new) <- names(x)
-    x <- x.new
-    rm(x.new)
-    
-    x[sapply(x, is.null)] <- NULL
-    if (length(x) == 0) return(NULL)
-  }
-  
-  is_grouped <- class(x)[1] == "list" && class(x[[1]])[1] == "list" && 
-    !(length(names(x[[1]])) == 2 && 
-        all(names(x[[1]]) == c("DOF", "CI")))
-  
-  num_groups <- ifelse(is_grouped, length(x), 1)
-  num_out <- ifelse(is_grouped, length(x) + 1, 1)
-  
-  out <- tryCatch({
-    ctmm::meta(x, 
-               variable = variable,
-               units = FALSE, 
-               verbose = FALSE, 
-               plot = FALSE) %>% 
-      suppressMessages() %>% 
-      suppressWarnings() %>% 
-      quiet()
-  }, error = function(e) {
-    message(paste(
-      "Population-level mean", variable, "could not be extracted."))
-    return(NULL)
-  })
-  if (is.null(out)) return(NULL)
-  
-  out <- capture.output(
-    ctmm::meta(x, 
-               variable = variable,
-               units = FALSE, 
-               verbose = FALSE, 
-               plot = FALSE)
-  ) %>% suppressMessages() %>% quiet()
-  
-  i <- 1
-  num_row <- 2
-  out_mods <- out_logs <- list()
-  for (i in seq_len(num_out)) {
-    
-    if (i == 1) num_row <- 2 
-    else num_row <- num_row + 3
-    
-    mods <- c("inverse-Gaussian", "Dirac-d")
-    extract_meta_mods <- function(y) {
-      model <- ifelse(
-        startsWith(y, "Dirac"), "Dirac-d", "inverse-Gaussian")
-      delta_AICc <- unlist(
-        stringr::str_extract_all(y, '\\d+([.,]\\d+)?'))
-      if (length(delta_AICc) == 0) delta_AICc <- "Inf"
-      list("model" = model, "delta_AICc" = as.numeric(delta_AICc))
-    }
-    
-    tmp_out <- extract_meta_mods(out[num_row]) %>% list()
-    tmp_out[[2]] <- extract_meta_mods(out[num_row + 1])
-    
-    out_mods[[i]] <- as.data.frame(do.call(rbind, tmp_out))
-    out_logs[[i]] <- ifelse(
-      startsWith(out[num_row], "Dirac"),
-      FALSE,
-      TRUE)
-    if (!is_grouped) 
-      out_logs[[i]] <- list("subpop_detected" = out_logs[[i]])
-    
-  } # end of loop [i]
-  
-  if (num_out == 1) {
-    
-    return(list(meta = ctmm::meta(x, 
-                                  variable = variable,
-                                  units = units, 
-                                  verbose = verbose, 
-                                  plot = plot) %>% quiet(),
-                mods = out_mods[[1]],
-                logs = out_logs[[1]],
-                names = names(x),
-                type = type))
-    
-  } else {
-    
-    extract_meta_best_mods <- function(y) {
-      model <- ifelse(
-        startsWith(y, "Sub-population"), 
-        "Sub-population", "Joint population")
-      delta_AICc <- unlist(
-        stringr::str_extract_all(y, '\\d+([.,]\\d+)?'))
-      if (length(delta_AICc) == 0) delta_AICc <- "Inf"
-      list("model" = model, "delta_AICc" = as.numeric(delta_AICc))
-    }
-    
-    out_mods[[length(out_mods) + 1]] <- data.frame(
-      do.call(rbind, list(
-        extract_meta_best_mods(out[num_row + 3]),
-        extract_meta_best_mods(out[num_row + 3 + 1])
-      )))
-    
-    if (diff(do.call(c, out_mods[[
-      length(out_mods)]]$delta_AICc)) <= 2) {
-      sub_detected <- FALSE
-    } else {
-      sub_detected <- ifelse(
-        startsWith(
-          out_mods[[length(out_mods)]][[1,1]],
-          "Sub-population"),
-        TRUE, FALSE)
-    }
-    
-    out_logs[[length(out_logs) + 1]] <- ifelse(
-      sub_detected,
-      TRUE,
-      FALSE)
-    
-    names(out_mods) <- names(out_logs) <- c(
-      paste0("var_subpop", 1:num_groups),
-      "var_jointpop",
-      "subpop_detected")
-    
-    return(list(meta = ctmm::meta(x, 
-                                  variable = variable,
-                                  units = units, 
-                                  verbose = verbose, 
-                                  plot = plot) %>% quiet(),
-                mods = out_mods,
-                logs = out_logs,
-                names = names(x),
-                type = type))
-  }
-}
-
-#' Extract ratios
-#'
-#' @description Extract ratios calculated with the ctmm::meta() function.
-#' @keywords internal
-#'
-#' @importFrom ctmm %#%
-#' @importFrom dplyr %>%
-#' @noRd
-#'
-extract_ratios <- function(x, rev = TRUE) {
-  if (is.null(names(x$meta))) stop("No subgroups evaluated.")
-  if (length(x$names) != 2) stop("Only two groups accepted.")
-  
-  if (rev) {
-    xy <- c(1, 2)
-    nm <- paste0(names(x$meta)[1], "/", names(x$meta)[2])
-  } else {
-    xy <- c(2, 1)
-    nm <- paste0(names(x$meta)[2], "/", names(x$meta)[1])
-  }
-  
-  x <- x$meta$`mean ratio`
-  return(data.frame(name = nm,
-                    lower = x[xy[1], xy[2], "low"],
-                    est = x[xy[1], xy[2], "est"],
-                    upper = x[xy[1], xy[2], "high"]))
-}
-
 
 # generate_missing_data <- function(x) {
 #   # If there is data loss:
