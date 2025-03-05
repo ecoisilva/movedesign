@@ -1,18 +1,16 @@
-options(shiny.maxRequestSize = 30 * 1024^2) # 30 MB
+
+options(shiny.maxRequestSize = 500 * 1024^2) # 500 MB
 
 .onLoad <- function(libname, pkgname) {
-  rlang::run_on_load()
+  # rlang::run_on_load()
+  rlang::on_load(rlang::local_use_cli(inline = TRUE))
 }
-
-rlang::on_load(rlang::local_use_cli(inline = TRUE))
 
 .onAttach <- function(libname, pkgname) {
   version <- utils::packageDescription(pkgname, fields = "Version")
-
   website <- "https://github.com/ecoisilva/movedesign/issues"
   if (interactive())
     website <- "{.url https://github.com/ecoisilva/movedesign/issues}"
-
   rlang::inform(
     class = "packageStartupMessage",
     message = c(
@@ -27,6 +25,10 @@ rlang::on_load(rlang::local_use_cli(inline = TRUE))
 utils::globalVariables(
   c(".data", "group", "seed",
     
+    "datList",
+    "outList",
+    "truthList",
+    
     "id",
     "x", "y",
     "x0", "y0", "x1", "y1",
@@ -38,10 +40,12 @@ utils::globalVariables(
     "duration", "dur",
     "interval", "dti", "dti_notes",
     
+    "CI_low", "CI_high",
     "value", "low", "high",
     "est", "lci", "uci",
     "error", "error_lci", "error_uci",
-    "CI_low", "CI_high",
+    "ratio_est", "ratio_lci", "ratio_uci",
+    "subpop_detected",
     
     "svf",
     "svf_lower",
@@ -53,6 +57,7 @@ utils::globalVariables(
     
     "type",
     "variable",
+    "target", "set_target",
     
     "n",
     "m",
@@ -60,6 +65,7 @@ utils::globalVariables(
     "overlaps",
     
     "var_color",
+    "color",
     
     "buffalo",
     "coati",

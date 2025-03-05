@@ -15,6 +15,7 @@ Depends:
 Imports: 
     bayestestR,
     bsplus,
+    combinat,
     config (>= 0.3.1),
     crayon,
     ctmm (>= 0.6.1),
