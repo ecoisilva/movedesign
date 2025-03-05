@@ -438,7 +438,8 @@ mod_tab_sims_ui <- function(id) {
                 
                 br(), span(
                   class = "help-block", 
-                  fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
+                  fontawesome::fa("circle-exclamation",
+                                  fill = "#dd4b39"),
                   span("Note:", class = "help-block-note"), 
                   
                   "The", span("movement speed",
@@ -549,6 +550,15 @@ mod_tab_sims_server <- function(id, rv) {
     }) %>% debounce(1000)
     
     ## Save reactive values (for groups): ---------------------------------
+    
+    observe({
+      req(rv$datList,
+          rv$active_tab == 'sims',
+          rv$which_meta == "mean",
+          rv$data_type == "simulated")
+      
+      shinyjs::hide(id = "simTable_save")
+    })
     
     observe({
       req(rv$datList,
@@ -865,17 +875,17 @@ mod_tab_sims_server <- function(id, rv) {
         seed = rv$seed0)
       rv$sims$grouped <- FALSE
       
-      if (is.null(rv$modList0)) {
-        rv$modList0 <- list(mod)
-        names(rv$modList0) <- as.character(rv$sims$m)
-        rv$seedList0 <- list(rv$seed0)
+      if (is.null(rv$modList)) {
+        rv$modList <- list(mod)
+        names(rv$modList) <- as.character(rv$sims$m)
+        rv$seedList <- list(rv$seed0)
         
       } else {
-        rv$modList0[[length(rv$modList0) + 1]] <- mod
-        names(rv$modList0)[[length(rv$modList0)]] <- 
+        rv$modList[[length(rv$modList) + 1]] <- mod
+        names(rv$modList)[[length(rv$modList)]] <- 
           as.character(rv$sims$m)
         
-        rv$seedList0 <<- c(rv$seedList0, rv$seed0)
+        rv$seedList <<- c(rv$seedList, rv$seed0)
       }
       
       names(out) <- as.character(rv$sims$m)
