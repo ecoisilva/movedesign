@@ -209,12 +209,10 @@ golem_add_external_resources <- function() {
     tags$link(href = paste0(
       "https://fonts.googleapis.com/css?",
       "family=",
+      "Fira+Sans", "|",
       "Plus+Jakarta+Sans", "|",
-      "Rubik:ital,wght@0,300..900;1,300..900", "|",
       "Roboto+Condensed", "|",
-      "Roboto+Condensed:wght@700", "|",
-      "Fira+Mono", "|",
-      "Fira+Sans+Condensed",
+      "Roboto+Condensed:wght@700",
       "&display=fallback"),
       rel = "stylesheet"),
     

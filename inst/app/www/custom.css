@@ -39,10 +39,8 @@
  --white: #fff;
  --black: #000;
 
- --sans: 'Plus Jakarta Sans', sans-serif;
- --monosans: 'Roboto Condensed', Consolas, monospace, sans-serif;
- --monosans: 'Roboto Condensed', Consolas, monospace, sans-serif;
- --mono: 'Fira Mono', Consolas, monospace, sans-serif;
+ --sans: 'Fira Sans', 'Plus Jakarta Sans', sans-serif;
+ --monosans: 'Roboto Condensed', Consolas, monospace;
 }
 
 .cl-mdn { color: var(--midnight) !important; }
@@ -110,6 +108,7 @@ body {
 }
 .control-sidebar-dark .nav-tabs.control-sidebar-tabs {
   background: #2d373b;
+  border-bottom: #2d373b;
 }
 
 .row {
@@ -246,11 +245,15 @@ body {
   border: 1px solid var(--grey-000) !important;
 }
 
+.navbar-nav > .messages-menu > .dropdown-menu > li .menu > li > a > p {
+  font-family: var(--monosans);
+}
+
 /* TEXT ---------------------------------------------------------------- */
 
 p {
   font-family: var(--sans);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.3px;
@@ -1228,6 +1231,10 @@ font-size: 12px;
 .modal-content {
   border-radius: 8px;
   font-size: 18px;
+}
+
+.modal-sm {
+  width: 356px;
 }
 
 .modal-lg {
