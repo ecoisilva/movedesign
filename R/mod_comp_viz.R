@@ -245,7 +245,7 @@ mod_comp_viz_server <- function(id, rv) {
       } else {
         req(rv$id)
         m <- length(rv$datList)
-        set_id <- rv$id # names(rv$datList)
+        set_id <- rv$id
         
         ui <- chooserInput(ns("set_groups"), 
                            leftLabel = "Group A", 
@@ -258,7 +258,8 @@ mod_comp_viz_server <- function(id, rv) {
       
       return(ui)
       
-    }) # end of renderUI, "select_groups"
+    }) %>% # end of renderUI, "select_groups",
+      bindEvent(c(rv$datList, rv$id))
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
@@ -328,115 +329,149 @@ mod_comp_viz_server <- function(id, rv) {
     
     ## Rendering legend for groups: -------------------------------------
     
-    output$selectUI_legend_groups <- renderUI({
+    estimating_initial_hr <- reactive({
+      
       req(rv$datList, rv$fitList)
       req(rv$which_question, rv$grouped, rv$is_valid)
       req(length(rv$groups[[1]][["A"]]) > 0,
           length(rv$groups[[1]][["B"]]) > 0)
       
+      loading_modal("Detecting subpopulations")
+      
+      start_hr <- Sys.time()
+      if ((length(rv$datList) == 1) ||
+          (rv$grouped && length(rv$datList) == 2)) {
+        
+        hr <- tryCatch(
+          ctmm::akde(rv$datList[[1]], rv$fitList[[1]]),
+          warning = function(w) NULL,
+          error = function(e) NULL)
+        hr <- list(hr)
+        
+        if (rv$grouped) {
+          hr2 <- tryCatch(
+            ctmm::akde(rv$datList[[2]], rv$fitList[[2]]),
+            warning = function(w) NULL,
+            error = function(e) NULL)
+          hr <- list(hr[[1]], hr2)
+        }
+        
+      } else {
+        
+        hr <- par.akde(
+          rv$datList,
+          rv$fitList,
+          parallel = rv$parallel)
+        
+      }
+      
+      shinybusy::remove_modal_spinner()
+      
+      return(hr)
+      
+    }) %>% # end of reactive, estimating_initial_hr()
+      bindCache(rv$species,
+                rv$id,
+                rv$datList,
+                length(rv$fitList))
+    
+    
+    get_meta_inputs <- reactive({
       datList <- rv$datList
       fitList <- rv$fitList
       
-      group_A <- rv$fitList[rv$groups[[1]][["A"]]]
-      group_A[sapply(group_A, is.null)] <- NULL
-      group_B <- rv$fitList[rv$groups[[1]][["B"]]]
-      group_B[sapply(group_B, is.null)] <- NULL
+      input <- .get_groups(fitList, groups = rv$groups[[1]])
+      txt_target <- list(
+        "hr" = c("area", "home range area"),
+        "ctsd" = c("speed", "movement speed"))
       
-      if (length(rv$which_question) == 1) {
-        if (rv$which_question == "Home range") {
-          name <- "area"
-          type <- "home range area"
-        } else if (rv$which_question == "Speed & distance") {
-          name <- "speed"
-          type <- "movement speed"
-        }
-        
-        out <- capture_meta(list(A = group_A,
-                                 B = group_B),
-                            variable = name,
-                            units = FALSE, 
-                            verbose = TRUE, 
-                            plot = FALSE) %>% 
-          suppressMessages() %>% 
-          suppressWarnings() %>%
+      out <- lapply(rv$set_target, function(x) {
+        .capture_meta(input,
+                      variable = txt_target[[x]][[1]],
+                      units = FALSE,
+                      verbose = TRUE,
+                      plot = FALSE) %>% 
+          suppressMessages() %>%
           quiet()
+      })
+      
+      if (length(rv$set_target) == 1) {
+        target_map <- list(
+          "hr" = list("hr" = out[["hr"]], "ctsd" = NULL),
+          "ctsd" = list("hr" = NULL, "ctsd" = out[["ctsd"]]))
         
-        req(out)
-        
-        if (name == "area") rv$metaList_groups <- list(
-          "intro" = list("hr" = out, "ctsd" = NULL),
+        outList <- list(
+          "intro" = target_map[[rv$set_target]],
           "final" = list("hr" = NULL, "ctsd" = NULL),
           "is_final" = FALSE)
-        if (name == "speed") rv$metaList_groups <- list(
-          "intro" = list("hr" = NULL, "ctsd" = out),
+        
+      } else {
+        
+        outList <- list(
+          "intro" = list("hr" = out[["hr"]], "ctsd" = out[["ctsd"]]),
           "final" = list("hr" = NULL, "ctsd" = NULL),
           "is_final" = FALSE)
-          
-        detected <- out$logs$subpop_detected
-        if (detected) {
-          ui_extra <- tagList(span(
+      }
+      
+      rv$metaList_groups <- outList
+
+      return(out)
+      
+    }) %>% # end of reactive, "get_meta_inputs",
+      bindCache(c(
+        rv$which_question, 
+        rv$datList,
+        rv$groups[[1]]))
+    
+    output$selectUI_legend_groups <- renderUI({
+      req(rv$datList, rv$fitList)
+      req(rv$which_question, rv$set_target, rv$grouped, rv$is_valid)
+      req(length(rv$groups[[1]][["A"]]) > 0,
+          length(rv$groups[[1]][["B"]]) > 0)
+      
+      txt_target <- list(
+        "hr" = c("area", "home range area"),
+        "ctsd" = c("speed", "movement speed"))
+      
+      out <- get_meta_inputs()
+      detected <- sapply(out, \(x) x$logs$subpop_detected)
+      
+      if (length(detected) == 1) {
+        
+        if (detected[1]) {
+          txt_detected <- tagList(span(
             "Sub-populations were", span("correctly", class = "cl-sea"),
-            "detected for", type, "with the current groups."))
-        } else if (!detected) {
-          ui_extra <- tagList(span(
+            "detected for", txt_target[[set_target]][[2]],
+            "with the current groups."))
+        } else if (!detected[1]) {
+          txt_detected <- tagList(span(
             "No sub-populations detected with the current groups",
-            "for", wrap_none(type, "."),
+            "for", wrap_none(txt_target[[set_target]][[2]], "."),
             "Proceed with", wrap_none(span("caution", 
                                            class = "cl-dgr"), ".")))
         }
         
       } else {
-        out_hr <- capture_meta(list(A = group_A,
-                                    B = group_B),
-                               variable = "area",
-                               units = FALSE, 
-                               verbose = TRUE, 
-                               plot = FALSE) %>% 
-          suppressMessages() %>% 
-          suppressWarnings() %>% 
-          quiet()
-        
-        out_sd <- capture_meta(list(A = group_A,
-                                    B = group_B),
-                               variable = "speed",
-                               units = FALSE, 
-                               verbose = TRUE, 
-                               plot = FALSE) %>% 
-          suppressMessages() %>% 
-          suppressWarnings() %>% 
-          quiet()
-        
-        req(out_hr, out_sd)
-        
-        rv$metaList_groups <- list(
-          "intro" = list("hr" = out_hr, "ctsd" = out_sd),
-          "final" = list("hr" = NULL, "ctsd" = NULL),
-          "is_final" = FALSE
-        )
-        
-        detected_hr <- out_hr$logs$subpop_detected
-        detected_sd <- out_sd$logs$subpop_detected
-        
-        if (detected_hr && detected_sd) {
-          ui_extra <- tagList(span(
+        if (detected[["hr"]] && detected[["ctsd"]]) {
+          txt_detected <- tagList(span(
             "Sub-populations were correctly detected for",
             span("home range area", class = "cl-sea"),
             "and for", span("movement speed", class = "cl-sea"),
             "with the current groups."))
-        } else if (detected_hr && !detected_sd) {
-          ui_extra <- tagList(span(
+        } else if (detected[["hr"]] && !detected[["ctsd"]]) {
+          txt_detected <- tagList(span(
             "Sub-populations were correctly detected for",
             span("home range area", class = "cl-sea"),
             "but not for", span("movement speed", class = "cl-dgr"),
             "with the current groups."))
-        } else if (!detected_hr && detected_sd) {
-          ui_extra <- tagList(span(
+        } else if (!detected[["hr"]] && detected[["ctsd"]]) {
+          txt_detected <- tagList(span(
             "Sub-populations were correctly detected for",
             span("movement speed", class = "cl-sea"),
             "but not for", span("home range area", class = "cl-dgr"),
             "with the current groups."))
-        } else if (!detected_hr && !detected_sd) {
-          ui_extra <- tagList(span(
+        } else if (!detected[["hr"]] && !detected[["ctsd"]]) {
+          txt_detected <- tagList(span(
             "No sub-populations detected with the current groups",
             "for", span("home range area", class = "cl-dgr"),
             "or for", 
@@ -453,7 +488,7 @@ mod_comp_viz_server <- function(id, rv) {
              
              fontawesome::fa("circle-exclamation", fill = pal$dgr),
              span("Note:", class = "help-block-note"),
-             ui_extra
+             txt_detected
         ))
       
       return(ui)

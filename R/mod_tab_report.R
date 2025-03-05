@@ -344,10 +344,10 @@ mod_tab_report_server <- function(id, rv) {
     
     output$report_emulate <- renderUI({
       
-      ui <- staticBlock("Uncertainty not propagated", active = FALSE)
+      ui <- staticBlock("Without individual varation", active = FALSE)
       
       if (req(rv$is_emulate)) {
-        ui <- staticBlock("Uncertainty propagated", active = TRUE)
+        ui <- staticBlock("With individual varation", active = TRUE)
       }
       
       out_ui <- tagList(ui)
@@ -774,9 +774,9 @@ mod_tab_report_server <- function(id, rv) {
           mean(N1, na.rm = TRUE))
         
         out_regime <- out_reg_hr <-
-          p("The ideal", span("sampling duration", class = "cl-sea"),
-            "for", span("home range", class = "cl-grn"), "estimation",
-            "should be at least 30", icon(name = "xmark"),
+          p("The minimum", span("sampling duration", class = "cl-sea"),
+            "recommended for", span("home range", class = "cl-grn"),
+            "estimation should be at least 30", icon(name = "xmark"),
             span("position autocorrelation", class = "cl-sea"),
             wrap_none("parameter (\u03C4", tags$sub("p"), "),"),
             "or \u2248", wrap_none(ideal_dur$value, " ", ideal_dur$unit,
@@ -1480,21 +1480,63 @@ mod_tab_report_server <- function(id, rv) {
         lci <- out[grep("mean", rownames(out)), ]$low
         uci <- out[grep("mean", rownames(out)), ]$high
         
-        overlaps_with <- dplyr::between(
-            tmpunit %#% get_truth[[i]], lci, uci)
+        truth <- tmpunit %#% get_truth[[i]]
+        out_details <- out[1, ] %>% 
+          dplyr::mutate(est = (est - truth)/truth,
+                        lci = (lci - truth)/truth,
+                        uci = (uci - truth)/truth) %>% 
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            within_threshold = any(
+              dplyr::c_across(c(est, lci, uci)) >=
+                -rv$error_threshold & 
+                dplyr::c_across(c(est, lci, uci)) <=
+                rv$error_threshold),
+            close_to_threshold = any(
+              dplyr::c_across(c(est, lci, uci)) >= 
+                -(rv$error_threshold * 2) & 
+                dplyr::c_across(c(est, lci, uci)) <= 
+                (rv$error_threshold * 2)),
+            overlaps_with = dplyr::case_when(
+              (lci < -rv$error_threshold &
+                 uci > rv$error_threshold) ~ "Yes",
+              within_threshold ~ "Yes",
+              close_to_threshold ~ "Near",
+              TRUE ~ "No"))
         
         txt_nsims <- ifelse(
           length(rv$simList) == 1,
           "of a single simulation",
-          paste("of our set of", length(rv$simList), "simulations"))
+          paste("of our", length(rv$simList), "simulations"))
         
-        txt_mean <- span(
-          "The mean", txt_type[[i]], txt_nsims,
-          if (overlaps_with) {
-            span("overlapped", class = "cl-sea")
-          } else {
-            span("did not overlap", class = "cl-dgr") },
-          "with the truth.")
+        switch(out_details$overlaps_with,
+               "Yes" = {
+                 txt_mean <- span(
+                   style = paste("font-family: var(--monosans);"),
+                   
+                   "The mean", txt_type[[i]], txt_nsims,
+                   "is", span("falls within", class = "cl-sea"),
+                   "the set error margin of",
+                   paste0(rv$error_threshold * 100, "%."))
+               },
+               "Near" = {
+                 txt_mean <- span(
+                   style = paste("font-family: var(--monosans);"),
+                   
+                   "The mean", txt_type[[i]], txt_nsims,
+                   "is", span("near", class = "cl-sea"),
+                   "the set error margin of",
+                   paste0(rv$error_threshold * 100, "%."))
+               },
+               "No" = {
+                 txt_mean <- span(
+                   style = paste("font-family: var(--monosans);"),
+                 
+                   "The mean", txt_type[[i]], txt_nsims,
+                   span("falls outside", class = "cl-dgr"),
+                   "the set error margin of",
+                   paste0(rv$error_threshold * 100, "%."))
+               })
         
         if (is.na(get_CI[[i]][["CI_low"]]) &&
             is.na(get_CI[[i]][["CI_high"]])) {
@@ -1504,29 +1546,41 @@ mod_tab_report_server <- function(id, rv) {
           txt_uncertainty <- ifelse(
             get_CI[[i]][["CI_high"]] < .3 && 
               get_CI[[i]][["CI_low"]] > -.3,
-            "and with low uncertainty.",
-            "but with high uncertainty.")
+            "with low uncertainty.",
+            "with high uncertainty.")
         }
         
-        txt_final <- span(
-          style = paste("font-weight: 800;",
-                        "font-family: var(--monosans);"),
-          
-          "The number of simulations is likely insufficient",
-          "to obtain an accurate mean", 
-          wrap_none(txt_type[[i]], color = pal$dgr, end = ","),
-          txt_uncertainty)
-        
-        if (overlaps_with) {
-          txt_final <- span(
-            style = paste("font-weight: 800;",
-                          "font-family: var(--monosans);"),
-            
-            "The number of simulations is likely sufficient",
-            "to obtain an accurate mean", 
-            wrap_none(txt_type[[i]], color = pal$sea, end = ","),
-            txt_uncertainty)
-        }
+        switch(out_details$overlaps_with,
+               "Yes" = {
+                 txt_final <- span(
+                   style = paste("font-weight: 800;",
+                                 "font-family: var(--monosans);"),
+                   
+                   "The number of simulations is likely sufficient",
+                   "to obtain an accurate mean", 
+                   wrap_none(txt_type[[i]], color = pal$sea, end = ","),
+                   txt_uncertainty)
+               },
+               "Near" = {
+                 txt_final <- span(
+                   style = paste("font-weight: 800;",
+                                 "font-family: var(--monosans);"),
+                   
+                   "The number of simulations is unlikely sufficient",
+                   "to obtain an accurate mean", 
+                   wrap_none(txt_type[[i]], color = pal$dgr, end = ","),
+                   txt_uncertainty)
+               },
+               "No" = {
+                 txt_final <- span(
+                   style = paste("font-weight: 800;",
+                                 "font-family: var(--monosans);"),
+                   
+                   "The number of simulations is likely insufficient",
+                   "to obtain an accurate mean", 
+                   wrap_none(txt_type[[i]], color = pal$dgr, end = ","),
+                   txt_uncertainty)
+               })
         
         # if (is.na(HDI$CI_low) && is.na(HDI$CI_high)) {
         #   txt_final <- tagList(
@@ -1591,125 +1645,100 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$active_tab == "report")
       rv$report$groups <- out_groups <- span("")
       
-      req(rv$grouped, rv$groups,
-          rv$which_meta == "compare")
-      req(rv$metaList_groups[[3]],
-          rv$metaList)
+      req(rv$grouped, rv$groups, rv$which_meta == "compare")
+      req(rv$metaErr, rv$metaList, rv$metaList_groups[["is_final"]])
       
-      type <- get_N <- get_CI <- get_HDI <- NULL
-      txt_type <- txt_title <- NULL
+      set_target <- c()
+      txt_type <- txt_title <- list()
+      get_N <- get_CoI <- get_CrI <- list()
+      txt_ratio_order <- "(for group A/group B)"
+      
+      .extract_ci <- function(type_key) {
+        CI <- rv$metaErr[grep(type_key, rv$metaErr$type), ]
+        c("CI_low"  = CI[nrow(CI), "lci"],
+          "CI_est"  = CI[nrow(CI), "est"],
+          "CI_high" = CI[nrow(CI), "uci"])
+      }
+      
       if ("Home range" %in% rv$which_question) {
-        type <- c("hr")
-        txt_type <- c("home range area")
-        txt_title <- "Home range meta-analyses:"
+        set_target <- c(set_target, "hr")
+        txt_type[["hr"]] <- "home range area"
+        txt_title[["hr"]] <- "Home range meta-analyses:"
         
-        get_CI <- rv$metaErr[grep("hr", rv$metaErr$type), ]
-        get_CI <- c("CI_low" = get_CI[nrow(get_CI), "lci"],
-                    "CI_est" = get_CI[nrow(get_CI), "est"],
-                    "CI_high" = get_CI[nrow(get_CI), "uci"])
-        
-        get_HDI <- c("CI" = rv$hr_HDI$CI,
-                     "CI_low" = rv$hr_HDI$CI_low,
-                     "CI_high" = rv$hr_HDI$CI_high)
+        get_CoI[["hr"]] <- .extract_ci("hr")
+        get_CrI[["hr"]] <- c("CI" = rv$hr_HDI$CI,
+                             "CI_low" = rv$hr_HDI$CI_low,
+                             "CI_high" = rv$hr_HDI$CI_high)
       }
       
       if ("Speed & distance" %in% rv$which_question) {
-        type <- c(type, "ctsd")
-        txt_type <- c(txt_type, "movement speed")
-        txt_title <- c(txt_title, "Speed meta-analyses:")
+        set_target <- c(set_target, "ctsd")
+        txt_type[["ctsd"]] <- "movement speed"
+        txt_title[["ctsd"]] <- "Speed meta-analyses:"
         
-        CI <- rv$metaErr[grep("ctsd", rv$metaErr$type), ]
-        CI <- c("CI_low" = CI[nrow(CI), "lci"],
-                "CI_est" = CI[nrow(CI), "est"],
-                "CI_high" = CI[nrow(CI), "uci"])
-        
-        if (length(rv$which_question) == 1) {
-          get_HDI <- c("CI" = rv$sd_HDI$CI,
-                       "CI_low" = rv$sd_HDI$CI_low,
-                       "CI_high" = rv$sd_HDI$CI_high)
-          get_CI <- CI
-        } else {
-          get_HDI <- list(get_HDI, 
-                          c("CI" = rv$sd_HDI$CI,
-                            "CI_low" = rv$sd_HDI$CI_low,
-                            "CI_high" = rv$sd_HDI$CI_high))
-          get_CI <- list(get_CI, CI)
-        }
+        get_CoI[["ctsd"]] <- .extract_ci("sd")
+        get_CrI[["ctsd"]] <- c("CI" = rv$sd_HDI$CI,
+                               "CI_low" = rv$sd_HDI$CI_low,
+                               "CI_high" = rv$sd_HDI$CI_high)
       }
       
-      if (!is.list(get_HDI)) get_HDI <- list(get_HDI)
-      if (!is.list(get_CI)) get_CI <- list(get_CI)
-      
-      # i <- 1
-      for (i in seq_along(type)) {
+      for (target in set_target) {
         
-        meta_truth <- rv$metaList_groups[[1]][[type[[i]]]]
-        meta <- rv$metaList_groups[[2]][[type[[i]]]]
+        meta_truth <- rv$metaList_groups[["intro"]][[target]]
+        meta <- rv$metaList_groups[["final"]][[target]]
         
         is_subpop <- meta_truth$logs$subpop_detected
         is_subpop_detected <- meta$logs$subpop_detected
         
-        txt_certainty <- NULL
-        if (is_subpop) {
+        txt_subpop_cont <- if (is_subpop == is_subpop_detected) 
+          "As expected, sub-populations were" else
+            "However, sub-populations were"
+        
+        if (meta_truth$mods$subpop_detected[[2,2]] < 2) {
+          txt_subpop <- span(
+            "There was insufficient evidence in the", rv$data_type,
+            "dataset to detect sub-populations.")
+          txt_subpop_cont <- "Sub-populations were"
+        }  else if (is_subpop) {
           txt_subpop <- span(
             "We expected to detect a sub-population",
             "through meta-analyses.")
-          
         } else {
-          if (meta_truth$mods$subpop_detected[[2,2]] < 2)
-            txt_subpop <- span(
-              "There was insufficient evidence in the",
-              rv$data_type, "dataset to detect subpopulations.")
-          else 
-            txt_subpop <- span(
-              "We expected no sub-populations to be detected",
-              "through meta-analyses.")
+          txt_subpop <- span(
+            "We expected no sub-populations to be detected",
+            "through meta-analyses.")
         }
         
-        if (is_subpop == is_subpop_detected) {
-          txt_to_add <- "As expected,"
-          col_subpop <- "cl-sea-d"
-        } else {
-          txt_to_add <- "However,"
-          if (meta_truth$mods$subpop_detected[[2,2]] < 2) {
-            col_subpop <- "cl-gld"
-          } else {
-            col_subpop <- "cl-dgr"
-          }
-        }
+        col_subpop <- dplyr::case_when(
+          is_subpop == is_subpop_detected ~ "cl-sea-d",
+          meta_truth$mods$subpop_detected[[2,2]] < 2 ~ "cl-gld",
+          TRUE ~ "cl-dgr"
+        )
         
-        if (is_subpop_detected) {
-          txt_subpop_detected <- span(
-            txt_to_add, 
-            span("sub-populations were detected", class = col_subpop),
-            ifelse(meta$mods$subpop_detected[[2,2]] < 2, 
-                   "(though with \u0394AICc \uFF1C 2).",
-                   "(\u0394AICc \uFF1E 2)."))
-        } else {
-          txt_subpop_detected <- span(
-            txt_to_add, 
-            span("sub-populations were not detected", class = col_subpop),
-            ifelse(meta$mods$subpop_detected[[2,2]] < 2, 
-                   "(though with \u0394AICc \uFF1C 2).",
-                   "(\u0394AICc \uFF1E 2)."))
-        }
+        txt_subpop_detected <- span(
+          txt_subpop_cont, span(
+            if (is_subpop_detected) "detected" else "not detected",
+            class = col_subpop),
+          ifelse(meta$mods$subpop_detected[[2,2]] < 2,
+                 "(though with \u0394AICc \uFF1C 2).",
+                 "(\u0394AICc \uFF1E 2).")
+        )
         
-        expected_ratio <- extract_ratios(meta_truth)
-        observed_ratio <- extract_ratios(meta)
-        txt_ratio_order <- "(group A/group B)"
+        expected_ratio <- .get_ratios(meta_truth)
+        observed_ratio <- .get_ratios(meta)
         
         ratio <- paste0(round(observed_ratio$est, 2), ":1")
         overlaps_with <- list(
           "truth" = dplyr::between(observed_ratio$est,
-                                   expected_ratio$lower, 
-                                   expected_ratio$upper),
-          "one_expected" = expected_ratio$lower <= 1 &
-            expected_ratio$upper >= 1,
-          "one_observed" = observed_ratio$lower <= 1 &
-            observed_ratio$upper >= 1)
+                                   expected_ratio$lci, 
+                                   expected_ratio$uci),
+          "one_expected" = expected_ratio$lci <= 1 &
+            expected_ratio$uci >= 1,
+          "one_observed" = observed_ratio$lci <= 1 &
+            observed_ratio$uci >= 1)
         
         txt_ratio <- span(
-          "The", txt_type[[i]], "ratio", txt_ratio_order,
+          "The", txt_type[[target]], "ratio", txt_ratio_order,
           ifelse(
             overlaps_with$one_observed,
             paste0("overlapped with one (i.e., ",
@@ -1717,89 +1746,67 @@ mod_tab_report_server <- function(id, rv) {
             paste0("did not overlap with one (ratio point estimate of ",
                    wrap_none(ratio, ")."))))
         
-        txt_final <- span(
-          style = paste("font-weight: 800;",
-                        "font-family: var(--monosans);"),
-          
-          "The number of simulations is likely insufficient",
-          "to obtain accurate", 
-          wrap_none(txt_type[[i]], color = pal$dgr, " ratios."))
+        sufficient_simulations <- overlaps_with$truth && 
+          overlaps_with$one_expected == overlaps_with$one_observed &&
+          !is.na(get_CrI[[target]][["CI_low"]]) && 
+          !is.na(get_CrI[[target]][["CI_high"]])
         
-        if (overlaps_with$truth &&
-            (overlaps_with$one_expected == overlaps_with$one_observed) &&
-            (!is.na(get_CI[[i]][["CI_low"]]) &&
-             !is.na(get_CI[[i]][["CI_high"]]))) {
+        txt_simulations <- span(
+          style = "font-weight: 800; font-family: var(--monosans);",
           
-          txt_final <- span(
-            style = paste("font-weight: 800;",
-                          "font-family: var(--monosans);"),
-            
-            "The number of simulations is likely sufficient",
-            "to obtain", 
-            wrap_none(txt_type[[i]], color = pal$sea, " ratios."))
+          if (sufficient_simulations) {
+            tagList("The number of simulations is likely sufficient", 
+                    "to obtain", wrap_none(txt_type[[target]], 
+                                           color = pal$sea, " ratios."))
+          } else {
+            tagList("The number of simulations is likely insufficient", 
+                    "to obtain", wrap_none(txt_type[[target]], 
+                                           color = pal$dgr, " ratios."))
+          }
+        )
+        
+        set_style_title <- paste("display: inline-block;",
+                                 "font-family: var(--monosans);",
+                                 "font-size: 18px;",
+                                 "color: var(--sea-dark);",
+                                 "margin-bottom: 8px;")
+        
+        index <- which(set_target == target)
+        
+        if (index == 1) {
+          out_groups <- tagList(
+            p(span(txt_title[[target]],
+                   style = set_style_title, class = "ttl-tab"),
+              br(),
+              txt_subpop,
+              txt_subpop_detected,
+              txt_ratio, txt_simulations))
           
         } else {
-          txt_final <- span(
-            style = paste("font-weight: 800;",
-                          "font-family: var(--monosans);"),
-            
-            "The number of simulations is likely insufficient",
-            "to obtain", # accurate", 
-            wrap_none(txt_type[[i]], color = pal$dgr, " ratios."))
-        }
-        
-        if (i == 1 && length(type) == 1)
-          out_groups <- p(
-            span(txt_title[[i]],
-                 style = paste("font-size: 18px;",
-                               "color: var(--sea-dark);",
-                               "font-family: var(--monosans);"),
-                 class = "ttl-tab"), br(),
-            out_groups,
-            txt_subpop,
-            txt_subpop_detected,
-            txt_ratio,
-            txt_final)
-        else if (i == 1 && length(type) > 1)
           out_groups <- tagList(
             out_groups,
-            txt_subpop,
-            txt_subpop_detected,
-            txt_ratio,
-            txt_final)
-        
-        if (i == 2)
-          out_groups <- p(
-            span("Home range meta-analyses:", 
-                 style = paste("font-size: 18px;",
-                               "color: var(--sea-dark);",
-                               "font-family: var(--monosans);")), br(),
-            out_groups,
-            p(),
-            span("Speed & distance meta-analyses:", 
-                 style = paste("font-size: 18px;",
-                               "color: var(--sea-dark);",
-                               "font-family: var(--monosans);")), br(),
-            p(txt_subpop,
-              txt_subpop_detected,
-              txt_ratio,
-              txt_final))
-        
+            tagList(
+              p(span(txt_title[[target]],
+                     style = set_style_title, class = "ttl-tab"),
+                br(),
+                txt_subpop,
+                txt_subpop_detected,
+                txt_ratio, txt_simulations)))
+        }
       }
       
       rv$report$groups <- tagList(
         out_groups,
-        span(style = paste("font-size: 16px;",
+        br(),
+        p(style = paste("font-size: 16px;",
                         "font-weight: 800;",
-                        "text-align: justify;",
+                        "text-align: center;",
                         "font-family: var(--monosans);"),
-          "Check the", shiny::icon("layer-group",
-                                   class = "cl-sea"),
-          span("Meta-analyses", class = "cl-sea"), "for more",
+          "Check the", shiny::icon("layer-group", class = "cl-sea"),
+          span("Meta-analyses", class = "cl-sea"), "tab for more",
           "information."))
       
     }) # end of observe
-    
     
     ## Rendering complete report: -----------------------------------------
     
@@ -1980,7 +1987,6 @@ mod_tab_report_server <- function(id, rv) {
           }) # end of renderUI, "end_report_both"
           
         }) # end of switch
-      
       
       if (rv$which_meta == "none") {
         shinyjs::show(id = "section-highlight_dur")
@@ -2556,10 +2562,12 @@ mod_tab_report_server <- function(id, rv) {
                       y = y_lab) +
         
         theme_movedesign(font_available = rv$is_font,
-                         ft_size = rv$ft_size) +
+                         ft_size = rv$ft_size,
+                         title_y = FALSE) +
         ggplot2::theme(
           legend.position = "none",
           axis.title.x = ggplot2::element_blank())
+      p
       
       rv$report$ds1_hr[["done"]] <- TRUE
       
@@ -2852,7 +2860,8 @@ mod_tab_report_server <- function(id, rv) {
                         y = y_lab) +
           
           theme_movedesign(font_available = rv$is_font,
-                           ft_size = 16) +
+                           ft_size = rv$ft_size,
+                           title_y = FALSE) +
           ggplot2::theme(
             legend.position = "none",
             axis.title.x = ggplot2::element_blank())
@@ -4181,30 +4190,46 @@ mod_tab_report_server <- function(id, rv) {
     ## Outputs: -----------------------------------------------------------
     
     observe({
-      req(rv$simList, rv$hrErr)
+      req(!is.null(rv$simList), rv$hrErr, rv$which_meta)
       req(nrow(rv$hrErr) == length(rv$simList))
       
       if ("Home range" %in% rv$which_question)
         shinyjs::show(id = "repBox_hr_err") else
           shinyjs::hide(id = "repBox_hr_err")
       
-      mod_blocks_server(
-        id = "repBlock_hrErr",
-        rv = rv, type = "hr", name = "hrErr")
+      if (rv$which_meta == "none") {
+        mod_blocks_server(
+          id = "repBlock_hrErr",
+          rv = rv, type = "hr", name = "hrErr")
+        
+      } else {
+        req(rv$metaErr)
+        mod_blocks_server(
+          id = "repBlock_hrErr",
+          rv = rv, type = "hr", name = "metaErr")
+      }
       
     }) # end of observe
     
     observe({
-      req(rv$simList, rv$speedErr)
+      req(rv$simList, rv$speedErr, rv$which_meta)
       req(nrow(rv$speedErr) == length(rv$simList))
       
       if ("Speed & distance" %in% rv$which_question)
         shinyjs::show(id = "repBox_speed_err") else
           shinyjs::hide(id = "repBox_speed_err")
       
-      mod_blocks_server(
-        id = "repBlock_speedErr",
-        rv = rv, type = "ctsd", name = "speedErr")
+      if (rv$which_meta == "none") {
+        mod_blocks_server(
+          id = "repBlock_speedErr",
+          rv = rv, type = "ctsd", name = "speedErr")
+        
+      } else {
+        req(rv$metaErr)
+        mod_blocks_server(
+          id = "repBlock_speedErr",
+          rv = rv, type = "ctsd", name = "metaErr")
+      }
       
     }) # end of observe
     

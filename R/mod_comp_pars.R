@@ -134,15 +134,6 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     output$parUI_parameters <- renderUI({
       req(rv$data_type, rv$id)
       
-      out_note <- span(
-        "They will only update if you change the",
-        "individual(s) and/or species selected, and then",
-        "click the buttons",
-        icon("wand-magic-sparkles", class = "cl-mdn"),
-        span("Validate", class = "cl-mdn"), "and",
-        icon("paper-plane", class = "cl-mdn"),
-        wrap_none(span("Extract", class = "cl-mdn"), "."))
-      
       if (length(rv$id) == 1) {
         
         if (rv$data_type == "selected") {
@@ -162,18 +153,39 @@ mod_comp_pars_server <- function(id, rv, set_type) {
             wrap_none(span(rv$tmp$sp, class = "cl-sea-d"), "."))
         }
         
-        out_ui <- column(
-          align = "center", width = 12, 
-          p(out_p, out_note))
-        
       } else {
-        out_ui <- column(
-          align = "center", width = 12, 
-          NULL) # TODO
+        
+        if (rv$data_type == "selected") {
+          req(rv$tmp$id, rv$tmp$sp, rv$tmp$sp_common)
+          out_p <- span(
+            "These parameters have been extracted from",
+            span(length(rv$tmp$id), class = "cl-sea-d"), "individual(s)",
+            "and species", span(rv$tmp$sp_common, class = "cl-sea-d"),
+            wrap_none("(", em(rv$tmp$sp), ")."))
+        }
+        
+        if (rv$data_type == "uploaded") {
+          out_p <- span(
+            "These parameters have been extracted from",
+            span(length(rv$tmp$id), class = "cl-sea-d"), "individual(s)",
+            "and species",
+            wrap_none(span(rv$tmp$sp, class = "cl-sea-d"), "."))
+        }
       }
       
       out <- tagList(
-        out_ui,
+        column(
+          align = "center", width = 12,
+          p(style = "text-align: justify;",
+            out_p, span(
+            "They will only update if you change the",
+            "individual(s) and/or species selected, and then",
+            "click the buttons",
+            icon("wand-magic-sparkles", class = "cl-mdn"),
+            span("Validate", class = "cl-mdn"), "and",
+            icon("paper-plane", class = "cl-mdn"),
+            wrap_none(span("Extract", class = "cl-mdn"), ".")))),
+        
         column(width = 12, uiOutput(ns("parBlock_process"))),
         
         fluidRow(
@@ -276,6 +288,10 @@ mod_comp_pars_server <- function(id, rv, set_type) {
           fitList <- fitList[rv$id]
         }
       
+      # TODO TO CHECK
+      datList[sapply(datList, is.null)] <- NULL
+      fitList[sapply(fitList, is.null)] <- NULL
+      
       if (input$parInput_type == "tau_p") {
         name <- "position"
         x_label <- "Position autocorrelation (in " 
@@ -285,7 +301,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         x_label <- "Velocity autocorrelation (in "
       }
       
-      capture_meta(fitList, 
+      .capture_meta(fitList, 
                    variable = paste("tau", name),
                    units = FALSE, 
                    verbose = FALSE, 

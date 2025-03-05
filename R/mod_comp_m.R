@@ -47,6 +47,12 @@ mod_comp_m_ui <- function(id) {
             maximumValue = 100,
             value = 2, wheelStep = 2),
           
+          fluidRow(
+            column(width = 12,
+                   verbatimTextOutput(outputId = ns("txt_m_groups"))
+            )),
+          br(),
+          
           shinyWidgets::numericInputIcon(
             inputId = ns("error_threshold"),
             label = "Error threshold:",
@@ -58,6 +64,11 @@ mod_comp_m_ui <- function(id) {
           
           fluidRow(
             column(width = 12,
+                   div(id = ns("txt_ratio_label"),
+                       p(style = "text-align: left !important;",
+                         HTML("&nbsp;"), "Ratio:") %>%
+                         tagAppendAttributes(class = 'label_split')),
+                   
                    verbatimTextOutput(outputId = ns("txt_ratio"))
             ))
           
@@ -71,7 +82,7 @@ mod_comp_m_ui <- function(id) {
         
         shiny::actionButton(
           inputId = ns("mButton_repeat"),
-          icon = icon("bolt"), # icon("repeat"),
+          icon = icon("bolt"),
           label = "Simulate",
           class = "btn-sims",
           width = "125px")
@@ -119,6 +130,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         if (rv$is_emulate) {
           req(rv$meanfitList)
           fit <- emulate_seeded(rv$meanfitList[[1]], rv$seed0)
+          if (length(fit$isotropic) > 1)
+            fit$isotropic <- fit$isotropic[["sigma"]]
           
           # Recenter to 0,0:
           fit$mu[["x"]] <- 0
@@ -139,6 +152,10 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (rv$is_emulate) {
             fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
             fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
+            if (length(fitA$isotropic) > 1)
+              fitA$isotropic <- fitA$isotropic[["sigma"]]
+            if (length(fitB$isotropic) > 1)
+              fitB$isotropic <- fitB$isotropic[["sigma"]]
             
             # Recenter to 0,0:
             fitA$mu[["x"]] <- 0
@@ -191,7 +208,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     
     estimating_time <- reactive({
       
-      out_time <- guess_time(rv$simList, parallel = rv$parallel)
+      out_time <- guess_time(data = rv$simList, parallel = rv$parallel)
       return(out_time)
       
     }) %>% # end of reactive, estimating_time()
@@ -207,6 +224,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     
     shinyjs::hide(id = "ratio")
     shinyjs::hide(id = "txt_ratio")
+    shinyjs::hide(id = "txt_ratio_label")
     
     shinyjs::hide(id = "nsims")
     shinyjs::hide(id = "nsims_max")
@@ -218,11 +236,14 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       if ("compare" == rv$which_meta) {   
         shinyjs::show(id = "ratio")
+        shinyjs::show(id = "txt_ratio_label")
         shinyjs::show(id = "txt_ratio")
+        
       }
       
       if ("mean" == rv$which_meta) {   
         shinyjs::hide(id = "ratio")
+        shinyjs::hide(id = "txt_ratio_label")
         shinyjs::hide(id = "txt_ratio")
       }
       
@@ -236,15 +257,14 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     
     observe({
       req(rv$which_m)
+      shinyjs::show("error_threshold")
       
       if (rv$which_m == "set_m") {
         req(input$nsims)
         rv$nsims <- as.numeric(input$nsims)
-        shinyjs::hide("error_threshold")
       } else if (rv$which_m == "get_m") {
         req(input$nsims_max)
         rv$nsims <- as.numeric(input$nsims_max)
-        shinyjs::show("error_threshold")
       }
       
     }) %>% # end of observe,
@@ -267,10 +287,10 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         shinyjs::hide(id = "nsims_max")
       }
       
-      req(length(rv$simList) <= 2)
+      req(length(rv$simList) >= 2)
       wheel_step <- ifelse("compare" %in% rv$which_meta, 2, 1)
-      req(length(rv$simList) <= wheel_step)
       
+      if (rv$which_m == "set_m") {
       shinyWidgets::updateAutonumericInput(
         session = session,
         inputId = "nsims",
@@ -278,10 +298,12 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         value = length(rv$simList), 
         options = list(
           decimalPlaces = 0,
-          minimumValue = length(rv$simList),
+          minimumValue = 1,
           maximumValue = 100,
           wheelStep = wheel_step))
+      }
       
+      if (rv$which_m == "get_m") {
       shinyWidgets::updateAutonumericInput(
         session = session,
         inputId = "nsims_max",
@@ -289,9 +311,10 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         value = length(rv$simList),
         options = list(
           decimalPlaces = 0,
-          minimumValue = length(rv$simList),
+          minimumValue = 1,
           maximumValue = 100,
           wheelStep = wheel_step))
+      }
       
     }) %>% # end of observe,
       bindEvent(rv$active_tab)
@@ -333,32 +356,24 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     
     ## Update number of tags: ---------------------------------------------
     
-    # observe({
-    #   req(rv$is_analyses)
-    #   shinyWidgets::updateAutonumericInput(
-    #     session = session,
-    #     inputId = "nsims",
-    #     label = NULL,
-    #     value = 0)
-    #   
-    # }) %>% # end of observe,
-    #   bindEvent(rv$is_analyses)
-    
     observe({
-      req(rv$which_meta, length(rv$simList) > 1)
+      req(rv$simList)
+      req(rv$active_tab == 'hr' || rv$active_tab == 'ctsd')
+      req(length(rv$simList) == 1)
       
       wheel_step <- ifelse("compare" %in% rv$which_meta, 2, 1)
+      
       shinyWidgets::updateAutonumericInput(
         session = session,
         inputId = "nsims",
         label = "Number of tags (total):",
-        value = length(rv$simList), 
+        value = 1,
         options = list(
           decimalPlaces = 0,
-          minimumValue = length(rv$simList),
+          minimumValue = 1,
           maximumValue = 100,
           wheelStep = wheel_step))
-      
+
     }) %>% # end of observe,
       bindEvent(rv$simList)
     
@@ -373,7 +388,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       meta <- rv$metaList_groups[[1]][[rv$set_analysis]]
       req(meta)
       
-      ratio <- round(extract_ratios(meta)$est, 1)
+      ratio <- round(.get_ratios(meta)$est, 1)
       req(ratio)
       
       out_txt <- NULL
@@ -406,6 +421,17 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
     }) %>% # end of renderText, "txt_ratio",
       bindEvent(rv$set_analysis)
+    
+    ## Rendering number of tags per group: --------------------------------
+    
+    output$txt_m_groups <- renderText({
+      req(input$nsims, "compare" %in% rv$which_meta)
+      
+      if (input$nsims == 2) return("1 tag per group")
+      else return(paste(input$nsims / 2, "tags per group"))
+      
+    }) %>% # end of renderText, "txt_m_groups",
+      bindEvent(input$nsims)
     
     # SIMULATIONS ---------------------------------------------------------
     ## Run multiple simulations (set number of tags): ---------------------
@@ -639,7 +665,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       num_sims <- length(rv$tmpList)
       loading_modal("Selecting movement model", type = "fit",
                     exp_time = rv$expt,
-                    n = num_sims)
+                    n = num_sims,
+                    parallel = rv$parallel)
       
       simList <- rv$tmpList
       guessList <- lapply(seq_along(simList), function (x)
@@ -1072,7 +1099,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           names(rv$akdeList) <- names(rv$simList)
           in_list <- rv$akdeList
           in_list[sapply(in_list, is.null)] <- NULL
-          out_meta <- capture_meta(in_list,
+          out_meta <- .capture_meta(in_list,
+                                   variable = "area",
                                    sort = TRUE,
                                    units = FALSE,
                                    verbose = TRUE,
@@ -1080,17 +1108,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
           if (rv$which_meta == "compare") {
             
-            get_groups <- function(x, groups) {
-              group_A <- x[groups[["A"]]]
-              # group_A[sapply(group_A, is.null)] <- NULL
-              group_B <- x[groups[["B"]]]
-              # group_B[sapply(group_B, is.null)] <- NULL
-              return(list(A = group_A,
-                          B = group_B))
-            }
-            
-            out_meta_groups <- capture_meta(
-              get_groups(rv$akdeList, rv$groups[[2]]),
+            out_meta_groups <- .capture_meta(
+              .get_groups(rv$akdeList, rv$groups[[2]]),
               variable = "area",
               units = TRUE, 
               verbose = TRUE,
@@ -1209,9 +1228,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             if (!is.null(out_meta_groups)) {
               meta_truth <- rv$metaList_groups[[1]][["hr"]]
               overlaps_with_truth <- dplyr::between(
-                extract_ratios(out_meta_groups)$est,
-                extract_ratios(meta_truth)$lower, 
-                extract_ratios(meta_truth)$upper)
+                .get_ratios(out_meta_groups)$est,
+                .get_ratios(meta_truth)$lci, 
+                .get_ratios(meta_truth)$uci)
             }
             
             # if cov -> infinity,
@@ -1583,7 +1602,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
           in_list <- rv$ctsdList
           in_list[sapply(in_list, is.null)] <- NULL
-          out_meta <- capture_meta(in_list,
+          out_meta <- .capture_meta(in_list,
+                                   variable = "speed",
                                    sort = TRUE,
                                    units = FALSE,
                                    verbose = TRUE,
@@ -1591,17 +1611,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
           if (rv$which_meta == "compare") {
             
-            get_groups <- function(x, groups) {
-              group_A <- x[groups[["A"]]]
-              # group_A[sapply(group_A, is.null)] <- NULL
-              group_B <- x[groups[["B"]]]
-              # group_B[sapply(group_B, is.null)] <- NULL
-              return(list(A = group_A,
-                          B = group_B))
-            }
-            
-            out_meta_groups <- capture_meta(
-              get_groups(rv$ctsdList, rv$groups[[2]]),
+            out_meta_groups <- .capture_meta(
+              .get_groups(rv$ctsdList, rv$groups[[2]]),
               variable = "speed",
               units = TRUE, 
               verbose = TRUE,
@@ -1732,9 +1743,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             if (!is.null(out_meta_groups)) {
               meta_truth <- rv$metaList_groups[[1]][["ctsd"]]
               overlaps_with_truth <- dplyr::between(
-                extract_ratios(out_meta_groups)$est,
-                extract_ratios(meta_truth)$lower, 
-                extract_ratios(meta_truth)$upper)
+                .get_ratios(out_meta_groups)$est,
+                .get_ratios(meta_truth)$lci, 
+                .get_ratios(meta_truth)$uci)
             }
             
             # if cov -> infinity,

@@ -1900,31 +1900,31 @@ mod_tab_design_server <- function(id, rv) {
     
     ## Sample sizes... ----------------------------------------------------
     
-    observe({
-      req(rv$dev$n[[1]])
-      
-      if (rv$dev$n[[1]] > 20000)
-        shinyalert::shinyalert(
-          inputId = "alert_n_small",
-          title = "Warning",
-          text = tagList(span(
-            "You are about to simulate a dataset with over",
-            scales::label_comma()(rv$dev$n[[1]]), "locations.",
-            "This can take a considerable amount of time to run",
-            "on certain devices (several hours or days).",
-            "Do you wish to proceed?"
-          )),
-          showConfirmButton = TRUE,
-          showCancelButton = TRUE,
-          confirmButtonText = "Proceed",
-          cancelButtonText = "Cancel",
-          callbackR = function(x) {
-            rv$dev$is_valid <- x },
-          html = TRUE,
-          size = "xs")
-      
-    }, priority = 0) %>% # end of observe,
-      bindEvent(input$devButton_run)
+    # observe({
+    #   req(rv$dev$n[[1]])
+    #   
+    #   if (rv$dev$n[[1]] > 20000)
+    #     shinyalert::shinyalert(
+    #       inputId = "alert_n_small",
+    #       title = "Warning",
+    #       text = tagList(span(
+    #         "You are about to simulate a dataset with over",
+    #         scales::label_comma()(rv$dev$n[[1]]), "locations.",
+    #         "This can take a considerable amount of time to run",
+    #         "on certain devices (several hours or days).",
+    #         "Do you wish to proceed?"
+    #       )),
+    #       showConfirmButton = TRUE,
+    #       showCancelButton = TRUE,
+    #       confirmButtonText = "Proceed",
+    #       cancelButtonText = "Cancel",
+    #       callbackR = function(x) {
+    #         rv$dev$is_valid <- x },
+    #       html = TRUE,
+    #       size = "xs")
+    #   
+    # }, priority = 0) %>% # end of observe,
+    #   bindEvent(input$devButton_run)
     
     # SIMULATIONS ---------------------------------------------------------
     ## Simulating GPS battery life: ---------------------------------------
@@ -2095,6 +2095,8 @@ mod_tab_design_server <- function(id, rv) {
         if (rv$is_emulate) {
           req(rv$meanfitList)
           fit <- emulate_seeded(rv$meanfitList[[1]], rv$seed0)
+          if (length(fit$isotropic) > 1)
+            fit$isotropic <- fit$isotropic[["sigma"]]
           
           # Recenter to 0,0:
           fit$mu[["x"]] <- 0
@@ -2119,6 +2121,10 @@ mod_tab_design_server <- function(id, rv) {
             if (rv$is_emulate) {
               fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
               fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
+              if (length(fitA$isotropic) > 1)
+                fitA$isotropic <- fitA$isotropic[["sigma"]]
+              if (length(fitB$isotropic) > 1)
+                fitB$isotropic <- fitB$isotropic[["sigma"]]
               
               # Recenter to 0,0:
               fitA$mu[["x"]] <- 0
@@ -2170,7 +2176,7 @@ mod_tab_design_server <- function(id, rv) {
     estimating_time <- reactive({
       
       loading_modal("Calculating run time")
-      out_time <- guess_time(rv$simList, parallel = rv$parallel)
+      out_time <- guess_time(data = rv$simList, parallel = rv$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out_time)

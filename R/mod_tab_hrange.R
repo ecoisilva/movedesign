@@ -221,12 +221,19 @@ mod_tab_hrange_ui <- function(id) {
                     column(
                       width = 12, align = "center",
                       style = "display: contents;",
+                      
                       shinyWidgets::awesomeCheckbox(
                         inputId = ns("hr_truth"),
                         label = span("Show", span("true", 
                                                   class = "cl-sea"), 
                                      "home range"),
-                        value = TRUE)), p(),
+                        value = TRUE),
+                      
+                      shinyWidgets::awesomeCheckbox(
+                        inputId = ns("hr_locations"),
+                        label = span("Show", span("locations", 
+                                                  class = "cl-sea")),
+                        value = FALSE)), p(),
                     
                     ggiraph::girafeOutput(
                       outputId = ns("hrPlot"),
@@ -271,12 +278,19 @@ mod_tab_hrange_ui <- function(id) {
                     column(
                       width = 12, align = "center",
                       style = "display: contents;",
+                      
                       shinyWidgets::awesomeCheckbox(
                         inputId = ns("hr_truth_new"),
                         label = span("Show", span("true", 
                                                   class = "cl-sea"), 
                                      "home range"),
-                        value = TRUE)), p(),
+                        value = TRUE),
+                      
+                      shinyWidgets::awesomeCheckbox(
+                        inputId = ns("hr_locations_new"),
+                        label = span("Show", span("locations", 
+                                                  class = "cl-sea")),
+                        value = FALSE)), p(),
                     
                     ggiraph::girafeOutput(
                       outputId = ns("hrPlot_new"),
@@ -436,7 +450,6 @@ mod_tab_hrange_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'hr',
           rv$simList, rv$akdeList)
-      req(length(rv$simList) == length(rv$akdeList))
       rv$hr_nsim <- 1
       
       if (length(rv$simList) == 1) {
@@ -448,7 +461,10 @@ mod_tab_hrange_server <- function(id, rv) {
               label = "Show simulation no.:",
               choices = seq(1, length(rv$simList), by = 1),
               selected = 1))
+        
       } else {
+        req(length(rv$simList) == length(rv$akdeList))
+        
         shinyjs::show(id = "hr_nsim")
         div(class = "sims-irs",
             shinyWidgets::updateSliderTextInput(
@@ -1060,6 +1076,7 @@ mod_tab_hrange_server <- function(id, rv) {
       loading_modal("Estimating home range")
       
       hrList <- estimating_hr()
+      
       truthList <- get_true_hr(
         data = rv$simList,
         seed = rv$seedList,
@@ -1327,7 +1344,7 @@ mod_tab_hrange_server <- function(id, rv) {
     
     timing_fit <- reactive({
       
-      out_time <- guess_time(rv$hr$simList, parallel = rv$parallel)
+      out_time <- guess_time(data = rv$hr$simList, parallel = rv$parallel)
       return(out_time)
       
     }) %>% # end of reactive, timing_fit()
@@ -1608,16 +1625,28 @@ mod_tab_hrange_server <- function(id, rv) {
     
     output$hrPlot <- ggiraph::renderGirafe({
       req(rv$is_analyses, 
-          rv$simList, input$hr_nsim,
-          length(rv$akdeList) > 0)
+          rv$simList, length(rv$akdeList) > 0)
+      
       req(length(rv$simList) == length(rv$akdeList))
-      req(input$hr_nsim <= length(rv$simList))
+      
+      nsim <- 1
+      if (!is.null(input$hr_nsim)) {
+        req(input$hr_nsim)
+        req(input$hr_nsim <= length(rv$simList))
+        nsim <- input$hr_nsim
+      }
+      show_truth <- FALSE
+      show_locations <- FALSE
       
       if (!is.null(input$hr_truth)) {
         show_truth <- ifelse(input$hr_truth, TRUE, FALSE)
-      } else { show_truth <- FALSE }
+      }
       
-      if (is.null(rv$akdeList[[input$hr_nsim]])) {
+      if (!is.null(input$hr_locations)) {
+        show_locations <- ifelse(input$hr_locations, TRUE, FALSE)
+      }
+      
+      if (is.null(rv$akdeList[[nsim]])) {
         ud <- ggplot2::ggplot() +
             ggtext::geom_richtext(
               mapping = ggplot2::aes(x = 1, y = 1),
@@ -1629,28 +1658,29 @@ mod_tab_hrange_server <- function(id, rv) {
         
       } else {
         
-        truth <- rv$truth$hr[[input$hr_nsim]]$data
-        ext <- ctmm::extent(list(rv$simList[[input$hr_nsim]],
-                                 rv$akdeList[[input$hr_nsim]],
+        truth <- rv$truth$hr[[nsim]]$data
+        ext <- ctmm::extent(list(rv$simList[[nsim]],
+                                 rv$akdeList[[nsim]],
                                  truth))
         
         if (!is.null(rv$hr$akdeList)) {
           req(rv$hr$simList, rv$hr$akdeList)
-          ext <- ctmm::extent(list(rv$simList[[input$hr_nsim]],
-                                   rv$akdeList[[input$hr_nsim]],
+          ext <- ctmm::extent(list(rv$simList[[nsim]],
+                                   rv$akdeList[[nsim]],
                                    rv$hr$simList,
                                    rv$hr$akdeList[[1]],
                                    truth))
         }
         
-        req(rv$simList[[input$hr_nsim]],
-            rv$akdeList[[input$hr_nsim]])
+        req(rv$simList[[nsim]],
+            rv$akdeList[[nsim]])
         
         ud <- plotting_hr(
-          input1 = list(data = rv$simList[[input$hr_nsim]],
-                        ud = rv$akdeList[[input$hr_nsim]]),
+          input1 = list(data = rv$simList[[nsim]],
+                        ud = rv$akdeList[[nsim]]),
           truth = truth,
           show_truth = show_truth,
+          show_locations = show_locations,
           contours = input$hr_contours,
           color = pal$sea,
           extent = ext,
@@ -1678,9 +1708,16 @@ mod_tab_hrange_server <- function(id, rv) {
       req(length(rv$simList) == length(rv$akdeList))
       req(rv$hr$simList, rv$hr$akdeList, rv$hr_nsim)
       
+      show_truth <- FALSE
+      show_locations <- FALSE
+      
       if (!is.null(input$hr_truth_new)) {
         show_truth <- ifelse(input$hr_truth_new, TRUE, FALSE)
-      } else { show_truth <- FALSE }
+      }
+      
+      if (!is.null(input$hr_locations_new)) {
+        show_locations <- ifelse(input$hr_locations_new, TRUE, FALSE)
+      }
       
       # Rendering home range estimate plot:
       truthList <- get_true_hr(
@@ -1707,6 +1744,7 @@ mod_tab_hrange_server <- function(id, rv) {
                       ud = rv$hr$akdeList[[1]]),
         truth = truth,
         show_truth = show_truth,
+        show_locations = show_locations,
         show_both = input$hr_datasets,
         contours = input$hr_contours_new,
         color = pal$dgr,
@@ -2009,7 +2047,7 @@ mod_tab_hrange_server <- function(id, rv) {
         events = list(onbeforechange =
                         rintrojs::readCallback('switchTabs')))
 
-    }) %>% # observe event, bound to:
+    }) %>% # end of observe,
       bindEvent(input$hrHelp_regime)
 
     ## Help modal (biases): -----------------------------------------------
@@ -2054,7 +2092,7 @@ mod_tab_hrange_server <- function(id, rv) {
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
 
-    }) %>% # observe event, bound to:
+    }) %>% # end of observe,
       bindEvent(input$hrHelp_method)
 
     observe({
@@ -2119,14 +2157,14 @@ mod_tab_hrange_server <- function(id, rv) {
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
 
-    }) %>% # observe event, bound to:
+    }) %>% # end of observe,
       bindEvent(input$hrHelp_bias)
 
     # MISC ----------------------------------------------------------------
 
     output$out_time_hr <- renderText({
       req(rv$time_hr)
-
+      
       out <- fix_unit(rv$time_hr[1], "seconds", convert = TRUE)
       out_txt <- paste0("Initial sampling design took approximately ",
                         out$value, " ", out$unit, ".")

@@ -437,7 +437,6 @@ mod_tab_ctsd_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'ctsd',
           rv$simList, rv$ctsdList)
-      req(length(rv$simList) == length(rv$ctsdList))
       rv$sd_nsim <- 1
       
       if (length(rv$simList) == 1) {
@@ -449,7 +448,10 @@ mod_tab_ctsd_server <- function(id, rv) {
               label = "Show simulation no.:",
               choices = seq(1, length(rv$simList), by = 1),
               selected = 1))
+        
       } else {
+        req(length(rv$simList) == length(rv$ctsdList))
+        
         shinyjs::show(id = "sd_nsim")
         div(class = "sims-irs",
             shinyWidgets::updateSliderTextInput(
@@ -1077,10 +1079,11 @@ mod_tab_ctsd_server <- function(id, rv) {
         style = "warning",
         message = paste0("Estimating ", msg_warning("run time"), "..."))
       
-      out_time <- guess_time(data = rv$simList,
+      out_time <- guess_time(type = "speed",
                              fit = rv$simfitList, 
+                             dti = rv$dti,
+                             dur = rv$dur,
                              seed = rv$seedList,
-                             type = "speed",
                              trace = TRUE,
                              parallel = rv$parallel)
       
@@ -1232,6 +1235,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       req(rv$active_tab == 'ctsd',
           rv$simList,
           rv$simfitList,
+          rv$which_meta,
           rv$tmp$id == rv$id,
           rv$sd$is_valid)
       req(length(rv$simList) == length(rv$simfitList))
@@ -1247,17 +1251,30 @@ mod_tab_ctsd_server <- function(id, rv) {
                length(rv$simList), num_cores)
       else ttl_time <- max_time
       
-      N <- extract_dof(rv$simfitList, "speed")
+      if (length(rv$ctsdList) == 0) {
+        N <- mean(unlist(extract_dof(rv$simfitList, "speed")),
+                  na.rm = TRUE)
+      } else {
+        N <- mean(sapply(rv$ctsdList, function(y) y$DOF[["speed"]]),
+                  na.rm = TRUE)
+      }
+      
+      if (is.na(N)) N <- NULL
       req(N)
       
       rv$sd$proceed_to_ctsd <- NULL
-      if (ttl_time > 15 %#% "minutes" || all(N < 15)) {
+      if (ttl_time > 15 %#% "minutes" || N < 15) {
+        
         ttl_time <- fix_unit(expt$unit %#% ttl_time,
                              expt$unit, convert = TRUE)
         min_time <- fix_unit(ttl_time$unit %#% expt$min %#% expt$unit,
                              ttl_time$unit)
         
-        if (all(N > 15)) out_txt <- tagList(span(
+        # dti <- rv$dti$value %#% rv$dti$unit
+        # tau_v <- rv$tau_v[[1]][2, "value"] %#% rv$tau_v[[1]][2, "unit"]
+        # if (N > 5 && (dti/tau_v > 1)) ...
+        
+        if (N > 15) out_txt <- tagList(span(
           "Expected run time for estimation",
           "could be on average", span(
             paste0(min_time$value, "\u2013",
@@ -1269,9 +1286,9 @@ mod_tab_ctsd_server <- function(id, rv) {
             css = "cl-dgr", end = ".")))
         else out_txt <- tagList(span(
           "Expected run time for estimation",
-          "cannot be obtained and may fail",
-          "due to", wrap_none("low effective sample sizes", 
-                              color = pal$dgr, end = ".")))
+          "cannot be obtained due to",
+          wrap_none("low effective sample sizes", 
+                    color = pal$dgr, end = ".")))
         
         shinyalert::shinyalert(
           className = "modal_warning",
@@ -1319,10 +1336,18 @@ mod_tab_ctsd_server <- function(id, rv) {
         message = paste0("Estimating ",
                          msg_warning("speed & distance"), "..."))
       
-      N <- extract_dof(rv$simfitList, "speed")
+      if (length(rv$ctsdList) == 0) {
+        N <- mean(unlist(extract_dof(rv$simfitList, "area")),
+                  na.rm = TRUE)
+      } else {
+        N <- mean(sapply(rv$ctsdList, function(y) y$DOF[["speed"]]),
+                  na.rm = TRUE)
+      }
+      
+      if (is.na(N)) N <- NULL
       req(N)
       
-      if (all(N < 15))
+      if (N < 15)
         loading_modal("Estimating speed & distance")
       else
         loading_modal("Estimating speed & distance", 
@@ -2277,9 +2302,9 @@ mod_tab_ctsd_server <- function(id, rv) {
     ## Initial sampling design: -------------------------------------------
     
     # observe({
-    #   req(rv$simList, 
-    #       rv$pathList, 
-    #       rv$ctsdList, 
+    #   req(rv$simList,
+    #       rv$pathList,
+    #       rv$ctsdList,
     #       rv$distErr,
     #       rv$sd$tbl)
     # 
@@ -2629,7 +2654,7 @@ mod_tab_ctsd_server <- function(id, rv) {
           footer = modalButton("Dismiss"),
           size = "m")) # end of modal
       
-    }) %>% # observe event, bound to:
+    }) %>% # end of observe,
       bindEvent(input$sdHelp_method)
     
     # MISC ----------------------------------------------------------------

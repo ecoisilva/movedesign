@@ -69,6 +69,19 @@ mod_tab_meta_ui <- function(id) {
                   width = "100%",
                   class = "btn-primary")
               ),
+              
+              br(),
+              shinyWidgets::radioGroupButtons(
+                inputId = ns("metaOutput_type"),
+                width = "260px",
+                label = "Show outputs for:",
+                choices = c(
+                  "Home range" = "hr",
+                  "Speed & distance" = "ctsd"),
+                selected = "hr",
+                checkIcon = list(yes = icon("circle-check")),
+                direction = "vertical",
+                justified = TRUE),
               br()
               
             ) # end of column (for text)
@@ -117,19 +130,7 @@ mod_tab_meta_ui <- function(id) {
             fluidRow(
               column(width = 12,
                      verbatimTextOutput(outputId = ns("txt_sd_ratio"))
-              )),
-            
-            br(),
-            shinyWidgets::radioGroupButtons(
-              inputId = ns("metaInput_type"),
-              label = "Show analyses:",
-              choices = c(
-                "Home range" = "hr",
-                "Speed & distance" = "ctsd"),
-              selected = "hr",
-              checkIcon = list(yes = icon("circle-check")),
-              direction = "vertical",
-              justified = TRUE)
+              ))
             
           ), # end of box // hrBox_sizes
           
@@ -253,7 +254,43 @@ mod_tab_meta_ui <- function(id) {
             
             div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
                 reactable::reactableOutput(
-                  ns("metaTable_m_optimal")))
+                  ns("metaTable_m_optimal"))),
+            
+            footer = column(
+              width = 12,
+              style = "max-width: 390px; float: right;",
+              
+              splitLayout(
+                cellWidths = c("20%", "1%",
+                               "41.5%", "1%",
+                               "38.5%"),
+                cellArgs = list(style = "align: center;"),
+                
+                shiny::actionButton(
+                  inputId = ns("metaHelp_resample"),
+                  label = NULL,
+                  width = "100%",
+                  icon = icon("circle-question"),
+                  class = "btn-warning"),
+                br(),
+                shiny::actionButton(
+                  inputId = ns("run_meta_resample"),
+                  label = span("Resample"),
+                  icon =  icon("wand-sparkles"),
+                  width = "100%",
+                  class = "btn-info"),
+                br(),
+                shinyWidgets::autonumericInput(
+                  inputId = ns("n_resamples"),
+                  label = NULL,
+                  currencySymbol = " resamples(s)",
+                  currencySymbolPlacement = "s",
+                  decimalPlaces = 0,
+                  minimumValue = 1,
+                  maximumValue = 1000,
+                  value = 5, wheelStep = 5),
+                
+              )) # end of footer
             
           ) # end of box // metaBox_summary
           
@@ -277,24 +314,44 @@ mod_tab_meta_server <- function(id, rv) {
     pal <- load_pal()
     
     # MAIN REACTIVE VALUES ------------------------------------------------
+      
+    rv$meta <- reactiveValues(n_resample = 1)
+    
+    ## Switch if both research targets are available: ---------------------
     
     observe({
       
       if (length(rv$which_question) == 2) {
-        req(input$metaInput_type)
-        rv$set_analysis <- input$metaInput_type
+        req(input$metaOutput_type)
+        rv$set_analysis <- input$metaOutput_type
       }
       
     }) %>% # end of observe,
       bindEvent(list(rv$which_question,
-                     input$metaInput_type,
+                     input$metaOutput_type,
                      input$run_meta))
+    
+    ## Update number of resamples: ----------------------------------------
+    
+    # observe({
+    #   req(rv$meta$n_resample > 1)
+    #   
+    #   # if (!is.null(rv$meta_tbl_resample)) {
+    #   #   rv$meta$n_resample <- max(unique(rv$meta_tbl_resample$sample))
+    #   # }
+    #   
+    #   shinyWidgets::updateAutonumericInput(
+    #     session = session,
+    #     inputId = "n_resamples",
+    #     value = rv$meta$n_resample)
+    #   
+    # }) %>% # end of observe,
+    #   bindEvent(rv$meta$n_resample)
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at the start: ----------------------------------------
     
     shinyjs::hide(id = "txt_ratio")
-    shinyjs::hide(id = "txt_ratio_label")
     
     boxnames <- c("simulations",
                   "outputs",
@@ -306,7 +363,7 @@ mod_tab_meta_server <- function(id, rv) {
       shinyjs::hide(id = paste0("metaBox_", boxnames[i]))
     }
     
-    ## Update based on workflow: ------------------------------------------
+    ## Update ratio text based on workflow: -------------------------------
     
     observe({
       req(rv$active_tab == 'meta')
@@ -331,7 +388,6 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of observe
     
-    
     ## Update based on outputs: -------------------------------------------
     
     observe({
@@ -342,7 +398,6 @@ mod_tab_meta_server <- function(id, rv) {
        else shinyjs::hide(id = "metaBox_simulations")
       
     }) # end of observe
-    
     
     observe({
       req(rv$grouped)
@@ -393,7 +448,7 @@ mod_tab_meta_server <- function(id, rv) {
       
       meta <- rv$metaList_groups[[2]][["hr"]]
       req(meta)
-      ratio <- round(extract_ratios(meta)$est, 1)
+      ratio <- round(.get_ratios(meta)$est, 1)
       ratio
       
       if (ratio == 1) out_txt <- paste0(
@@ -420,7 +475,7 @@ mod_tab_meta_server <- function(id, rv) {
       
       meta <- rv$metaList_groups[[2]][["ctsd"]]
       req(meta)
-      ratio <- round(extract_ratios(meta)$est, 1)
+      ratio <- round(.get_ratios(meta)$est, 1)
       ratio
       
       if (ratio == 1) out_txt <- paste0(
@@ -562,7 +617,6 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of renderUI, "metaUI_legend"
     
-    
     ## Render footer for outputs box: -------------------------------------
     
     output$metaUI_footer <- renderUI({
@@ -604,29 +658,7 @@ mod_tab_meta_server <- function(id, rv) {
     }) # end of renderUI, "metaUI_footer"
     
     # OPERATIONS ----------------------------------------------------------
-    
-    get_sets <- function(input) {
-      num_sets <- ceiling(length(input) / 2)
-      if (length(input) %% 2 != 0)
-        out <- c(1, rep(seq_len(num_sets - 1), each = 2,
-                        length.out = length(input) - 1))
-      else 
-        out <- rep(seq_len(num_sets), each = 2,
-                   length.out = length(input))
-      
-      return(list(out = out, sets = max(unique(out))))
-    }
-    
-    get_groups <- function(x, groups) {
-      group_A <- x[groups[["A"]]]
-      # group_A[sapply(group_A, is.null)] <- NULL
-      group_B <- x[groups[["B"]]]
-      # group_B[sapply(group_B, is.null)] <- NULL
-      return(list(A = group_A,
-                  B = group_B))
-    }
-    
-    ## Run meta-analyses: -------------------------------------------------
+    ## Run global meta-analyses: ------------------------------------------
     
     observe({
       req(rv$active_tab == 'meta')
@@ -650,9 +682,8 @@ mod_tab_meta_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      req(rv$active_tab == 'meta',
-          rv$truth, !rv$is_meta,
-          length(rv$simList) > 2)
+      req(rv$active_tab == 'meta')
+      req(rv$truth, !rv$is_meta, length(rv$simList) > 2)
       
       rv$metaEst <- NULL
       rv$metaErr <- NULL
@@ -685,90 +716,48 @@ mod_tab_meta_server <- function(id, rv) {
         message = paste0("Meta-analyses ",
                          msg_warning("in progress"), "..."))
       
-      metaList <- list()
+      set_target <- c()
       if ("Home range" %in% rv$which_question) {
         req(rv$akdeList)
-        x_hr <- rv$akdeList
-        x_hr[sapply(x_hr, is.null)] <- NULL
-        metaList[["hr"]] <- capture_meta(
-          x_hr,
-          variable = "area",
-          units = TRUE, 
-          verbose = FALSE,
-          plot = FALSE,
-          type = "hr")
+        set_target <- c(set_target, "hr")
       }
-      
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$ctsdList)
-        x_sd <- rv$ctsdList
-        x_sd[sapply(x_sd, is.null)] <- NULL
-        metaList[["ctsd"]] <- capture_meta(
-          x_sd,
-          variable = "speed",
-          units = TRUE, 
-          verbose = FALSE,
-          plot = FALSE,
-          type = "ctsd")
+        set_target <- c(set_target, "ctsd")
       }
       
       if (rv$grouped) {
         req(length(rv$groups[[2]]$A) > 0,
             length(rv$groups[[2]]$B) > 0)
+      }
+      
+      lists <- .build_meta_objects(rv,
+                                   set_target = set_target,
+                                   subpop = rv$grouped,
+                                   trace = FALSE)
+      list2env(lists, envir = environment())
+      
+      metaList <- list()
+      if ("Home range" %in% rv$which_question) {
+        metaList[["hr"]] <- outList[["All"]][["hr"]] }
+      if ("Speed & distance" %in% rv$which_question) {
+        metaList[["ctsd"]] <- outList[["All"]][["ctsd"]] }
+      
+      if (rv$grouped) {
         
-        outList <- list()
+        datList_groups <- list()
         metaList_groups <- list()
+        
         if ("Home range" %in% rv$which_question) {
-          req(rv$akdeList)
-          outList <- get_groups(rv$akdeList, rv$groups[[2]])
-          metaList_groups[["hr"]] <- capture_meta(
-            outList,
-            units = TRUE, 
-            verbose = TRUE,
-            plot = FALSE,
-            type = "hr") %>% 
-            suppressMessages() %>% 
-            suppressWarnings() %>% 
-            quiet()
-          
+          datList_groups <- datList[["groups"]][["hr"]]
           rv$metaList_groups[[2]][["hr"]] <- 
-            metaList_groups[["hr"]]
-          
-          if (is.null(metaList_groups[["hr"]])) {
-            msg_log(
-              style = "danger",
-              message = paste0(
-                msg_danger("Home range"), 
-                " meta-analyses for groups ",
-                msg_danger("failed"), ","),
-              detail = "Run more simulations in the appropriate tab.")
-          }
+            outList[["groups"]][["hr"]]
         }
         
         if ("Speed & distance" %in% rv$which_question) {
-          req(rv$ctsdList)
-          outList <- get_groups(rv$ctsdList, rv$groups[[2]])
-          metaList_groups[["ctsd"]] <- capture_meta(
-            outList,
-            units = TRUE, 
-            verbose = TRUE,
-            plot = FALSE,
-            type = "ctsd") %>% 
-            suppressMessages() %>% 
-            suppressWarnings() %>% 
-            quiet()
-          
-          rv$metaList_groups[[2]][["ctsd"]] <- 
-            metaList_groups[["ctsd"]]
-          
-          if (is.null(metaList_groups[["ctsd"]]))
-            msg_log(
-              style = "danger",
-              message = paste0(
-                msg_danger("Speed"), 
-                " meta-analyses for groups ",
-                msg_danger("failed"), ","),
-              detail = "Run more simulations in the appropriate tab.")
+          datList_groups <- .get_groups(rv$ctsdList, rv$groups[[2]])
+          rv$metaList_groups[[2]][["ctsd"]] <-
+            outList[["groups"]][["ctsd"]]
         }
         
       } # end of if (rv$grouped)
@@ -857,7 +846,7 @@ mod_tab_meta_server <- function(id, rv) {
             truth_A <- truth_summarized[["A"]]$area
             truth_B <- truth_summarized[["B"]]$area
           }
-
+          
           if (out_groups$type == "ctsd") {
             
             truth_summarized <- get_true_speed(
@@ -919,7 +908,6 @@ mod_tab_meta_server <- function(id, rv) {
         shinyjs::show(id = "metaBox_err_speed")
       }
       
-      Sys.sleep(3)
       msg_log(
         style = "success",
         message = paste0("Meta-analyses ",
@@ -945,156 +933,180 @@ mod_tab_meta_server <- function(id, rv) {
       
       shinybusy::remove_modal_spinner()
       
-    }, priority = 0) %>% # end of observe,
+    }) %>% # end of observe,
       bindEvent(input$run_meta)
     
     ## Run meta-analyses (for each set of simulations): -------------------
-    ## For metaPlot_m_optimal
+
+    get_meta_outputs <- reactive({
+      
+      start <- Sys.time()
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = tagList(span(
+          style = "font-size: 18px;",
+          span("Running", style = "color: #797979;"),
+          wrap_none(
+            span("meta-analyses (permutations)", class = "cl-sea"),
+            span("...", style = "color: #797979;")))))
+      
+      msg_log(
+        style = "warning",
+        message = paste0("Meta-analyses (permutations) ",
+                         msg_warning("in progress"), "..."))
+      
+      get_analysis <- c()
+      if ("Home range" %in% rv$which_question) {
+        req(rv$akdeList)
+        req(length(rv$akdeList) > 0)
+        req(length(rv$simList) == length(rv$akdeList))
+        get_analysis <- c(get_analysis, "hr")
+      }
+      
+      if ("Speed & distance" %in% rv$which_question) {
+        req(rv$ctsdList)
+        req(length(rv$ctsdList) > 0)
+        req(length(rv$simList) == length(rv$ctsdList))
+        get_analysis <- c(get_analysis, "ctsd")
+      }
+      
+      tmp <- run_meta_permutations(
+        rv, set_target = get_analysis,
+        subpop = rv$grouped,
+        random = FALSE, 
+        trace = FALSE)
+      
+      msg_log(
+        style = "success",
+        message = paste0("Meta-analyses (permutations) ",
+                         msg_success("completed"), "."),
+        run_time = difftime(Sys.time(), start, units = "sec"))
+      
+      shinybusy::remove_modal_spinner()
+      return(tmp)
+      
+    }) %>% # end of reactive, "get_meta_outputs",
+      bindCache(c(
+        rv$which_question, 
+        rv$simList, 
+        rv$simfitList))
+    
     
     observe({
+      req(rv$active_tab == 'meta')
       req(rv$which_question,
           !is.null(rv$grouped),
           rv$set_analysis)
+      req(length(rv$simList) > 2)
       
-      inList <- NULL
-      if (rv$set_analysis == "hr") {
+      shinyjs::hide(id = "metaBox_summary")
+      rv$random <- FALSE
+      
+      tmp <- get_meta_outputs()
+      rv$meta_tbl <<- dplyr::bind_rows(rv$meta_tbl, tmp)
+      rv$meta_tbl <- dplyr::distinct(rv$meta_tbl)
+      rv$meta_tbl_resample <- NULL
+      
+      shinyjs::show(id = "metaBox_summary")
+      
+    }) %>% # end of observe,
+      bindEvent(input$run_meta)
+    
+    
+    get_meta_permutation_outputs <- reactive({
+      
+      start <- Sys.time()
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = tagList(span(
+          style = "font-size: 18px;",
+          span("Resampling individuals \n",
+               "for", style = "color: #797979;"),
+          wrap_none(span("meta-analyses", class = "cl-sea"),
+                    span("...", style = "color: #797979;")))))
+      
+      msg_log(
+        style = "warning",
+        message = paste0("Resampling ",
+                         msg_warning("in progress"), "..."))
+      
+      get_analysis <- c()
+      if ("Home range" %in% rv$which_question) {
         req(rv$akdeList)
-        variable <- "area"
-        inList <- rv$akdeList
+        req(length(rv$akdeList) > 0)
+        req(length(rv$simList) == length(rv$akdeList))
+        get_analysis <- c(get_analysis, "hr")
       }
-      if (rv$set_analysis == "ctsd") {
+      
+      if ("Speed & distance" %in% rv$which_question) {
         req(rv$ctsdList)
-        variable <- "speed"
-        inList <- rv$ctsdList
+        req(length(rv$ctsdList) > 0)
+        req(length(rv$simList) == length(rv$ctsdList))
+        get_analysis <- c(get_analysis, "ctsd")
       }
       
-      req(!is.null(inList))
-      req(length(inList) > 2)
+      tmp <- run_meta_permutations(
+        rv, set_target = get_analysis,
+        subpop = rv$grouped,
+        random = TRUE, max_samples = input$n_resamples,
+        trace = TRUE)
       
-      rv$meta_tbl <- NULL
+      msg_log(
+        style = "success",
+        message = paste0("Resampling ", msg_success("completed"), "."),
+        run_time = difftime(Sys.time(), start, units = "sec"))
       
-      dt_meta <- data.frame(
-        "type" = character(0),
-        "m" = numeric(0),
-        "lci" = numeric(0),
-        "est" = numeric(0),
-        "uci" = numeric(0),
-        "overlaps" = logical(0),
-        "subpop" = logical(0),
-        "group" = character(0))
+      shinyFeedback::showToast(
+        type = "success",
+        message = paste("Resampling completed!"),
+        .options = list(
+          timeOut = 3000,
+          extendedTimeOut = 3500,
+          progressBar = FALSE,
+          closeButton = TRUE,
+          preventDuplicates = TRUE,
+          positionClass = "toast-bottom-right"
+        )
+      )
       
-      groups <- 1
-      nm_groups <- "All"
-      if (rv$grouped) {
-        req(rv$groups)
-        groups <- length(rv$groups$final)
-        inList <- get_groups(inList, groups = rv$groups[[2]])
-        nm_groups <- c("A", "B")
-      } else {
-        inList <- list(inList)
-      }
+      shinybusy::remove_modal_spinner()
+      return(tmp)
       
-      # group <- 1
-      for (group in seq_len(groups)) {
-        input <- inList[[group]]
-        if (length(input) == 0) break
-        
-        if (rv$set_analysis == "hr") {
-          truth_summarized <- get_true_hr(
-            sigma = rv$sigma,
-            
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
-            grouped = rv$grouped,
-            groups = if (rv$grouped) rv$groups[[2]] else NULL,
-            summarized = TRUE)
-          
-          truth <- truth_summarized[[nm_groups[group]]]$area
-        }
-        
-        if (rv$set_analysis == "ctsd") {
-          truth_summarized <- get_true_speed(
-            data = rv$simList,
-            seed = rv$seedList,
-            
-            tau_p = rv$tau_p,
-            tau_v = rv$tau_v,
-            sigma = rv$sigma,
-            
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
-            grouped = rv$grouped,
-            groups = if (rv$grouped) rv$groups[[2]] else NULL,
-            
-            summarized = TRUE)
-          
-          truth <- truth_summarized[[nm_groups[group]]]
-        }
-        
-        arg <- get_sets(input)
-        for (set in seq_len(arg$sets)) {
-          input_subset <- input[arg$out <= set]
-          out_meta <- capture_meta(input_subset,
-                                   sort = TRUE,
-                                   units = FALSE,
-                                   verbose = TRUE,
-                                   plot = FALSE)
-          
-          if (!is.null(out_meta)) {
-            
-            tmpname <- rownames(out_meta$meta)
-            tmpunit <- extract_units(tmpname[grep("^mean", tmpname)])
-            
-            out_est <- c(
-              "lci" = out_meta$meta[1, 1] %#% tmpunit,
-              "est" = out_meta$meta[1, 2] %#% tmpunit,
-              "uci" = out_meta$meta[1, 3] %#% tmpunit)
-            out_err <- c(
-              "lci" = ((out_est[["lci"]] %#% tmpunit) - truth) / truth,
-              "est" = ((out_est[["est"]] %#% tmpunit) - truth) / truth,
-              "uci" = ((out_est[["uci"]] %#% tmpunit) - truth) / truth)
-            
-            dt_meta <- dt_meta %>% dplyr::add_row(
-              type = rv$set_analysis,
-              m = length(input_subset),
-              lci = out_err[[1]],
-              est = out_err[[2]],
-              uci = out_err[[3]],
-              overlaps = dplyr::between(truth,
-                                        out_meta$meta[1, 1],
-                                        out_meta$meta[1, 3]),
-              subpop = out_meta$logs$subpop_detected,
-              group = nm_groups[group])
-            
-          } else {
-            
-            dt_meta <- dt_meta %>% dplyr::add_row(
-              type = rv$set_analysis,
-              m = length(input_subset),
-              lci = NA, est = NA, uci = NA,
-              overlaps = NA,
-              subpop = NA,
-              group = nm_groups[group])
-            
-          } # end of if statement (!is.null(out_meta))
-          
-        } # end of loop (set)
-      } # end of loop (group)
+    }) %>% # end of reactive, "get_meta_permutation_outputs",
+      bindCache(c(
+        rv$which_question, 
+        rv$simList, 
+        rv$simfitList,
+        input$n_resamples))
+    
+    observe({
+      req(rv$active_tab == 'meta')
+      req(rv$which_question,
+          !is.null(rv$grouped),
+          rv$set_analysis,
+          rv$meta_tbl)
       
-      rv$meta_tbl <<- rbind(rv$meta_tbl, 
-                            dplyr::distinct(dt_meta))
+      rv$random <- TRUE
+      n_resamples <- input$n_resamples
+      # rv$meta$n_resample <- rv$meta$n_resample + input$n_resamples
       
-    }, priority = 1) %>% # end of observe,
-      bindEvent(list(input$run_meta,
-                     rv$set_analysis))
+      tmp <- get_meta_permutation_outputs()
+      rv$meta_tbl_resample <<- rbind(rv$meta_tbl_resample,
+                                     dplyr::distinct(tmp))
+      
+
+    }) %>% # end of observe,
+      bindEvent(input$run_meta_resample)
     
     # PLOTS ---------------------------------------------------------------
     ## Rendering meta plot at the individual-level: -----------------------
     
     observe({
       if (length(rv$which_question) == 2)
-        shinyjs::show(id = "metaInput_type") else
-          shinyjs::hide(id = "metaInput_type")
+        shinyjs::show(id = "metaOutput_type") else
+          shinyjs::hide(id = "metaOutput_type")
       
     }) # end of observe
     
@@ -1200,9 +1212,7 @@ mod_tab_meta_server <- function(id, rv) {
             grouped = rv$grouped,
             groups = if (rv$grouped) rv$groups[[2]] else NULL)
           
-          true_value <- lapply(seq_along(truthList), function(x) {
-            out$unit[[1]] %#% truthList[[x]]$area
-          })
+          true_value <- lapply(truthList, \(x) out$unit[[1]] %#% x$area)
           names(true_value) <- names(truthList)
         }
         
@@ -1474,74 +1484,293 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of renderGirafe, "metaPlot_groups"
     
-    ## Rendering error plot of optimal search outputs: --------------------
+    ## Rendering plots for optimal population sample sizes: ---------------
     
     output$metaPlot_m_optimal <- ggiraph::renderGirafe({
-      req(rv$meta_tbl, rv$which_m, rv$which_meta, rv$set_analysis)
+      req(rv$meta_tbl, 
+          rv$which_m, 
+          rv$which_meta,
+          rv$which_question,
+          rv$set_analysis)
+      req(length(rv$simList) > 1)
       
-      out <- rv$meta_tbl
-      req(all(!is.na(out$est)))
+      dodge_width <- .25
       
-      if (rv$which_meta == "mean") {
-        req(rv$error_threshold)
-        p_error1 <- ggplot2::geom_hline(
-          yintercept = rv$error_threshold,
-          color = "black",
-          linetype = "dotted")
-        p_error2 <-  ggplot2::geom_hline(
-          yintercept = -rv$error_threshold,
-          color = "black",
-          linetype = "dotted")
+      plot_title <- NULL
+      if (length(rv$which_question) > 1) {
+        plot_title <- ifelse(rv$set_analysis == "hr",
+                             "For home range:",
+                             "For speed & distance:")
       }
       
-      out$var_color <- out$overlap
-      var_color_title <- "Overlaps with truth:"
+      pal_values <- c("Yes" = pal$sea,
+                      "Near" = pal$grn,
+                      "No" = pal$dgr)
       
-      # TODO
-      # if (rv$which_meta == "compare") {
-      #   out$var_color <- out$subpop
-      #   var_color_title <- "Sub-population detected?"
-      # } # Note: this refers to finding subpops within each group
-      ## need to change to finding subpops within the population.
-      
-      if (all(out$var_color)) truth_values <- pal$sea
-      else if (all(out$var_color == FALSE)) truth_values <- pal$dgr
-      else truth_values <- c(pal$dgr, pal$sea)
-      
-      p.optimal <- out %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = as.factor(m), y = est,
-                       group = group,
-                       shape = group,
-                       color = var_color)) +
+      if (rv$random) {
+        req(rv$meta_tbl_resample,
+            rv$error_threshold)
         
-        { if (rv$which_meta == "mean") p_error1 } +
-        { if (rv$which_meta == "mean") p_error2 } +
+        out <- rv$meta_tbl_resample %>% 
+          dplyr::mutate(m == as.integer(m)) %>% 
+          dplyr::filter(type == rv$set_analysis) 
         
-        ggplot2::geom_hline(
-          yintercept = 0,
-          linewidth = 0.3,
-          linetype = "solid") +
-        ggplot2::geom_point(
-          size = 4,
-          position = ggplot2::position_dodge(width = .25)) +
-        ggplot2::geom_linerange(
-          ggplot2::aes(ymin = lci,
-                       ymax = uci),
-          position = ggplot2::position_dodge(width = .25)) +
+        if (rv$grouped) {
+          out <- out %>%
+            dplyr::filter(group != "All")
+        }
         
-        ggplot2::labs(x = "Number of individuals", y = "Error (%)") +
+        req(all(!is.na(out$est)))
+        req(nrow(out) > 0)
         
-        ggplot2::scale_y_continuous(labels = scales::percent) +
-        ggplot2::scale_color_manual(var_color_title,
-                                    values = truth_values) +
-        ggplot2::scale_shape_manual("Group:", values = c(16,17)) +
-        theme_movedesign(font_available = rv$is_font) +
-        ggplot2::theme(legend.position = "bottom")
+        max_samples <- max(unique(out$sample))
+        
+        out_mean <- out %>% 
+          dplyr::group_by(type, group, m) %>% 
+          dplyr::summarize(
+            n = dplyr::n(),
+            error = mean(error, na.rm = TRUE),
+            lci = mean(error_lci, na.rm = TRUE),
+            uci = mean(error_uci, na.rm = TRUE)) %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            within_threshold = any(
+              dplyr::c_across(c(error, lci, uci)) >=
+                -rv$error_threshold & 
+                dplyr::c_across(c(error, lci, uci)) <=
+                rv$error_threshold),
+            close_to_threshold = any(
+              dplyr::c_across(c(error, lci, uci)) >= 
+                -(rv$error_threshold * 2) & 
+                dplyr::c_across(c(error, lci, uci)) <= 
+                (rv$error_threshold * 2)),
+            color = dplyr::case_when(
+              (lci < -rv$error_threshold &
+                 uci > rv$error_threshold) ~ "Yes",
+              within_threshold ~ "Yes",
+              close_to_threshold ~ "Near",
+              TRUE ~ "No")) %>% 
+          quiet() %>% 
+          suppressMessages() %>% 
+          suppressWarnings()
+        
+        color_title <- paste0(
+          "Within error threshold (\u00B1",
+          rv$error_threshold * 100, "%)?")
+        
+        plot_subtitle <- paste(
+          "<b>Maximum number of samples:</b>", max_samples)
+        
+        if (rv$which_meta == "mean") {
+          p_error1 <- ggplot2::geom_hline(
+            yintercept = rv$error_threshold,
+            color = "black",
+            linetype = "dotted")
+          p_error2 <-  ggplot2::geom_hline(
+            yintercept = -rv$error_threshold,
+            color = "black",
+            linetype = "dotted")
+        }
+        
+        p.optimal <- out_mean %>% 
+          ggplot2::ggplot(
+            ggplot2::aes(x = as.factor(m),
+                         y = error,
+                         group = group,
+                         shape = group,
+                         color = color)) + 
+          
+          ggplot2::geom_hline(
+            yintercept = 0,
+            linewidth = 0.3,
+            linetype = "solid") +
+          
+          { if (rv$which_meta == "mean") p_error1 } +
+          { if (rv$which_meta == "mean") p_error2 } +
+          
+          ggplot2::geom_jitter(
+            data = out,
+            mapping = ggplot2::aes(x = as.factor(m),
+                                   y = error,
+                                   group = group,
+                                   shape = group,
+                                   color = color),
+            position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+            size = 2, color = "grey80", alpha = 0.9) +
+          
+          # ggplot2::geom_line(
+          #   position = ggplot2::position_dodge(width = 0.4),
+          #   show.legend = TRUE,
+          #   linewidth = 0.6, alpha = 0.5) +
+          ggplot2::geom_linerange(
+            ggplot2::aes(ymin = lci,
+                         ymax = uci),
+            show.legend = TRUE,
+            position = ggplot2::position_dodge(width = 0.4),
+            linewidth = 2.2, alpha = 0.3) +
+          ggplot2::geom_point(
+            position = ggplot2::position_dodge(width = 0.4),
+            show.legend = TRUE,
+            size = 3.5) +
+          
+          ggplot2::labs(
+            title = plot_title,
+            subtitle = plot_subtitle,
+            x = "<i>Population</i> sample size, <i>m</i>",
+            y = "Relative error (%)",
+            color = color_title) +
+          
+          ggplot2::scale_y_continuous(breaks = scales::breaks_pretty(),
+                                      labels = scales::percent) +
+          
+          ggplot2::scale_color_manual(values = pal_values,
+                                      na.translate = FALSE, drop = FALSE) +
+          ggplot2::scale_shape_manual("Group:", values = c(16, 17)) +
+          
+          theme_movedesign(font_available = rv$is_font) +
+          ggplot2::theme(
+            legend.position = "bottom",
+            plot.title = ggtext::element_markdown(
+              size = 15, face = 2, hjust = 1,
+              margin = ggplot2::margin(b = 2)),
+            plot.subtitle = ggtext::element_markdown(
+              size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
+        
+        if (rv$which_meta == "mean") {
+          p.optimal <- p.optimal +
+            ggplot2::guides(shape = "none")
+        }
+        
+      } else {
+        
+        out <- out_all <- dplyr::distinct(rv$meta_tbl) %>% 
+          dplyr::select(c(-est, -lci, -uci)) %>%
+          dplyr::filter(type == rv$set_analysis)
+        req(all(!is.na(out$est)))
+        req(nrow(out) > 0)
+        
+        if (rv$grouped) {
+          out <- out %>% 
+            dplyr::filter(group != "All")
+        }
+        
+        req(all(!is.na(out$est)))
+        req(nrow(out) > 0)
+        
+        color_title <- paste0(
+          "Within error threshold (\u00B1",
+          rv$error_threshold * 100, "%)?")
+        
+        if (rv$which_meta == "mean") {
+          p_error1 <- ggplot2::geom_hline(
+            yintercept = rv$error_threshold,
+            color = "black",
+            linetype = "dotted")
+          p_error2 <- ggplot2::geom_hline(
+            yintercept = -rv$error_threshold,
+            color = "black",
+            linetype = "dotted")
+        }
+        
+        out <- out %>%
+          dplyr::group_by(type) %>% 
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            within_threshold = any(
+              dplyr::c_across(c(error, error_lci, error_uci)) >=
+                -rv$error_threshold & 
+                dplyr::c_across(c(error, error_lci, error_uci)) <=
+                rv$error_threshold),
+            close_to_threshold = any(
+              dplyr::c_across(c(error, error_lci, error_uci)) >= 
+                -(rv$error_threshold * 2) & 
+                dplyr::c_across(c(error, error_lci, error_uci)) <= 
+                (rv$error_threshold * 2)),
+            color = dplyr::case_when(
+              (error_lci < -rv$error_threshold &
+                 error_uci > rv$error_threshold) ~ "Yes",
+              within_threshold ~ "Yes",
+              close_to_threshold ~ "Near",
+              TRUE ~ "No"))
+        
+        if (rv$which_meta == "compare") {
+          req(rv$metaList_groups)
+          req(rv$metaList[[rv$set_analysis]])
+          dodge_width <- .4
+          
+          is_subpop <- rv$metaList_groups[["intro"]][[
+            rv$set_analysis]]$logs$subpop_detected
+          is_subpop
+          
+          # is_final_subpop <- rv$metaList[[rv$set_analysis]]$
+          #   logs$subpop_detected
+          # is_final_subpop
+          
+          is_final_subpop <- out_all %>%
+            dplyr::filter(group == "All") %>%
+            dplyr::pull(subpop_detected)
+          is_final_subpop <- rep(is_final_subpop, each = 2)
+          is_final_subpop <- out$color <- ifelse(
+            is_final_subpop == "FALSE", "No", "Yes")
+          is_final_subpop
+          
+          pal1 <- c("Yes" = pal$sea, "No" = pal$dgr)
+          pal2 <- c("Yes" = pal$dgr, "No" = pal$sea)
+          pal_values <- if(is_subpop) pal1 else pal2
+          # pal_values <- pal_values[is_final_subpop]
+          
+          color_title <- "Sub-population detected?"
+          
+        } # Note: this refers to finding subpops within the population.
+        
+        p.optimal <- out %>%
+          ggplot2::ggplot(
+            ggplot2::aes(x = as.factor(m),
+                         y = error,
+                         group = group,
+                         shape = group,
+                         color = color)) +
+          
+          { if (rv$which_meta == "mean") p_error1 } +
+          { if (rv$which_meta == "mean") p_error2 } +
+          
+          ggplot2::geom_hline(
+            yintercept = 0,
+            linewidth = 0.3,
+            linetype = "solid") +
+          ggplot2::geom_point(
+            size = 4,
+            position = ggplot2::position_dodge(width = dodge_width)) +
+          ggplot2::geom_linerange(
+            ggplot2::aes(ymin = error_lci,
+                         ymax = error_uci),
+            position = ggplot2::position_dodge(width = dodge_width)) +
+          
+          ggplot2::labs(
+            title = plot_title,
+            x = "Number of individuals",
+            y = "Error (%)",
+            color = color_title) +
+          
+          ggplot2::scale_y_continuous(labels = scales::percent,
+                                      breaks = scales::breaks_pretty()) +
+          ggplot2::scale_color_manual(values = pal_values) +
+          ggplot2::scale_shape_manual("Group:", values = c(16,17)) +
+          theme_movedesign(font_available = rv$is_font) +
+          ggplot2::theme(
+            legend.position = "bottom",
+            plot.title = ggtext::element_markdown(
+              size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
+        
+        if (rv$which_meta == "mean") {
+          p.optimal <- p.optimal +
+            ggplot2::guides(shape = "none")
+        }
+      }
       
       ggiraph::girafe(
         ggobj = p.optimal,
-        width_svg = 5.5, height_svg = 3,
+        width_svg = 5.5, height_svg = 4,
         options = list(
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
@@ -1554,7 +1783,240 @@ mod_tab_meta_server <- function(id, rv) {
                         "cursor: pointer;")))) %>%
         suppressWarnings()
       
-    }) # end of renderGirafe, "metaPlot_m_optimal"
+    }) %>% # end of renderGirafe, "metaPlot_m_optimal"
+      bindEvent(c(input$run_meta,
+                  input$run_meta_resample,
+                  rv$set_analysis))
+    
+    ## Rendering error plot of optimal search outputs (ratios): -----------
+    
+    output$metaPlot_m_ratio_optimal <- ggiraph::renderGirafe({
+      req(rv$which_meta == "compare", rv$grouped)
+      req(rv$meta_tbl, rv$which_m, rv$which_meta,
+          rv$which_question, rv$set_analysis)
+      req(length(rv$simList) > 1)
+      
+      rv$random <- FALSE
+      
+      plot_title <- NULL
+      if (length(rv$which_question) > 1) {
+        plot_title <- ifelse(rv$set_analysis == "hr",
+                             "For home range:",
+                             "For speed & distance:")
+      }
+      
+      pal_values <- c("Yes" = pal$sea,
+                      "Near" = pal$grn,
+                      "No" = pal$dgr)
+      
+      get_analysis <- c()
+      if ("Home range" %in% rv$which_question) {
+        req(rv$akdeList)
+        req(length(rv$akdeList) > 0)
+        req(length(rv$simList) == length(rv$akdeList))
+        get_analysis <- c(get_analysis, "hr")
+      }
+      
+      if ("Speed & distance" %in% rv$which_question) {
+        req(rv$ctsdList)
+        req(length(rv$ctsdList) > 0)
+        req(length(rv$simList) == length(rv$ctsdList))
+        get_analysis <- c(get_analysis, "ctsd")
+      }
+      
+      truth <- c()
+      truthList <- .get_expected_values(get_analysis, rv)
+      if (rv$set_analysis == "hr") {
+        truth[["hr"]] <- truthList[["hr"]][["A"]]$area/
+          truthList[["hr"]][["B"]]$area
+      }
+      
+      if (rv$set_analysis == "ctsd") {
+        truth[["ctsd"]] <- truthList[["ctsd"]][["A"]]/
+          truthList[["ctsd"]][["B"]]
+      }
+      
+      out_all <- rv$meta_tbl
+      
+      req(rv$metaList_groups)
+      req(rv$metaList[[rv$set_analysis]])
+      dodge_width <- .4
+      
+      is_subpop <- rv$metaList_groups[["intro"]][[
+        rv$set_analysis]]$logs$subpop_detected
+      is_final_subpop <- out_all %>%
+        dplyr::filter(type == rv$set_analysis) %>% 
+        dplyr::filter(group == "All") %>%
+        dplyr::pull(subpop_detected)
+      is_final_subpop <- ifelse(is_final_subpop == "FALSE", "No", "Yes")
+      # Note: this refers to finding subpops within the population.
+      
+      pal1 <- c("Yes" = pal$sea, "No" = pal$dgr)
+      pal2 <- c("Yes" = pal$dgr, "No" = pal$sea)
+      pal_values <- if(is_subpop) pal1 else pal2
+      
+      color_title <- "Sub-population detected?"
+      
+      if (rv$random) {
+        req(rv$meta_tbl_resample)
+        
+        out <- rv$meta_tbl_resample %>% 
+          dplyr::select(-c(truth, est, lci, uci,
+                           error, error_lci, error_uci, group)) %>%
+          dplyr::filter(type == rv$set_analysis) %>% 
+          dplyr::mutate(m == as.integer(m)) %>% 
+          tidyr::drop_na(ratio_est) %>% 
+          dplyr::distinct()
+        
+        max_samples <- max(unique(out$sample))
+        
+        out_mean <- out %>% 
+          dplyr::group_by(type, m) %>% 
+          dplyr::summarize(
+            n = dplyr::n(),
+            ratio_est = mean(ratio_est, na.rm = TRUE),
+            ratio_lci = mean(ratio_lci, na.rm = TRUE),
+            ratio_uci = mean(ratio_uci, na.rm = TRUE)) %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            color = dplyr::case_when(
+              (ratio_lci < truth[[rv$set_analysis]] &
+                 ratio_uci > truth[[rv$set_analysis]]) ~ "Yes",
+              TRUE ~ "No")) %>% 
+          quiet() %>% 
+          suppressMessages() %>% 
+          suppressWarnings()
+        
+        color_title <- "Sub-population detected?"
+        plot_subtitle <- paste(
+          "<b>Maximum number of samples:</b>", max_samples)
+        
+        out_mean$color <- is_final_subpop
+        
+        p.ratio.optimal <- out_mean %>% 
+          ggplot2::ggplot(
+            ggplot2::aes(x = as.factor(m),
+                         y = ratio_est,
+                         fill = m,
+                         color = color)) +
+          
+          ggplot2::geom_hline(
+            yintercept = truth[[rv$set_analysis]],
+            linewidth = 0.3,
+            linetype = "solid") +
+          
+          ggplot2::geom_jitter(
+            data = out,
+            mapping = ggplot2::aes(x = as.factor(m),
+                                   y = ratio_est,
+                                   color = color),
+            position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+            size = 2, color = "grey80", alpha = 0.9) +
+          
+          ggplot2::geom_linerange(
+            ggplot2::aes(ymin = ratio_lci,
+                         ymax = ratio_uci),
+            show.legend = TRUE,
+            position = ggplot2::position_dodge(width = 0.4),
+            linewidth = 2.2, alpha = 0.3) +
+          ggplot2::geom_point(
+            position = ggplot2::position_dodge(width = 0.4),
+            show.legend = TRUE,
+            size = 3.5) +
+          
+          ggplot2::labs(
+            title = plot_title,
+            subtitle = plot_subtitle,
+            x = "<i>Population</i> sample size, <i>m</i>",
+            y = "Ratio (Group A / Group B)",
+            color = color_title) +
+          
+          ggplot2::scale_y_continuous(breaks = scales::breaks_pretty()) +
+          ggplot2::scale_color_manual(values = pal_values, drop = FALSE) +
+          
+          theme_movedesign(font_available = rv$is_font) +
+          ggplot2::theme(
+            legend.position = "bottom",
+            plot.title = ggtext::element_markdown(
+              size = 15, face = 2, hjust = 1,
+              margin = ggplot2::margin(b = 2)),
+            plot.subtitle = ggtext::element_markdown(
+              size = 14, hjust = 1, margin = ggplot2::margin(b = 15))) +
+          ggplot2::guides(fill = "none")
+        
+      } else {
+        
+        out <- out_all %>% 
+          dplyr::select(-c(truth, est, lci, uci,
+                           error, error_lci, error_uci, group)) %>%
+          dplyr::filter(type == rv$set_analysis) %>% 
+          dplyr::distinct()
+        req(all(!is.na(out$est)))
+        req(nrow(out) > 0)
+        
+        out <- out %>%
+          dplyr::group_by(type) %>% 
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            color = dplyr::case_when(
+              (ratio_lci < truth[[rv$set_analysis]] &
+                 ratio_uci > truth[[rv$set_analysis]]) ~ "Yes",
+              TRUE ~ "No"))
+        
+        p.ratio.optimal <- out %>%
+          ggplot2::ggplot(
+            ggplot2::aes(x = as.factor(m),
+                         y = ratio_est,
+                         color = color)) +
+          
+          ggplot2::geom_hline(
+            yintercept = truth[[rv$set_analysis]],
+            linewidth = 0.3,
+            linetype = "solid") +
+          ggplot2::geom_point(
+            size = 4,
+            position = ggplot2::position_dodge(width = dodge_width)) +
+          ggplot2::geom_linerange(
+            ggplot2::aes(ymin = ratio_lci,
+                         ymax = ratio_uci),
+            position = ggplot2::position_dodge(width = dodge_width)) +
+          
+          ggplot2::labs(
+            title = plot_title,
+            x = "Number of individuals",
+            y = "Ratio (Group A / Group B)",
+            color = color_title) +
+          
+          ggplot2::scale_y_continuous(breaks = scales::breaks_pretty()) +
+          ggplot2::scale_color_manual(values = pal_values) +
+          # ggplot2::scale_shape_manual("Group:", values = c(16,17)) +
+          theme_movedesign(font_available = rv$is_font) +
+          ggplot2::theme(
+            legend.position = "bottom",
+            plot.title = ggtext::element_markdown(
+              size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
+        
+      }
+      
+      ggiraph::girafe(
+        ggobj = p.ratio.optimal,
+        width_svg = 5.5, height_svg = 4,
+        options = list(
+          ggiraph::opts_selection(type = "none"),
+          ggiraph::opts_toolbar(saveaspng = FALSE),
+          ggiraph::opts_tooltip(
+            opacity = 1,
+            use_fill = TRUE),
+          ggiraph::opts_hover(
+            css = paste("fill: #1279BF;",
+                        "stroke: #1279BF;",
+                        "cursor: pointer;")))) %>%
+        suppressWarnings()
+      
+    }) %>% # end of renderGirafe, "metaPlot_m_ratio_optimal"
+      bindEvent(list(input$run_meta,
+                     input$run_meta_resample,
+                     rv$set_analysis))
     
     # TABLES --------------------------------------------------------------
     ## Rendering meta-analyses outputs: -----------------------------------
@@ -1626,7 +2088,7 @@ mod_tab_meta_server <- function(id, rv) {
     ## Rendering meta-analyses outputs (for groups): ----------------------
     
     output$metaTable_groups <- reactable::renderReactable({
-      req(rv$metaList_groups[[3]], 
+      req(rv$metaList_groups[[3]],
           rv$set_analysis,
           input$metaInput_mod)
       
@@ -1759,7 +2221,7 @@ mod_tab_meta_server <- function(id, rv) {
     #   
     # }) # end of renderReactable, "metaTable_m"
     
-    ## Optimal search outputs: --------------------------------------------
+    ## Rendering meta-analyses outputs (permutations): --------------------
     
     output$metaTable_m_optimal <- reactable::renderReactable({
       req(rv$which_question, rv$meta_tbl)
@@ -1774,14 +2236,15 @@ mod_tab_meta_server <- function(id, rv) {
       }
       
       dt_meta <- rv$meta_tbl %>%
+        dplyr::filter(type == set_analysis) %>% 
         dplyr::select(-overlaps, -type) %>%
-        dplyr::mutate(subpop = as.logical(subpop)) %>% 
-        dplyr::select(m, lci, est, uci, group, subpop)
+        dplyr::mutate(subpop = as.logical(subpop_detected)) %>% 
+        dplyr::select(m, error_lci, error, error_uci, group, subpop)
       
       dt_meta$subpop <- ifelse(dt_meta$subpop, "Yes", "No")
       
       nms <- list(
-        m = "M",
+        m = "m",
         lci = "95% LCI",
         est = "Est",
         uci = "95% UCI",
@@ -1791,7 +2254,9 @@ mod_tab_meta_server <- function(id, rv) {
       
       colgroups <- list(
         reactable::colGroup(
-          name = "Error", columns = c("lci", "est", "uci")))
+          name = "Error", columns = c("error_lci", 
+                                      "error",
+                                      "error_uci")))
       
       reactable::reactable(
         data = dt_meta,
@@ -1814,15 +2279,15 @@ mod_tab_meta_server <- function(id, rv) {
         columns = list(
           m = reactable::colDef(
             name = nms[["m"]]),
-          lci = reactable::colDef(
+          error_lci = reactable::colDef(
             name = nms[["lci"]],
             style = format_perc,
             format = reactable::colFormat(percent = TRUE, digits = 1)),
-          est = reactable::colDef(
+          error = reactable::colDef(
             name = nms[["est"]],
             style = format_perc,
             format = reactable::colFormat(percent = TRUE, digits = 1)),
-          uci = reactable::colDef(
+          error_uci = reactable::colDef(
             name = nms[["uci"]],
             style = format_perc,
             format = reactable::colFormat(percent = TRUE, digits = 1)),
@@ -1861,7 +2326,7 @@ mod_tab_meta_server <- function(id, rv) {
       meta <- rv$metaList_groups[[2]][["hr"]]
       req(!is.null(meta))
       
-      observed_ratio <- extract_ratios(meta)
+      observed_ratio <- .get_ratios(meta)
       observed_ratio
       
       return(tagList(
@@ -1871,9 +2336,9 @@ mod_tab_meta_server <- function(id, rv) {
           header = "Ratio",
           value = paste0(round(observed_ratio$est, 1), ":1"),
           subtitle = paste0(
-            scales::label_comma(.1)(observed_ratio$lower),
+            scales::label_comma(.1)(observed_ratio$lci),
             ":1 \u2014 ", scales::label_comma(.1)
-            (observed_ratio$upper), ":1"))
+            (observed_ratio$uci), ":1"))
       ))
       
     }) # end of renderUI, "metaBlock_hr_ratio"
@@ -1894,7 +2359,7 @@ mod_tab_meta_server <- function(id, rv) {
       meta <- rv$metaList_groups[[2]][["ctsd"]]
       req(!is.null(meta))
       
-      observed_ratio <- extract_ratios(meta)
+      observed_ratio <- .get_ratios(meta)
       observed_ratio
       
       return(tagList(
@@ -1904,12 +2369,45 @@ mod_tab_meta_server <- function(id, rv) {
           header = "Ratio",
           value = paste0(round(observed_ratio$est, 1), ":1"),
           subtitle = paste0(
-            scales::label_comma(.1)(observed_ratio$lower),
+            scales::label_comma(.1)(observed_ratio$lci),
             ":1 \u2014 ", scales::label_comma(.1)
-            (observed_ratio$upper), ":1"))
+            (observed_ratio$uci), ":1"))
       ))
       
     }) # end of renderUI, "metaBlock_speed_ratio"
+    
+    # HELP MODALS ---------------------------------------------------------
+    ## Help modal (resample): ---------------------------------------------
+    
+    # observe({
+    #   
+    #   shiny::showModal(
+    #     shiny::modalDialog(
+    #       title = h4(span("Resampling", class = "cl-sea"),
+    #                  "individuals:"),
+    #       
+    #       fluidRow(
+    #         style = paste("margin-right: 20px;",
+    #                       "margin-left: 20px;"),
+    #         
+    #         # h4(style = "margin-top: 30px;", "For more information:"),
+    #         # 
+    #         # p(style = "font-family: var(--monosans);",
+    #         #   "- Noonan, M. J., Fleming, C. H., Akre, T. S.,",
+    #         #   "Drescher-Lehman, J., Gurarie, E., Harrison, A. L.,",
+    #         #   "Kays, R. & Calabrese, J. M. (2019). Scale-insensitive",
+    #         #   "estimation of speed and distance traveled from animal",
+    #         #   "tracking data. Movement Ecology, 7(1), 1-15.")
+    #         
+    #         p("TBA")
+    #         
+    #       ), # end of fluidRow
+    #       
+    #       footer = modalButton("Dismiss"),
+    #       size = "m")) # end of modal
+    #   
+    # }) %>% # end of observe,
+    #   bindEvent(input$metaHelp_resample)
     
   }) # end of moduleServer
 }

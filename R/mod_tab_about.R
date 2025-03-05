@@ -107,7 +107,7 @@ mod_tab_about_ui <- function(id) {
                 p(style = "padding: none;"),
 
                 ### Data source -------------------------------------------
-
+                
                 shinyWidgets::radioGroupButtons(
                   inputId = ns("which_data"),
                   label = span("Data source:", style = "font-size: 16px;"),
@@ -126,7 +126,7 @@ mod_tab_about_ui <- function(id) {
 
                 shinyWidgets::checkboxGroupButtons(
                   inputId = ns("which_question"),
-                  label = span("Research questions:",
+                  label = span("Research target:",
                                style = "font-size: 16px;"),
                   choices = c("Home range",
                               "Speed & distance"),
@@ -193,8 +193,9 @@ mod_tab_about_ui <- function(id) {
                          shinyWidgets::awesomeCheckbox(
                            inputId = ns("is_emulate"),
                            label = span(
-                             "Propagate",
-                             span("uncertainty", class = "cl-sea"),
+                             "Add",
+                             span("individual", class = "cl-sea"),
+                             "variation",
                              style = "font-size: 15px;"),
                            value = FALSE))),
                 
@@ -252,8 +253,9 @@ mod_tab_about_server <- function(id, rv) {
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
+    # shinyjs::hide(id = "is_emulate")
+    
     observe({
-
       font_available <- tryCatch({
         gdtools::register_gfont(family = "Roboto Condensed")
       })
@@ -271,7 +273,12 @@ mod_tab_about_server <- function(id, rv) {
       rv$which_question <- input$which_question
       rv$which_meta <- input$which_meta
       
-      req(input$which_m)
+      target_map <- c("Home range" = "hr",
+                      "Speed & distance" = "ctsd")
+      set_target <- target_map[rv$which_question]
+      names(set_target) <- set_target
+      rv$set_target <- set_target
+      
     }, label = "o-about_workflow")
     
     observe({
@@ -301,31 +308,27 @@ mod_tab_about_server <- function(id, rv) {
       bindEvent(rv$which_meta)
     
     observe({
-      req(rv$which_m, rv$which_question)
-      if (rv$which_m == "get_m" && 
-          length(rv$which_question) == 2) {
-        
-        shinyalert::shinyalert(
-          type = "error",
-          title = "Warning",
-          text = tagList(span(
-            "Searching for the", span("minimum", class = "cl-jgl"),
-            "number of VHF/GPS tags is an iterative process.",
-            "Currently, this option only allows for one",
-            span("research question", class = "cl-dgr"),
-            "at a time. Please select either 'Home range' or",
-            "'Speed & distance' (but not both) to proceed.")),
-          confirmButtonText = "Dismiss",
-          html = TRUE,
-          size = "xs")
-        
-        shinyWidgets::updateCheckboxGroupButtons(
-          session = session,
-          inputId = "which_question",
-          selected = character(0))
-        
-        rv$which_question <- NULL
-      }
+      req(rv$which_m == "get_m",
+          length(rv$which_question) == 2)
+      
+      shinyWidgets::updateCheckboxGroupButtons(
+        session = session,
+        inputId = "which_question",
+        selected = character(0))
+      
+      shinyalert::shinyalert(
+        type = "error",
+        title = "Warning",
+        text = tagList(span(
+          "Searching for the", span("minimum", class = "cl-jgl"),
+          "number of VHF/GPS tags is an iterative process.",
+          "Currently, this option only allows for one",
+          span("research question", class = "cl-dgr"),
+          "at a time. Please select either 'Home range' or",
+          "'Speed & distance' (but not both) to proceed.")),
+        confirmButtonText = "Dismiss",
+        html = TRUE,
+        size = "xs")
       
     }) # end of observe
     
@@ -349,8 +352,6 @@ mod_tab_about_server <- function(id, rv) {
       }
       
     }) # end of observe
-    
-    # shinyjs::hide(id = "is_emulate")
     
     observe({
       req(rv$which_data)
@@ -424,7 +425,54 @@ mod_tab_about_server <- function(id, rv) {
       
     }, label = "o-about_generate_seed") # end of observe
     
-  })
+    ## If settings are restored: ------------------------------------------
+    
+    observe({
+      req(rv$restored)
+      loading_modal("Restoring values")
+      
+      rv$which_data <- rv$restored_rv$which_data
+      rv$which_question <- rv$restored_rv$which_question
+      rv$which_meta <- rv$restored_rv$which_meta
+      
+      shinyWidgets::updateRadioGroupButtons(
+        session = session,
+        inputId = "which_data",
+        selected = rv$which_data)
+      
+      shinyWidgets::updateCheckboxGroupButtons(
+        session = session,
+        inputId = "which_question",
+        selected = rv$which_question)
+      
+      shinyWidgets::updateRadioGroupButtons(
+        session = session,
+        inputId = "which_meta",
+        selected = rv$which_meta)
+      
+      shinybusy::remove_modal_spinner()
+      req(rv$which_meta)
+      
+      if (rv$which_meta != "none") {
+        rv$which_m <- rv$restored_rv$which_m
+        rv$is_emulate <- rv$restored_rv$is_emulate
+        
+        shinyWidgets::updateRadioGroupButtons(
+          session = session,
+          inputId = "which_m",
+          selected = rv$which_m)
+        
+        shinyWidgets::updateAwesomeCheckbox(
+          session = session,
+          inputId = "is_emulate",
+          value = rv$is_emulate)
+      }
+      
+    }) %>% # end of observe,
+      bindEvent(rv$restored)
+    
+    
+  }) # end of moduleServer
 }
 
 ## To be copied in the UI

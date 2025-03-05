@@ -910,7 +910,7 @@ mod_tab_data_upload_server <- function(id, rv) {
         )
       )
       
-      out <- guess_time(rv$datList[rv$id], parallel = rv$parallel)
+      out <- guess_time(data = rv$datList[rv$id], parallel = rv$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out)
@@ -1181,7 +1181,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       nm_mods <- lapply(rv$fitList, function(x) summary(x)$name)
       n_OUf <- sum(grepl("^OUf", nm_mods))
       
-      to_filter_out <- "^OUΩ" # paste0("\u03A9")
+      to_filter_out <- paste0("^OU\u03A9")
       if (any(grep(to_filter_out, unlist(nm_mods), perl = TRUE))) {
         fit0 <- fit0[-grep(to_filter_out, unlist(nm_mods), perl = TRUE)]
         nm_mods <- lapply(fit0, function(x) summary(x)$name)
