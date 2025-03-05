@@ -7,7 +7,7 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_comp_settings_ui <- function(id){
+mod_comp_settings_ui <- function(id) {
   ns <- NS(id)
   tagList(
 
@@ -163,7 +163,7 @@ mod_comp_settings_server <- function(id, rv) {
         if (is.null(rv$simList)) {
           shiny::showNotification(
             "No data available to save!", type = "error", duration = 8)
-        } else { saveRDS(reactiveValuesToList(rv), file = file) }
+        } else { base::saveRDS(reactiveValuesToList(rv), file = file) }
         
       } # end of content
     ) # end of output, "download_settings"
@@ -171,29 +171,26 @@ mod_comp_settings_server <- function(id, rv) {
     ## Restore settings/values (from previous session): -------------------
     
     observe({
+      # validate(need(input$restore_state, message = FALSE))
+      # loading_modal("Restoring values")
       
-      validate(need(input$restore_state, message = FALSE))
-      restored_vals <- readRDS(
+      rv$restored_rv <- readRDS(
         file = paste(input$restore_state$datapath))
-      rv$restored_vals <- restored_vals
-      rv$overwrite_all <- TRUE
+      rv$restored <- TRUE
       
-      shiny::showModal(
-        shiny::modalDialog(
-          title = "Previous parameters restored!",
-          
-          p("Data status:"),
-          p("Type:", rv$restored_vals$"data_type"),
-          p("Number of simulations:", 
-            length(rv$restored_vals$"simList")),
-          
-          # p("Parameters:"),
-          # p("Seed:", rv$restored_vals$"seed0"),
-          
-          footer = tagList(
-            modalButton("Dismiss")
-          ),
-          size = "s"))
+      # shiny::showModal(
+      #   shiny::modalDialog(
+      #     title = "Previous parameters restored!",
+      #     
+      #     p("Type:", rv$data_type),
+      #     p("Number of simulations:", length(rv$simList)),
+      #     
+      #     footer = tagList(
+      #       modalButton("Dismiss")
+      #     ),
+      #     size = "s"))
+      
+      # shinybusy::remove_modal_spinner()
       
     }, label = "o-about_restore") %>% # end of observe,
       bindEvent(input$restore_state)

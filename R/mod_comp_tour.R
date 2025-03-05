@@ -829,7 +829,7 @@ mod_comp_tour_server <- function(id, rv) {
         events = list(onbeforechange = 
                         rintrojs::readCallback("switchTabs")))
       
-    }) %>% # observe event, bound to:
+    }) %>% # end of observe,
       bindEvent(input$default_tour)
     
     
