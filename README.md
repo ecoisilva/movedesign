@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# movedesign <img style="padding: 15px 0px 0px 0px;"  src='https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/logo.png' align="right" height="140"/>
+# movedesign <img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/logo.png" style="padding: 15px 0px 0px 0px;" align="right" height="140"/>
 
 <!-- badges: start -->
 
@@ -76,6 +76,8 @@ introduction, refer to the
 [vignette](https://ecoisilva.github.io/movedesign/articles/tutorial.html)
 or the
 [manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153).
+
+<img src="https://besjournals.onlinelibrary.wiley.com/cms/asset/61349f57-8042-41d6-989c-cd4c39a17252/mee314153-fig-0001-m.jpg" style="padding: 5px 0px 5px 0px;" width="100%"/>
 
 ## Getting help:
 
