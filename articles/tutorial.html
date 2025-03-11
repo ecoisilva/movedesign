@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Tutorial • movedesign</title>
+<title>‘movedesign’ tutorial • movedesign</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
 <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="../apple-touch-icon.png">
@@ -14,12 +14,14 @@
 <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="../apple-touch-icon-60x60.png">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Roboto-0.4.9/font.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Fira_Sans-0.4.9/font.css" rel="stylesheet">
 <link href="../deps/JetBrains_Mono-0.4.9/font.css" rel="stylesheet">
-<link href="../deps/Roboto_Slab-0.4.9/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="tutorial_files/libs/quarto-html/popper.min.js"></script><script src="tutorial_files/libs/quarto-html/tippy.umd.min.js"></script><link href="tutorial_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="tutorial_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="‘movedesign’ tutorial">
+<meta property="og:image" content="https://ecoisilva.github.io/movedesign/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -43,7 +45,7 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/tutorial.html">Tutorial</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial.html">'movedesign' tutorial</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
@@ -60,38 +62,210 @@
 
 
   </div>
-</nav><div class="container template-article">
-
-
-
-
+</nav><div class="container template-quarto">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Tutorial</h1>
-            
-      
-      <small class="dont-index">Source: <a href="https://github.com/ecoisilva/movedesign/tree/main/vignettes/tutorial.Rmd" class="external-link"><code>vignettes/tutorial.Rmd</code></a></small>
-      <div class="d-none name"><code>tutorial.Rmd</code></div>
+      <img src="../logo.png" class="logo" alt=""><h1>‘movedesign’ tutorial</h1>
+
+
+
+
+      <small class="dont-index">Source: <a href="https://github.com/ecoisilva/movedesign/tree/main/vignettes/tutorial.qmd" class="external-link"><code>vignettes/tutorial.qmd</code></a></small>
+      <div class="d-none name"><code></code></div>
     </div>
 
-    
-    
-<p><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorialtemplate.png" width="100%"></p>
-<p>Here, you will be guided step-by-step through the app. At times, you
-will be prompted to perform a specific action, which will be
-highlighted. Please take care to follow these instructions, since later
-parts of the tour require that all previous steps are performed. If no
-action is requested, simply proceed to the next step by clicking on the
-‘Next’ button or using the right arrow of your keyboard.</p>
-<p><strong>Warning:</strong> do not interact with anything outside of
-highlighted zones create alongside the tutorial boxes. This tutorial
-will not cover definitions in detail, but you can check out the more
-comprehensive
-<svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24V250.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1H222.6c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg>
-help tips at any time.</p>
-  </main>
-</div>
 
+
+
+
+
+    <section class="section level2"><h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h2>
+<div style="text-align: justify">
+<p>The application includes a built-in guided tutorial to help you navigate its features. When you open the <code>'Home'</code> tab, you’ll find the following:</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure><p><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img1.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly <span style="color: white; background: #009DA0;">highlighted</span>. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking <code>'Next'</code> or pressing the right arrow key on your keyboard.</p>
+<p><strong>Warning:</strong> Avoid interacting with anything outside the highlighted zones during the tutorial, as this may disrupt the guided experience.</p>
+<p>This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24V250.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1H222.6c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg> help tips at any time. Documentation is also available on <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">Silva et al. 2023</a>)</span>.</p>
+<section class="level2"><h3 id="setting-a-workflow">1. Setting a workflow<a class="anchor" aria-label="anchor" href="#setting-a-workflow"></a>
+</h3>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure><p><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img2.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>These are the current options for <code>movedesign</code> workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target.</p>
+<p>1.1. <code>Data Source</code></p>
+<p>Users can specify how they want to obtain data:</p>
+<ul>
+<li>
+<code>Upload</code>: Import a dataset from a local file.</li>
+<li>
+<code>Select</code>: Choose from pre-existing datasets available in the application.</li>
+<li>
+<code>Simulate</code>: Generate synthetic data for testing or modeling purposes.</li>
+</ul>
+<p>1.2. <code>Research Target</code></p>
+<p>Users can define their primary research focus:</p>
+<ul>
+<li>
+<code>Home range</code>: Analyze long-term space-use requirements.</li>
+<li>
+<code>Speed &amp; distance</code>: Investigate movement metrics such as speed and distance traveled.</li>
+</ul>
+<p>1.3. <code>Analytical Target</code></p>
+<p>Users can decide on the type of statistical analysis:</p>
+<ul>
+<li>
+<code>Individual estimate</code>: Obtain metrics for a single individual.</li>
+<li>
+<code>Mean estimate of sampled population</code>: Obtain a mean estimate across a sampled group.</li>
+<li>
+<code>Compare estimates of two sampled populations</code>: Perform a comparative analysis between two groups.</li>
+</ul>
+<p>Additionally, users have the option to:</p>
+<ul>
+<li>
+<code>Add individual variation</code>: Include variation among individuals during simulation.</li>
+</ul>
+<p>All workflows follows a stepwise approach, with tabs presented in sequence.</p>
+</section><section class="level2"><h3 id="study-design-of-an-individual-estimate">Study design of an individual estimate<a class="anchor" aria-label="anchor" href="#study-design-of-an-individual-estimate"></a>
+</h3>
+<p>Workflow based on <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">Silva et al. 2023</a>)</span>.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure><p><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img3.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>You will be guided through a real animal tracking project available through the package. To simulate data from scratch, exit the tour (click the <code>×</code> button above the tutorial box) and navigate to the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:  #009DA0;overflow:visible;position:relative;"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V299.6l-94.7 94.7c-8.2 8.2-14 18.5-16.8 29.7l-15 60.1c-2.3 9.4-1.8 19 1.4 27.8H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM549.8 235.7l14.4 14.4c15.6 15.6 15.6 40.9 0 56.6l-29.4 29.4-71-71 29.4-29.4c15.6-15.6 40.9-15.6 56.6 0zM311.9 417L441.1 287.8l71 71L382.9 487.9c-4.1 4.1-9.2 7-14.9 8.4l-60.1 15c-5.5 1.4-11.2-.2-15.2-4.2s-5.6-9.7-4.2-15.2l15-60.1c1.4-5.6 4.3-10.8 8.4-14.9z"></path></svg><code>'Simulate data'</code> tab, where another guided tour is available.</p>
+<p>First, we will navigate to (1) the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:   #009DA0;overflow:visible;position:relative;"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384v38.6C310.1 219.5 256 287.4 256 368c0 59.1 29.1 111.3 73.7 143.3c-3.2 .5-6.4 .7-9.7 .7H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zm48 96a144 144 0 1 1 0 288 144 144 0 1 1 0-288zm16 80c0-8.8-7.2-16-16-16s-16 7.2-16 16v48H368c-8.8 0-16 7.2-16 16s7.2 16 16 16h48v48c0 8.8 7.2 16 16 16s16-7.2 16-16V384h48c8.8 0 16-7.2 16-16s-7.2-16-16-16H448V304z"></path></svg><code>'Select data'</code> tab to load a dataset available within the package. Then, we will move to (2) the <svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:    #009DA0;overflow:visible;position:relative;"><path d="M176 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h16V98.4C92.3 113.8 16 200 16 304c0 114.9 93.1 208 208 208s208-93.1 208-208c0-41.8-12.3-80.7-33.5-113.2l24.1-24.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L355.7 143c-28.1-23-62.2-38.8-99.7-44.6V64h16c17.7 0 32-14.3 32-32s-14.3-32-32-32H224 176zm72 192V320c0 13.3-10.7 24-24 24s-24-10.7-24-24V192c0-13.3 10.7-24 24-24s24 10.7 24 24z"></path></svg><code>'Sampling design'</code> tab to define the sampling duration and interval. Finally, we will proceed to (3) the <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M352 96c0 14.3-3.1 27.9-8.8 40.2L396 227.4c-23.7 25.3-54.2 44.1-88.5 53.6L256 192h0 0l-68 117.5c21.5 6.8 44.3 10.5 68.1 10.5c70.7 0 133.8-32.7 174.9-84c11.1-13.8 31.2-16 45-5s16 31.2 5 45C428.1 341.8 347 384 256 384c-35.4 0-69.4-6.4-100.7-18.1L98.7 463.7C94 471.8 87 478.4 78.6 482.6L23.2 510.3c-5 2.5-10.9 2.2-15.6-.7S0 501.5 0 496V440.6c0-8.4 2.2-16.7 6.5-24.1l60-103.7C53.7 301.6 41.8 289.3 31.2 276c-11.1-13.8-8.8-33.9 5-45s33.9-8.8 45 5c5.7 7.1 11.8 13.8 18.2 20.1l69.4-119.9c-5.6-12.2-8.8-25.8-8.8-40.2c0-53 43-96 96-96s96 43 96 96zm21 297.9c32.6-12.8 62.5-30.8 88.9-52.9l43.7 75.5c4.2 7.3 6.5 15.6 6.5 24.1V496c0 5.5-2.9 10.7-7.6 13.6s-10.6 3.2-15.6 .7l-55.4-27.7c-8.4-4.2-15.4-10.8-20.1-18.9L373 393.9zM256 128a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"></path></svg><code>'Analyses'</code> tab.</p>
+</section>
+</div>
+<hr>
+<section class="level2 unnumbered"><h3 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h3>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-silva2023movedesign" class="csl-entry" role="listitem">
+Silva, Inês, Christen H Fleming, Michael J Noonan, William F Fagan, and Justin M Calabrese. 2023. <span>“Movedesign: Shiny r App to Evaluate Sampling Design for Animal Movement Studies.”</span> <em>Methods in Ecology and Evolution</em> 14 (9): 2216–25.
+</div>
+</div>
+</section></section><script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'light-border',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config);
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script></main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
+</div>
 
 
     <footer><div class="pkgdown-footer-left">
