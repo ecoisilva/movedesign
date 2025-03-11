@@ -55,7 +55,6 @@ mod_tab_about_ui <- function(id) {
 
       # Tour/tutorial section: --------------------------------------------
 
-      # Section currently in progress:
       shinydashboardPlus::box(
         id = "about_tour",
         title = NULL,
@@ -69,16 +68,31 @@ mod_tab_about_ui <- function(id) {
           br(),
           h2("How does this",
              span("application", class = "cl-sea"), "work?"),
-          p(),
           
-          mod_comp_tour_ui("tour_1"),
+          p(style = paste("max-width: 685px;",
+                          "text-align: center;",
+                          "margin-top: 10px;",
+                          "margin-bottom: 0px;"),
+            "Click below for a", 
+            span("guided tutorial", class = "cl-sea"), "with:"),
           
-          p(), shinyWidgets::awesomeCheckbox(
+          mod_comp_tour_ui("tour_1"), # TODO WIP
+          shinyWidgets::awesomeCheckbox(
             inputId = ns("overwrite_active"),
             label = span(
               "Use fixed", span("seed", class = "cl-sea"),
               "for tutorials only"),
             value = FALSE),
+          br(),
+          
+          p(style = paste("max-width: 685px;",
+                          "text-align: center;",
+                          "margin-top: 0px;",
+                          "margin-bottom: 10px;"),
+            "For more details, check the first manuscript",
+            wrap_none(
+              a(href = paste0("https://besjournals.onlinelibrary.wiley.com/",
+                              "doi/10.1111/2041-210X.14153"), "here"), ".")),
           p()
           
         ) # end of column (text)
@@ -284,6 +298,9 @@ mod_tab_about_server <- function(id, rv) {
     observe({
       rv$which_m <- input$which_m
       if (req(rv$which_meta) == "none") rv$which_m <- NULL
+      if (req(rv$which_meta) == "none") shinyjs::disable("is_emulate")
+      else shinyjs::enable("is_emulate")
+      
     }, label = "o-about_m")
     
     observe({
@@ -301,8 +318,13 @@ mod_tab_about_server <- function(id, rv) {
     shinyjs::hide(id = "num_tags_max")
     
     observe({
-      if (rv$which_meta == "none") shinyjs::hide(id = "which_m")
-      else shinyjs::show(id = "which_m")
+      if (rv$which_meta == "none") {
+        shinyjs::hide(id = "which_m")
+        shinyWidgets::updateAwesomeCheckbox(
+          session = session,
+          inputId = "is_emulate",
+          value = FALSE)
+      } else shinyjs::show(id = "which_m")
       
     }) %>% # end of observe,
       bindEvent(rv$which_meta)
