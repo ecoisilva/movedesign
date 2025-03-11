@@ -1,4 +1,4 @@
-#' Run the Shiny Application
+#' Run movedesign' R Shiny Application
 #'
 #' @param ... arguments to pass to golem_opts.
 #' See `?golem::get_golem_options` for more details.
@@ -7,6 +7,7 @@
 #' @export
 #' @importFrom shiny shinyApp
 #' @importFrom golem with_golem_options
+#' 
 run_app <- function(
     onStart = NULL,
     options = list(),
@@ -27,6 +28,6 @@ run_app <- function(
       fixrates = movedesign::fixrates,
       sims_hrange = movedesign::sims_hrange,
       sims_speed = movedesign::sims_speed
-    ) # end of list
+    )
   )
 }
