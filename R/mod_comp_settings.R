@@ -157,7 +157,7 @@ mod_comp_settings_server <- function(id, rv) {
     
     output$download_settings <- downloadHandler(
       filename = function() {
-        paste0("movedesign-settings_", Sys.Date(), ".rds")
+        paste0("movedesign-out_", rv$species, "_", Sys.Date(), ".rds")
       },
       content = function(file) {
         if (is.null(rv$simList)) {

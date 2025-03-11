@@ -426,6 +426,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     
     output$txt_m_groups <- renderText({
       req(input$nsims, "compare" %in% rv$which_meta)
+      req(input$nsims > 1)
       
       if (input$nsims == 2) return("1 tag per group")
       else return(paste(input$nsims / 2, "tags per group"))
@@ -474,6 +475,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       req(length(num_sims) > 0)
       req(num_sims > 0)
+      
+      rv$meta_tbl <- NULL
       
       shinybusy::show_modal_spinner(
         spin = "fading-circle",
@@ -1282,7 +1285,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           tmpname <- rownames(summary(rv$akdeList[[i]])$CI)
           tmpunit <- extract_units(tmpname[grep('^area', tmpname)])
           
-          out_est <- c( 
+          out_est <- c(
             "lci" = tmpsum$CI[1], 
             "est" = tmpsum$CI[2], 
             "uci" = tmpsum$CI[3]) 

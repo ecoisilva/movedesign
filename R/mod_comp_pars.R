@@ -279,6 +279,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     output$parPlot_all <- ggiraph::renderGirafe({
       req(rv$which_question, input$parInput_type)
       req(rv$datList, length(rv$fitList) > 1)
+      req(rv$which_meta != "none")
       
       datList <- rv$datList
       fitList <- rv$fitList
@@ -288,7 +289,6 @@ mod_comp_pars_server <- function(id, rv, set_type) {
           fitList <- fitList[rv$id]
         }
       
-      # TODO TO CHECK
       datList[sapply(datList, is.null)] <- NULL
       fitList[sapply(fitList, is.null)] <- NULL
       
