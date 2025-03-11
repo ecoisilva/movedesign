@@ -21,6 +21,7 @@ test_that("{abbrv_unit}, Unit abbreviation function", {
       movedesign:::abbrv_unit(ini[i]),
       out[i])
   }
+  
 })
 
 test_that("{fix_unit} Fix unit function", {
