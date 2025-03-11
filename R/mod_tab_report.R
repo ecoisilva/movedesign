@@ -1847,9 +1847,9 @@ mod_tab_report_server <- function(id, rv) {
         browser() # TODO TOCHECK
         highlighted_dur <- as.numeric(rv$highlight_dur)
         
-        est <- .err_to_txt(rv$hr_cri_new$est * 100, 0)
-        lci <- .err_to_txt(rv$hr_cri_new$lci * 100, 1)
-        uci <- .err_to_txt(rv$hr_cri_new$uci * 100, 1)
+        est <- .err_to_txt(rv$hr_cri_new$est)
+        lci <- .err_to_txt(rv$hr_cri_new$lci)
+        uci <- .err_to_txt(rv$hr_cri_new$uci)
         
         txt_level <- ifelse(
           rv$hr_cri_new$uci < .3 & rv$hr_cri_new$lci > -.3,
