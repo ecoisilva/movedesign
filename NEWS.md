@@ -10,14 +10,16 @@
 -   Users can propagate estimate uncertainty from the initial dataset into the simulated dataset.
 
 ## Minor improvements
--  Added outlier plots to Data tabs.
--  Added warning messages in case of very low effective sample sizes.
--  Report tab also highlights outputs from meta-analyses.
+
+-   Added outlier plots to Data tabs.
+-   Added warning messages in case of very low effective sample sizes.
+-   Report tab also highlights outputs from meta-analyses.
 
 ## Bug fixes
 
--   Fixed issue during data upload due to missing argument (#3).
--   Fixed Report tab bug, should now display the correct CIs (#3).
+-   Fixed issue during data upload due to missing argument (https://github.com/ecoisilva/movedesign/issues/3).
+-   Fixed Report tab bug, should now display the correct CIs (https://github.com/ecoisilva/movedesign/issues/3).
+-   Fixed bug where sampling duration/interval did not display correctly (https://github.com/ecoisilva/movedesign/issues/5)
 
 # movedesign 0.2.0
 
@@ -72,7 +74,7 @@
 
 -   Guided tours now cover all modules.
 -   Report now covers scenario where both questions are requested.
--   `guess_time()` now works for `ctmm::speed()` as well.
+-   The function `guess_time()` now works for `ctmm::speed()` as well.
 
 ## Minor improvements
 
@@ -86,6 +88,6 @@
 -   Fixed a bug with extreme timescale parameters in the sims tab.
 -   Fixed a bug in table outputs in the sims tab.
 
-# movedesign 0.0.9000
+# movedesign 0.0.9
 
 -   Added a `NEWS.md` file to track changes to the package.

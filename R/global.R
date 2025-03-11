@@ -2,24 +2,27 @@
 options(shiny.maxRequestSize = 500 * 1024^2) # 500 MB
 
 .onLoad <- function(libname, pkgname) {
-  # rlang::run_on_load()
-  rlang::on_load(rlang::local_use_cli(inline = TRUE))
+  rlang::run_on_load()
 }
+
+rlang::on_load(rlang::local_use_cli(inline = TRUE))
 
 .onAttach <- function(libname, pkgname) {
   version <- utils::packageDescription(pkgname, fields = "Version")
-  website <- "https://github.com/ecoisilva/movedesign/issues"
-  if (interactive())
-    website <- "{.url https://github.com/ecoisilva/movedesign/issues}"
+  website <- "{.url https://github.com/ecoisilva/movedesign/issues}"
+  
   rlang::inform(
     class = "packageStartupMessage",
     message = c(
-      "!" = paste("Issues?", website),
-      "x" = "Silence? {.code suppressPackageStartupMessages(library(movedesign))}",
-      "i" = 'For citation details, run: {.code citation("movedesign")}'
+      # "i" = paste("Loading movedesign, version:", version),
+      "i" = 'To cite, run: {.code citation("movedesign")}',
+      "!" = paste("Bugs?", website),
+      "x" = "Silence? {.code suppressPackageStartupMessages(library(movedesign))}"
     )
   )
 }
+
+
 
 # Global variables:
 utils::globalVariables(
