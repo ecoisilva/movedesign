@@ -22,9 +22,8 @@ rlang::on_load(rlang::local_use_cli(inline = TRUE))
   )
 }
 
-
-
 # Global variables:
+
 utils::globalVariables(
   c(".data", "group", "seed",
     
@@ -40,9 +39,12 @@ utils::globalVariables(
     "time", "timestamp", "lag",
     
     "device",
-    "duration", "dur",
-    "interval", "dti", "dti_notes",
+    "duration", "dur", "dur_unit",
+    "interval", "dti", "dti_unit", "dti_notes",
     
+    "tau_p", "tau_v", 
+    
+    "CI", "LCI", "UCI",
     "CI_low", "CI_high",
     "value", "low", "high",
     "est", "lci", "uci",
@@ -62,8 +64,12 @@ utils::globalVariables(
     "variable",
     "target", "set_target",
     
+    "to_filter",
+    "get_truth",
+    
     "n",
     "m",
+    "N1", "N2",
     "subpop",
     "overlaps",
     

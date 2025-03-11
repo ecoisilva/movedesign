@@ -34,7 +34,6 @@ Imports:
     parsedate,
     plyr,
     pracma,
-    quarto,
     reactable,
     rintrojs,
     rlang,
@@ -54,7 +53,8 @@ Imports:
     tidyr,
     utils,
     viridis
-Suggests: 
+Suggests:
+    quarto,
     knitr,
     rmarkdown,
     shinytest2
