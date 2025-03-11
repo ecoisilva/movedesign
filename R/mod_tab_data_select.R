@@ -720,14 +720,17 @@ mod_tab_data_select_server <- function(id, rv) {
       req(input$id_selected != "")
       req(is_valid())
 
+      if (length(rv$datList) == 1)
+        txt_extra <- ", and the individual is " else
+          txt_extra <- ", and the individuals are:\n   "
+      
       msg_log(
         style = "success",
-        message = paste0("Species and individual(s) ",
+        message = paste0("Species and individual ",
                          msg_success("validated"), "."),
         detail = paste0("Species selected is the ",
-                        msg_success(input$sp_selected),
-                        ", with the selected individual(s): ",
-                        msg_success(toString(input$id_selected)), "."))
+                        msg_success(rv$species_binom),
+                        txt_extra, msg_success(toString(rv$id)),"."))
       
       shinyFeedback::showToast(
         type = "success",
@@ -929,35 +932,115 @@ mod_tab_data_select_server <- function(id, rv) {
           }
           
           rv$mu <- list(rv$mu[[1]], rv$mu[[1]], rv$mu[[1]])
-          rv$proceed <- TRUE
-        }
+          
+          ### Validate groups: --------------------------------------------
+          
+          fitA <- tryCatch({
+            out_fit <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
+            if (length(out_fit$isotropic) > 1)
+              out_fit$isotropic <- out_fit$isotropic[["sigma"]]
+            out_fit
+          }, error = function(e) {
+            message("A warning occurred:", conditionMessage(e), "\n")
+          })
+          
+          fitB <- tryCatch({
+            out_fit <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0)
+            if (length(out_fit$isotropic) > 1)
+              out_fit$isotropic <- out_fit$isotropic[["sigma"]]
+            out_fit
+          }, error = function(e) {
+            message("A warning occurred:", conditionMessage(e), "\n")
+          })
+          
+          validate_A <- tryCatch({
+            ctmm::simulate(fitA, t = seq(0, 100, by = 1), seed = rv$seed0)
+          }, error = function(e) {
+            return(NULL)
+          })
+          
+          validate_B <- tryCatch({
+            ctmm::simulate(fitB, t = seq(0, 100, by = 1), seed = rv$seed0)
+          }, error = function(e) {
+            return(NULL)
+          })
+          
+          if (is.null(validate_A) || is.null(validate_B)) {
+            bug_group <- c()
+            if (is.null(validate_A)) bug_group <- c(bug_group, "A")
+            if (is.null(validate_B)) bug_group <- c(bug_group, "B")
+            
+            msg_log(
+              style = "danger",
+              message = paste0(
+                "Validation ", msg_danger("failed"),
+                " of group(s): ", msg_danger(toString(bug_group))),
+              detail = "Try again with different groupings.")
+            
+            are_groups_valid <- FALSE
+            shinybusy::remove_modal_spinner()
+            
+            shinyalert::shinyalert(
+              type = "error",
+              title = paste(span("Invalid", class = "cl-dgr"), "groups"),
+              text = tagList(span(
+                "Please try selecting differents individuals",
+                "in each", span("group", class = "cl-dgr"),
+                "(start by removing those with",
+                wrap_none(span("N < 5", class = "cl-dgr"), "),"),
+                "or chose a different", span("dataset", class = "cl-dgr"), 
+                "altogether, before proceeding.")),
+              html = TRUE,
+              size = "xs")
+            
+          } else {
+            
+            msg_log(
+              style = "success",
+              message = paste0(
+                "Groups ", msg_success("validated"), "."),
+              detail = paste0(
+                "Group A is ",
+                msg_success(toString(rv$groups[["intro"]][["A"]])), ";",
+                "\n", "   Group B is ",
+                msg_success(toString(rv$groups[["intro"]][["B"]])), "."))
+            rv$proceed <- TRUE
+            are_groups_valid <- TRUE
+          }
+          
+          # end of if (rv$grouped)
+          
+        } else are_groups_valid <- TRUE
         
-        rv$svfList <- extract_svf(dat0, rv$fitList[rv$id])
-        
-        rv$tmp$sp_common <- rv$species_common
-        rv$tmp$sp <- rv$species_binom
-        rv$tmp$id <- rv$id
-        
-        shinyFeedback::showToast(
-          type = "success",
-          message = "Parameters extracted!",
-          .options = list(
-            timeOut = 3000,
-            extendedTimeOut = 3500,
-            progressBar = FALSE,
-            closeButton = TRUE,
-            preventDuplicates = TRUE,
-            positionClass = "toast-bottom-right"))
-        
-        msg_log(
-          style = "success",
-          message = paste0("Parameters ",
-                           msg_success("extracted"), "."),
-          detail = paste("Proceed to",
-                         msg_success('Sampling design'), "tab."))
-        
-        if (!rv$tour_active) {
-          shinyalert::shinyalert(
+        if (are_groups_valid) {
+          shinyFeedback::showToast(
+            type = "success",
+            message = "Parameters extracted!",
+            .options = list(
+              timeOut = 3000,
+              extendedTimeOut = 3500,
+              progressBar = FALSE,
+              closeButton = TRUE,
+              preventDuplicates = TRUE,
+              positionClass = "toast-bottom-right"))
+          
+          msg_log(
+            style = "success",
+            message = paste0("Parameters ",
+                             msg_success("extracted"), "."),
+            detail = paste("Proceed to",
+                           msg_success('Sampling design'), "tab."))
+          
+          
+          
+          rv$svfList <- extract_svf(dat0, rv$fitList[rv$id])
+          
+          rv$tmp$sp_common <- rv$species_common
+          rv$tmp$sp <- rv$species_binom
+          rv$tmp$id <- rv$id
+          
+          shinybusy::remove_modal_spinner()
+          if (!rv$tour_active) shinyalert::shinyalert(
             className = "modal_success",
             type = "success",
             title = "Success!",
@@ -969,8 +1052,6 @@ mod_tab_data_select_server <- function(id, rv) {
             html = TRUE,
             size = "xs")
         }
-        
-        shinybusy::remove_modal_spinner()
       }
       
     }) %>% # end of observe,

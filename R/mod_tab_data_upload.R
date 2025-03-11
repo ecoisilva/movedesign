@@ -1127,7 +1127,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       if (length(rv$datList) == 1)
         txt_extra <- ", and the individual is " else
-          txt_extra <- ", and the individuals are "
+          txt_extra <- ", and the individuals are:\n   "
       
       msg_log(
         style = "success",
@@ -1135,7 +1135,7 @@ mod_tab_data_upload_server <- function(id, rv) {
                          msg_success("validated"), "."),
         detail = paste0("Species selected is the ",
                         msg_success(rv$species_binom),
-                        txt_extra, msg_success(toString(rv$id)), "."))
+                        txt_extra, msg_success(toString(rv$id)),"."))
       
       shinyFeedback::showToast(
         type = "success",
@@ -1155,7 +1155,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       bindEvent(input$validate_upload)
     
     # PARAMETERS ----------------------------------------------------------
-    ## Extract location variance, timescales, etc.: -----------------------
+    ## Extract timescales, location variance, etc.: -----------------------
     
     observe({
       req(rv$which_question,
@@ -1178,37 +1178,51 @@ mod_tab_data_upload_server <- function(id, rv) {
       dat0 <- rv$datList[rv$id]
       fit0 <- rv$fitList[rv$id]
       
+      browser()
+      
       nm_mods <- lapply(rv$fitList, function(x) summary(x)$name)
       n_OUf <- sum(grepl("^OUf", nm_mods))
       
       to_filter_out <- paste0("^OU\u03A9")
       if (any(grep(to_filter_out, unlist(nm_mods), perl = TRUE))) {
-        fit0 <- fit0[-grep(to_filter_out, unlist(nm_mods), perl = TRUE)]
+        to_remove <- grep(to_filter_out, unlist(nm_mods), perl = TRUE)
+        
+        msg_log(
+          style = "danger",
+          message = paste0(
+            "Individual(s) ", msg_danger("removed"), ": ",
+            msg_danger(toString(names(fit0)[to_remove]))),
+          detail = "Movement model OU\u03A9 is invalid.")
+        
+        fit0 <- fit0[-to_remove]
         nm_mods <- lapply(fit0, function(x) summary(x)$name)
+        
       }
       
-      to_filter <- "^IOU|^OUF|^OU(?!f)"
+      # to_filter <- "^IOU|^OUF|^OU(?!f)"
       if (length(rv$which_question) == 1) {
         if ("Home range" == rv$which_question) {
-          # does assume range residency for rv$id
           msg_log(
             style = "danger",
             message = paste0(
               "Assuming ", msg_danger("range residency"), ","),
             detail = paste("Assuming all selected individuals",
                            "are range resident."))
-          to_filter <- "^OU(?!f)|^OUF"
+          # to_filter <- "^OU(?!f)|^OUF"
         }
-        
-        if ("Speed & distance" == rv$which_question) {
-          to_filter <- "^IOU|^OUF"
-        }
+
+        # if ("Speed & distance" == rv$which_question) {
+        #   to_filter <- "^IOU|^OUF"
+        # }
       }
-      
+
       fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
       
-      # TODO
-      # if (length(fit0) == 0 && n_OUf == 0) {}
+      # TODO TOCHECK:
+      # if (length(fit0) == 0 && n_OUf == 0) {
+      #   message("---length(fit0) == 0 && n_OUf == 0---")
+      #   browser()
+      # }
       
       if (length(fit0) == 0) {
         msg_log(
@@ -1340,10 +1354,85 @@ mod_tab_data_upload_server <- function(id, rv) {
         }
         
         rv$mu <- list(rv$mu[[1]], rv$mu[[1]], rv$mu[[1]])
-        rv$proceed <- TRUE
-      }
+        
+        ### Validate groups: ----------------------------------------------
+        
+        fitA <- tryCatch({
+          out_fit <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
+          if (length(out_fit$isotropic) > 1)
+            out_fit$isotropic <- out_fit$isotropic[["sigma"]]
+          out_fit
+        }, error = function(e) {
+          message("A warning occurred:", conditionMessage(e), "\n")
+        })
+        
+        fitB <- tryCatch({
+          out_fit <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0)
+          if (length(out_fit$isotropic) > 1)
+            out_fit$isotropic <- out_fit$isotropic[["sigma"]]
+          out_fit
+        }, error = function(e) {
+          message("A warning occurred:", conditionMessage(e), "\n")
+        })
+        
+        validate_A <- tryCatch({
+          ctmm::simulate(fitA, t = seq(0, 100, by = 1), seed = rv$seed0)
+        }, error = function(e) {
+          return(NULL)
+        })
+        
+        validate_B <- tryCatch({
+          ctmm::simulate(fitB, t = seq(0, 100, by = 1), seed = rv$seed0)
+        }, error = function(e) {
+          return(NULL)
+        })
+        
+        if (is.null(validate_A) || is.null(validate_B)) {
+          bug_group <- c()
+          if (is.null(validate_A)) bug_group <- c(bug_group, "A")
+          if (is.null(validate_B)) bug_group <- c(bug_group, "B")
+          
+          msg_log(
+            style = "danger",
+            message = paste0(
+              "Validation ", msg_danger("failed"),
+              " of group(s): ", msg_danger(toString(bug_group))),
+            detail = "Try again with different groupings.")
+          
+          shinybusy::remove_modal_spinner()
+          
+          shinyalert::shinyalert(
+            type = "error",
+            title = paste(span("Invalid", class = "cl-dgr"), "groups"),
+            text = tagList(span(
+                "Please try selecting differents individuals",
+                "in each", span("group", class = "cl-dgr"),
+                "(start by removing those with",
+                wrap_none(span("N < 5", class = "cl-dgr"), "),"),
+              "or chose a different", span("dataset", class = "cl-dgr"), 
+              "altogether, before proceeding.")),
+            html = TRUE,
+            size = "xs")
+          
+        } else {
+          
+          msg_log(
+            style = "success",
+            message = paste0(
+              "Groups ", msg_success("validated"), "."),
+            detail = paste0(
+              "Group A is ",
+              msg_success(toString(rv$groups[["intro"]][["A"]])), ";",
+              "\n", "   Group B is ",
+              msg_success(toString(rv$groups[["intro"]][["B"]])), "."))
+          rv$proceed <- TRUE
+          
+          shinybusy::remove_modal_spinner()
+        }
+        
+      } # end of if (rv$grouped)
       
-      shinybusy::remove_modal_spinner()
+      req(rv$proceed)
       
       ### Extract variogram:
       
