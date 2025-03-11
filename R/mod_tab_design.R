@@ -2152,9 +2152,30 @@ mod_tab_design_server <- function(id, rv) {
       }
       
       if (rv$grouped) {
+        
+        simA <- NULL
+        simB <- NULL
         # rv$modList_groups <- list(A = fitA, B = fitB)
         simA <- ctmm::simulate(fitA, t = t_new, seed = rv$seed0)
         simB <- ctmm::simulate(fitB, t = t_new, seed = rv$seed0 + 1)
+        summary(fitA)
+        summary(fitB)
+        
+        if (is.null(simA) || is.null(simB)) {
+          bug_group <- c()
+          if (is.null(simA)) bug_group <- c(bug_group, "A")
+          if (is.null(simB)) bug_group <- c(bug_group, "B")
+          
+          msg_log(
+            style = "danger",
+            message = paste0(
+              "Simulation ", msg_danger("failed"),
+              " for group(s): ", msg_danger(bug_group)),
+            detail = "Try again with different groupings.")
+          shinybusy::remove_modal_spinner()
+        }
+        
+        req(!is.null(simA), !is.null(simB))
         simA <- pseudonymize(simA)
         simB <- pseudonymize(simB)
         sim <- list(simA, simB)
@@ -2294,8 +2315,8 @@ mod_tab_design_server <- function(id, rv) {
         ))
       )
       
-        if (rv$which_meta == "compare")
-          req(length(rv$tau_p) == 3)
+      if (rv$which_meta == "compare")
+        req(length(rv$tau_p) == 3)
       
       start <- Sys.time()
       simList <- simulating_data()
