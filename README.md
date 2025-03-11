@@ -77,7 +77,7 @@ introduction, refer to the
 or the
 [manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153).
 
-<img src="https://besjournals.onlinelibrary.wiley.com/cms/asset/61349f57-8042-41d6-989c-cd4c39a17252/mee314153-fig-0001-m.jpg" style="padding: 5px 0px 5px 0px;" width="100%"/>
+<img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png" style="padding: 5px 0px 5px 0px;" width="100%"/>
 
 ## Getting help:
 
