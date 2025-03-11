@@ -517,7 +517,6 @@ theme_movedesign <- function(ft_size = 13,
                              title_y = TRUE) {
   
   if (!font_available) {
-    # font <- "mono"
     
     ggplot2::theme_minimal() %+replace%
       ggplot2::theme(
@@ -542,6 +541,7 @@ theme_movedesign <- function(ft_size = 13,
       suppressWarnings()
     
   } else {
+    
     ggplot2::theme_minimal() %+replace%
       ggplot2::theme(
         
