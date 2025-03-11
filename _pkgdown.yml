@@ -14,9 +14,9 @@ template:
   bootstrap: 5
   bslib:
     base_font:
-      google: Roboto
+      google: Fira Sans
     heading_font:
-      google: Roboto Slab
+      google: Fira Sans
     code_font:
       google: JetBrains Mono
     bg: '#ffffff'

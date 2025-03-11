@@ -1,0 +1,99 @@
+---
+title: "'movedesign' tutorial"
+description: > 
+  How to design an animal tracking project with 'movedesign'
+vignette: >
+  %\VignetteIndexEntry{Tutorial}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk: 
+    collapse: true
+    comment: '#>'
+bibliography: references.bib
+---
+
+# Overview
+
+```{r, include = FALSE}
+
+library(fontawesome)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+<div style="text-align: justify">
+The application includes a built-in guided tutorial to help you navigate its features. When you open the `'Home'` tab, you'll find the following:
+
+```{r, echo=FALSE, out.width="100%", eval=TRUE}
+
+knitr::include_graphics("https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img1.png")
+
+```
+
+This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly [highlighted]{style="color: white; background: #009DA0;"}. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking `'Next'` or pressing the right arrow key on your keyboard.
+
+**Warning:** Avoid interacting with anything outside the highlighted zones during the tutorial, as this may disrupt the guided experience.
+
+This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive `r fa("circle-question")` help tips at any time. Documentation is also available on [@movedesia].
+
+## 1. Setting a workflow
+
+```{r, echo=FALSE, out.width="100%", eval=TRUE}
+
+knitr::include_graphics("https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img2.png")
+
+```
+
+These are the current options for `movedesign` workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target.
+
+1.1. `Data Source`
+
+Users can specify how they want to obtain data:
+
+-   `Upload`: Import a dataset from a local file.
+-   `Select`: Choose from pre-existing datasets available in the application.
+-   `Simulate`: Generate synthetic data for testing or modeling purposes.
+
+1.2. `Research Target`
+
+Users can define their primary research focus:
+
+-   `Home range`: Analyze long-term space-use requirements.
+-   `Speed & distance`: Investigate movement metrics such as speed and distance traveled.
+
+1.3. `Analytical Target`
+
+Users can decide on the type of statistical analysis:
+
+-   `Individual estimate`: Obtain metrics for a single individual.
+-   `Mean estimate of sampled population`: Obtain a mean estimate across a sampled group.
+-   `Compare estimates of two sampled populations`: Perform a comparative analysis between two groups.
+
+Additionally, users have the option to:
+
+-   `Add individual variation`: Include variation among individuals during simulation.
+
+All workflows follows a stepwise approach, with tabs presented in sequence.
+
+## Study design of an individual estimate
+
+Workflow based on [@silva2023movedesign].
+
+```{r, echo=FALSE, out.width="100%", eval=TRUE}
+
+knitr::include_graphics("https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img3.png")
+
+```
+
+You will be guided through a real animal tracking project available through the package. To simulate data from scratch, exit the tour (click the `×` button above the tutorial box) and navigate to the `r fa("file-pen", fill = "  #009DA0")` `'Simulate data'` tab, where another guided tour is available.
+
+First, we will navigate to (1) the `r fa("file-circle-plus", fill = "   #009DA0")` `'Select data'` tab to load a dataset available within the package. Then, we will move to (2) the `r fa("stopwatch", fill = "    #009DA0")` `'Sampling design'` tab to define the sampling duration and interval. Finally, we will proceed to (3) the `r fa("compass-drafting")` `'Analyses'` tab.
+
+</div>
+
+------------------------------------------------------------------------
+
+## References

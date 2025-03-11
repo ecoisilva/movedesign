@@ -18,12 +18,12 @@
 }
 
 .introjs-tooltipReferenceLayer * {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Fira Sans', 'Plus Jakarta Sans', sans-serif;
 }
 .introjs-tooltiptext {
   padding: 0 52px 0 52px;
   box-sizing: border-box;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Fira Sans', 'Plus Jakarta Sans', sans-serif;
   font-size: 16px;
   text-align: justify;
   color: #ffffff !important;

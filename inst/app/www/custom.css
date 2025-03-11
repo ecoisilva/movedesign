@@ -7,10 +7,11 @@
  --midnight-dark: #2c3b41;
 
  --sea-light: #06c6ca;
- --sea: #009da0;
+ --sea:	#009DA0;
  --sea-med: #007d80;
- --sea-dark: #006669;
- 
+ --sea-dark: #006B6D;
+ --sea-night: #00393A;
+
  --tree: #77b131;
  --tree-dark: #508016;
  
@@ -18,14 +19,14 @@
  --jungle: #8ca000; 
  --jungle-dark: #6b8e23;
  
- --danger-light: #ff7766;
- --danger: #dd4b39;
- --danger-dark: #cc1b34;
-
- --gold-light: #ffb300;
- --gold: #ffa700;
- --gold-dark: #ea8500;
+ --danger: #DB4545;
+ --danger-dark: #9D2A38; /* #cc1b34; */
+ --danger-night: #721616;
  
+ --gold-light: #ffb300;
+ --gold: #F29800; /* #ffa700; */
+ --gold-dark: #ea8500;
+              
  --grey-000: #f4f4f4;
  --grey-100: #e6e6e6;
  --grey-200: #cecece;
@@ -53,7 +54,6 @@
 .cl-grn { color: var(--tree) !important; }
 .cl-grn-d { color: var(--tree-dark) !important; }
 .cl-dgr { color: var(--danger) !important; }
-.cl-dgr-l { color: var(--danger-light) !important; }
 .cl-dgr-d { color: var(--danger-dark) !important; }
 
 .cl-gld { color: var(--gold-dark) !important; }
