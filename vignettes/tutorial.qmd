@@ -37,7 +37,7 @@ This step-by-step guide will walk you through the app, ensuring you understand i
 
 **Warning:** Avoid interacting with anything outside the highlighted zones during the tutorial, as this may disrupt the guided experience.
 
-This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive `r fa("circle-question")` help tips at any time. Documentation is also available on [@movedesia].
+This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive `r fa("circle-question")` help tips at any time. Documentation is also available on [@silva2023movedesign].
 
 ## 1. Setting a workflow
 
