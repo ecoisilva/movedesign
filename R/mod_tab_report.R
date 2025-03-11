@@ -451,23 +451,13 @@ mod_tab_report_server <- function(id, rv) {
         out_dur <- input_dur
       }
       
-      rv$hr_CI <- data.frame(
-        mean = mean(newdat$error, na.rm = TRUE),
-        CI_low = min(newdat$error, na.rm = TRUE),
-        CI_high = max(newdat$error, na.rm = TRUE))
+      rv$hr_coi <- data.frame(
+        est = mean(newdat$error, na.rm = TRUE),
+        lci = min(newdat$error, na.rm = TRUE),
+        uci = max(newdat$error, na.rm = TRUE))
       
       # Credible intervals:
-      hr_HDI <- tryCatch(
-        bayestestR::ci(newdat$error, ci = ci, method = "HDI"),
-        error = function(e) e)
-      
-      rv$hr_HDI <- data.frame("CI" = ci,
-                              "CI_low" = NA,
-                              "CI_high" = NA)
-      
-      if (!inherits(hr_HDI, "error"))
-        if (!is.na(hr_HDI$CI_low) && !is.na(hr_HDI$CI_high))
-          rv$hr_HDI <- hr_HDI
+      rv$hr_cri <- .extract_cri(newdat$error, ci)
       
     }) # end of observe
     
@@ -490,14 +480,13 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::filter(duration == out_dur)
       
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-      rv$hr_CI_new <- data.frame(
-        mean = mean(newdat$error, na.rm = TRUE),
-        CI_low = mean(newdat$error_lci, na.rm = TRUE),
-        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+      rv$hr_coi_new <- data.frame(
+        est = mean(newdat$error, na.rm = TRUE),
+        lci = mean(newdat$error_lci, na.rm = TRUE),
+        uci = mean(newdat$error_uci, na.rm = TRUE))
       
       # Credible intervals:
-      rv$hr_HDI_new <- suppressWarnings(
-        bayestestR::ci(newdat$error, ci = ci, method = "HDI"))
+      rv$hr_cri_new <- .extract_cri(newdat$error, ci)
       
     }) %>% # end of observe,
       bindEvent(rv$highlight_dur)
@@ -539,23 +528,13 @@ mod_tab_report_server <- function(id, rv) {
           error_uci = rv$sd$tbl$ctsd_err_max)
       }
       
-      rv$sd_CI <- data.frame(
-        mean = mean(newdat$error, na.rm = TRUE),
-        CI_low = mean(newdat$error_lci, na.rm = TRUE),
-        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+      rv$sd_coi <- data.frame(
+        est = mean(newdat$error, na.rm = TRUE),
+        lci = mean(newdat$error_lci, na.rm = TRUE),
+        uci = mean(newdat$error_uci, na.rm = TRUE))
       
       # Credible intervals:
-      sd_HDI <- tryCatch(
-        bayestestR::ci(newdat$error, ci = ci, method = "HDI"),
-        error = function(e) e)
-      
-      rv$sd_HDI <- data.frame("CI" = ci,
-                              "CI_low" = NA,
-                              "CI_high" = NA)
-      
-      if (!inherits(sd_HDI, "error"))
-        if (!is.na(sd_HDI$CI_low) && !is.na(sd_HDI$CI_high))
-          rv$sd_HDI <- sd_HDI
+      rv$sd_cri <- .extract_cri(newdat$error, ci)
       
     }) # end of observe
     
@@ -579,14 +558,13 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::filter(dti == out_dti$value)
       
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-      rv$sd_CI_new <- data.frame(
-        mean = mean(newdat$error, na.rm = TRUE),
-        CI_low = mean(newdat$error_lci, na.rm = TRUE),
-        CI_high = mean(newdat$error_uci, na.rm = TRUE))
+      rv$sd_coi_new <- data.frame(
+        est = mean(newdat$error, na.rm = TRUE),
+        lci = mean(newdat$error_lci, na.rm = TRUE),
+        uci = mean(newdat$error_uci, na.rm = TRUE))
       
       # Credible intervals:
-      rv$sd_HDI_new <- suppressWarnings(
-        bayestestR::ci(newdat$error, ci = ci, method = "HDI"))
+      rv$sd_cri_new <- .extract_cri(newdat$error, ci)
       
     }) %>% # end of observe,
       bindEvent(rv$highlight_dti)
@@ -633,13 +611,16 @@ mod_tab_report_server <- function(id, rv) {
           rv$is_analyses,
           rv$simList)
       
+      css_bold <- "font-weight: bold;"
+      css_mono <- "font-family: var(--monosans);"
+      
       if (length(rv$id) == 1) {
         out_id <- span(rv$id, class = "cl-grn")
       } else {
-        get_id <- toString(rv$id)
         out_id <- span(
           "multiple individuals",
-          wrap_none("(", span(get_id, class = "cl-grn"), ")"))
+          wrap_none("(", span(toString(rv$id),
+                              class = "cl-grn"), ")"))
       }
       
       switch(rv$data_type,
@@ -667,25 +648,20 @@ mod_tab_report_server <- function(id, rv) {
       out_bias <- NULL
       if (rv$add_note) {
         out_bias <- span(
-          style = paste("font-weight: 800;",
-                        "font-family: var(--monosans);"),
-          
+          style = paste(css_mono, css_bold),
           "However, due to ",
-          span("very low effective sample sizes",
-               style = "color: var(--danger)"),
-          "of the",
-          rv$data_type, "data, these parameters may not be",
+          span("very low effective sample sizes", class = "cl-dgr"),
+          "of the", rv$data_type, "data, these parameters may not be",
           "accurate, and lead to negatively biased outputs.")
       }
       
       rv$report$species <- p(
         out_species, 
-        span(style = paste("font-weight: 800;",
-                           "font-family: var(--monosans);"),
+        span(style = paste(css_mono, css_bold),
              "Please see the",
              icon("paw", class = "cl-sea"),
              span("Species", class = "cl-sea"),
-             "parameters above for more details."),
+             "parameters for more details."),
         out_bias)
       
     }) %>% # end of observe,
@@ -702,39 +678,16 @@ mod_tab_report_server <- function(id, rv) {
       if ("Home range" %in% rv$which_question) req(rv$hr_completed)
       if ("Speed & distance" %in% rv$which_question) req(rv$sd_completed)
       
-      # Characteristic timescales:
-      
-      tau_p <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
-      tau_v <- ifelse(is.null(rv$tau_v[[1]]), 0,
-                      rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2])
-      
-      # Ideal sampling design:
-      
-      ideal_dur <- fix_unit(tau_p * 30, "seconds", convert = TRUE)
-      dur_unit <- ideal_dur$unit
-      
-      if (is.null(rv$tau_v[[1]])) {
-        ideal_dti <- data.frame(value = Inf, unit = "days")
-      } else {
-        ideal_dti <- fix_unit(rv$tau_v[[1]]$value[2],
-                              rv$tau_v[[1]]$unit[2], convert = TRUE)
-      }
-      
-      dti_unit <- ifelse(is.null(rv$tau_v[[1]]), "days", ideal_dti$unit)
-      
-      # Current sampling design:
-      
-      dur <- dur_unit %#% rv$dur$value %#% rv$dur$unit
-      dur <- fix_unit(dur, dur_unit)
-      dti <- dti_unit %#% rv$dti$value %#% rv$dti$unit
-      dti <- fix_unit(dti, dti_unit)
+      pars <- .build_parameters(rv)
+      list2env(pars, envir = environment())
       
       rv$hr_col <- rv$ctsd_col <- data.frame(
-        hex = pal$sea, css = "var(--sea)")
+        hex = pal$sea,
+        css = "cl-sea")
       
       if (dur$value <= ideal_dur$value) {
         rv$hr_col$hex <- pal$dgr
-        rv$hr_col$css <- "var(--danger)"
+        rv$hr_col$css <- "cl-dgr"
       }
       
       if (!is.infinite(ideal_dti$value)) {
@@ -749,7 +702,7 @@ mod_tab_report_server <- function(id, rv) {
         
         if (dti$value > 3 * ideal_dti$value) {
           rv$ctsd_col$hex <- pal$dgr
-          rv$ctsd_col$css <- "var(--danger)"
+          rv$ctsd_col$css <- "cl-dgr"
         }
         
         if ((dti$value %#% dti$unit) <= tau_v) {
@@ -766,12 +719,7 @@ mod_tab_report_server <- function(id, rv) {
       ### For home range estimation:
       
       if ("Home range" %in% rv$which_question) {
-        req(rv$hr_HDI)
-        
-        N1 <- rv$dev$N1
-        if (is.list(rv$dev$N1)) N1 <- do.call(c, N1)
-        N1 <- scales::label_comma(accuracy = 1)(
-          mean(N1, na.rm = TRUE))
+        req(rv$hr_cri)
         
         out_regime <- out_reg_hr <-
           p("The minimum", span("sampling duration", class = "cl-sea"),
@@ -793,12 +741,7 @@ mod_tab_report_server <- function(id, rv) {
       ## Speed and distance estimation:
       
       if ("Speed & distance" %in% rv$which_question) {
-        req(rv$sd_HDI)
-        
-        N2 <- rv$dev$N2
-        if (is.list(rv$dev$N2)) N2 <- do.call(c, N2)
-        N2 <- scales::label_comma(accuracy = 1)(
-          mean(N2, na.rm = TRUE))
+        req(rv$sd_cri)
         
         out_regime <- out_reg_ctsd <-
           p("The ", span("sampling interval", class = "cl-sea"),
@@ -838,7 +781,22 @@ mod_tab_report_server <- function(id, rv) {
           rv$data_type,
           rv$is_analyses,
           rv$simList)
+      if (rv$which_meta != "none") req(rv$meta_tbl)
       
+      if ("Home range" %in% rv$which_question) {
+        req(rv$hr_cri, rv$hrErr)
+      }
+      if ("Speed & distance" %in% rv$which_question) {
+        req(!is.null(rv$is_ctsd))
+        if (rv$is_ctsd) req(rv$sd_cri, rv$speedErr)
+      }
+      
+      css_bold <- "font-weight: bold;"
+      css_mono <- "font-family: var(--monosans);"
+      
+      #### Initialize:
+      
+      out_analyses <- NULL
       rv$report$analyses <- NULL
       
       if ("Home range" %in% rv$which_question) 
@@ -846,43 +804,44 @@ mod_tab_report_server <- function(id, rv) {
       if ("Speed & distance" %in% rv$which_question)
         req(rv$speedEst, rv$distEst, rv$sd_completed)
       
-      # Characteristic timescales:
+      pars <- .build_parameters(rv)
+      list2env(pars, envir = environment())
       
-      tau_p <- rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
-      tau_v <- ifelse(is.null(rv$tau_v[[1]]), 0,
-                      rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2])
-      
-      # Sampling design:
-      
-      ideal_dur <- fix_unit(tau_p * 30, "seconds", convert = TRUE)
-      dur_unit <- ideal_dur$unit
-      
-      if (is.null(rv$tau_v[[1]])) {
-        ideal_dti <- data.frame(value = Inf, unit = "days")
+      if (rv$which_meta == "none") {
+        txt_single <- span(
+          style = paste(css_mono, css_bold),
+          "To obtain credible intervals from multiple",
+          "simulations, select a different",
+          span("analytical target", class = "cl-sea"),
+          "(mean of sampled population, or comparing population means)",
+          "in the", icon("house", class = "cl-mdn"),
+          span("Home", class = "cl-mdn"), "tab.")
+        
       } else {
-        ideal_dti <- fix_unit(rv$tau_v[[1]]$value[2],
-                              rv$tau_v[[1]]$unit[2], convert = TRUE)
+        txt_meta_no_ci <- span(
+          "The number of simulations was insufficient so credible",
+          "intervals (CIs) could", span("not", class = "cl-dgr"),
+          "be calculated.",
+          span(
+            style = paste(css_mono, css_bold),
+            "Please run more simulations in the corresponding",
+            shiny::icon("compass-drafting", class = "cl-sea"),
+            span("Analyses", class = "cl-sea"), "tab(s) to obtain",
+            wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
       }
-      dti_unit <- ifelse(is.null(rv$tau_v[[1]]), "days", ideal_dti$unit)
       
-      dur <- dur_unit %#% rv$dur$value %#% rv$dur$unit
-      dur <- fix_unit(dur, dur_unit)
-      dti <- dti_unit %#% rv$dti$value %#% rv$dti$unit
-      dti <- fix_unit(dti, dti_unit)
-      
-      ## Home range estimation:
+      #### Home range estimation:
       
       if ("Home range" %in% rv$which_question) {
-        req(rv$hr_HDI, rv$hrErr)
-       
-        hrCI <- c(round(rv$hr_HDI$CI_low * 100, 1),
-                  round(rv$hr_HDI$CI * 100, 0),
-                  round(rv$hr_HDI$CI_high * 100, 1))
         
-        txt_level <- "estimation."
-        if (!is.na(rv$hr_HDI$CI_low) && !is.na(rv$hr_HDI$CI_high))
-          txt_level <- ifelse(
-            rv$hr_HDI$CI_high < .3 & rv$hr_HDI$CI_low > -.3,
+        hr_cri <- c(.err_to_txt(rv$hr_cri$lci),
+                    .err_to_txt(rv$hr_cri$est),
+                    .err_to_txt(rv$hr_cri$uci))
+        
+        txt_hr_uncertainty <- "estimation."
+        if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$uci))
+          txt_hr_uncertainty <- ifelse(
+            rv$hr_cri$uci < .3 & rv$hr_cri$lci > -.3,
             "estimation, and with low uncertainty.", 
             "estimation, but with high uncertainty.")
         
@@ -890,85 +849,40 @@ mod_tab_report_server <- function(id, rv) {
         plot_dur <- opts_dur[which.min(abs(
           opts_dur - ("days" %#% dur$value %#% dur$unit)))]
         
-        out_analyses <- NULL
-        
         if (dur$value >= ideal_dur$value) {
           rv$report$is_hr <- TRUE
-          out_hr1 <- span(
-            style = "font-weight: bold;",
+          txt_hr <- span(
+            style = css_bold,
             "Your current sampling duration is likely sufficient",
-            "for home range", txt_level)
+            "for home range", txt_hr_uncertainty)
           
         } else {
           rv$report$is_hr <- FALSE
-          out_hr1 <- span(
-            style = "font-weight: bold;",
+          txt_hr <- span(
+            style = css_bold,
             "Your current sampling duration may be insufficient",
             "for home range estimation.")
         }
         
-        out_hr2 <- NULL
-        if (rv$which_meta == "none") {
+        txt_hr_extra <- NULL
+        if (rv$which_meta == "none") txt_hr_extra <- txt_single
+        else {
           
-          #   out_hr2 <- span(
-          #     "Keep in mind that, for a similar duration of",
-          #     plot_dur, "days, there is a",
-          #     wrap_none(hrCI[2], "%", css = "cl-blk"),
-          #     "probability that the relative error will lie between",
-          #     wrap_none(hrCI[1], "%", css = "cl-blk"),
-          #     "and", wrap_none(hrCI[3], "%", end = ".", css = "cl-blk"))
-          
-          out_hr2 <- span(
-            style = paste("font-weight: 800;",
-                          "font-family: var(--monosans);"),
-            
-            "To obtain credible intervals from multiple",
-            "simulations, select a different",
-            span("analytical target", class = "cl-sea"),
-            "in the", icon("house", class = "cl-mdn"),
-            span("Home", class = "cl-mdn"), "tab.")
-          
-        } else {
-          
-          if (!is.na(hrCI[1]) && !is.na(hrCI[3])) {
-            out_hr2 <- span(
-              "There is a", wrap_none(hrCI[2], "%", css = "cl-blk"),
+          if (!is.na(hr_cri[1]) && !is.na(hr_cri[3])) {
+            txt_hr_extra <- span(
+              "There is a", wrap_none(hr_cri[2], "%", css = "cl-blk"),
               "probability the relative error will lie between",
-              wrap_none(hrCI[1], "%", css = "cl-blk"),
-              "and", wrap_none(hrCI[3], "%", end = ".", css = "cl-blk"))
-            
-          } else {
-            out_hr2 <- span(
-              "The number of simulations was insufficient so credible",
-              "intervals (CIs) could not be calculated, returning ",
-              wrap_none(span("NAs", class = "cl-dgr"), "."),
-              span(
-                style = paste("font-weight: 800;",
-                              "font-family: var(--monosans);"),
-                "Please run more simulations in the corresponding",
-                shiny::icon("compass-drafting", class = "cl-sea"),
-                span("Analyses", class = "cl-sea"), "tab to obtain",
-                wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
-          }
+              wrap_none(hr_cri[1], "%", css = "cl-blk"),
+              "and", wrap_none(hr_cri[3], "%", end = ".", css = "cl-blk"))
+          } else txt_hr_extra <- txt_meta_no_ci
         }
         
-        nsims <- ifelse(
-          length(rv$simList) == 1,
-          "a single simulation",
-          paste(length(rv$simList), "simulations"))
-        
-        out_nsims <- span(
-          "Your error estimate based on",
-          span(style = "font-weight: bold;", nsims),
-          "was",
-          wrap_none(
-            round(mean(rv$hrErr$est, na.rm = TRUE) * 100, 1),
-            "%."))
+        txt_nsim <- .get_txt_nsim(rv, set_target = "hr")
         
         out_analyses <- out_hr <- p(
-          out_hr1,
-          out_nsims,
-          out_hr2)
+          txt_hr,
+          txt_nsim,
+          txt_hr_extra)
         
       } # end of 'Home range'
       
@@ -976,22 +890,18 @@ mod_tab_report_server <- function(id, rv) {
       
       if ("Speed & distance" %in% rv$which_question) {
         
-        req(!is.null(rv$is_ctsd))
         if (rv$is_ctsd) {
-          req(rv$sd_HDI, rv$speedErr)
           
-          sdCI <- c(round(rv$sd_HDI$CI_low * 100, 1),
-                    round(rv$sd_HDI$CI * 100, 0),
-                    round(rv$sd_HDI$CI_high * 100, 1))
+          sdCI <- c(round(rv$sd_cri$lci * 100, 1),
+                    round(rv$sd_cri$est * 100, 0),
+                    round(rv$sd_cri$uci * 100, 1))
           
-          txt_level <- "estimation."
-          if (!is.na(rv$sd_HDI$CI_low) && !is.na(rv$sd_HDI$CI_high))
-            txt_level <- ifelse(
-              rv$sd_HDI$CI_high < .3 & rv$sd_HDI$CI_low > -.3,
+          txt_sd_uncertainty <- "estimation."
+          if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$uci))
+            txt_sd_uncertainty <- ifelse(
+              rv$sd_cri$uci < .3 & rv$sd_cri$lci > -.3,
               "estimation, and with low uncertainty.", 
               "estimation, but with high uncertainty.")
-          
-          ctsd_err <- mean(rv$speedErr$est, na.rm = TRUE)
         }
         
         dti_options <- movedesign::sims_speed[[1]] %>%
@@ -1007,101 +917,62 @@ mod_tab_report_server <- function(id, rv) {
         if (is.list(rv$dev$N2)) N2 <- do.call(c, N2)
         N2 <- mean(N2, na.rm = TRUE)
         
-        if (N2 >= 30) {
-          rv$report$is_ctsd <- TRUE
-          out_ctsd1 <- span(
-            style = "font-weight: bold;",
+        if (N2 >= 100) {
+          rv$report$is_sd <- TRUE
+          txt_sd <- span(
+            style = paste(css_mono, css_bold),
             "Your current sampling interval is likely sufficient",
-            "for speed & distance", txt_level)
-        } else if (N2 >= 5) {
-          rv$report$is_ctsd <- FALSE
-          out_ctsd1 <- span(
-            style = "font-weight: bold;",
+            "for speed & distance", txt_sd_uncertainty)
+        } else if (N2 >= 30) {
+          rv$report$is_sd <- FALSE
+          txt_sd <- span(
+            style = paste(css_mono, css_bold),
             "Your current sampling interval may be sufficient",
             "for speed & distance estimation.")
         } else if (N2 > 0) {
-          rv$report$is_ctsd <- FALSE
-          out_ctsd1 <- span(
-            style = "font-weight: bold;",
+          rv$report$is_sd <- FALSE
+          txt_sd <- span(
+            style = paste(css_mono, css_bold),
             "Your current sampling interval may be insufficient",
             "for speed & distance estimation.")
         } else {
-          rv$report$is_ctsd <- FALSE
-          out_ctsd1 <- span(
-            style = "font-weight: bold;",
+          rv$report$is_sd <- FALSE
+          txt_sd <- span(
+            style = paste(css_mono, css_bold),
             "Your current sampling interval was too coarse",
             "for speed & distance estimation.")
         }
         
         if (rv$is_ctsd) {
-          out_ctsd2 <- NULL
+          txt_sd_extra <- NULL
           
-          if (rv$which_meta == "none") {
-            out_ctsd2 <- span(
-              style = paste("font-weight: 800;",
-                            "font-family: var(--monosans);"),
-              
-              "To obtain credible intervals from multiple",
-              "simulations, select a different",
-              span("analytical target", class = "cl-sea"),
-              "in the", icon("house", class = "cl-mdn"),
-              span("Home", class = "cl-mdn"), "tab.")
-            
-          } else {
-            
+          if (rv$which_meta == "none") txt_sd_extra <- txt_single
+          else {
             if (!is.na(sdCI[1]) && !is.na(sdCI[3]))
-              out_ctsd2 <- span(
+              txt_sd_extra <- span(
                 "There is a", wrap_none(sdCI[2], "%", css = "cl-blk"),
                 "probability that the relative error will lie within",
                 wrap_none(sdCI[1], "%", css = "cl-blk"), "and",
                 wrap_none(sdCI[3], "%", end = ".", css = "cl-blk"))
-            else
-              out_ctsd2 <- span(
-                "The number of simulations was insufficient so credible",
-                "intervals (CIs) could not be calculated, returning ",
-                wrap_none(span("NAs", class = "cl-dgr"), "."),
-                span(
-                  style = paste("font-weight: 800;",
-                                "font-family: var(--monosans);"),
-                  "Please run more simulations in the corresponding",
-                  shiny::icon("compass-drafting", class = "cl-sea"),
-                  span("Analyses", class = "cl-sea"), "tab to obtain",
-                  wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
+            else txt_sd_extra <- txt_meta_no_ci
           }
           
-          nsims <- ifelse(
-            length(rv$simList) == 1,
-            "a single simulation",
-            paste(length(rv$simList), "simulations"))
-          
-          out_nsims <- span(
-            "Your error estimate based on",
-            span(style = "font-weight: bold;", nsims),
-            "was",
-            wrap_none(
-              round(mean(rv$speedErr$est, na.rm = TRUE) * 100, 1),
-              "%."))
+          txt_nsim <- .get_txt_nsim(rv, set_target = "ctsd")
           
           out_analyses <- out_ctsd <- p(
-            out_ctsd1,
-            out_nsims,
-            out_ctsd2)
+            txt_sd,
+            txt_nsim,
+            txt_sd_extra)
           
         } else {
-          out_ctsd2 <- NULL
-          if (is.na(hrCI[1]) || is.na(hrCI[3]))
-            out_ctsd2 <- span(
-              "The number of simulations was insufficient so credible",
-              "intervals (CIs) could not be calculated, returning ",
-              wrap_none(span("NAs", class = "cl-dgr"), "."),
-              
-              span(style = paste("font-weight: 800;",
-                                 "font-family: var(--monosans);"),
-                   "Please run more simulations in the corresponding",
-                   shiny::icon("compass-drafting", class = "cl-sea"),
-                   span("Analyses", class = "cl-sea"), "tab to obtain",
-                   wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
-          out_analyses <- out_ctsd <- p(out_ctsd1, out_ctsd2)
+          
+          txt_sd_extra <- NULL
+          if (is.na(hr_cri[1]) || 
+              is.na(hr_cri[3])) txt_sd_extra <- txt_meta_no_ci
+          
+          out_analyses <- out_ctsd <- p(
+            txt_sd, 
+            txt_sd_extra)
         }
         
       } # end of "Speed & distance"
@@ -1117,47 +988,59 @@ mod_tab_report_server <- function(id, rv) {
           rv$hr_completed,
           rv$sd_completed,
           rv$simList)
-      
-      ### Both home range and speed & distance:
-      
+      if (rv$which_meta != "none") {
+        req(rv$metaErr, rv$meta_tbl) }
+
+      #### Initialize:
+
       is_hr <- rv$report$is_hr
-      is_ctsd <- rv$report$is_ctsd
-      req(!is.null(is_hr), !is.null(is_ctsd))
+      is_sd <- rv$report$is_sd
+      req(!is.null(is_hr), !is.null(is_sd))
       req(rv$hr_completed, rv$sd_completed)
-      
-      sufficient <- span("sufficient", class = "cl-grn")
-      insufficient <- span("insufficient", class = "cl-dgr")
-      
+
       txt_hr_uncertainty <- NULL
       txt_sd_uncertainty <- NULL
-      
-      ## Number of simulations:
-      
-      out_nsims <- span(
-        "a", span(style = "font-weight: bold;", "single"), 
-        "simulation")
-      
-      if (length(rv$simList) > 1) {
-        out_nsims <- span(style = "font-weight: bold;", 
-                          length(rv$simList), "simulations")
-      }
-      
-      # Home range estimation errors:
-      
-      hrErr_lci <- round(mean(rv[["hrErr"]]$lci, 
-                              na.rm = TRUE) * 100, 1)
-      hrErr_est <- round(mean(rv[["hrErr"]]$est, 
-                              na.rm = TRUE) * 100, 1)
-      hrErr_uci <- round(mean(rv[["hrErr"]]$uci, 
-                              na.rm = TRUE) * 100, 1)
-      
       is_hr_ci <- FALSE
-      txt_hr_uncertainty <- NULL
+      is_sd_ci <- FALSE
+
+      #### Styles:
+
+      css_bold <- "font-weight: bold;"
+      css_mono <- "font-family: var(--monosans);"
+
+      #### For number of simulations:
+
+      sufficient <- span("sufficient", class = "cl-grn")
+      insufficient <- span("insufficient", class = "cl-dgr")
+
       if (length(rv$simList) > 1) {
-        req(rv$hr_HDI)
-        hrErr_lci <- round(rv$hr_HDI$CI_low * 100, 1)
-        hrErr_uci <- round(rv$hr_HDI$CI_high * 100, 1)
-        
+        txt_nsim <- span(length(rv$simList), "simulations",
+                          style = css_bold)
+      } else {
+        txt_nsim <- span("a", span("single", style = css_bold),
+                          "simulation")
+      }
+
+      #### For home range estimation:
+
+      if (rv$which_meta == "none") {
+        hrErr_lci <- .err_to_txt(rv[["hrErr"]]$lci)
+        hrErr_est <- .err_to_txt(rv[["hrErr"]]$est)
+        hrErr_uci <- .err_to_txt(rv[["hrErr"]]$uci)
+      } else {
+        tmp <- rv$meta_tbl %>%
+          dplyr::filter(group == "All") %>%
+          dplyr::filter(type == "hr") %>%
+          dplyr::slice(which.max(m))
+        hrErr_lci <- tmp[["error_lci"]]
+        hrErr_est <- tmp[["error"]]
+        hrErr_uci <- tmp[["error_uci"]]
+      }
+
+      if (length(rv$simList) > 1) {
+        hrErr_lci <- .err_to_txt(rv$hr_cri$lci)
+        hrErr_uci <- .err_to_txt(rv$hr_cri$uci)
+
         if (!is.na(hrErr_lci) && !is.na(hrErr_uci)) {
           txt_hr_uncertainty <- case_when(
             abs(hrErr_uci) > 50 && abs(hrErr_lci) > 50 ~
@@ -1165,28 +1048,23 @@ mod_tab_report_server <- function(id, rv) {
             abs(hrErr_uci) > 10 && abs(hrErr_lci) > 10 ~
               "(with low uncertainty)",
             TRUE ~ "(with very low uncertainty)")
-          
+
           is_hr_ci <- TRUE
         }
       }
-      
+
       # Speed and distance errors:
-      
+
       if (any(rv$dev$N2 > 0)) {
-        sdErr_lci <- round(mean(rv[["speedErr"]]$lci, 
-                                na.rm = TRUE) * 100, 1)
-        sdErr_est <- round(mean(rv[["speedErr"]]$est, 
-                                na.rm = TRUE) * 100, 1)
-        sdErr_uci <- round(mean(rv[["speedErr"]]$uci, 
-                                na.rm = TRUE) * 100, 1)
-        
-        is_sd_ci <- FALSE
-        txt_sd_uncertainty <- NULL
+        sdErr_lci <- .err_to_txt(rv[["speedErr"]]$lci)
+        sdErr_est <- .err_to_txt(rv[["speedErr"]]$est)
+        sdErr_uci <- .err_to_txt(rv[["speedErr"]]$uci)
+
         if (length(rv$simList) > 1) {
-          req(rv$sd_HDI)
-          sdErr_lci <- round(rv$sd_HDI$CI_low * 100, 1)
-          sdErr_uci <- round(rv$sd_HDI$CI_high * 100, 1)
-          
+          req(rv$sd_cri)
+          sdErr_lci <- round(rv$sd_cri$lci * 100, 1)
+          sdErr_uci <- round(rv$sd_cri$uci * 100, 1)
+
           if (!is.na(sdErr_lci) && !is.na(sdErr_uci)) {
             txt_sd_uncertainty <- case_when(
               abs(sdErr_uci) > 50 && abs(sdErr_lci) > 50 ~
@@ -1194,16 +1072,16 @@ mod_tab_report_server <- function(id, rv) {
               abs(sdErr_uci) > 10 && abs(sdErr_lci) > 10 ~
                 "(with low uncertainty)",
               TRUE ~ "(with very low uncertainty)")
-            
+
             is_sd_ci <- TRUE
           }
         }
       }
-      
-      if (is_hr & !is_ctsd) {
+
+      if (is_hr & !is_sd) {
         out <- span(
           style = "font-weight: bold;",
-          
+
           "Your current tracking regime is likely sufficient",
           "for home range",
           ifelse(is_hr_ci,
@@ -1213,11 +1091,11 @@ mod_tab_report_server <- function(id, rv) {
           ifelse(is_sd_ci,
                  wrap_none("estimation ", txt_sd_uncertainty, "."),
                  "estimation."))
-        
+
         if (any(rv$dev$N2 == 0))
           out <- span(
             style = "font-weight: bold;",
-            
+
             "Your current tracking regime is likely sufficient",
             "for home range",
             ifelse(is_hr_ci,
@@ -1230,11 +1108,11 @@ mod_tab_report_server <- function(id, rv) {
                    wrap_none("estimation ", txt_sd_uncertainty, "."),
                    "estimation."))
       }
-      
-      if (!is_hr & is_ctsd) {
+
+      if (!is_hr & is_sd) {
         out <- span(
           style = "font-weight: bold;",
-          
+
           "Your current tracking regime may be insufficient",
           "for home range",
           ifelse(is_hr_ci,
@@ -1245,11 +1123,11 @@ mod_tab_report_server <- function(id, rv) {
                  wrap_none("estimation ", txt_sd_uncertainty, "."),
                  "estimation."))
       }
-      
-      if (is_hr & is_ctsd) {
+
+      if (is_hr & is_sd) {
         out <- span(
           style = "font-weight: bold;",
-          
+
           "Your current tracking regime is likely sufficient",
           "for both home range",
           ifelse(is_hr_ci,
@@ -1260,11 +1138,11 @@ mod_tab_report_server <- function(id, rv) {
                  wrap_none("estimation ", txt_sd_uncertainty, "."),
                  "estimation."))
       }
-      
-      if (!is_hr & !is_ctsd) {
+
+      if (!is_hr & !is_sd) {
         out <- span(
-          style = "font-weight: bold;",
-          
+          style = css_bold,
+
           "Your current tracking regime may be insufficient",
           "for both home range",
           ifelse(is_hr_ci,
@@ -1274,11 +1152,11 @@ mod_tab_report_server <- function(id, rv) {
           ifelse(is_sd_ci,
                  wrap_none("estimation ", txt_sd_uncertainty, "."),
                  "estimation."))
-        
+
         if (any(rv$dev$N2 == 0))
           out <- span(
             style = "font-weight: bold;",
-            
+
             "Your current tracking regime may be insufficient",
             "for home range",
             ifelse(is_hr_ci,
@@ -1291,41 +1169,74 @@ mod_tab_report_server <- function(id, rv) {
                    wrap_none("estimation ", txt_sd_uncertainty, "."),
                    "estimation."))
       }
-      
-      if (is.na(hrErr_lci) || is.na(hrErr_uci)) {
-        out_hr_err <- tagList(
-          ifelse(hrErr_est == 0, "less than 0.01%",
-                 wrap_none(hrErr_est, "%")),
-          "for home range estimation,")
-      } else {
-        out_hr_err <- tagList(
-          ifelse(hrErr_est == 0, "less than 0.01%",
-                 wrap_none(hrErr_est, "%")),
-          wrap_none("[", hrErr_lci, ", ", hrErr_uci,
-                    "%]", css = "cl-blk"), 
-          "for home range estimation,")
+
+      if (rv$which_meta == "none") {
+        if (is.na(hrErr_lci) || is.na(hrErr_uci)) {
+          out_hr_err <- span(
+            ifelse(hrErr_est == 0, "less than 0.01%",
+                   paste0(round(hrErr_est * 100, 1), "%")),
+            "for home range estimation,")
+        } else {
+          out_hr_err <- span(
+            ifelse(hrErr_est == 0, "less than 0.01%",
+                   paste0(round(hrErr_est * 100, 1), "%")),
+            paste0("[", round(hrErr_lci * 100, 1),
+                   ", ", round(hrErr_uci * 100, 1), "%]"),
+            "for home range estimation,")
+        }
+        
+        if (is.na(sdErr_lci) || is.na(sdErr_uci)) {
+          out_sd_err <- span(
+            "and", ifelse(sdErr_est == 0, "less than 0.01%",
+                          paste0(round(sdErr_est * 100, 1), "%")),
+            "for speed estimation.")
+        } else {
+          out_sd_err <- span(
+            "and", ifelse(sdErr_est == 0, "less than 0.01%",
+                          paste0(round(sdErr_est * 100, 1), "%")),
+            paste0("[", round(sdErr_lci * 100, 1),
+                   ", ", round(sdErr_uci * 100, 1), "%]"),
+            "for speed estimation.")
+        }
+        
+      } else  {
+        hrmetaErr <- dplyr::filter(rv$metaErr, type == "hr")
+        sdmetaErr <- dplyr::filter(rv$metaErr, type == "ctsd")
+        
+        if (is.na(hrmetaErr$lci) || is.na(hrmetaErr$uci)) {
+          out_hr_err <- span(
+            ifelse(hrmetaErr$est == 0, "less than 0.01%",
+                   paste0(round(hrmetaErr$est * 100, 1), "%")),
+            "for home range estimation,")
+        } else {
+          out_hr_err <- span(
+            ifelse(hrmetaErr$est == 0, "less than 0.01%",
+                   paste0(round(hrmetaErr$est * 100, 1), "%")),
+            paste0("[", round(hrmetaErr$lci * 100, 1),
+                   ", ", round(hrmetaErr$uci * 100, 1), "%]"),
+            "for home range estimation,")
+        }
+        
+        if (is.na(sdmetaErr$lci) || is.na(sdmetaErr$uci)) {
+          out_sd_err <- span(
+            "and", ifelse(sdmetaErr$est == 0, "less than 0.01%",
+                          paste0(round(sdmetaErr$est * 100, 1), "%")),
+            "for speed estimation.")
+        } else {
+          out_sd_err <- span(
+            "and", ifelse(sdmetaErr$est == 0, "less than 0.01%",
+                          paste0(round(sdmetaErr$est * 100, 1), "%")),
+            paste0("[", round(sdmetaErr$lci * 100, 1),
+                   ", ", round(sdmetaErr$uci * 100, 1), "%]"),
+            "for speed estimation.")
+        }
       }
       
-      if (is.na(sdErr_lci) || is.na(sdErr_uci)) {
-        out_sd_err <- tagList(
-          "and", ifelse(sdErr_est == 0, "less than 0.01%",
-                        wrap_none(sdErr_est, "%")),
-          "for speed estimation.")
-      } else {
-        out_sd_err <- tagList(
-          "and", ifelse(sdErr_est == 0, "less than 0.01%",
-                        wrap_none(sdErr_est, "%")),
-          wrap_none("[", sdErr_lci, ", ", sdErr_uci,
-                    "%]", css = "cl-blk"), 
-          "for speed estimation.")
-      }
-      
+      out_extra <- ""
       if (is.null(txt_hr_uncertainty)) {
         if (rv$which_meta == "none") {
           out_extra <- span(
-            style = paste("font-weight: 800;",
-                          "font-family: var(--monosans);"),
-            
+            style = paste(css_mono, css_bold),
             "To obtain credible intervals from multiple",
             "simulations, select a different",
             span("analytical target", class = "cl-sea"),
@@ -1334,33 +1245,31 @@ mod_tab_report_server <- function(id, rv) {
         } else {
           out_extra <- span(
             "The number of simulations was insufficient so credible",
-            "intervals (CIs) could not be calculated, returning ",
-            wrap_none(span("NAs", class = "cl-dgr"), "."),
-            
-            span(style = paste("font-weight: 800;",
-                               "font-family: var(--monosans);"),
-                 "Please run more simulations in the corresponding",
-                 shiny::icon("compass-drafting", class = "cl-sea"),
-                 span("Analyses", class = "cl-sea"), "tab to obtain",
-                 wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
+            "intervals (CIs) could", span("not", class = "cl-dgr"),
+            "be calculated.", 
+            span(
+              style = paste(css_mono, css_bold),
+              "Please run more simulations in the corresponding",
+              shiny::icon("compass-drafting", class = "cl-sea"),
+              span("Analyses", class = "cl-sea"), "tab to obtain",
+              wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
         }
-      } else { out_extra <- "" }
-      
+      }
+
       out_analyses <- p(
         out,
         "Your error estimate based on",
-        out_nsims, "was", out_hr_err,
+        txt_nsim, "was", out_hr_err,
         if (any(rv$dev$N2 > 0)) { out_sd_err
         } else { span("but the sampling interval was",
                       "too coarse to estimate speed.") },
         out_extra
       )
-      
+
       rv$report$analyses <- out_analyses
-      
+
     }) %>% # end of observe,
       bindEvent(input$build_report)
-    
     
     ## Reporting META (if available): ------------------------------------
     
@@ -1396,92 +1305,29 @@ mod_tab_report_server <- function(id, rv) {
           rv$which_meta == "mean",
           rv$metaList)
       
-      type <- get_truth <- get_CI <- get_HDI <- NULL
-      txt_type <- txt_title <- NULL
+      css_bold <- "font-weight: bold;"
+      css_mono <- "font-family: var(--monosans);"
       
-      if ("Home range" %in% rv$which_question) {
-        type <- c("hr")
-        txt_type <- c("home range area")
-        txt_title <- "Home range meta-analyses:"
-        
-        truth_summarized <- get_true_hr(
-          sigma = rv$sigma,
-          
-          emulated = rv$is_emulate,
-          fit = if (rv$is_emulate) rv$meanfitList else NULL,
-          
-          grouped = FALSE,
-          summarized = TRUE)
-        
-        get_truth <- truth_summarized[["All"]]$area
-        get_CI <- rv$metaErr[grep("hr", rv$metaErr$type), ]
-        get_CI <- c("CI_low" = get_CI[nrow(get_CI), "lci"],
-                    "CI_est" = get_CI[nrow(get_CI), "est"],
-                    "CI_high" = get_CI[nrow(get_CI), "uci"])
-        
-        get_HDI <- c("CI" = rv$hr_HDI$CI,
-                     "CI_low" = rv$hr_HDI$CI_low,
-                     "CI_high" = rv$hr_HDI$CI_high)
-      }
-
-      if ("Speed & distance" %in% rv$which_question) {
-        type <- c(type, "ctsd")
-        txt_type <- c(txt_type, "movement speed")
-        txt_title <- c(txt_title, "Speed meta-analyses:")
-
-        truth_summarized <- get_true_speed(
-          data = rv$simList,
-          seed = rv$seedList,
-
-          tau_p = rv$tau_p,
-          tau_v = rv$tau_v,
-          sigma = rv$sigma,
-
-          emulated = rv$is_emulate,
-          fit = if (rv$is_emulate) rv$meanfitList else NULL,
-
-          grouped = FALSE,
-          summarized = TRUE)
-        
-        truth <- truth_summarized[["All"]]
-        
-        CI <- rv$metaErr[grep("ctsd", rv$metaErr$type), ]
-        CI <- c("CI_low" = CI[nrow(CI), "lci"],
-                "CI_est" = CI[nrow(CI), "est"],
-                "CI_high" = CI[nrow(CI), "uci"])
-        
-        HDI <- c("CI" = rv$sd_HDI$CI,
-                 "CI_low" = rv$sd_HDI$CI_low,
-                 "CI_high" = rv$sd_HDI$CI_high)
-        
-        if (length(rv$which_question) == 1) {
-          get_truth <- get_truth
-          get_HDI <- HDI
-          get_CI <- CI
-        } else {
-          get_truth <- list(get_truth, truth)
-          get_HDI <- list(get_HDI, HDI)
-          get_CI <- list(get_CI, CI)
-        }
-      }
+      list2env(.build_outputs(rv), envir = environment())
       
-      if (!is.list(get_truth)) get_truth <- list(get_truth)
-      if (!is.list(get_HDI)) get_HDI <- list(get_HDI)
-      if (!is.list(get_CI)) get_CI <- list(get_CI)
+      # TODO type is now set_target
+      ## see .build_outputs
+      ## get_coi and get_cri are now lists!
+      ## need to check all the code below this point
       
-      # i <- 1
-      for (i in seq_along(type)) {
+      # target <- "hr"
+      for (target in seq_along(set_target)) {
+        # browser()
         
-        out <- as.data.frame(rv$metaList[[type[[i]]]]$meta)
+        out <- as.data.frame(rv$metaList[[target]]$meta)
         tmpunit <- extract_units(rownames(
           out[grep("mean", rownames(out)), ]))
-        
         est <- out[grep("mean", rownames(out)), ]$est
         lci <- out[grep("mean", rownames(out)), ]$low
         uci <- out[grep("mean", rownames(out)), ]$high
         
-        truth <- tmpunit %#% get_truth[[i]]
-        out_details <- out[1, ] %>% 
+        truth <- tmpunit %#% get_truth[[target]]
+        out_dt <- out[1, ] %>% 
           dplyr::mutate(est = (est - truth)/truth,
                         lci = (lci - truth)/truth,
                         uci = (uci - truth)/truth) %>% 
@@ -1509,11 +1355,10 @@ mod_tab_report_server <- function(id, rv) {
           "of a single simulation",
           paste("of our", length(rv$simList), "simulations"))
         
-        switch(out_details$overlaps_with,
+        switch(out_dt$overlaps_with,
                "Yes" = {
                  txt_mean <- span(
-                   style = paste("font-family: var(--monosans);"),
-                   
+                   style = css_mono,
                    "The mean", txt_type[[i]], txt_nsims,
                    "is", span("falls within", class = "cl-sea"),
                    "the set error margin of",
@@ -1521,8 +1366,7 @@ mod_tab_report_server <- function(id, rv) {
                },
                "Near" = {
                  txt_mean <- span(
-                   style = paste("font-family: var(--monosans);"),
-                   
+                   style = css_mono,
                    "The mean", txt_type[[i]], txt_nsims,
                    "is", span("near", class = "cl-sea"),
                    "the set error margin of",
@@ -1530,59 +1374,53 @@ mod_tab_report_server <- function(id, rv) {
                },
                "No" = {
                  txt_mean <- span(
-                   style = paste("font-family: var(--monosans);"),
-                 
+                   style = css_mono,
                    "The mean", txt_type[[i]], txt_nsims,
                    span("falls outside", class = "cl-dgr"),
                    "the set error margin of",
                    paste0(rv$error_threshold * 100, "%."))
                })
         
-        if (is.na(get_CI[[i]][["CI_low"]]) &&
-            is.na(get_CI[[i]][["CI_high"]])) {
+        if (is.na(get_coi[[target]][["lci"]]) &&
+            is.na(get_coi[[target]][["uci"]])) {
           txt_uncertainty <- 
             "however, run more simulations to confirm."
         } else {
           txt_uncertainty <- ifelse(
-            get_CI[[i]][["CI_high"]] < .3 && 
-              get_CI[[i]][["CI_low"]] > -.3,
+            get_coi[[target]][["uci"]] < .3 && 
+              get_coi[[target]][["CI_lci"]] > -.3,
             "with low uncertainty.",
             "with high uncertainty.")
         }
         
-        switch(out_details$overlaps_with,
-               "Yes" = {
-                 txt_final <- span(
-                   style = paste("font-weight: 800;",
-                                 "font-family: var(--monosans);"),
-                   
-                   "The number of simulations is likely sufficient",
-                   "to obtain an accurate mean", 
-                   wrap_none(txt_type[[i]], color = pal$sea, end = ","),
-                   txt_uncertainty)
-               },
-               "Near" = {
-                 txt_final <- span(
-                   style = paste("font-weight: 800;",
-                                 "font-family: var(--monosans);"),
-                   
-                   "The number of simulations is unlikely sufficient",
-                   "to obtain an accurate mean", 
-                   wrap_none(txt_type[[i]], color = pal$dgr, end = ","),
-                   txt_uncertainty)
-               },
-               "No" = {
-                 txt_final <- span(
-                   style = paste("font-weight: 800;",
-                                 "font-family: var(--monosans);"),
-                   
-                   "The number of simulations is likely insufficient",
-                   "to obtain an accurate mean", 
-                   wrap_none(txt_type[[i]], color = pal$dgr, end = ","),
-                   txt_uncertainty)
-               })
+        switch(
+          out_dt$overlaps_with,
+          "Yes" = {
+            txt_final <- span(
+              style = paste(css_mono, css_bold),
+              "The number of simulations is likely sufficient",
+              "to obtain an accurate mean", 
+              wrap_none(txt_type[[i]], color = pal$sea, end = ","),
+              txt_uncertainty)
+          },
+          "Near" = {
+            txt_final <- span(
+              style = paste(css_mono, css_bold),
+              "The number of simulations is unlikely sufficient",
+              "to obtain an accurate mean", 
+              wrap_none(txt_type[[target]], color = pal$dgr, end = ","),
+              txt_uncertainty)
+          },
+          "No" = {
+            txt_final <- span(
+              style = paste(css_mono, css_bold),
+              "The number of simulations is likely insufficient",
+              "to obtain an accurate mean", 
+              wrap_none(txt_type[[target]], color = pal$dgr, end = ","),
+              txt_uncertainty)
+          })
         
-        # if (is.na(HDI$CI_low) && is.na(HDI$CI_high)) {
+        # if (is.na(HDI$CI_lci) && is.na(HDI$uci)) {
         #   txt_final <- tagList(
         #     txt_final,
         #     span(
@@ -1596,10 +1434,9 @@ mod_tab_report_server <- function(id, rv) {
         if (i == 1 && length(type) == 1)
           out_meta <- p(
             p(txt_title[[i]],
-                 style = paste("font-size: 18px;",
-                               "color: var(--sea-dark);",
-                               "font-family: var(--monosans);"),
-                 class = "ttl-tab"),
+              style = paste(css_mono, "font-size: 18px;",
+                            "color: var(--sea-dark);"),
+              class = "ttl-tab"),
             p(out_meta,
               txt_mean,
               txt_final))
@@ -1612,15 +1449,13 @@ mod_tab_report_server <- function(id, rv) {
         if (i == 2)
           out_meta <- p(
             p("Home range meta-analyses:",
-                 style = paste("font-size: 18px;",
-                               "color: var(--sea-dark);",
-                               "font-family: var(--monosans);")),
+              style = paste("font-size: 18px;",
+                            "color: var(--sea-dark);")),
             p(out_meta),
             p(),
             p("Speed & distance meta-analyses:",
-                 style = paste("font-size: 18px;",
-                               "color: var(--sea-dark);",
-                               "font-family: var(--monosans);")),
+              style = paste("font-size: 18px;",
+                            "color: var(--sea-dark);")),
             p(txt_mean, 
               txt_final),
             p())
@@ -1629,9 +1464,8 @@ mod_tab_report_server <- function(id, rv) {
       rv$report$meta <- tagList(
         out_meta,
         p(style = paste("font-size: 16px;",
-                        "font-weight: 800;",
                         "text-align: justify;",
-                        "font-family: var(--monosans);"),
+                        css_mono, css_bold),
           "Check the", shiny::icon("layer-group",
                                    class = "cl-sea"),
           span("Meta-analyses", class = "cl-sea"), "tab",
@@ -1648,16 +1482,19 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$grouped, rv$groups, rv$which_meta == "compare")
       req(rv$metaErr, rv$metaList, rv$metaList_groups[["is_final"]])
       
+      css_bold <- "font-weight: bold;"
+      css_mono <- "font-family: var(--monosans);"
+      
       set_target <- c()
       txt_type <- txt_title <- list()
-      get_N <- get_CoI <- get_CrI <- list()
+      get_N <- get_coi <- get_cri <- list()
       txt_ratio_order <- "(for group A/group B)"
       
       .extract_ci <- function(type_key) {
         CI <- rv$metaErr[grep(type_key, rv$metaErr$type), ]
-        c("CI_low"  = CI[nrow(CI), "lci"],
-          "CI_est"  = CI[nrow(CI), "est"],
-          "CI_high" = CI[nrow(CI), "uci"])
+        c("lci" = CI[nrow(CI), "lci"],
+          "est" = CI[nrow(CI), "est"],
+          "uci" = CI[nrow(CI), "uci"])
       }
       
       if ("Home range" %in% rv$which_question) {
@@ -1665,10 +1502,10 @@ mod_tab_report_server <- function(id, rv) {
         txt_type[["hr"]] <- "home range area"
         txt_title[["hr"]] <- "Home range meta-analyses:"
         
-        get_CoI[["hr"]] <- .extract_ci("hr")
-        get_CrI[["hr"]] <- c("CI" = rv$hr_HDI$CI,
-                             "CI_low" = rv$hr_HDI$CI_low,
-                             "CI_high" = rv$hr_HDI$CI_high)
+        get_coi[["hr"]] <- .extract_ci("hr")
+        get_cri[["hr"]] <- c("lci" = rv$hr_cri$lci,
+                             "est" = rv$hr_cri$est,
+                             "uci" = rv$hr_cri$uci)
       }
       
       if ("Speed & distance" %in% rv$which_question) {
@@ -1676,10 +1513,10 @@ mod_tab_report_server <- function(id, rv) {
         txt_type[["ctsd"]] <- "movement speed"
         txt_title[["ctsd"]] <- "Speed meta-analyses:"
         
-        get_CoI[["ctsd"]] <- .extract_ci("sd")
-        get_CrI[["ctsd"]] <- c("CI" = rv$sd_HDI$CI,
-                               "CI_low" = rv$sd_HDI$CI_low,
-                               "CI_high" = rv$sd_HDI$CI_high)
+        get_coi[["ctsd"]] <- .extract_ci("sd")
+        get_cri[["ctsd"]] <- c("lci" = rv$sd_cri$lci,
+                               "est" = rv$sd_cri$est,
+                               "uci" = rv$sd_cri$uci)
       }
       
       for (target in set_target) {
@@ -1698,7 +1535,7 @@ mod_tab_report_server <- function(id, rv) {
           txt_subpop <- span(
             "There was insufficient evidence in the", rv$data_type,
             "dataset to detect sub-populations.")
-          txt_subpop_cont <- "Sub-populations were"
+          txt_subpop_cont <- "With the simulations, sub-populations were"
         }  else if (is_subpop) {
           txt_subpop <- span(
             "We expected to detect a sub-population",
@@ -1748,11 +1585,11 @@ mod_tab_report_server <- function(id, rv) {
         
         sufficient_simulations <- overlaps_with$truth && 
           overlaps_with$one_expected == overlaps_with$one_observed &&
-          !is.na(get_CrI[[target]][["CI_low"]]) && 
-          !is.na(get_CrI[[target]][["CI_high"]])
+          !is.na(get_cri[[target]][["lci"]]) && 
+          !is.na(get_cri[[target]][["uci"]])
         
         txt_simulations <- span(
-          style = "font-weight: 800; font-family: var(--monosans);",
+          style = paste(css_mono, css_bold),
           
           if (sufficient_simulations) {
             tagList("The number of simulations is likely sufficient", 
@@ -2007,14 +1844,15 @@ mod_tab_report_server <- function(id, rv) {
           "Home range" %in% rv$which_question) {
         req(rv$highlight_dur)
         
+        browser() # TODO TOCHECK
         highlighted_dur <- as.numeric(rv$highlight_dur)
         
-        CI <- round(rv$hr_HDI_new$CI * 100, 0)
-        LCI <- round(rv$hr_HDI_new$CI_low * 100, 1)
-        UCI <- round(rv$hr_HDI_new$CI_high * 100, 1)
+        est <- .err_to_txt(rv$hr_cri_new$est * 100, 0)
+        lci <- .err_to_txt(rv$hr_cri_new$lci * 100, 1)
+        uci <- .err_to_txt(rv$hr_cri_new$uci * 100, 1)
         
         txt_level <- ifelse(
-          rv$hr_HDI_new$CI_high < .3 & rv$hr_HDI_new$CI_low > -.3,
+          rv$hr_cri_new$uci < .3 & rv$hr_cri_new$lci > -.3,
           "and with low", "but with high")
         
         ideal_dur <- fix_unit(
@@ -2029,10 +1867,10 @@ mod_tab_report_server <- function(id, rv) {
               "estimation,", txt_level, "uncertainty:",
               "for a duration of",
               highlighted_dur, "days, there is a",
-              wrap_none(CI, "%", css = "cl-blk"),
+              wrap_none(est, "%", css = "cl-blk"),
               "probability that the relative error will lie within",
-              wrap_none(LCI, "%", css = "cl-blk"),
-              "and", wrap_none(UCI, "%", end = ".", css = "cl-blk"))
+              wrap_none(lci, "%", css = "cl-blk"),
+              "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
           
         } else {
           out_comp <- out_comp_hr <-
@@ -2064,12 +1902,12 @@ mod_tab_report_server <- function(id, rv) {
         out_dti <- fix_unit(highlighted_dti, "seconds",
                             convert = TRUE)
         
-        CI <- round(rv$sd_HDI_new$CI * 100, 0)
-        LCI <- round(rv$sd_HDI_new$CI_low * 100, 1)
-        UCI <- round(rv$sd_HDI_new$CI_high * 100, 1)
+        est <- .err_to_txt(rv$sd_cri_new$est)
+        lci <- .err_to_txt(rv$sd_cri_new$lci)
+        uci <- .err_to_txt(rv$sd_cri_new$uci)
         
         txt_level <- ifelse(
-          rv$sd_HDI_new$CI_high < .3 & rv$sd_HDI_new$CI_low > -.3,
+          rv$sd_cri_new$uci < .3 & rv$sd_cri_new$lci > -.3,
           "and with low", "but with high")
         
         ideal_dti <- fix_unit(
@@ -2083,10 +1921,10 @@ mod_tab_report_server <- function(id, rv) {
               "estimation,", txt_level, "uncertainty:",
               "for a sampling interval of",
               wrap_none(out_dti$value, " ", out_dti$unit, ", there"),
-              "is a", wrap_none(CI, "%", css = "cl-blk"),
+              "is a", wrap_none(est, "%", css = "cl-blk"),
               "probability that the relative error will lie within",
-              wrap_none(LCI, "%", css = "cl-blk"),
-              "and", wrap_none(UCI, "%", end = ".", css = "cl-blk"))
+              wrap_none(lci, "%", css = "cl-blk"),
+              "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
           
         } else {
           out_comp <- out_comp_sd <-
@@ -2095,10 +1933,10 @@ mod_tab_report_server <- function(id, rv) {
               "estimation. For a sampling interval of",
               wrap_none(out_dti$value, " ", out_dti$unit, ", there is"),
               "high uncertainty",
-              wrap_none("(", CI, "%", css = "cl-blk"),
+              wrap_none("(", est, "%", css = "cl-blk"),
               "probability that the relative error will lie within",
-              wrap_none(LCI, "%", css = "cl-blk"),
-              "and", wrap_none(UCI, "%", end = ").", css = "cl-blk"))
+              wrap_none(lci, "%", css = "cl-blk"),
+              "and", wrap_none(uci, "%", end = ").", css = "cl-blk"))
         }
       } # end of "Speed & distance"
       
@@ -2399,10 +2237,10 @@ mod_tab_report_server <- function(id, rv) {
       if (is_log) ds1_hr$y <- ds1_hr$y / max(ds1_hr$y)
       
       ci1_hr <- subset(
-        ds1_hr, x >= rv$hr_HDI$CI_low & x <= rv$hr_HDI$CI_high)
+        ds1_hr, x >= rv$hr_cri$lci & x <= rv$hr_cri$uci)
       
       if (is_dur) {
-        req(rv$hr_HDI_new)
+        req(rv$hr_cri_new)
         
         out_dur_new <- dt_hr$dur[
           abs(dt_hr$dur - as.numeric(rv$highlight_dur)) %>%
@@ -2421,15 +2259,12 @@ mod_tab_report_server <- function(id, rv) {
           "max" = max(ds2_hr$x),
           "min" = min(ds2_hr$x))
         
-        rv$hr_HDI_new <- 
-          suppressWarnings(bayestestR::ci(
-            ds2_hr$x, ci = input_ci, method = "HDI"))
-        
+        rv$hr_cri_new <- suppressWarnings(
+          .extract_cri(ds2_hr$x, ci = input_ci))
         if (is_log) ds2_hr$y <- ds2_hr$y / max(ds2_hr$y)
         
         ci2_hr <- subset(
-          ds2_hr, x >= rv$hr_HDI_new$CI_low &
-            x <= rv$hr_HDI_new$CI_high)
+          ds2_hr, x >= rv$hr_cri_new$lci & x <= rv$hr_cri_new$uci)
         
         hr_p1 <- ggplot2::geom_line(
           data = ds2_hr, mapping = ggplot2::aes(x = x, y = y),
@@ -2441,10 +2276,10 @@ mod_tab_report_server <- function(id, rv) {
           alpha = 0.2, fill = pal$mdn)
         
         hr_p3 <- ggplot2::geom_segment(
-          data = rv$hr_HDI_new,
+          data = rv$hr_cri_new,
           mapping = ggplot2::aes(
-            x = .data$CI_low,
-            xend = .data$CI_high,
+            x = .data$lci,
+            xend = .data$uci,
             y = 0, yend = 0,
             col = "est_new", linetype = "est_new"),
           size = .8) %>% 
@@ -2460,7 +2295,7 @@ mod_tab_report_server <- function(id, rv) {
       
       lbl <- c(
         paste0("AKDE error"),
-        paste0("Median AKDE error + ", rv$hr_HDI$CI * 100,
+        paste0("Median AKDE error + ", rv$hr_cri$est * 100,
                "% HDI for ", rv$report$dur_for_hr))
       brk <- c("now", "est")
       
@@ -2473,7 +2308,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if (is_dur) {
         lbl <- c(
-          lbl, paste0("Median AKDE error + ", rv$hr_HDI$CI * 100,
+          lbl, paste0("Median AKDE error + ", rv$hr_cri$est * 100,
                       "% HDI for ", rv$highlight_dur, " days"))
         brk <- c(brk, "est_new")
         
@@ -2499,7 +2334,7 @@ mod_tab_report_server <- function(id, rv) {
           ggplot2::aes(col = "est"),
           linetype = "dotted") +
         
-        { if (!is.na(rv$hr_HDI$CI_low) && !is.na(rv$hr_HDI$CI_low))
+        { if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci))
           ggplot2::geom_area(
             data = ci1_hr,
             mapping = ggplot2::aes(x = x, y = y, fill = "est"),
@@ -2507,12 +2342,12 @@ mod_tab_report_server <- function(id, rv) {
         
         { if (is_dur) hr_p3 } +
         
-        { if (!is.na(rv$hr_HDI$CI_low) && !is.na(rv$hr_HDI$CI_low))
+        { if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci))
           ggplot2::geom_segment(
             data = ~ head(.x, 1),
             mapping = ggplot2::aes(
-              x = rv$hr_HDI$CI_low,
-              xend = rv$hr_HDI$CI_high,
+              x = rv$hr_cri$lci,
+              xend = rv$hr_cri$uci,
               y = 0, yend = 0, col = "est",
               linetype = "est"),
             size = .8) %>% 
@@ -2546,11 +2381,11 @@ mod_tab_report_server <- function(id, rv) {
         ggplot2::scale_color_manual(
           name = "", labels = lbl, breaks = brk,
           values = val_col) +
-        { if (!is.na(rv$hr_HDI$CI_low) && !is.na(rv$hr_HDI$CI_low))
+        { if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci))
           ggplot2::scale_fill_manual(
             name = "", labels = lbl, breaks = brk,
             values = val_fill) } +
-        { if (!is.na(rv$hr_HDI$CI_low) && !is.na(rv$hr_HDI$CI_low))
+        { if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci))
           ggplot2::scale_linetype_manual(
             name = "", labels = lbl, breaks = brk,
             values = val_linetype) } +
@@ -2673,10 +2508,10 @@ mod_tab_report_server <- function(id, rv) {
       if (is_log) ds1_sd$y <- ds1_sd$y / max(ds1_sd$y)
       
       ci1_sd <- subset(
-        ds1_sd, x >= rv$sd_HDI$CI_low & x <= rv$sd_HDI$CI_high)
+        ds1_sd, x >= rv$sd_cri$lci & x <= rv$sd_cri$uci)
       
       if (is_dti) {
-        req(rv$sd_HDI_new)
+        req(rv$sd_cri_new)
         
         dti_new <- sd_opts$dti[match(rv$highlight_dti,
                                      sd_opts$dti_notes)]
@@ -2718,14 +2553,13 @@ mod_tab_report_server <- function(id, rv) {
           "max" = max(ds2_sd$x),
           "min" = min(ds2_sd$x))
         
-        rv$sd_HDI_new <-
-          suppressWarnings(bayestestR::ci(
-            ds2_sd$x, ci = input_ci, method = "HDI"))
+        rv$sd_cri_new <- suppressWarnings(
+          .extract_cri(ds2_sd$x, ci = input_ci))
         
         if (is_log) ds2_sd$y <- ds2_sd$y / max(ds2_sd$y)
         
         ci2_sd <- subset(
-          ds2_sd, x >= rv$sd_HDI_new$CI_low & x <= rv$sd_HDI_new$CI_high)
+          ds2_sd, x >= rv$sd_cri_new$lci & x <= rv$sd_cri_new$uci)
         
         sd_p1 <- ggplot2::geom_line(
           data = ds2_sd, mapping = ggplot2::aes(x = x, y = y),
@@ -2737,10 +2571,10 @@ mod_tab_report_server <- function(id, rv) {
           alpha = 0.2, fill = pal$mdn)
         
         sd_p3 <- ggplot2::geom_segment(
-          data = rv$sd_HDI_new,
+          data = rv$sd_cri_new,
           mapping = ggplot2::aes(
-            x = .data$CI_low,
-            xend = .data$CI_high,
+            x = .data$lci,
+            xend = .data$uci,
             y = 0, yend = 0,
             col = "est_new", linetype = "est_new"),
           size = .8)
@@ -2755,7 +2589,7 @@ mod_tab_report_server <- function(id, rv) {
       
       lbl <- c(
         paste0("CTSD error"),
-        paste0("Median CTSD error + ", rv$sd_HDI$CI * 100,
+        paste0("Median CTSD error + ", rv$sd_cri$est * 100,
                "% HDI for ", txt_dti))
       brk <- c("now", "est")
       
@@ -2770,7 +2604,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if (is_dti) {
         lbl <- c(
-          lbl, paste0("Median CTSD error + ", rv$sd_HDI$CI * 100,
+          lbl, paste0("Median CTSD error + ", rv$sd_cri$est * 100,
                       "% HDI for ", txt_dti_new))
         brk <- c(brk, "est_new")
         
@@ -2799,7 +2633,7 @@ mod_tab_report_server <- function(id, rv) {
             ggplot2::aes(col = "est"),
             linetype = "dotted") +
           
-          { if (!is.na(rv$sd_HDI$CI_low) && !is.na(rv$sd_HDI$CI_low))
+          { if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci))
             ggplot2::geom_area(
               data = ci1_sd,
               mapping = ggplot2::aes(x = x, y = y, fill = "est"),
@@ -2807,12 +2641,12 @@ mod_tab_report_server <- function(id, rv) {
           
           { if (is_dti) sd_p3 } +
           
-          { if (!is.na(rv$sd_HDI$CI_low) && !is.na(rv$sd_HDI$CI_low))
+          { if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci))
             ggplot2::geom_segment(
               data = ~ head(.x, 1),
               mapping = ggplot2::aes(
-                x = rv$sd_HDI$CI_low,
-                xend = rv$sd_HDI$CI_high,
+                x = rv$sd_cri$lci,
+                xend = rv$sd_cri$uci,
                 y = 0, yend = 0, col = "est",
                 linetype = "est"),
               size = .8)
@@ -2844,11 +2678,11 @@ mod_tab_report_server <- function(id, rv) {
           ggplot2::scale_color_manual(
             name = "", labels = lbl, breaks = brk,
             values = val_col) +
-          { if (!is.na(rv$sd_HDI$CI_low) && !is.na(rv$sd_HDI$CI_low))
+          { if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci))
             ggplot2::scale_fill_manual(
               name = "", labels = lbl, breaks = brk,
               values = val_fill) } +
-          { if (!is.na(rv$sd_HDI$CI_low) && !is.na(rv$sd_HDI$CI_low))
+          { if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci))
             ggplot2::scale_linetype_manual(
               name = "", labels = lbl, breaks = brk,
               values = val_linetype) } +
@@ -3042,7 +2876,7 @@ mod_tab_report_server <- function(id, rv) {
     }) # end of renderUI, "repPlotLegend2"
     
     output$repPlot_precision <- ggiraph::renderGirafe({
-      req(rv$hr_HDI, rv$sd_HDI)
+      req(rv$hr_cri, rv$sd_cri)
       req(rv$which_meta == "none")
       
       is_both <- FALSE
@@ -3082,7 +2916,7 @@ mod_tab_report_server <- function(id, rv) {
       xmin <- xmax <- NA
 
       if (is_dur && !is_both) {
-        req(rv$report$ds2_hr, rv$hr_HDI_new)
+        req(rv$report$ds2_hr, rv$hr_cri_new)
 
         details <- details %>%
           dplyr::add_row(
@@ -3090,8 +2924,8 @@ mod_tab_report_server <- function(id, rv) {
             group = "est_new",
             type = "hr_est_new",
             value = rv$report$ds2_hr[["median"]],
-            lci = rv$hr_HDI_new$CI_low,
-            uci = rv$hr_HDI_new$CI_high,
+            lci = rv$hr_cri_new$lci,
+            uci = rv$hr_cri_new$uci,
             label = paste0("AKDE error for ",
                            rv$highlight_dur, " days"),
             fill = pal$mdn,
@@ -3106,7 +2940,7 @@ mod_tab_report_server <- function(id, rv) {
       }
 
       if (is_dti && !is_both) {
-        req(rv$report$ds2_sd, rv$sd_HDI_new)
+        req(rv$report$ds2_sd, rv$sd_cri_new)
 
         details <- details %>%
           dplyr::add_row(
@@ -3114,8 +2948,8 @@ mod_tab_report_server <- function(id, rv) {
             group = "est_new",
             type = "sd_est_new",
             value = rv$report$ds2_sd[["median"]],
-            lci = rv$sd_HDI_new$CI_low,
-            uci = rv$sd_HDI_new$CI_high,
+            lci = rv$sd_cri_new$lci,
+            uci = rv$sd_cri_new$uci,
             label = paste0("CTSD error for ",
                            rv$report$txt_dti_new),
             fill = pal$mdn,
@@ -3138,8 +2972,8 @@ mod_tab_report_server <- function(id, rv) {
             group = "est",
             type = "hr_est",
             value = rv$report$ds1_hr[["median"]],
-            lci = rv$hr_HDI$CI_low,
-            uci = rv$hr_HDI$CI_high,
+            lci = rv$hr_cri$lci,
+            uci = rv$hr_cri$uci,
             label = paste0("AKDE error for ",
                            rv$report$dur_for_hr),
             fill = pal$sea,
@@ -3149,13 +2983,11 @@ mod_tab_report_server <- function(id, rv) {
         
         if (!is.null(rv$simList)) {
           ci <- ifelse(is.null(input$ci), .95, input$ci/100)
-          err <- suppressWarnings(
-            bayestestR::ci(rv$hrErr$est,
-                           ci = ci, method = "HDI"))
+          err <- suppressWarnings(.extract_cri(rv$hrErr$est, ci))
           err <- data.frame(
-            lci = ifelse(is.null(err$CI_low), NA, err$CI_low),
+            lci = ifelse(is.null(err$lci), NA, err$lci),
             mean = mean(rv$hrErr$est, na.rm = TRUE),
-            uci = ifelse(is.null(err$CI_high), NA, err$CI_high))
+            uci = ifelse(is.null(err$uci), NA, err$uci))
         }
 
         input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
@@ -3189,8 +3021,8 @@ mod_tab_report_server <- function(id, rv) {
             group = "est",
             type = "sd_est",
             value = rv$report$ds1_sd[["median"]],
-            lci = rv$sd_HDI$CI_low,
-            uci = rv$sd_HDI$CI_high,
+            lci = rv$sd_cri$lci,
+            uci = rv$sd_cri$uci,
             label = paste0("CTSD error for ",
                            rv$report$txt_dti),
             fill = ifelse(is_both, pal$grn, pal$sea),
@@ -3201,12 +3033,11 @@ mod_tab_report_server <- function(id, rv) {
         if (!is.null(rv$simList)) {
           ci <- ifelse(is.null(input$ci), .95, input$ci/100)
           err <- suppressWarnings(
-            bayestestR::ci(rv$speedErr$est,
-                           ci = ci, method = "HDI"))
+            .extract_cri(rv$speedErr$est, ci = ci))
           err <- data.frame(
-            lci = ifelse(is.null(err$CI_low), NA, err$CI_low),
+            lci = err$lci,
             mean = mean(rv$speedErr$est, na.rm = TRUE),
-            uci =  ifelse(is.null(err$CI_high), NA, err$CI_high))
+            uci =  err$uci)
         }
         
         input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
@@ -4193,9 +4024,9 @@ mod_tab_report_server <- function(id, rv) {
       req(!is.null(rv$simList), rv$hrErr, rv$which_meta)
       req(nrow(rv$hrErr) == length(rv$simList))
       
-      if ("Home range" %in% rv$which_question)
-        shinyjs::show(id = "repBox_hr_err") else
-          shinyjs::hide(id = "repBox_hr_err")
+      if ("Home range" %in% rv$which_question) {
+        shinyjs::show(id = "repBox_hr_err") 
+      } else { shinyjs::hide(id = "repBox_hr_err") }
       
       if (rv$which_meta == "none") {
         mod_blocks_server(
