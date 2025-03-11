@@ -11,37 +11,40 @@ mod_comp_tour_ui <- function(id) {
   ns <- NS(id)
   tagList(
     
-    actionButton(
-      inputId = ns("default_tour"),
-      label = "Click here for a guided tutorial",
-      icon = icon("compass"),
-      width = "238px",
-      class = "btn-primary")
-  
-    # fluidRow(
-    #   align = "center",
-    #   div(id = "content-tutorial",
-    #       
-    #       splitLayout(
-    #         cellWidths = c("200px", "1%", "200px"),
-    #         cellArgs = list(style = 'align: center;'),
-    #         
-    #         actionButton(
-    #           inputId = ns("default_tour"),
-    #           label = "Individual estimate",
-    #           icon = icon("compass"),
-    #           width = "100%",
-    #           class = "btn-primary"),
-    #         p(),
-    #         actionButton(
-    #           inputId = ns("default_tour_pop"),
-    #           icon =  icon("compass"),
-    #           label = "Population estimate",
-    #           width = "100%",
-    #           class = "btn-info")
-    #         
-    #       ) # end of splitLayout
-    #   )) # end of fluidRow
+    fluidRow(
+      align = "center",
+      div(id = "content-tutorial",
+          
+          p(),
+          actionButton(
+            inputId = ns("default_tour"),
+            label = "Individual estimate",
+            icon = icon("compass"),
+            width = "238px",
+            class = "btn-primary"),
+          p()
+          
+          # splitLayout(
+          #   cellWidths = c("200px", "1%", "200px"),
+          #   cellArgs = list(style = 'align: center;'),
+          #   actionButton(
+          #     inputId = ns("default_tour"),
+          #     label = "Individual estimate",
+          #     icon = icon("compass"),
+          #     width = "100%",
+          #     class = "btn-primary"),
+          #   p(),
+          #   actionButton(
+          #     inputId = ns("default_tour_pop"),
+          #     icon =  icon("compass"),
+          #     label = "Population estimate",
+          #     width = "100%",
+          #     class = "btn-info")
+          # 
+          # 
+          # ) # end of splitLayout
+          
+      )) # end of fluidRow
   
   ) # end of tagList
 }

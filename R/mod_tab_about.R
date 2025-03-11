@@ -74,7 +74,7 @@ mod_tab_about_ui <- function(id) {
                           "margin-top: 10px;",
                           "margin-bottom: 0px;"),
             "Click below for a", 
-            span("guided tutorial", class = "cl-sea"), "with:"),
+            span("guided tutorial", class = "cl-sea"), "for:"),
           
           mod_comp_tour_ui("tour_1"), # TODO WIP
           shinyWidgets::awesomeCheckbox(
@@ -213,7 +213,8 @@ mod_tab_about_ui <- function(id) {
                              style = "font-size: 15px;"),
                            value = FALSE))),
                 
-                uiOutput(ns("aboutUI_pop_var"))
+                uiOutput(ns("aboutUI_pop_var")),
+                p()
 
             ) # end of div
           ) # end of fluidRow
