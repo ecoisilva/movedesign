@@ -347,22 +347,23 @@ mod_tab_ctsd_ui <- function(id) {
             #       icon =  icon("trash"),
             #       width = "110px")), br()
 
-          ), # end of box // sdBox_summary
+          ) #, # end of box // sdBox_summary
 
           ## Additional information: --------------------------------------
 
-          shinydashboardPlus::box(
-            title = span("Additional information:", class = "ttl-box"),
-            id = ns("sdBox_misc"),
-            width = NULL,
-            solidHeader = FALSE,
-
-            verbatimTextOutput(outputId = ns("out_time_sd")),
-            verbatimTextOutput(outputId = ns("out_time_sd_new")),
-            div(class = "pre-main",
-                verbatimTextOutput(outputId = ns("out_time_sd_total")))
-            
-          ) # end of box
+          # shinydashboardPlus::box(
+          #   title = span("Additional information:", class = "ttl-box"),
+          #   id = ns("sdBox_misc"),
+          #   width = NULL,
+          #   solidHeader = FALSE,
+          # 
+          #   verbatimTextOutput(outputId = ns("out_time_sd")),
+          #   verbatimTextOutput(outputId = ns("out_time_sd_new")),
+          #   div(class = "pre-main",
+          #       verbatimTextOutput(outputId = ns("out_time_sd_total")))
+          #   
+          # ) # end of box
+          
       ) # end of column (bottom)
 
     ) # end of fluidRow
@@ -1219,8 +1220,11 @@ mod_tab_ctsd_server <- function(id, rv) {
       }
       
       names(rv$ctsdList) <- names(rv$simList)
-      
       if ("DOF" %in% names(ctsd)) ctsd <- list(ctsd)
+      
+      time_sd <- difftime(Sys.time(), start_sd, units = "sec")
+      rv$sd$time[2] <- rv$sd$time[2] + time_sd[[1]]
+      
       return(ctsd)
       
     }) %>% # end of reactive, estimating_speed()
@@ -1581,16 +1585,16 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         rv$sd$tbl <<- rbind(
           rv$sd$tbl, 
-          sdRow(group = if (rv$grouped) group else NA,
-                data = rv$simList[[sim_no]],
-                seed = rv$seedList[[sim_no]],
-                fit = rv$simfitList[[sim_no]],
-                tau_v = tau_v,
-                
-                speed = rv$speedEst[sim_no, ],
-                speed_error = rv$speedErr[sim_no, ],
-                distance = rv$distEst[sim_no, ],
-                distance_error = rv$distErr[sim_no, ]))
+          .build_tbl_sd(
+            group = if (rv$grouped) group else NA,
+            data = rv$simList[[sim_no]],
+            seed = rv$seedList[[sim_no]],
+            obj = rv$ctsdList[[sim_no]],
+            par = tau_v,
+            speed = rv$speedEst[sim_no, ],
+            speed_error = rv$speedErr[sim_no, ],
+            distance = rv$distEst[sim_no, ],
+            distance_error = rv$distErr[sim_no, ]))
       }
       
       shinyjs::show(id = "sdBlock_est")
@@ -1959,8 +1963,9 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         msg_log(
           style = "error",
-          message = "Effective sample size too low.",
-          detail = "Please select a different sampling design.")
+          message = paste0(
+            "Effective sample size ", msg_danger("too low"), ","),
+          detail = paste("Please select a different sampling design."))
         
       } else {
         
@@ -2347,17 +2352,17 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       rv$sd$tbl <<- rbind(
         rv$sd$tbl,
-        sdRow(data_type = "Modified",
-              group = group,
-              data = rv$sd$simList[[1]],
-              seed = rv$seedList[[set_id]],
-              fit = rv$sd$fitList[[1]],
-              tau_v = tau_v,
-              
-              speed = rv$speedEst_new[1, ],
-              speed_error = rv$speedErr_new[1, ],
-              distance = rv$distEst_new[1, ],
-              distance_error = rv$distErr_new[1, ]))
+        .build_tbl_sd(
+          data_type = "Modified",
+          group = group,
+          data = rv$sd$simList[[1]],
+          seed = rv$seedList[[set_id]],
+          obj = rv$sd$ctsdList[[1]],
+          par = tau_v,
+          speed = rv$speedEst_new[1, ],
+          speed_error = rv$speedErr_new[1, ],
+          distance = rv$distEst_new[1, ],
+          distance_error = rv$distErr_new[1, ]))
       
       rv$sd$tbl <- dplyr::distinct(rv$sd$tbl)
       
@@ -2403,6 +2408,12 @@ mod_tab_ctsd_server <- function(id, rv) {
                         nms_ctsd,
                         nms_dist)
       
+      if (length(unique(dt_sd$data)) == 1) {
+        dt_sd <- dplyr::select(dt_sd, -data)
+        nms <- nms[-1]
+        colgroups <- colgroups[-1]
+      }
+      
       reactable::reactable(
         data = dt_sd,
         compact = TRUE,
@@ -2436,37 +2447,42 @@ mod_tab_ctsd_server <- function(id, rv) {
           n = reactable::colDef(
             name = nms[["n"]],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 0)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 0)),
           N2 = reactable::colDef(
             minWidth = 80, name = nms[["N2"]],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)),
           ctsd = reactable::colDef(
             minWidth = 120, name = nms[["ctsd"]]),
           ctsd_err = reactable::colDef(
             minWidth = 80, name = nms[["ctsd_err"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)),
           ctsd_err_min = reactable::colDef(
             minWidth = 80, name = nms[["ctsd_err_min"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)),
           ctsd_err_max = reactable::colDef(
             minWidth = 80, name = nms[["ctsd_err_max"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)),
           dist = reactable::colDef(
             minWidth = 80, name = nms[["dist"]]),
           dist_err = reactable::colDef(
             minWidth = 80, name = nms[["dist_err"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1))),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1))
+        ),
         columnGroups = colgroups)
 
     }) %>% # end of renderReactable, "sdTable"
@@ -2526,11 +2542,12 @@ mod_tab_ctsd_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      req(rv$active_tab == 'ctsd', rv$simList, rv$simfitList)
+      req(rv$active_tab == 'ctsd', rv$simList, rv$simfitList, rv$ctsdList)
+      req(length(rv$ctsdList) >= 1)
       
       mod_blocks_server(
         id = "sdBlock_N",
-        rv = rv, data = rv$simList, fit = rv$simfitList,
+        rv = rv, data = rv$simList, obj = rv$ctsdList,
         type = "N", name = "speed")
 
     }) # end of observe
@@ -2552,7 +2569,7 @@ mod_tab_ctsd_server <- function(id, rv) {
 
       mod_blocks_server(
         id = "sdBlock_N_new",
-        rv = rv, data = rv$sd$simList, fit = rv$sd$fitList,
+        rv = rv, data = rv$sd$simList, obj = rv$sd$fitList,
         type = "N", name = "speed", class = "cl-mdn")
 
     }) # end of observe

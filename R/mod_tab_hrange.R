@@ -1194,14 +1194,14 @@ mod_tab_hrange_server <- function(id, rv) {
           
           rv$hr$tbl <<- rbind(
             rv$hr$tbl, 
-            hrRow(group = if (rv$grouped) group else NA,
-                  data = rv$simList[[sim_no]], 
-                  seed = rv$seedList[[sim_no]],
-                  fit = rv$simfitList[[sim_no]],
-                  tau_p = tau_p,
-                  
-                  area = out_est_df[i, ],
-                  error = out_err_df[i, ]))
+            .build_tbl_hr(
+              group = if (rv$grouped) group else NA,
+              data = rv$simList[[sim_no]], 
+              seed = rv$seedList[[sim_no]],
+              obj = rv$akdeList[[sim_no]],
+              par = tau_p,
+              area = out_est_df[i, ],
+              error = out_err_df[i, ]))
           next
         }
         
@@ -1224,14 +1224,14 @@ mod_tab_hrange_server <- function(id, rv) {
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          hrRow(group = if (rv$grouped) group else NA,
-                data = rv$simList[[sim_no]], 
-                seed = rv$seedList[[sim_no]],
-                fit = rv$simfitList[[sim_no]],
-                tau_p = tau_p,
-                
-                area = out_est_df[i, ],
-                error =  out_err_df[i, ]))
+          .build_tbl_hr(
+            group = if (rv$grouped) group else NA,
+            data = rv$simList[[sim_no]], 
+            seed = rv$seedList[[sim_no]],
+            obj = rv$simfitList[[sim_no]],
+            par = tau_p,
+            area = out_est_df[i, ],
+            error =  out_err_df[i, ]))
       }
       
       rv$hrEst <<- rbind(rv$hrEst, out_est_df)
@@ -1588,15 +1588,15 @@ mod_tab_hrange_server <- function(id, rv) {
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          hrRow(data_type = "Modified",
-                group = group,
-                data = rv$hr$simList[[1]],
-                seed = rv$seedList[[set_id]],
-                fit = rv$sd$fitList[[1]],
-                tau_p = tau_p,
-
-                area = out_est[1, ],
-                error = out_err[1, ]))
+          .build_tbl_hr(
+            data_type = "Modified",
+            group = group,
+            data = rv$hr$simList[[1]],
+            seed = rv$seedList[[set_id]],
+            obj = rv$sd$fitList[[1]],
+            par = tau_p,
+            area = out_est[1, ],
+            error = out_err[1, ]))
         
         rv$hrEst_new <- out_est
         rv$hrErr_new <- out_err
@@ -1820,6 +1820,12 @@ mod_tab_hrange_server <- function(id, rv) {
       
       colgroups <- list(nms_sizes, nms_error)
       
+      if (length(unique(dt_hr$data)) == 1) {
+        dt_hr <- dplyr::select(dt_hr, -data)
+        nms <- nms[-1]
+        colgroups <- colgroups[-1]
+      }
+      
       reactable::reactable(
         data = dt_hr,
         compact = TRUE,
@@ -1855,31 +1861,34 @@ mod_tab_hrange_server <- function(id, rv) {
           n = reactable::colDef(
             name = nms[["n"]],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 0)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 0)),
           N1 = reactable::colDef(
             minWidth = 80, name = nms[["N1"]],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)),
           area = reactable::colDef(
             minWidth = 80, name = nms[["area"]]),
-          
           area_err = reactable::colDef(
             minWidth = 80, name = nms[["area_err"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)),
           area_err_min = reactable::colDef(
             minWidth = 80, name = nms[["area_err_min"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)),
           area_err_max = reactable::colDef(
             minWidth = 80, name = nms[["area_err_max"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1))),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1))
+        ),
         columnGroups = colgroups)
       
     }) %>% # end of renderReactable, "hrTable"
@@ -1944,7 +1953,7 @@ mod_tab_hrange_server <- function(id, rv) {
 
       mod_blocks_server(
         id = "hrBlock_N",
-        rv = rv, data = rv$simList, fit = rv$simfitList,
+        rv = rv, data = rv$simList, obj = rv$simfitList,
         type = "N", name = "area")
 
     }) # end of observe
@@ -1966,7 +1975,7 @@ mod_tab_hrange_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "hrBlock_N_new",
-        rv = rv, data = rv$hr$simList, fit = rv$hr$fitList,
+        rv = rv, data = rv$hr$simList, obj = rv$hr$fitList,
         type = "N", name = "area", class = "cl-mdn")
       
     }) # end of observe

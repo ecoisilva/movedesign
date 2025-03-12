@@ -759,8 +759,8 @@ mod_comp_tour_server <- function(id, rv) {
             
             "Click the", fontawesome::fa("bookmark"),
             "'Build report' button to see a detailed",
-            "answer to how likely your current sampling design",
-            "is to answer your research questions.")
+            "assessment of how well your current sampling design",
+            "addresses your research targets.")
         )))
       
       element <- c(element, paste0(tab7, "repBox_analyses"))

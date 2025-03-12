@@ -3024,7 +3024,7 @@ mod_tab_design_server <- function(id, rv) {
     }) # end of renderUI // devBlock_loss
     
     # TABLES --------------------------------------------------------------
-    ## Listing multiple sampling designs: ---------------------------------
+    ## Listing sampling designs: ------------------------------------------
     
     observe({
       req(rv$seed0,
@@ -3096,18 +3096,18 @@ mod_tab_design_server <- function(id, rv) {
           n = reactable::colDef(
             name = nms[["n"]],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 0)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 0)),
           N1 = reactable::colDef(
             minWidth = 80, name = nms[["N1"]],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)),
           N2 = reactable::colDef(
             minWidth = 80, name = nms[["N2"]],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)),
           fit = reactable::colDef(
             minWidth = 70, name = nms[["fit"]])
         ))

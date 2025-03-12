@@ -546,27 +546,27 @@ theme_movedesign <- function(ft_size = 13,
       ggplot2::theme(
         
         text = ggplot2::element_text(family = font, size = ft_size),
-
+        
         plot.title = ggtext::element_markdown(
           size = ft_size + 3, vjust = 1.2, hjust = .5),
         
         plot.subtitle = ggtext::element_markdown(
           color = "#666666", hjust = .5),
         plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm"),
-
+        
         panel.grid.minor = ggplot2::element_line(colour = "#f7f7f7"),
         panel.grid.major = ggplot2::element_line(colour = "#f7f7f7"),
-
+        
         axis.text.x = ggplot2::element_text(colour = "#878787"),
         axis.text.y = ggplot2::element_text(colour = "#878787"),
         axis.title.x = ggtext::element_markdown(
           hjust = 1, margin = ggplot2::margin(t = 2.5)),
         
         if (title_y) {
-        axis.title.y = ggtext::element_markdown(
-          angle = 90, margin = ggplot2::margin(r = 2.5)) }
-
-        ) %>%
+          axis.title.y = ggtext::element_markdown(
+            angle = 90, margin = ggplot2::margin(r = 2.5)) }
+        
+      ) %>%
       suppressWarnings()
   }
 }
@@ -1194,12 +1194,13 @@ load_pal <- function() {
   out <- list(mdn = "#222d32",
               sea = "#009da0",
               sea_m = "#007d80",
-              sea_d = "#006669",
+              sea_d = "#00585A",
               grn = "#77b131",
-              grn_d = "#508016",
+              grn_d = "#385c13",
               dgr = "#dd4b39",
-              gld = "#ffbf00",
-              gld_d = "#ea8500")
+              dgr_d = "#A12C3B",
+              gld = "#ffb300",
+              gld_d = "#D47800")
   
   return(out)
 }
@@ -1671,19 +1672,22 @@ devRow <- function(group = NULL,
   return(out)
 }
 
-hrRow <- function(data_type = "Initial",
-                  
-                  group,
-                  data,
-                  seed,
-                  fit,
-                  tau_p,
-                  
-                  area, 
-                  error) {
+
+#' @title Build table for home range
+#' @description Build table for home range
+#' @keywords internal
+#' @noRd
+.build_tbl_hr <- function(data_type = "Initial",
+                          group,
+                          data,
+                          seed,
+                          obj,
+                          par,
+                          area, 
+                          error) {
   
   if (is.null(group)) group <- NA
-  N <- extract_dof(fit, name = "area")[[1]]
+  N <- extract_dof(obj, name = "area")[[1]]
   
   out <- data.frame(
     seed = seed,
@@ -1700,8 +1704,7 @@ hrRow <- function(data_type = "Initial",
     area_err_max = error$uci)
   
   out$taup <- paste(
-    scales::label_comma(.1)(tau_p$value[2]),
-    abbrv_unit(tau_p$unit[2]))
+    scales::label_comma(.1)(par$value[2]), abbrv_unit(par$unit[2]))
   
   dur <- extract_sampling(data, name = "period")[[1]]
   out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
@@ -1717,23 +1720,25 @@ hrRow <- function(data_type = "Initial",
   
   return(out)
   
-} # end of function, hrRow()
+} # end of function, .build_tbl_hr
 
-sdRow <- function(data_type = "Initial",
-                  
-                  group = NULL,
-                  data,
-                  seed,
-                  fit,
-                  tau_v,
-                  
-                  speed,
-                  speed_error,
-                  distance, 
-                  distance_error) {
+#' @title Build table for speed and distance
+#' @description Build table for speed and distance
+#' @keywords internal
+#' @noRd
+.build_tbl_sd <- function(data_type = "Initial",
+                          group = NULL,
+                          data,
+                          seed,
+                          obj,
+                          par,
+                          speed,
+                          speed_error,
+                          distance, 
+                          distance_error) {
   
   if (is.null(group)) group <- NA
-  N <- extract_dof(fit, name = "speed")[[1]]
+  N <- extract_dof(obj, name = "speed")[[1]]
   
   out <- data.frame(
     seed = seed,
@@ -1752,8 +1757,7 @@ sdRow <- function(data_type = "Initial",
     dist_err = distance_error$est)
   
   out$tauv <- paste(
-    scales::label_comma(.1)(tau_v$value[2]),
-    abbrv_unit(tau_v$unit[2]))
+    scales::label_comma(.1)(par$value[2]), abbrv_unit(par$unit[2]))
   
   dur <- extract_sampling(data, name = "period")[[1]]
   out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
@@ -1767,22 +1771,26 @@ sdRow <- function(data_type = "Initial",
     out$ctsd <- NA
   } else {
     out_ctsd <- fix_unit(speed$est, speed$unit)
-    out$ctsd <- paste(out_ctsd$value, abbrv_unit(out_ctsd$unit))
+    out$ctsd <- paste(
+      scales::label_comma(.1)(out_ctsd$value), 
+      abbrv_unit(out_ctsd$unit))
   }
   
   if (is.na(distance$est)) {
     out$dist <- NA
   } else {
-    out_dist <- fix_unit(distance$est, distance$unit,
-                         convert = TRUE)
-    out$dist <- paste(out_dist$value, out_dist$unit)
+    out_dist <- fix_unit(distance$est, distance$unit, convert = TRUE)
+    out$dist <- paste(
+      scales::label_comma(.1)(out_dist$value), 
+      abbrv_unit(out_dist$unit))
   }
   
   return(out)
   
-} # end of function, sdRow()
+} # end of function, .build_tbl_sd()
 
-#' Chooser input
+
+#' @title Chooser input
 #'
 #' @noRd
 #'

@@ -29,7 +29,7 @@ mod_blocks_server <- function(id,
                               N = NULL,
                               
                               data = NULL,
-                              fit = NULL,
+                              obj = NULL,
                               
                               input_name = NULL, 
                               input_modal = NULL,
@@ -148,8 +148,8 @@ mod_blocks_server <- function(id,
                  n <- sapply(data, nrow)
                  if (type == "n") value <- n
                  if (type == "N") {
-                   req(fit)
-                   value <- extract_dof(fit, name = name)
+                   req(obj)
+                   value <- extract_dof(obj, name = name)
                    value <- unlist(value)
                  }
                }
@@ -375,8 +375,12 @@ mod_blocks_server <- function(id,
         ### Error: --------------------------------------------------------
         
         if (grepl("Err", name)) {
+          is_multiple <- ifelse(length(rv$simList) > 1, TRUE, FALSE)
           
-          out_text <- "Relative error"
+          if (!is_multiple) {
+            out_text <- "Relative error"
+          } else out_text <- "Mean relative error"
+          
           if (grepl("List", name)) out_text <- "Expected error"
           
           out_block <- errorBlock(

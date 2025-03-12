@@ -834,7 +834,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           rv$dev$tbl <<- rbind(rv$dev$tbl, newrow)
           
           msg_log(
-            style = 'warning',
+            style = "warning",
             message = paste0("Model fit for sim no. ", i + 1, " ",
                              msg_success("completed"), "..."),
             run_time = time_i)
@@ -922,7 +922,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       if (m_max == 0) {
         msg_log(
           style = "error",
-          message = "Simulations are already available.",
+          message = paste0(
+            "Simulations are already  ", msg_danger("available"), ","),
           detail = "Restart from sampling design tab.")
         
         shinybusy::remove_modal_spinner()  
@@ -1318,15 +1319,14 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          hrRow(group = if (rv$grouped) group else NA,
-                
-                data = rv$simList[[i]], 
-                seed = rv$seedList[[i]],
-                fit = rv$simfitList[[i]],
-                tau_p = tau_p,
-                
-                area = out_est_df,
-                error = out_err_df))
+          .build_tbl_hr(
+            group = if (rv$grouped) group else NA,
+            data = rv$simList[[i]], 
+            seed = rv$seedList[[i]],
+            obj = rv$simfitList[[i]],
+            par = tau_p,
+            area = out_est_df,
+            error = out_err_df))
       }
       
       rv$hrEst <<- rbind(rv$hrEst, out_est_df)
@@ -1915,15 +1915,16 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         rv$sd$tbl <<- rbind(
           rv$sd$tbl,
-          sdRow(group = if (rv$grouped) group else NA,
-                data = rv$simList[[i]],
-                seed = rv$seedList[[i]],
-                tau_v = tau_v,
-                fit = rv$simfitList[[i]],
-                speed = rv$speedEst[i, ],
-                speed_error = rv$speedErr[i, ],
-                distance = rv$distEst[i, ],
-                distance_error = rv$distErr[i, ]))
+          .build_tbl_sd(
+            group = if (rv$grouped) group else NA,
+            data = rv$simList[[i]],
+            seed = rv$seedList[[i]],
+            obj = rv$ctsdList[[i]],
+            par = tau_v,
+            speed = rv$speedEst[i, ],
+            speed_error = rv$speedErr[i, ],
+            distance = rv$distEst[i, ],
+            distance_error = rv$distErr[i, ]))
       }
       
       if (rv$set_analysis == "ctsd") rv$sd_completed <- TRUE

@@ -333,7 +333,9 @@ mod_tab_report_server <- function(id, rv) {
       out <- tagList(
         br(),
         span("Data loss:", class = "txt-label"), ui_loss,
+        p(style = "margin-top: 5px; margin-bottom: 0px"),
         span("Location error:", class = "txt-label"), ui_error,
+        p(style = "margin-top: 5px; margin-bottom: 0px"),
         span("Storage limit:", class = "txt-label"), ui_limit)
       
       return(out)
@@ -1010,7 +1012,7 @@ mod_tab_report_server <- function(id, rv) {
 
       #### For number of simulations:
 
-      sufficient <- span("sufficient", class = "cl-grn")
+      sufficient <- span("sufficient", class = "cl-sea")
       insufficient <- span("insufficient", class = "cl-dgr")
 
       if (length(rv$simList) > 1) {
@@ -1080,24 +1082,24 @@ mod_tab_report_server <- function(id, rv) {
 
       if (is_hr & !is_sd) {
         out <- span(
-          style = "font-weight: bold;",
-
-          "Your current tracking regime is likely sufficient",
-          "for home range",
+          style = paste(css_mono, css_bold),
+          
+          "Your current tracking regime is likely",
+          sufficient, "for home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
                  "estimation,"),
-          "but insufficient for speed & distance",
+          "but", insufficient, "for speed & distance",
           ifelse(is_sd_ci,
                  wrap_none("estimation ", txt_sd_uncertainty, "."),
                  "estimation."))
 
         if (any(rv$dev$N2 == 0))
           out <- span(
-            style = "font-weight: bold;",
+            style = paste(css_mono, css_bold),
 
-            "Your current tracking regime is likely sufficient",
-            "for home range",
+            "Your current tracking regime is likely",
+            sufficient, "for home range",
             ifelse(is_hr_ci,
                    wrap_none("estimation ", txt_hr_uncertainty, ","),
                    "estimation,"),
@@ -1111,14 +1113,14 @@ mod_tab_report_server <- function(id, rv) {
 
       if (!is_hr & is_sd) {
         out <- span(
-          style = "font-weight: bold;",
+          style = paste(css_mono, css_bold),
 
-          "Your current tracking regime may be insufficient",
-          "for home range",
+          "Your current tracking regime may be",
+          insufficient, "for home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
                  "estimation,"),
-          "but likely sufficient for speed & distance",
+          "but likely", sufficient, "for speed & distance",
           ifelse(is_sd_ci,
                  wrap_none("estimation ", txt_sd_uncertainty, "."),
                  "estimation."))
@@ -1126,10 +1128,10 @@ mod_tab_report_server <- function(id, rv) {
 
       if (is_hr & is_sd) {
         out <- span(
-          style = "font-weight: bold;",
+          style = paste(css_mono, css_bold),
 
-          "Your current tracking regime is likely sufficient",
-          "for both home range",
+          "Your current tracking regime is likely",
+          sufficient, "for both home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
                  "estimation,"),
@@ -1141,10 +1143,10 @@ mod_tab_report_server <- function(id, rv) {
 
       if (!is_hr & !is_sd) {
         out <- span(
-          style = css_bold,
+          style = paste(css_mono, css_bold),
 
-          "Your current tracking regime may be insufficient",
-          "for both home range",
+          "Your current tracking regime may be",
+          insufficient, "for both home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
                  "estimation,"),
@@ -1155,10 +1157,10 @@ mod_tab_report_server <- function(id, rv) {
 
         if (any(rv$dev$N2 == 0))
           out <- span(
-            style = "font-weight: bold;",
+            style = paste(css_mono, css_bold),
 
-            "Your current tracking regime may be insufficient",
-            "for home range",
+            "Your current tracking regime may be",
+            insufficient, "for home range",
             ifelse(is_hr_ci,
                    wrap_none("estimation ", txt_hr_uncertainty, ","),
                    "estimation,"),
@@ -1283,7 +1285,8 @@ mod_tab_report_server <- function(id, rv) {
     }) # end of observe
     
     output$end_meta <- renderUI({
-      req(rv$report$meta, rv$report$groups)
+      req(rv$which_meta != "none")
+      req(rv$report$meta, rv$report$groups, rv$grouped)
       
       div(id = "report_meta",
           style = paste0("background-color: #f4f4f4;",
@@ -1434,7 +1437,7 @@ mod_tab_report_server <- function(id, rv) {
         if (i == 1 && length(type) == 1)
           out_meta <- p(
             p(txt_title[[i]],
-              style = paste(css_mono, "font-size: 18px;",
+              style = paste("font-size: 18px;",
                             "color: var(--sea-dark);"),
               class = "ttl-tab"),
             p(out_meta,
@@ -1449,12 +1452,18 @@ mod_tab_report_server <- function(id, rv) {
         if (i == 2)
           out_meta <- p(
             p("Home range meta-analyses:",
-              style = paste("font-size: 18px;",
+              style = paste("font-family: var(--sans);",
+                            "font-weight: 400;",
+                            "font-style: italic;",
+                            "font-size: 18px;",
                             "color: var(--sea-dark);")),
             p(out_meta),
             p(),
             p("Speed & distance meta-analyses:",
-              style = paste("font-size: 18px;",
+              style = paste("font-family: var(--sans);",
+                            "font-weight: 400;",
+                            "font-style: italic;",
+                            "font-size: 18px;",
                             "color: var(--sea-dark);")),
             p(txt_mean, 
               txt_final),
@@ -1650,8 +1659,35 @@ mod_tab_report_server <- function(id, rv) {
     observe({
       req(rv$which_question,
           rv$report$species,
-          rv$report$regime,
-          rv$report$analyses)
+          rv$report$regime)
+      
+      if (is.null(rv$report$analyses)) {
+        shinyjs::hide(id = "repBox_analyses")
+        shinyjs::hide(id = "section-comparison")
+        
+        m <- length(rv$simList)
+        m <- ifelse(m == 1, "one simulation", "two simulations")
+        
+        shinyalert::shinyalert(
+          type = "warning",
+          title = "Warning",
+          text = tagList(span(
+            "Only", m, "currently available.",
+            "Run more", span("simulations", class = "cl-grn"), 
+            "in one of the previous analyses tabs."
+          )),
+          html = TRUE,
+          size = "xs")
+        
+        msg_log(
+          style = "error",
+          message = paste(
+            msg_danger("Insufficient simulations"),
+            "to generate a report."),
+          detail = "Return to the analyses tab(s).")
+      }
+      
+      req(rv$report$analyses)
       
       if (length(rv$which_question) > 1) {
         shinyjs::hide(id = "section-comparison")
@@ -1896,11 +1932,9 @@ mod_tab_report_server <- function(id, rv) {
           dplyr::select(dti, dti_notes) %>%
           unique()
         
-        highlighted_dti <- opts$dti[match(rv$highlight_dti,
-                                          opts$dti_notes)]
-        
-        out_dti <- fix_unit(highlighted_dti, "seconds",
-                            convert = TRUE)
+        highlighted_dti <- opts$dti[
+          match(rv$highlight_dti, opts$dti_notes)]
+        out_dti <- fix_unit(highlighted_dti, "seconds", convert = TRUE)
         
         est <- .err_to_txt(rv$sd_cri_new$est)
         lci <- .err_to_txt(rv$sd_cri_new$lci)
@@ -1915,29 +1949,30 @@ mod_tab_report_server <- function(id, rv) {
              rv$tau_v[[1]]$unit[2]) / 3, "seconds")
         
         if (highlighted_dti <= ideal_dti$value) {
-          out_comp <- out_comp_sd <-
-            p("Your new sampling interval would likely be sufficient",
-              "for", span("speed & distance", class = "cl-grn"),
-              "estimation,", txt_level, "uncertainty:",
-              "for a sampling interval of",
-              wrap_none(out_dti$value, " ", out_dti$unit, ", there"),
-              "is a", wrap_none(est, "%", css = "cl-blk"),
-              "probability that the relative error will lie within",
-              wrap_none(lci, "%", css = "cl-blk"),
-              "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
+          out_comp <- out_comp_sd <- p(
+            "Your new sampling interval would likely be sufficient",
+            "for", span("speed & distance", class = "cl-grn"),
+            "estimation,", txt_level, "uncertainty:",
+            "for a sampling interval of",
+            wrap_none(out_dti$value, " ", out_dti$unit, ", there"),
+            "is a", wrap_none(est, "%", css = "cl-blk"),
+            "probability that the relative error will lie within",
+            wrap_none(lci, "%", css = "cl-blk"),
+            "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
           
         } else {
-          out_comp <- out_comp_sd <-
-            p("Your new sampling interval would likely be insufficient",
-              "for", span("speed & distance", class = "cl-grn"),
-              "estimation. For a sampling interval of",
-              wrap_none(out_dti$value, " ", out_dti$unit, ", there is"),
-              "high uncertainty",
-              wrap_none("(", est, "%", css = "cl-blk"),
-              "probability that the relative error will lie within",
-              wrap_none(lci, "%", css = "cl-blk"),
-              "and", wrap_none(uci, "%", end = ").", css = "cl-blk"))
+          out_comp <- out_comp_sd <- p(
+            "Your new sampling interval would likely be insufficient",
+            "for", span("speed & distance", class = "cl-grn"),
+            "estimation. For a sampling interval of",
+            wrap_none(out_dti$value, " ", out_dti$unit, ", there is"),
+            "high uncertainty",
+            wrap_none("(", est, "%", css = "cl-blk"),
+            "probability that the relative error will lie within",
+            wrap_none(lci, "%", css = "cl-blk"),
+            "and", wrap_none(uci, "%", end = ").", css = "cl-blk"))
         }
+        
       } # end of "Speed & distance"
       
       ### Both home range and speed & distance:
@@ -3567,7 +3602,7 @@ mod_tab_report_server <- function(id, rv) {
     # TABLES --------------------------------------------------------------
     ## Final report table (combining previous results): -------------------
     
-    reportRow <- reactive({
+    build_tbl_report <- reactive({
       n_sims <- length(rv$simList)
       
       dt_regs <- rv$dev$tbl
@@ -3618,17 +3653,11 @@ mod_tab_report_server <- function(id, rv) {
             dplyr::full_join(tmpsd))
       }
       
-      # if (length(rv$simList) == 1) {
-      #   if (nrow(tmpdat == 2))
-      #     tmpdat <- dplyr::coalesce(tmpdat[1,], tmpdat[2,])
-      # }
-      
       tmpdat <- tmpdat %>%
         dplyr::group_by(seed) %>%
         dplyr::summarize(dplyr::across(dplyr::everything(), 
                          ~ifelse(all(is.na(.)), NA,
                                  .[!is.na(.)][1])))
-      
       return(tmpdat)
       
     }) # end of reactive
@@ -3640,7 +3669,7 @@ mod_tab_report_server <- function(id, rv) {
           rv$simList,
           !rv$is_report)
       
-      rv$report$tbl <- reportRow()
+      rv$report$tbl <- build_tbl_report()
       dat <- rv$report$tbl
       
       if (length(rv$simList) == 1) {
@@ -3798,20 +3827,20 @@ mod_tab_report_server <- function(id, rv) {
           reactable::colDef(
             name = nms[1, "n"],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 0)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 0)) },
         N1 = if ("N1" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "N1"],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)) },
         N2 = if ("N2" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "N2"],
             style = format_num,
-            format = reactable::colFormat(separators = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)) },
         area = if ("area" %in% choices_subset) {
           reactable::colDef(
             minWidth = 100, name = nms[1, "area"]) },
@@ -3819,20 +3848,23 @@ mod_tab_report_server <- function(id, rv) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err"],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)) },
         area_err_min = if ("area_err_min" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err_min"],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)) },
         area_err_max = if ("area_err_max" %in% choices_subset) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "area_err_max"],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)) },
         ctsd = if ("ctsd" %in% choices_subset) {
           reactable::colDef(
             minWidth = 100, name = nms[1, "ctsd"]) },
@@ -3840,20 +3872,23 @@ mod_tab_report_server <- function(id, rv) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "ctsd_err"],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)) },
         ctsd_err_min = if ("ctsd_err_min" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 80, name = nms[1, "ctsd_err_min"],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)) },
         ctsd_err_max = if ("ctsd_err_max" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 80, name = nms[1, "ctsd_err_max"],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)) },
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)) },
         dist = if ("dist" %in% choices_subset) { 
           reactable::colDef(
             minWidth = 100, name = nms[1, "dist"]) },
@@ -3861,8 +3896,9 @@ mod_tab_report_server <- function(id, rv) {
           reactable::colDef(
             minWidth = 80, name = nms[1, "dist_err"],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE,
-                                          digits = 1)) }
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = 1)) }
       )
       
       namedcolumns[sapply(namedcolumns, is.null)] <- NULL
@@ -4003,17 +4039,18 @@ mod_tab_report_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "repBlock_Narea", 
-        rv = rv, data = rv$simList, fit = rv$simfitList,
+        rv = rv, data = rv$simList, obj = rv$simfitList,
         type = "N", name = "area")
       
     }) # end of observe
     
     observe({
-      req(rv$active_tab == 'report', rv$simList, rv$simfitList)
+      req(rv$active_tab == 'report',
+          rv$ctsdList, rv$simList, rv$simfitList)
       
       mod_blocks_server(
         id = "repBlock_Nspeed", 
-        rv = rv, data = rv$simList, fit = rv$simfitList,
+        rv = rv, data = rv$simList, obj = rv$ctsdList,
         type = "N", name = "speed")
       
     }) # end of observe

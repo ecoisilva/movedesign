@@ -1606,12 +1606,12 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "uplBlock_Narea", 
-        rv = rv, data = rv$datList[rv$id], fit = rv$fitList[rv$id],
+        rv = rv, data = rv$datList[rv$id], obj = rv$fitList[rv$id],
         type = "N", name = "area")
       
       mod_blocks_server(
         id = "uplBlock_Nspeed", 
-        rv = rv, data = rv$datList[rv$id], fit = rv$fitList[rv$id],
+        rv = rv, data = rv$datList[rv$id], obj = rv$fitList[rv$id],
         type = "N", name = "speed")
       
     }) # end of observe

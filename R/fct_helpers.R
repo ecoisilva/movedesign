@@ -871,11 +871,9 @@ extract_sampling <- function(obj, name, units = FALSE) {
 }
 
 
-#' Extract DOF
-#'
+#' @title Extract DOF values
 #' @description Extracting DOF values and units from ctmm summaries.
 #' @keywords internal
-#'
 #' @noRd
 extract_dof <- function(
     obj,
@@ -890,10 +888,15 @@ extract_dof <- function(
     obj <- list(obj)
   }
   
-  x <- 1
   out <- list()
   out <- lapply(seq_along(obj), function(x) {
-    sum.obj <- summary(obj[[x]])
+    
+    if (class(obj[[x]]) == "speed") {
+      sum.obj <- obj[[x]]
+    } else {
+      sum.obj <- summary(obj[[x]])
+    }
+    
     if (is.null(sum.obj)) return(NULL)
     if (is.null(sum.obj$DOF) || length(sum.obj$DOF) == 0)
       return(NULL)

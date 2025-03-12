@@ -720,7 +720,7 @@ mod_tab_data_select_server <- function(id, rv) {
       req(input$id_selected != "")
       req(is_valid())
 
-      if (length(rv$datList) == 1)
+      if (length(rv$datList[input$id_selected]) == 1)
         txt_extra <- ", and the individual is " else
           txt_extra <- ", and the individuals are:\n   "
       
@@ -1157,12 +1157,12 @@ mod_tab_data_select_server <- function(id, rv) {
       
       mod_blocks_server(
         id = "selBlock_Narea", 
-        rv = rv, data = rv$datList[rv$id], fit = rv$fitList[rv$id],
+        rv = rv, data = rv$datList[rv$id], obj = rv$fitList[rv$id],
         type = "N", name = "area")
       
       mod_blocks_server(
         id = "selBlock_Nspeed", 
-        rv = rv, data = rv$datList[rv$id], fit = rv$fitList[rv$id],
+        rv = rv, data = rv$datList[rv$id], obj = rv$fitList[rv$id],
         type = "N", name = "speed")
       
     }) # end of observe
