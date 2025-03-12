@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>‘movedesign’ tutorial • movedesign</title>
+<title>‘movedesign’ Walkthrough • movedesign</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
 <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="../apple-touch-icon.png">
@@ -20,7 +20,7 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="tutorial_files/libs/quarto-html/popper.min.js"></script><script src="tutorial_files/libs/quarto-html/tippy.umd.min.js"></script><link href="tutorial_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="tutorial_files/libs/quarto-html/light-border.css" rel="stylesheet">
-<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="‘movedesign’ tutorial">
+<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="‘movedesign’ Walkthrough">
 <meta property="og:image" content="https://ecoisilva.github.io/movedesign/logo.png">
 </head>
 <body>
@@ -45,7 +45,7 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/tutorial.html">'movedesign' tutorial</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial.html">'movedesign' Walkthrough</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
@@ -65,10 +65,10 @@
 </nav><div class="container template-quarto">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>‘movedesign’ tutorial</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>‘movedesign’ Walkthrough</h1>
 
-
-
+      <p class="author">Inês Silva</p>
+      <p class="date">2025-03-12</p>
 
       <small class="dont-index">Source: <a href="https://github.com/ecoisilva/movedesign/tree/main/vignettes/tutorial.qmd" class="external-link"><code>vignettes/tutorial.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
@@ -79,87 +79,171 @@
 
 
 
-    <section class="section level2"><h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+    <style>
+body {
+    text-align: justify;
+}
+.custom-box {
+    background-color: #009DA0;
+    color: white;
+    padding: 10px 10px 2px 10px;
+    margin: 8px 0 8px 0;
+}
+</style>
+<section class="section level2"><h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<div style="text-align: justify">
 <p>The application includes a built-in guided tutorial to help you navigate its features. When you open the <code>'Home'</code> tab, you’ll find the following:</p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure><p><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img1.png" style="width:100.0%"></p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial1_img1.png" class="quarto-figure quarto-figure-center"></p>
 </figure>
 </div>
-</div>
-</div>
-<p>This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly <span style="color: white; background: #009DA0;">highlighted</span>. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking <code>'Next'</code> or pressing the right arrow key on your keyboard.</p>
-<p><strong>Warning:</strong> Avoid interacting with anything outside the highlighted zones during the tutorial, as this may disrupt the guided experience.</p>
-<p>This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24V250.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1H222.6c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg> help tips at any time. Documentation is also available on <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">Silva et al. 2023</a>)</span>.</p>
-<section class="level2"><h3 id="setting-a-workflow">1. Setting a workflow<a class="anchor" aria-label="anchor" href="#setting-a-workflow"></a>
+<p>This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly <span style="color: white; background: #009DA0;">highlighted</span>. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking <code>'Next'</code> or pressing the right arrow key on your keyboard. The information from the guided tour is also partially available below.</p>
+<p><svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#DB4545;overflow:visible;position:relative;"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24V264c0 13.3-10.7 24-24 24s-24-10.7-24-24V152c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg><span style="color: #DB4545; font-weight: bold;">Warning:</span> <span style="color: #DB4545;">During the guided tutorial, refrain from interacting with anything outside the highlighted zones to avoid interruptions.</span></p>
+<p>This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24V250.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1H222.6c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg><strong>help tips</strong> at any time. Documentation is also available on Silva <em>et al.</em> <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">2023</a>)</span>.</p>
+<section class="level2"><h3 id="workflows">Workflows<a class="anchor" aria-label="anchor" href="#workflows"></a>
 </h3>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure><p><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img2.png" style="width:100.0%"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>These are the current options for <code>movedesign</code> workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target.</p>
-<p>1.1. <code>Data Source</code></p>
-<p>Users can specify how they want to obtain data:</p>
-<ul>
-<li>
-<code>Upload</code>: Import a dataset from a local file.</li>
-<li>
-<code>Select</code>: Choose from pre-existing datasets available in the application.</li>
-<li>
-<code>Simulate</code>: Generate synthetic data for testing or modeling purposes.</li>
+<p>These are the current options for <code>movedesign</code> workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target. All workflows follow a stepwise approach, with tabs displayed sequentially on the right sidebar. Irrelevant tabs for the current workflow will be automatically hidden.</p>
+<p><strong>Step 1.</strong> <em>Data source:</em></p>
+<p>Users can specify what is their data source:</p>
+<ul class="task-list">
+<li><label><input type="checkbox"><code>Upload</code>: Import a dataset from a local file.</label></li>
+<li><label><input type="checkbox"><code>Select</code>: Choose from pre-existing datasets available in the application.</label></li>
+<li><label><input type="checkbox"><code>Simulate</code>: Generate synthetic data for testing or modeling purposes.</label></li>
 </ul>
-<p>1.2. <code>Research Target</code></p>
-<p>Users can define their primary research focus:</p>
-<ul>
-<li>
-<code>Home range</code>: Analyze long-term space-use requirements.</li>
-<li>
-<code>Speed &amp; distance</code>: Investigate movement metrics such as speed and distance traveled.</li>
+<p><strong>Step 2.</strong> <em>Research target:</em></p>
+<p>Users can define their research targets:</p>
+<ul class="task-list">
+<li><label><input type="checkbox"><code>Home range</code>: Analyze long-term space-use requirements.</label></li>
+<li><label><input type="checkbox"><code>Speed &amp; distance</code>: Investigate movement metrics such as speed and distance traveled.</label></li>
 </ul>
-<p>1.3. <code>Analytical Target</code></p>
-<p>Users can decide on the type of statistical analysis:</p>
-<ul>
-<li>
-<code>Individual estimate</code>: Obtain metrics for a single individual.</li>
-<li>
-<code>Mean estimate of sampled population</code>: Obtain a mean estimate across a sampled group.</li>
-<li>
-<code>Compare estimates of two sampled populations</code>: Perform a comparative analysis between two groups.</li>
+<p><strong>Step 3.</strong> <em>Analytical target:</em></p>
+<p>Users can decide on their analytical target for the estimates:</p>
+<ul class="task-list">
+<li><label><input type="checkbox"><code>Individual estimate</code>: Obtain metrics for a single individual.</label></li>
+<li><label><input type="checkbox"><code>Mean estimate of sampled population</code>: Obtain a mean estimate across a sampled group.</label></li>
+<li><label><input type="checkbox"><code>Compare estimates of two sampled populations</code>: Perform a comparative analysis between two groups (for the detection of sub-populations).</label></li>
 </ul>
 <p>Additionally, users have the option to:</p>
-<ul>
-<li>
-<code>Add individual variation</code>: Include variation among individuals during simulation.</li>
-</ul>
-<p>All workflows follows a stepwise approach, with tabs presented in sequence.</p>
-</section><section class="level2"><h3 id="study-design-of-an-individual-estimate">Study design of an individual estimate<a class="anchor" aria-label="anchor" href="#study-design-of-an-individual-estimate"></a>
+<ul class="task-list">
+<li><label><input type="checkbox"><code>Add individual variation</code>: Include variation among individuals during simulations (only available for mean and estimate comparisons).</label></li>
+</ul></section><section class="level2"><h3 id="study-design-of-an-individual-estimate">Study design of an individual estimate:<a class="anchor" aria-label="anchor" href="#study-design-of-an-individual-estimate"></a>
 </h3>
-<p>Workflow based on <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">Silva et al. 2023</a>)</span>.</p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure><p><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img3.png" style="width:100.0%"></p>
+<p>This workflow is presented in Silva <em>et al.</em> <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">2023</a>)</span>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial1_img3.png" class="quarto-figure quarto-figure-center"></p>
 </figure>
 </div>
+<p>You will be guided through a real animal tracking project available through the package. To simulate data from scratch, exit the tutorial (click the <code>×</code> button above the tutorial box) and navigate to the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#009DA0;overflow:visible;position:relative;"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V299.6l-94.7 94.7c-8.2 8.2-14 18.5-16.8 29.7l-15 60.1c-2.3 9.4-1.8 19 1.4 27.8H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM549.8 235.7l14.4 14.4c15.6 15.6 15.6 40.9 0 56.6l-29.4 29.4-71-71 29.4-29.4c15.6-15.6 40.9-15.6 56.6 0zM311.9 417L441.1 287.8l71 71L382.9 487.9c-4.1 4.1-9.2 7-14.9 8.4l-60.1 15c-5.5 1.4-11.2-.2-15.2-4.2s-5.6-9.7-4.2-15.2l15-60.1c1.4-5.6 4.3-10.8 8.4-14.9z"></path></svg><code>'Simulate data'</code> tab, where another guided tour is available.</p>
+<p>First, we will navigate to (1) the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#009DA0;overflow:visible;position:relative;"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384v38.6C310.1 219.5 256 287.4 256 368c0 59.1 29.1 111.3 73.7 143.3c-3.2 .5-6.4 .7-9.7 .7H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zm48 96a144 144 0 1 1 0 288 144 144 0 1 1 0-288zm16 80c0-8.8-7.2-16-16-16s-16 7.2-16 16v48H368c-8.8 0-16 7.2-16 16s7.2 16 16 16h48v48c0 8.8 7.2 16 16 16s16-7.2 16-16V384h48c8.8 0 16-7.2 16-16s-7.2-16-16-16H448V304z"></path></svg><code>'Select data'</code> tab to load a dataset available within the package. Then, we will move to (2) the <svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#009DA0;overflow:visible;position:relative;"><path d="M176 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h16V98.4C92.3 113.8 16 200 16 304c0 114.9 93.1 208 208 208s208-93.1 208-208c0-41.8-12.3-80.7-33.5-113.2l24.1-24.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L355.7 143c-28.1-23-62.2-38.8-99.7-44.6V64h16c17.7 0 32-14.3 32-32s-14.3-32-32-32H224 176zm72 192V320c0 13.3-10.7 24-24 24s-24-10.7-24-24V192c0-13.3 10.7-24 24-24s24 10.7 24 24z"></path></svg><code>'Sampling design'</code> tab to define the sampling duration and interval. Finally, we will proceed to (3) the <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M352 96c0 14.3-3.1 27.9-8.8 40.2L396 227.4c-23.7 25.3-54.2 44.1-88.5 53.6L256 192h0 0l-68 117.5c21.5 6.8 44.3 10.5 68.1 10.5c70.7 0 133.8-32.7 174.9-84c11.1-13.8 31.2-16 45-5s16 31.2 5 45C428.1 341.8 347 384 256 384c-35.4 0-69.4-6.4-100.7-18.1L98.7 463.7C94 471.8 87 478.4 78.6 482.6L23.2 510.3c-5 2.5-10.9 2.2-15.6-.7S0 501.5 0 496V440.6c0-8.4 2.2-16.7 6.5-24.1l60-103.7C53.7 301.6 41.8 289.3 31.2 276c-11.1-13.8-8.8-33.9 5-45s33.9-8.8 45 5c5.7 7.1 11.8 13.8 18.2 20.1l69.4-119.9c-5.6-12.2-8.8-25.8-8.8-40.2c0-53 43-96 96-96s96 43 96 96zm21 297.9c32.6-12.8 62.5-30.8 88.9-52.9l43.7 75.5c4.2 7.3 6.5 15.6 6.5 24.1V496c0 5.5-2.9 10.7-7.6 13.6s-10.6 3.2-15.6 .7l-55.4-27.7c-8.4-4.2-15.4-10.8-20.1-18.9L373 393.9zM256 128a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"></path></svg><code>'Analyses'</code> tab.</p>
+<p>Afterwards, you can review a detailed summary of all outputs in the <code>'Report'</code> tab.</p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Please choose <code>Select</code> as your data source to choose from a list of available species. Then, set <code>Home range</code> and <code>Speed &amp; distance</code> as your research targets. For the analytical target, choose <code>Individual estimate</code>.</p>
 </div>
+<section class="level3"><h4 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
+</h4>
+<p>By navigating to the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#009DA0;overflow:visible;position:relative;"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384v38.6C310.1 219.5 256 287.4 256 368c0 59.1 29.1 111.3 73.7 143.3c-3.2 .5-6.4 .7-9.7 .7H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zm48 96a144 144 0 1 1 0 288 144 144 0 1 1 0-288zm16 80c0-8.8-7.2-16-16-16s-16 7.2-16 16v48H368c-8.8 0-16 7.2-16 16s7.2 16 16 16h48v48c0 8.8 7.2 16 16 16s16-7.2 16-16V384h48c8.8 0 16-7.2 16-16s-7.2-16-16-16H448V304z"></path></svg><code>'Select data'</code> tab, you can choose from seven species available in the <code>ctmm</code> package. Parameters extracted from these species can inform tracking studies of other species with similar movement behaviors.</p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> First, select the <code>African Buffalo</code> (<em>Syncerus caffer</em>) as your study species. From the dropdown menu, select <code>Cilla</code> as your focal individual and click the <code>'Validate'</code> button.</p>
 </div>
-<p>You will be guided through a real animal tracking project available through the package. To simulate data from scratch, exit the tour (click the <code>×</code> button above the tutorial box) and navigate to the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:  #009DA0;overflow:visible;position:relative;"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V299.6l-94.7 94.7c-8.2 8.2-14 18.5-16.8 29.7l-15 60.1c-2.3 9.4-1.8 19 1.4 27.8H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM549.8 235.7l14.4 14.4c15.6 15.6 15.6 40.9 0 56.6l-29.4 29.4-71-71 29.4-29.4c15.6-15.6 40.9-15.6 56.6 0zM311.9 417L441.1 287.8l71 71L382.9 487.9c-4.1 4.1-9.2 7-14.9 8.4l-60.1 15c-5.5 1.4-11.2-.2-15.2-4.2s-5.6-9.7-4.2-15.2l15-60.1c1.4-5.6 4.3-10.8 8.4-14.9z"></path></svg><code>'Simulate data'</code> tab, where another guided tour is available.</p>
-<p>First, we will navigate to (1) the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:   #009DA0;overflow:visible;position:relative;"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384v38.6C310.1 219.5 256 287.4 256 368c0 59.1 29.1 111.3 73.7 143.3c-3.2 .5-6.4 .7-9.7 .7H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zm48 96a144 144 0 1 1 0 288 144 144 0 1 1 0-288zm16 80c0-8.8-7.2-16-16-16s-16 7.2-16 16v48H368c-8.8 0-16 7.2-16 16s7.2 16 16 16h48v48c0 8.8 7.2 16 16 16s16-7.2 16-16V384h48c8.8 0 16-7.2 16-16s-7.2-16-16-16H448V304z"></path></svg><code>'Select data'</code> tab to load a dataset available within the package. Then, we will move to (2) the <svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:    #009DA0;overflow:visible;position:relative;"><path d="M176 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h16V98.4C92.3 113.8 16 200 16 304c0 114.9 93.1 208 208 208s208-93.1 208-208c0-41.8-12.3-80.7-33.5-113.2l24.1-24.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L355.7 143c-28.1-23-62.2-38.8-99.7-44.6V64h16c17.7 0 32-14.3 32-32s-14.3-32-32-32H224 176zm72 192V320c0 13.3-10.7 24-24 24s-24-10.7-24-24V192c0-13.3 10.7-24 24-24s24 10.7 24 24z"></path></svg><code>'Sampling design'</code> tab to define the sampling duration and interval. Finally, we will proceed to (3) the <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M352 96c0 14.3-3.1 27.9-8.8 40.2L396 227.4c-23.7 25.3-54.2 44.1-88.5 53.6L256 192h0 0l-68 117.5c21.5 6.8 44.3 10.5 68.1 10.5c70.7 0 133.8-32.7 174.9-84c11.1-13.8 31.2-16 45-5s16 31.2 5 45C428.1 341.8 347 384 256 384c-35.4 0-69.4-6.4-100.7-18.1L98.7 463.7C94 471.8 87 478.4 78.6 482.6L23.2 510.3c-5 2.5-10.9 2.2-15.6-.7S0 501.5 0 496V440.6c0-8.4 2.2-16.7 6.5-24.1l60-103.7C53.7 301.6 41.8 289.3 31.2 276c-11.1-13.8-8.8-33.9 5-45s33.9-8.8 45 5c5.7 7.1 11.8 13.8 18.2 20.1l69.4-119.9c-5.6-12.2-8.8-25.8-8.8-40.2c0-53 43-96 96-96s96 43 96 96zm21 297.9c32.6-12.8 62.5-30.8 88.9-52.9l43.7 75.5c4.2 7.3 6.5 15.6 6.5 24.1V496c0 5.5-2.9 10.7-7.6 13.6s-10.6 3.2-15.6 .7l-55.4-27.7c-8.4-4.2-15.4-10.8-20.1-18.9L373 393.9zM256 128a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"></path></svg><code>'Analyses'</code> tab.</p>
-</section>
+<p>When choosing an individual, ensure it accurately represents the movement behavior you aim to emulate. The validation step ensures that we can detect the <strong>position autocorrelation timescale</strong> (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mi>p</mi></msub><annotation encoding="application/x-tex">\tau_p</annotation></semantics></math>), essential for home range estimation, and the <strong>velocity autocorrelation timescale</strong> (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mi>v</mi></msub><annotation encoding="application/x-tex">\tau_v</annotation></semantics></math>), for speed &amp; distance estimation.</p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Once validation is successful, the button should now read <code>'Validated!'</code> Proceed by clicking the <code>'Extract'</code> button.</p>
 </div>
-<hr>
-<section class="level2 unnumbered"><h3 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial1_img4.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+</section><section class="level3"><h4 id="sampling-design">Sampling design<a class="anchor" aria-label="anchor" href="#sampling-design"></a>
+</h4>
+<p>Navigate to the <svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#009DA0;overflow:visible;position:relative;"><path d="M176 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h16V98.4C92.3 113.8 16 200 16 304c0 114.9 93.1 208 208 208s208-93.1 208-208c0-41.8-12.3-80.7-33.5-113.2l24.1-24.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L355.7 143c-28.1-23-62.2-38.8-99.7-44.6V64h16c17.7 0 32-14.3 32-32s-14.3-32-32-32H224 176zm72 192V320c0 13.3-10.7 24-24 24s-24-10.7-24-24V192c0-13.3 10.7-24 24-24s24 10.7 24 24z"></path></svg><code>'Sampling design'</code> tab. Now, we are ready to evaluate the intended sampling design for a future tracking project by simulating data conditioned on the extracted movement parameters.</p>
+<p><strong>Step 1.</strong> <em>Select a tracking device:</em></p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Choose <code>GPS/Satellite logger</code> as your tracking device.</p>
+</div>
+<p>GPS/Satellite loggers automate sampling using satellite systems. However, both <strong>sampling duration</strong> and <strong>sampling interval</strong> are inherently limited by GPS battery life. This tradeoff determines how much data can be collected over time.</p>
+<p><strong>Step 2.</strong> <em>Adjust battery life and fix rate:</em></p>
+<p>Here, you can configure two key parameters: <code>GPS battery life</code>, the expected operational duration of the GPS device, and <code>Maximum GPS fix rate</code>, the longest possible time interval between recorded locations (fixes) over that duration. The device manufacturer typically provides this information, which is listed in the model’s documentation.</p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Now, adjust the settings as follows: set <code>GPS battery life</code> to 2 years, and set the <code>Maximum GPS fix rate</code> to 1 fix every 6 hours. Then, from the sampling parameters plot, choose a sampling interval of <code>2 hours</code>.</p>
+</div>
+<p><strong>Step 3 (optional).</strong> <em>Add device limitations:</em></p>
+<p>You may include other device limitations, such as location error and success fix rate, to understand the precision and reliability of the sampling regime under various conditions.</p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Change <code>Fix success rate (%)</code> to 85%, and the <code>Location error</code> to 10 meters.</p>
+</div>
+<p><strong>Step 4.</strong> <em>Validate and run simulation:</em></p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Click the ‘Validate’ button until it reads ‘Validated!’, then click the ‘Run’ button.</p>
+</div>
+<p>Two notifications will appear: the first during the calculation of the expected run time, and the second during the simulation and model fitting based on the current parameters. <strong>Wait for both to finish before proceeding.</strong></p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial1_img5.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+</section><section class="level3"><h4 id="analyses">Analyses<a class="anchor" aria-label="anchor" href="#analyses"></a>
+</h4>
+<p>Navigate to the <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M352 96c0 14.3-3.1 27.9-8.8 40.2L396 227.4c-23.7 25.3-54.2 44.1-88.5 53.6L256 192h0 0l-68 117.5c21.5 6.8 44.3 10.5 68.1 10.5c70.7 0 133.8-32.7 174.9-84c11.1-13.8 31.2-16 45-5s16 31.2 5 45C428.1 341.8 347 384 256 384c-35.4 0-69.4-6.4-100.7-18.1L98.7 463.7C94 471.8 87 478.4 78.6 482.6L23.2 510.3c-5 2.5-10.9 2.2-15.6-.7S0 501.5 0 496V440.6c0-8.4 2.2-16.7 6.5-24.1l60-103.7C53.7 301.6 41.8 289.3 31.2 276c-11.1-13.8-8.8-33.9 5-45s33.9-8.8 45 5c5.7 7.1 11.8 13.8 18.2 20.1l69.4-119.9c-5.6-12.2-8.8-25.8-8.8-40.2c0-53 43-96 96-96s96 43 96 96zm21 297.9c32.6-12.8 62.5-30.8 88.9-52.9l43.7 75.5c4.2 7.3 6.5 15.6 6.5 24.1V496c0 5.5-2.9 10.7-7.6 13.6s-10.6 3.2-15.6 .7l-55.4-27.7c-8.4-4.2-15.4-10.8-20.1-18.9L373 393.9zM256 128a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"></path></svg><code>'Analyses'</code> tabs.</p>
+<section class="level4"><h5 id="home-range-estimation">Home range estimation<a class="anchor" aria-label="anchor" href="#home-range-estimation"></a>
+</h5>
+<p>In this step, we use the <strong>Autocorrelated Kernel Density Estimator (AKDE)</strong> <span class="citation" data-cites="fleming2015 silva2022">(<a href="#ref-fleming2015" role="doc-biblioref">Fleming et al., 2015</a>; <a href="#ref-silva2022" role="doc-biblioref">Silva et al., 2022</a>)</span>, available from the <code>ctmm</code> <code>R</code> package, to estimate home range area. In the introduction box of the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M408 120c0 54.6-73.1 151.9-105.2 192c-7.7 9.6-22 9.6-29.6 0C241.1 271.9 168 174.6 168 120C168 53.7 221.7 0 288 0s120 53.7 120 120zm8 80.4c3.5-6.9 6.7-13.8 9.6-20.6c.5-1.2 1-2.5 1.5-3.7l116-46.4C558.9 123.4 576 135 576 152V422.8c0 9.8-6 18.6-15.1 22.3L416 503V200.4zM137.6 138.3c2.4 14.1 7.2 28.3 12.8 41.5c2.9 6.8 6.1 13.7 9.6 20.6V451.8L32.9 502.7C17.1 509 0 497.4 0 480.4V209.6c0-9.8 6-18.6 15.1-22.3l122.6-49zM327.8 332c13.9-17.4 35.7-45.7 56.2-77V504.3L192 449.4V255c20.5 31.3 42.3 59.6 56.2 77c20.5 25.6 59.1 25.6 79.6 0zM288 152a40 40 0 1 0 0-80 40 40 0 1 0 0 80z"></path></svg><code>'Home range'</code> tab:</p>
+<p><strong>Step 1.</strong> <em>Run the estimation:</em></p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Click the <code>Run estimation</code> to generate the home range estimate.</p>
+</div>
+<p><strong>Step 2.</strong> <em>Interpret the outputs:</em></p>
+<p>This tab presents three key outputs:</p>
+<ul>
+<li><p><strong>Estimate</strong>: The computed home range size, accompanied by the 95% confidence interval (low–high) to account for uncertainty.</p></li>
+<li><p><strong>Relative error (%)</strong>: The percentage deviation of the estimate and its CIs from the true home range. Lower error values indicate a more precise estimate.</p></li>
+<li><p><strong>Effective sample size (N<sub>area</sub>)</strong>: The number of home range crossing events, which influences the reliability of the estimate.</p></li>
+</ul>
+<p>Given the current sampling parameters (sampling interval of <em>one fix every 2 hours</em> and the realized duration of <em>10.1 months</em>), N<sub>area</sub> ≈ 34, indicating approximately 34 home range crossing events occurred within the sampling period.</p>
+<p>The visualization compares the estimated home range to the true home range. Ideally, the point estimate should closely match the true home range. The 95% confidence intervals should be as narrow as possible and tightly follow the point estimate.</p>
+<p>In our case study, a single simulation yielded wide confidence intervals, suggesting high uncertainty and suggesting that a longer sampling duration may be necessary. However, the relative error was low, indicating that while additional data collection may not substantially change the point estimates, it will narrow confidence intervals.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial1_img6.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+</section><section class="level4"><h5 id="speed-distance-estimation">Speed &amp; distance estimation<a class="anchor" aria-label="anchor" href="#speed-distance-estimation"></a>
+</h5>
+<p>For this step, we are using the <strong>continuous-time speed &amp; distance (CTSD)</strong> estimator <span class="citation" data-cites="noonan2019">(<a href="#ref-noonan2019" role="doc-biblioref">Noonan et al., 2019</a>)</span>, available in the <code>ctmm</code> <code>R</code> package. In the introduction box of the <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zM288 96a32 32 0 1 0 -64 0 32 32 0 1 0 64 0zM256 416c35.3 0 64-28.7 64-64c0-17.4-6.9-33.1-18.1-44.6L366 161.7c5.3-12.1-.2-26.3-12.3-31.6s-26.3 .2-31.6 12.3L257.9 288c-.6 0-1.3 0-1.9 0c-35.3 0-64 28.7-64 64s28.7 64 64 64zM176 144a32 32 0 1 0 -64 0 32 32 0 1 0 64 0zM96 288a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm352-32a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"></path></svg><code>'Speed &amp; distance'</code> tab:</p>
+<p><strong>Step 1.</strong> <em>Run the estimation:</em></p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Click the <code>Run estimation</code> to estimate speed &amp; distance.</p>
+</div>
+<p><strong>Step 2.</strong> <em>Interpret the outputs:</em></p>
+<p>The output types here are identical to those in the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M408 120c0 54.6-73.1 151.9-105.2 192c-7.7 9.6-22 9.6-29.6 0C241.1 271.9 168 174.6 168 120C168 53.7 221.7 0 288 0s120 53.7 120 120zm8 80.4c3.5-6.9 6.7-13.8 9.6-20.6c.5-1.2 1-2.5 1.5-3.7l116-46.4C558.9 123.4 576 135 576 152V422.8c0 9.8-6 18.6-15.1 22.3L416 503V200.4zM137.6 138.3c2.4 14.1 7.2 28.3 12.8 41.5c2.9 6.8 6.1 13.7 9.6 20.6V451.8L32.9 502.7C17.1 509 0 497.4 0 480.4V209.6c0-9.8 6-18.6 15.1-22.3l122.6-49zM327.8 332c13.9-17.4 35.7-45.7 56.2-77V504.3L192 449.4V255c20.5 31.3 42.3 59.6 56.2 77c20.5 25.6 59.1 25.6 79.6 0zM288 152a40 40 0 1 0 0-80 40 40 0 1 0 0 80z"></path></svg><code>'Home range'</code> tab. However, in this case, they apply to <strong>distance</strong> (comparing the trajectory derived from the selected sampling regime to the true fine-scale trajectory, shown in grey), and <strong>speed</strong>. Ideally, both should closely align with the truth.</p>
+<p>Wide confidence intervals indicate high uncertainty, suggesting that a shorter sampling interval may be necessary to improve accuracy.</p>
+<p>Given the current sampling parameters (sampling interval of <em>one fix every 2 hours</em> and the realized duration of <em>10.1 months</em>), we have an N<sub>speed</sub> ≈ 1,995. This is the equivalent to 1,995 independently sampled velocities. A higher N<sub>speed</sub> enhances estimate precision and reduces uncertainty.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial1_img7.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+</section></section><section class="level3"><h4 id="report">Report<a class="anchor" aria-label="anchor" href="#report"></a>
+</h4>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Click the <code>Build report</code> button to see a detailed assessment of how well your current sampling design addresses your research targets.</p>
+</div>
+<p>All settings and outputs are compiled here. This report will help you determine whether the sampling duration is sufficient for obtaining a reliable home range area estimate, and if the sampling interval is adequate for a reliable speed and distance estimate.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial1_img8.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+<p>You can compare your results to our simulations based on similar timescales and sampling parameters, allowing for a quick assessment of consistency.</p>
+</section></section><section class="level2 unnumbered"><h3 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h3>
-<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list">
+<div id="ref-fleming2015" class="csl-entry" role="listitem">
+Fleming, C. H., Fagan, W. F., Mueller, T., Olson, K. A., Leimgruber, P., &amp; Calabrese, J. M. (2015). Rigorous home range estimation with movement data: A new autocorrelated kernel density estimator. <em>Ecology</em>, <em>96</em>(5), 1182–1188. <a href="https://doi.org/10.1890/14-2010.1" class="external-link">https://doi.org/10.1890/14-2010.1</a>
+</div>
+<div id="ref-noonan2019" class="csl-entry" role="listitem">
+Noonan, M. J., Fleming, C. H., Akre, T. S., Drescher-Lehman, J., Gurarie, E., Harrison, A.-L., Kays, R., &amp; Calabrese, J. M. (2019). Scale-insensitive estimation of speed and distance traveled from animal tracking data. <em>Movement Ecology</em>, <em>7</em>(1), 1–15. <a href="https://doi.org/10.1186/s40462-019-0177-1" class="external-link">https://doi.org/10.1186/s40462-019-0177-1</a>
+</div>
+<div id="ref-silva2022" class="csl-entry" role="listitem">
+Silva, I., Fleming, C. H., Noonan, M. J., Alston, J., Folta, C., Fagan, W. F., &amp; Calabrese, J. M. (2022). Autocorrelation<span>-</span>informed home range estimation: A review and practical guide. <em>Methods in Ecology and Evolution</em>, <em>13</em>(3), 534–544. <a href="https://doi.org/10.1111/2041-210X.13786" class="external-link">https://doi.org/10.1111/2041-210X.13786</a>
+</div>
 <div id="ref-silva2023movedesign" class="csl-entry" role="listitem">
-Silva, Inês, Christen H Fleming, Michael J Noonan, William F Fagan, and Justin M Calabrese. 2023. <span>“Movedesign: Shiny r App to Evaluate Sampling Design for Animal Movement Studies.”</span> <em>Methods in Ecology and Evolution</em> 14 (9): 2216–25.
+Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., &amp; Calabrese, J. M. (2023). Movedesign: Shiny r app to evaluate sampling design for animal movement studies. <em>Methods in Ecology and Evolution</em>, <em>14</em>(9), 2216–2225. <a href="https://doi.org/10.1111/2041-210X.14153" class="external-link">https://doi.org/10.1111/2041-210X.14153</a>
 </div>
 </div>
 </section></section><script id="quarto-html-after-body" type="application/javascript">
