@@ -210,6 +210,7 @@ golem_add_external_resources <- function() {
       "https://fonts.googleapis.com/css?",
       "family=",
       "Fira+Sans", "|",
+      "Fira+Sans:italic", "|",
       "Plus+Jakarta+Sans", "|",
       "Roboto+Condensed", "|",
       "Roboto+Condensed:wght@700",
