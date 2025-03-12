@@ -15,7 +15,7 @@
  --rainforest: #009a84;
  
  --forest: #77b131;
- --forest-dark: #508016;
+ --forest-dark: #385c13;
  
  --jungle-light: #a3ba00;
  --jungle: #8ca000; 
@@ -1561,10 +1561,13 @@ table.dataTable.display tbody td {
   background-color: var(--sea) !important;
 }
 
-.modal_error.sweet-alert h2,
-.modal_warning.sweet-alert h2 {
+.modal_error.sweet-alert h2 {
   font-size: 24px !important;
   color: var(--danger) !important;
+}
+.modal_warning.sweet-alert h2 {
+  font-size: 24px !important;
+  color: var(--gold-dawn) !important;
 }
 
 .modal_warning.sweet-alert .sa-icon.sa-error,
