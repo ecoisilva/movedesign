@@ -1,5 +1,7 @@
 ---
-title: "'movedesign' tutorial"
+title: "'movedesign' Walkthrough"
+author: "Inês Silva"
+date: "`r Sys.Date()`"
 description: > 
   How to design an animal tracking project with 'movedesign'
 vignette: >
@@ -11,7 +13,22 @@ knitr:
     collapse: true
     comment: '#>'
 bibliography: references.bib
+csl: mee.csl
 ---
+
+```{=html}
+<style>
+body {
+    text-align: justify;
+}
+.custom-box {
+    background-color: #009DA0;
+    color: white;
+    padding: 10px 10px 2px 10px;
+    margin: 8px 0 8px 0;
+}
+</style>
+```
 
 # Overview
 
@@ -24,76 +41,180 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-<div style="text-align: justify">
+
 The application includes a built-in guided tutorial to help you navigate its features. When you open the `'Home'` tab, you'll find the following:
 
-```{r, echo=FALSE, out.width="100%", eval=TRUE}
+![](images/tutorial1_img1.png){fig-align="center"}
 
-knitr::include_graphics("https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img1.png")
+This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly [highlighted]{style="color: white; background: #009DA0;"}. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking `'Next'` or pressing the right arrow key on your keyboard. The information from the guided tour is also partially available below.
 
-```
+`r fontawesome::fa("circle-exclamation", fill = "#DB4545")` [Warning:]{style="color: #DB4545; font-weight: bold;"} [During the guided tutorial, refrain from interacting with anything outside the highlighted zones to avoid interruptions.]{style="color: #DB4545;"}
 
-This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly [highlighted]{style="color: white; background: #009DA0;"}. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking `'Next'` or pressing the right arrow key on your keyboard.
+This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive `r fa("circle-question")` **help tips** at any time. Documentation is also available on Silva *et al.* [-@silva2023movedesign].
 
-**Warning:** Avoid interacting with anything outside the highlighted zones during the tutorial, as this may disrupt the guided experience.
+## Workflows
 
-This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive `r fa("circle-question")` help tips at any time. Documentation is also available on [@silva2023movedesign].
+These are the current options for `movedesign` workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target. All workflows follow a stepwise approach, with tabs displayed sequentially on the right sidebar. Irrelevant tabs for the current workflow will be automatically hidden.
 
-## 1. Setting a workflow
+**Step 1.** *Data source:*
 
-```{r, echo=FALSE, out.width="100%", eval=TRUE}
+Users can specify what is their data source:
 
-knitr::include_graphics("https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img2.png")
+-   [ ] `Upload`: Import a dataset from a local file.
+-   [ ] `Select`: Choose from pre-existing datasets available in the application.
+-   [ ] `Simulate`: Generate synthetic data for testing or modeling purposes.
 
-```
+**Step 2.** *Research target:*
 
-These are the current options for `movedesign` workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target.
+Users can define their research targets:
 
-1.1. `Data Source`
+-   [ ] `Home range`: Analyze long-term space-use requirements.
+-   [ ] `Speed & distance`: Investigate movement metrics such as speed and distance traveled.
 
-Users can specify how they want to obtain data:
+**Step 3.** *Analytical target:*
 
--   `Upload`: Import a dataset from a local file.
--   `Select`: Choose from pre-existing datasets available in the application.
--   `Simulate`: Generate synthetic data for testing or modeling purposes.
+Users can decide on their analytical target for the estimates:
 
-1.2. `Research Target`
-
-Users can define their primary research focus:
-
--   `Home range`: Analyze long-term space-use requirements.
--   `Speed & distance`: Investigate movement metrics such as speed and distance traveled.
-
-1.3. `Analytical Target`
-
-Users can decide on the type of statistical analysis:
-
--   `Individual estimate`: Obtain metrics for a single individual.
--   `Mean estimate of sampled population`: Obtain a mean estimate across a sampled group.
--   `Compare estimates of two sampled populations`: Perform a comparative analysis between two groups.
+-   [ ] `Individual estimate`: Obtain metrics for a single individual.
+-   [ ] `Mean estimate of sampled population`: Obtain a mean estimate across a sampled group.
+-   [ ] `Compare estimates of two sampled populations`: Perform a comparative analysis between two groups (for the detection of sub-populations).
 
 Additionally, users have the option to:
 
--   `Add individual variation`: Include variation among individuals during simulation.
+-   [ ] `Add individual variation`: Include variation among individuals during simulations (only available for mean and estimate comparisons).
 
-All workflows follows a stepwise approach, with tabs presented in sequence.
+## Study design of an individual estimate:
 
-## Study design of an individual estimate
+This workflow is presented in Silva *et al.* [-@silva2023movedesign].
 
-Workflow based on [@silva2023movedesign].
+![](images/tutorial1_img3.png){fig-align="center"}
 
-```{r, echo=FALSE, out.width="100%", eval=TRUE}
+You will be guided through a real animal tracking project available through the package. To simulate data from scratch, exit the tutorial (click the `×` button above the tutorial box) and navigate to the `r fa("file-pen", fill = "#009DA0")` `'Simulate data'` tab, where another guided tour is available.
 
-knitr::include_graphics("https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/tutorial_img3.png")
+First, we will navigate to (1) the `r fa("file-circle-plus", fill = "#009DA0")` `'Select data'` tab to load a dataset available within the package. Then, we will move to (2) the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab to define the sampling duration and interval. Finally, we will proceed to (3) the `r fa("compass-drafting")` `'Analyses'` tab.
 
-```
+Afterwards, you can review a detailed summary of all outputs in the `'Report'` tab.
 
-You will be guided through a real animal tracking project available through the package. To simulate data from scratch, exit the tour (click the `×` button above the tutorial box) and navigate to the `r fa("file-pen", fill = "  #009DA0")` `'Simulate data'` tab, where another guided tour is available.
+::: custom-box
+`r fontawesome::fa("bell")` Please choose `Select` as your data source to choose from a list of available species. Then, set `Home range` and `Speed & distance` as your research targets. For the analytical target, choose `Individual estimate`.
+:::
 
-First, we will navigate to (1) the `r fa("file-circle-plus", fill = "   #009DA0")` `'Select data'` tab to load a dataset available within the package. Then, we will move to (2) the `r fa("stopwatch", fill = "    #009DA0")` `'Sampling design'` tab to define the sampling duration and interval. Finally, we will proceed to (3) the `r fa("compass-drafting")` `'Analyses'` tab.
+### Data
 
-</div>
+By navigating to the `r fa("file-circle-plus", fill = "#009DA0")` `'Select data'` tab, you can choose from seven species available in the `ctmm` package. Parameters extracted from these species can inform tracking studies of other species with similar movement behaviors.
 
-------------------------------------------------------------------------
+::: custom-box
+`r fontawesome::fa("bell")` First, select the `African Buffalo` (*Syncerus caffer*) as your study species. From the dropdown menu, select `Cilla` as your focal individual and click the `'Validate'` button.
+:::
+
+When choosing an individual, ensure it accurately represents the movement behavior you aim to emulate. The validation step ensures that we can detect the **position autocorrelation timescale** ($\tau_p$), essential for home range estimation, and the **velocity autocorrelation timescale** ($\tau_v$), for speed & distance estimation.
+
+::: custom-box
+`r fontawesome::fa("bell")` Once validation is successful, the button should now read `'Validated!'` Proceed by clicking the `'Extract'` button.
+:::
+
+![](images/tutorial1_img4.png){fig-align="center"}
+
+### Sampling design
+
+Navigate to the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab. Now, we are ready to evaluate the intended sampling design for a future tracking project by simulating data conditioned on the extracted movement parameters.
+
+**Step 1.** *Select a tracking device:*
+
+::: custom-box
+`r fontawesome::fa("bell")` Choose `GPS/Satellite logger` as your tracking device.
+:::
+
+GPS/Satellite loggers automate sampling using satellite systems. However, both **sampling duration** and **sampling interval** are inherently limited by GPS battery life. This tradeoff determines how much data can be collected over time.
+
+**Step 2.** *Adjust battery life and fix rate:*
+
+Here, you can configure two key parameters: `GPS battery life`, the expected operational duration of the GPS device, and `Maximum GPS fix rate`, the longest possible time interval between recorded locations (fixes) over that duration. The device manufacturer typically provides this information, which is listed in the model’s documentation.
+
+::: custom-box
+`r fontawesome::fa("bell")` Now, adjust the settings as follows: set `GPS battery life` to 2 years, and set the `Maximum GPS fix rate` to 1 fix every 6 hours. Then, from the sampling parameters plot, choose a sampling interval of `2 hours`.
+:::
+
+**Step 3 (optional).** *Add device limitations:*
+
+You may include other device limitations, such as location error and success fix rate, to understand the precision and reliability of the sampling regime under various conditions.
+
+::: custom-box
+`r fontawesome::fa("bell")` Change `Fix success rate (%)` to 85%, and the `Location error` to 10 meters.
+:::
+
+**Step 4.** *Validate and run simulation:*
+
+::: custom-box
+`r fontawesome::fa("bell")` Click the 'Validate' button until it reads 'Validated!', then click the 'Run' button.
+:::
+
+Two notifications will appear: the first during the calculation of the expected run time, and the second during the simulation and model fitting based on the current parameters. **Wait for both to finish before proceeding.**
+
+![](images/tutorial1_img5.png){fig-align="center"}
+
+### Analyses
+
+Navigate to the `r fa("compass-drafting")` `'Analyses'` tabs.
+
+#### Home range estimation
+
+In this step, we use the **Autocorrelated Kernel Density Estimator (AKDE)** [@fleming2015; @silva2022], available from the `ctmm` `R` package, to estimate home range area. In the introduction box of the `r fa("map-location-dot")` `'Home range'` tab:
+
+**Step 1.** *Run the estimation:*
+
+::: custom-box
+`r fontawesome::fa("bell")` Click the `Run estimation` to generate the home range estimate.
+:::
+
+**Step 2.** *Interpret the outputs:*
+
+This tab presents three key outputs:
+
+-   **Estimate**: The computed home range size, accompanied by the 95% confidence interval (low–high) to account for uncertainty.
+
+-   **Relative error (%)**: The percentage deviation of the estimate and its CIs from the true home range. Lower error values indicate a more precise estimate.
+
+-   **Effective sample size (N<sub>area</sub>)**: The number of home range crossing events, which influences the reliability of the estimate.
+
+Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), N<sub>area</sub> ≈ 34, indicating approximately 34 home range crossing events occurred within the sampling period.
+
+The visualization compares the estimated home range to the true home range. Ideally, the point estimate should closely match the true home range. The 95% confidence intervals should be as narrow as possible and tightly follow the point estimate.
+
+In our case study, a single simulation yielded wide confidence intervals, suggesting high uncertainty and suggesting that a longer sampling duration may be necessary. However, the relative error was low, indicating that while additional data collection may not substantially change the point estimates, it will narrow confidence intervals.
+
+![](images/tutorial1_img6.png){fig-align="center"}
+
+#### Speed & distance estimation
+
+For this step, we are using the **continuous-time speed & distance (CTSD)** estimator [@noonan2019], available in the `ctmm` `R` package. In the introduction box of the `r fa("gauge-high")` `'Speed & distance'` tab:
+
+**Step 1.** *Run the estimation:*
+
+::: custom-box
+`r fontawesome::fa("bell")` Click the `Run estimation` to estimate speed & distance.
+:::
+
+**Step 2.** *Interpret the outputs:*
+
+The output types here are identical to those in the `r fa("map-location-dot")` `'Home range'` tab. However, in this case, they apply to **distance** (comparing the trajectory derived from the selected sampling regime to the true fine-scale trajectory, shown in grey), and **speed**. Ideally, both should closely align with the truth.
+
+Wide confidence intervals indicate high uncertainty, suggesting that a shorter sampling interval may be necessary to improve accuracy.
+
+Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), we have an N<sub>speed</sub> ≈ 1,995. This is the equivalent to 1,995 independently sampled velocities. A higher N<sub>speed</sub> enhances estimate precision and reduces uncertainty.
+
+![](images/tutorial1_img7.png){fig-align="center"}
+
+### Report
+
+::: custom-box
+`r fontawesome::fa("bell")` Click the `Build report` button to see a detailed assessment of how well your current sampling design addresses your research targets. 
+:::
+
+All settings and outputs are compiled here. This report will help you determine whether the sampling duration is sufficient for obtaining a reliable home range area estimate, and if the sampling interval is adequate for a reliable speed and distance estimate.
+
+![](images/tutorial1_img8.png){fig-align="center"}
+
+You can compare your results to our simulations based on similar timescales and sampling parameters, allowing for a quick assessment of consistency.  
 
 ## References
