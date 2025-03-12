@@ -75,5 +75,5 @@ To cite `movedesign`, use the following:
 citation("movedesign")
 ```
 
-> Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese, J. M. (2023). movedesign: Shiny R app to evaluate sampling design for animal movement studies. Methods in Ecology and Evolution, 14(9), 2216-2225.
+> Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese, J. M. (2023). movedesign: Shiny R app to evaluate sampling design for animal movement studies. Methods in Ecology and Evolution, 14(9), 2216–2225. https://doi.org/10.1111/2041-210X.14153
 :::
