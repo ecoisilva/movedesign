@@ -77,7 +77,10 @@ introduction, refer to the
 or the
 [manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153).
 
-<img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png" style="padding: 5px 0px 5px 0px;" width="100%"/>
+<center>
+
+<img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png" style="padding: 15px 0px 5px 0px; max-width: 600px; width: 80%;"/>
+</center>
 
 ## Getting help:
 
