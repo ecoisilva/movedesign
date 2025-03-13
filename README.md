@@ -77,7 +77,9 @@ introduction, refer to the
 or the
 [manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153).
 
-<img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png" style="padding: 15px 0px 5px 0px; max-width: 550px; width: 80%; display: block; margin: 0 auto;"/>
+<img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png"
+     alt="This figure presents a conceptual workflow of the key elements of the ‘movedesign’ application, which provides an R Shiny-powered user interface to test different sampling designs for specified tracking projects." 
+     style="padding: 15px 0px 5px 0px; max-width: 550px; width: 80%; display: block; margin: 0 auto;"/>
 
 ## Getting help:
 
