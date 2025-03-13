@@ -27,6 +27,9 @@ body {
     padding: 10px 10px 2px 10px;
     margin: 8px 0 8px 0;
 }
+code {
+  background-color: RGB(232, 232, 232) !important;
+}
 </style>
 ```
 
@@ -83,7 +86,7 @@ Additionally, users have the option to:
 
 -   [ ] `Add individual variation`: Include variation among individuals during simulations (only available for mean and estimate comparisons).
 
-## Study design of an individual estimate:
+## Study design for an individual estimate:
 
 This workflow is presented in Silva *et al.* [-@silva2023movedesign].
 
@@ -208,10 +211,10 @@ Given the current sampling parameters (sampling interval of *one fix every 2 hou
 ### Report
 
 ::: custom-box
-`r fontawesome::fa("bell")` Click the `Build report` button to see a detailed assessment of how well your current sampling design addresses your research targets. 
+`r fontawesome::fa("bell")` Click the `Build report` button to generate a detailed evaluation of how well your sampling design meets your research targets.
 :::
 
-All settings and outputs are compiled here. This report will help you determine whether the sampling duration is sufficient for obtaining a reliable home range area estimate, and if the sampling interval is adequate for a reliable speed and distance estimate.
+The report compiles all settings and outputs in one place, helping you assess whether the *sampling parameters* were sufficient for a reliable **home range area estimate**, and/or **speed and distance estimate**. Use this report to fine-tune your sampling design to ensure robust outputs.
 
 ![](images/tutorial1_img8.png){fig-align="center"}
 
