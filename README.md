@@ -77,10 +77,7 @@ introduction, refer to the
 or the
 [manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153).
 
-<center>
-
-<img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png" style="padding: 15px 0px 5px 0px; max-width: 600px; width: 80%;"/>
-</center>
+<img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png" style="padding: 15px 0px 5px 0px; max-width: 550px; width: 80%; display: block; margin: 0 auto;"/>
 
 ## Getting help:
 
@@ -100,6 +97,6 @@ citation("movedesign")
 > Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese,
 > J. M. (2023). movedesign: Shiny R app to evaluate sampling design for
 > animal movement studies. Methods in Ecology and Evolution, 14(9),
-> 2216-2225.
+> 2216–2225. <https://doi.org/10.1111/2041-210X.14153>
 
 </div>
