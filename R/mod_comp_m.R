@@ -1463,13 +1463,16 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           detail = paste("or until error threshold is reached."))
         
         if (length(rv$simList) == 1) {
+          
           # Running one extra simulation at the beginning:
           rv$seed0 <- generate_seed(rv$seedList)
           simList <- simulating_data()
           
           seedList <- list(rv$seed0)
           rv$seedList <- c(rv$seedList, rv$seed0)
+          
         } else {
+          
           if (rv$grouped) {
             rv$seed0 <- generate_seed(rv$seedList)
             simList <- simulating_data()
@@ -1486,6 +1489,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             })
             seedList <- utils::tail(rv$seedList, m)
           }
+          
         }
         
         # If there is tag failure:
@@ -1525,10 +1529,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         if (!is.null(rv$lost))
           if (rv$lost$perc > 0) {
             
-            to_keep <- round(sapply(simList, function(x)
-              nrow(x) * (1 - rv$lost$perc)))
-            
             simList <- lapply(simList, function(x) {
+              
+              to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
               to_keep_vec <- sort(sample(1:nrow(x),
                                          to_keep, replace = FALSE))
               x[to_keep_vec, ] })

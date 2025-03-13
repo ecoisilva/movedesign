@@ -2350,10 +2350,9 @@ mod_tab_design_server <- function(id, rv) {
       if (!is.null(input$device_fixsuccess))
         if (req(input$device_fixsuccess) < 100) {
           
-          to_keep <- round(sapply(simList, function(x)
-            nrow(x) * (1 - rv$lost$perc)))
-          
           simList <- lapply(simList, function(x) {
+            
+            to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
             to_keep_vec <- sort(sample(1:nrow(x),
                                        to_keep, replace = FALSE))
             x[to_keep_vec, ] })

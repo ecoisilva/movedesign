@@ -441,12 +441,12 @@ mod_comp_viz_server <- function(id, rv) {
         if (detected[1]) {
           txt_detected <- tagList(span(
             "Sub-populations were", span("correctly", class = "cl-sea"),
-            "detected for", txt_target[[set_target]][[2]],
+            "detected for", txt_target[[rv$set_target]][[2]],
             "with the current groups."))
         } else if (!detected[1]) {
           txt_detected <- tagList(span(
             "No sub-populations detected with the current groups",
-            "for", wrap_none(txt_target[[set_target]][[2]], "."),
+            "for", wrap_none(txt_target[[rv$set_target]][[2]], "."),
             "Proceed with", wrap_none(span("caution", 
                                            class = "cl-dgr"), ".")))
         }
