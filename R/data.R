@@ -30,7 +30,7 @@
 #' \code{tau_p}, \code{tau_v}, \code{hrange}, and \code{pars}.
 #'
 #' @references Calabrese et al. (2016). Methods in Ecology and Evolution, 7(9), 1124-1132.
-#' (\href{https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12559}{MEE})
+#' DOI: 10.1111/2041-210X.12559
 #'
 #' \describe{
 #'   \item{name}{Movement process names (e.g., "Ind. Ident. Distr. (IID)")}
@@ -53,7 +53,7 @@
 #' @format An object of class \code{"data.frame"}.
 #'
 #' @references Silva et al. (2021). Methods in Ecology and Evolution, 13(3), 534-544.
-#' (\href{https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13786}{MEE})
+#' DOI: 10.1111/2041-210X.12559
 #'
 "sims_hrange"
 
@@ -67,6 +67,6 @@
 #' @format An object of class \code{"data.frame"}.
 #'
 #' @references Noonan et al. (2019).  Movement Ecology, 7(1), 1-15.
-#' (\href{https://movementecologyjournal.biomedcentral.com/articles/10.1186/s40462-019-0177-19}{ME})
+#' DOI: 10.1186/s40462-019-0177-1
 #'
 "sims_speed"

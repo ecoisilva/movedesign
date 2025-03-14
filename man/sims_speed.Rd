@@ -15,6 +15,6 @@ Expanded simulations from Noonan et al. (2019) and Silva et al. (in prep).
 }
 \references{
 Noonan et al. (2019).  Movement Ecology, 7(1), 1-15.
-(\href{https://movementecologyjournal.biomedcentral.com/articles/10.1186/s40462-019-0177-19}{ME})
+DOI: 10.1186/s40462-019-0177-1
 }
 \keyword{datasets}

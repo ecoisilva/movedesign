@@ -15,6 +15,6 @@ Expanded simulations from Silva et al. (2021).
 }
 \references{
 Silva et al. (2021). Methods in Ecology and Evolution, 13(3), 534-544.
-(\href{https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13786}{MEE})
+DOI: 10.1111/2041-210X.12559
 }
 \keyword{datasets}

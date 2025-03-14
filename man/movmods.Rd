@@ -18,7 +18,7 @@ within the ctmm R package.
 }
 \references{
 Calabrese et al. (2016). Methods in Ecology and Evolution, 7(9), 1124-1132.
-(\href{https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12559}{MEE})
+DOI: 10.1111/2041-210X.12559
 
 \describe{
   \item{name}{Movement process names (e.g., "Ind. Ident. Distr. (IID)")}
