@@ -678,7 +678,7 @@ mod_tab_meta_server <- function(id, rv) {
         )),
         html = TRUE,
         size = "xs")
-      
+        
     }) # end of observe
     
     observe({
@@ -906,6 +906,16 @@ mod_tab_meta_server <- function(id, rv) {
       
       if ("Speed & distance" %in% rv$which_question) {
         shinyjs::show(id = "metaBox_err_speed")
+      }
+      
+      if (length(rv$which_question) == 1) {
+        if ("Home range" %in% rv$which_question) {
+          shinyjs::hide(id = "metaBox_err_speed")
+        }
+        
+        if ("Speed & distance" %in% rv$which_question) {
+          shinyjs::hide(id = "metaBox_err_hr")
+        }
       }
       
       msg_log(
@@ -1984,17 +1994,18 @@ mod_tab_meta_server <- function(id, rv) {
     output$metaTable_m_optimal <- reactable::renderReactable({
       req(rv$which_question, rv$meta_tbl)
       
-      if (length(rv$which_question) == 2) {
-        req(rv$set_analysis)
-        set_analysis <- rv$set_analysis
-      } else {
-        set_analysis <- switch(rv$which_question,
-                               "Home range" = "hr",
-                               "Speed & distance" = "ctsd")
-      }
+      # TODO TOREMOVE
+      # if (length(rv$which_question) == 2) {
+      #   req(rv$set_analysis)
+      #   set_analysis <- rv$set_analysis
+      # } else {
+      #   set_analysis <- switch(rv$which_question,
+      #                          "Home range" = "hr",
+      #                          "Speed & distance" = "ctsd")
+      # }
       
       dt_meta <- rv$meta_tbl %>%
-        dplyr::filter(type == set_analysis) %>% 
+        dplyr::filter(type == rv$set_analysis) %>% 
         dplyr::select(-overlaps, -type) %>%
         dplyr::mutate(subpop = as.logical(subpop_detected)) %>% 
         dplyr::select(m, error_lci, error, error_uci, group, subpop)
@@ -2104,6 +2115,9 @@ mod_tab_meta_server <- function(id, rv) {
     observe({
       req(rv$metaErr,
           "Speed & distance" %in% rv$which_question)
+      
+      tmp <- dplyr::filter(rv$metaErr, type == "ctsd")
+      req(nrow(tmp) > 0)
       
       mod_blocks_server(
         id = "metaBlock_speed",

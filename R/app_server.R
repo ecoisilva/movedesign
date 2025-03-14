@@ -71,12 +71,14 @@ app_server <- function(input, output, session) {
     add_note = FALSE,
     
     err_prev = rep(1, 5),
+    dev_failed = c(),
     
-    time = c(0, 0),
     tour_active = FALSE,
     alert_active = TRUE,
     overwrite_active = FALSE,
     crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0",
+    time = list("hr" = list("initial" = c(0, 0), "final" = c(0, 0)),
+                "ctsd" = list("initial" = c(0, 0), "final" = c(0, 0))),
     
     highlight_dur = "",
     highlight_dti = "",

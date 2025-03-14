@@ -155,19 +155,33 @@ mod_comp_settings_server <- function(id, rv) {
     # SETTINGS ------------------------------------------------------------
     ## Save settings/values (for next session): ---------------------------
     
-    output$download_settings <- downloadHandler(
-      filename = function() {
-        paste0("movedesign-out_", rv$species, "_", Sys.Date(), ".rds")
-      },
-      content = function(file) {
-        if (is.null(rv$simList)) {
-          shiny::showNotification(
-            "No data available to save!", type = "error", duration = 8)
-        } else { base::saveRDS(reactiveValuesToList(rv), file = file) }
-        
-      } # end of content
-    ) # end of output, "download_settings"
-    
+    observe({
+      
+      # shinybusy::show_modal_spinner(
+      #   spin = "fading-circle",
+      #   color = "var(--sea)",
+      #   text = tagList(
+      #     span("Restoring", style = "color: #797979;"),
+      #     wrap_none(span("settings", class = "cl-sea"),
+      #               span("...", style = "color: #797979;"))))
+      
+      output$download_settings <- downloadHandler(
+        filename = function() {
+          paste0("movedesign-out_", rv$species, "_", Sys.Date(), ".rds")
+        },
+        content = function(file) {
+          if (is.null(rv$simList)) {
+            shiny::showNotification(
+              "No data available to save!", type = "error", duration = 8)
+          } else { base::saveRDS(reactiveValuesToList(rv), file = file) }
+          
+        } # end of content
+      ) # end of output, "download_settings"
+      
+      # shinybusy::remove_modal_spinner()
+      
+    }) # end of observe
+  
     ## Restore settings/values (from previous session): -------------------
     
     observe({

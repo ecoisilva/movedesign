@@ -1178,8 +1178,6 @@ mod_tab_data_upload_server <- function(id, rv) {
       dat0 <- rv$datList[rv$id]
       fit0 <- rv$fitList[rv$id]
       
-      browser()
-      
       nm_mods <- lapply(rv$fitList, function(x) summary(x)$name)
       n_OUf <- sum(grepl("^OUf", nm_mods))
       
@@ -1217,12 +1215,6 @@ mod_tab_data_upload_server <- function(id, rv) {
       }
 
       fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
-      
-      # TODO TOCHECK:
-      # if (length(fit0) == 0 && n_OUf == 0) {
-      #   message("---length(fit0) == 0 && n_OUf == 0---")
-      #   browser()
-      # }
       
       if (length(fit0) == 0) {
         msg_log(

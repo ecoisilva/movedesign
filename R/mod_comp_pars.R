@@ -291,6 +291,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       
       datList[sapply(datList, is.null)] <- NULL
       fitList[sapply(fitList, is.null)] <- NULL
+      req(length(fitList) > 0)
       
       if (input$parInput_type == "tau_p") {
         name <- "position"
@@ -309,7 +310,6 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       req(out)
       
       out <- out$meta
-      
       pars <- extract_pars(fitList, name = name, si_units = TRUE)
       nms <- names(pars)
       pars <- do.call(rbind, pars)

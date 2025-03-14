@@ -1162,11 +1162,18 @@ mod_tab_hrange_server <- function(id, rv) {
         
         if (rv$is_emulate) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], 
-                           rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
             "position")[[1]]
+          tau_v <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            "velocity")[[1]]
+          sigma <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]
+          tau_v <- rv$tau_v[[group]]
+          sigma <- rv$sigma[[group]]
         }
         
         seed <- as.character(rv$seedList[[sim_no]])
@@ -1175,7 +1182,6 @@ mod_tab_hrange_server <- function(id, rv) {
         
         tmpsum <- tryCatch(
           summary(rv$akdeList[[i]]),
-          # warning = function(w) return(NULL),
           error = function(e) e)
         
         if (is.null(rv$akdeList[[sim_no]]) || 
@@ -1194,14 +1200,17 @@ mod_tab_hrange_server <- function(id, rv) {
           
           rv$hr$tbl <<- rbind(
             rv$hr$tbl, 
-            .build_tbl_hr(
+            .build_tbl(
+              target = "hr",
               group = if (rv$grouped) group else NA,
               data = rv$simList[[sim_no]], 
-              seed = rv$seedList[[sim_no]],
+              seed = names(rv$simList)[[sim_no]],
               obj = rv$akdeList[[sim_no]],
-              par = tau_p,
+              tau_p = tau_p,
+              tau_v = tau_v,
+              sigma = sigma,
               area = out_est_df[i, ],
-              error = out_err_df[i, ]))
+              area_error = out_err_df[i, ]))
           next
         }
         
@@ -1224,21 +1233,24 @@ mod_tab_hrange_server <- function(id, rv) {
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          .build_tbl_hr(
+          .build_tbl(
+            target = "hr",
             group = if (rv$grouped) group else NA,
             data = rv$simList[[sim_no]], 
             seed = rv$seedList[[sim_no]],
-            obj = rv$simfitList[[sim_no]],
-            par = tau_p,
+            obj = rv$akdeList[[sim_no]],
+            tau_p = tau_p,
+            tau_v = tau_v,
+            sigma = sigma,
             area = out_est_df[i, ],
-            error =  out_err_df[i, ]))
+            area_error = out_err_df[i, ]))
       }
       
       rv$hrEst <<- rbind(rv$hrEst, out_est_df)
       rv$hrErr <<- rbind(rv$hrErr, out_err_df)
       
       time_hr <- difftime(Sys.time(), start, units = "sec")
-      rv$time_hr[1] <- rv$time_hr[1] + time_hr[[1]]
+      rv$time[["hr"]][[1]][1] <- rv$time[["hr"]][[1]][1] + time_hr[[1]]
       
       msg_log(
         style = "success",
@@ -1579,24 +1591,34 @@ mod_tab_hrange_server <- function(id, rv) {
         
         if (rv$is_emulate) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], 
-                           rv$seedList[[set_id]]),
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[set_id]]),
             "position")[[1]]
+          tau_v <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[set_id]]),
+            "velocity")[[1]]
+          sigma <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[set_id]]),
+            "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]
+          tau_v <- rv$tau_v[[group]]
+          sigma <- rv$sigma[[group]]
         }
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          .build_tbl_hr(
+          .build_tbl(
             data_type = "Modified",
+            target = "hr",
             group = group,
             data = rv$hr$simList[[1]],
             seed = rv$seedList[[set_id]],
-            obj = rv$sd$fitList[[1]],
-            par = tau_p,
+            obj = akde_new[[1]],
+            tau_p = tau_p,
+            tau_v = tau_v,
+            sigma = sigma,
             area = out_est[1, ],
-            error = out_err[1, ]))
+            area_error = out_err[1, ]))
         
         rv$hrEst_new <- out_est
         rv$hrErr_new <- out_err
@@ -1633,8 +1655,9 @@ mod_tab_hrange_server <- function(id, rv) {
       if (!is.null(input$hr_nsim)) {
         req(input$hr_nsim)
         req(input$hr_nsim <= length(rv$simList))
-        nsim <- input$hr_nsim
+        nsim <- as.integer(input$hr_nsim)
       }
+      
       show_truth <- FALSE
       show_locations <- FALSE
       
@@ -1793,7 +1816,14 @@ mod_tab_hrange_server <- function(id, rv) {
       req(rv$hr$tbl, rv$akdeList)
       
       dt_hr <- dplyr::select(rv$hr$tbl, -seed)
-      if (!rv$grouped) dt_hr <- dplyr::select(dt_hr, -group)
+      
+      if (!rv$grouped) {
+        dt_hr <- dplyr::select(
+          dt_hr, -c(device, group, tauv, sigma, N2, ctsd:dist_err))
+      } else {
+        dt_hr <- dplyr::select(
+          dt_hr, -c(device, tauv, sigma, N2, ctsd:dist_err))
+      }
       
       nms <- list(
         data = "Data",

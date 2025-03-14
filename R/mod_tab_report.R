@@ -1311,16 +1311,10 @@ mod_tab_report_server <- function(id, rv) {
       css_bold <- "font-weight: bold;"
       css_mono <- "font-family: var(--monosans);"
       
+      # TODO TOCHECK after this point!
       list2env(.build_outputs(rv), envir = environment())
       
-      # TODO type is now set_target
-      ## see .build_outputs
-      ## get_coi and get_cri are now lists!
-      ## need to check all the code below this point
-      
-      # target <- "hr"
       for (target in seq_along(set_target)) {
-        # browser()
         
         out <- as.data.frame(rv$metaList[[target]]$meta)
         tmpunit <- extract_units(rownames(
@@ -3605,8 +3599,8 @@ mod_tab_report_server <- function(id, rv) {
     build_tbl_report <- reactive({
       n_sims <- length(rv$simList)
       
-      dt_regs <- rv$dev$tbl
-      dt_regs <- dt_regs %>% dplyr::slice_tail(n = n_sims)
+      dt_dv <- rv$dev$tbl
+      dt_dv <- dt_dv %>% dplyr::slice_tail(n = n_sims)
       
       if ("Home range" %in% rv$which_question) {
         req(rv$hr$tbl)
@@ -3634,30 +3628,28 @@ mod_tab_report_server <- function(id, rv) {
         N1 = numeric(0),
         N2 = numeric(0))
       
-      tmpdat <- dt_regs %>% dplyr::select(.data$seed:.data$N2)
-      tmpdat <- suppressMessages(dplyr::full_join(dat, tmpdat))
+      tmpdat <- suppressMessages(dplyr::full_join(dat, dt_dv))
       
       if ("Home range" %in% rv$which_question) {
-        tmphr <- dt_hr %>% dplyr::select(
-          c(.data$seed, .data$taup:.data$area_err_max))
+        tmphr <- dt_hr %>% dplyr::select(-c(device))
         tmpdat <- suppressMessages(
-          tmpdat %>% dplyr::group_by(seed) %>% 
-            dplyr::full_join(tmphr))
+          tmpdat %>%
+            dplyr::group_by(seed) %>% 
+            dplyr::full_join(dt_hr))
       }
       
       if ("Speed & distance" %in% rv$which_question) {
-        tmpsd <- dt_sd %>% dplyr::select(
-          c(.data$seed, .data$tauv:.data$dist_err))
         tmpdat <- suppressMessages(
-          tmpdat %>% dplyr::group_by(seed) %>% 
-            dplyr::full_join(tmpsd))
+          tmpdat %>%
+            dplyr::full_join(dt_sd))
       }
       
       tmpdat <- tmpdat %>%
+        dplyr::distinct() %>% 
         dplyr::group_by(seed) %>%
-        dplyr::summarize(dplyr::across(dplyr::everything(), 
-                         ~ifelse(all(is.na(.)), NA,
-                                 .[!is.na(.)][1])))
+        dplyr::summarize(dplyr::across(
+          dplyr::everything(), 
+          ~ifelse(all(is.na(.)), NA, .[!is.na(.)][1])))
       return(tmpdat)
       
     }) # end of reactive

@@ -1616,111 +1616,122 @@ tele_to_dt <- function(object) {
   return(data_dt)
 }
 
-devRow <- function(group = NULL,
-                   device,
-                   data,
-                   seed,
-                   fit,
-                   
-                   tau_p,
-                   tau_v,
-                   sigma) {
+#' @title Build tables row-by-row
+#' @description Build tables row-by-row
+#' @keywords internal
+#' 
+#' @noRd
+#' 
+.build_tbl <- function(data_type = "Initial",
+                       target = NULL,
+                       group = NULL,
+                       device = NULL,
+                       data,
+                       seed,
+                       obj,
+                       tau_p,
+                       tau_v,
+                       sigma,
+                       area,
+                       area_error,
+                       speed,
+                       speed_error,
+                       distance, 
+                       distance_error) {
   
   if (is.null(group)) group <- NA
+  if (is.null(device)) device <- NA
+  if (is.null(target)) target <- ""
+  
   out <- data.frame(
-    device = NA,
-    seed = seed,
+    data = data_type,
+    device = device,
+    seed = as.numeric(seed),
     group = group,
-    
     taup = NA,
     tauv = NA,
     sigma = NA,
-    
-    dur = NA,
-    dti = NA,
-    n = NA,
-    N1 = NA,
-    N2 = NA)
-  
-  out$device <- device
-  
-  out$taup <- paste(
-    scales::label_comma(.1)(tau_p$value[2]),
-    abbrv_unit(tau_p$unit[2]))
-  
-  out$tauv <- paste(
-    scales::label_comma(.1)(tau_v$value[2]),
-    abbrv_unit(tau_v$unit[2]))
-  
-  out$sigma <- paste(
-    scales::label_comma(.1)(sigma$value[2]),
-    abbrv_unit(sigma$unit[2]))
-  
-  dur <- extract_sampling(data, name = "period")[[1]]
-  dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
-  
-  dti <- extract_sampling(data, name = "interval")[[1]]
-  dti <- fix_unit(dti$value, dti$unit)
-  
-  out$dur <- paste(dur[1], abbrv_unit(dur[,2]))
-  out$dti <- paste(dti[1], abbrv_unit(dti[,2]))
-  
-  out$n <- nrow(data)
-  out$N1 <- extract_dof(fit, name = "area")[[1]]
-  out$N2 <- extract_dof(fit, name = "speed")[[1]]
-  
-  return(out)
-}
-
-
-#' @title Build table for home range
-#' @description Build table for home range
-#' @keywords internal
-#' @noRd
-.build_tbl_hr <- function(data_type = "Initial",
-                          group,
-                          data,
-                          seed,
-                          obj,
-                          par,
-                          area, 
-                          error) {
-  
-  if (is.null(group)) group <- NA
-  N <- extract_dof(obj, name = "area")[[1]]
-  
-  out <- data.frame(
-    seed = seed,
-    data = data_type,
-    group = group,
-    taup = NA,
     dur = NA,
     dti = NA,
     n = nrow(data),
-    N1 = N,
+    N1 = NA,
+    N2 = NA,
     area = NA,
-    area_err = error$est,
-    area_err_min = error$lci,
-    area_err_max = error$uci)
+    area_err = NA,
+    area_err_min = NA,
+    area_err_max = NA,
+    ctsd = NA,
+    ctsd_err = NA,
+    ctsd_err_min = NA,
+    ctsd_err_max = NA,
+    dist = NA,
+    dist_err = NA)
   
   out$taup <- paste(
-    scales::label_comma(.1)(par$value[2]), abbrv_unit(par$unit[2]))
+    scales::label_comma(.1)(tau_p$value[2]), abbrv_unit(tau_p$unit[2]))
+  out$tauv <- paste(
+    scales::label_comma(.1)(tau_v$value[2]), abbrv_unit(tau_v$unit[2]))
+  out$sigma <- paste(
+    scales::label_comma(.1)(sigma$value[2]), abbrv_unit(sigma$unit[2]))
   
   dur <- extract_sampling(data, name = "period")[[1]]
-  out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
-  out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
+  dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
+  out$dur <- paste(dur$value, abbrv_unit(dur$unit))
   
   dti <- extract_sampling(data, name = "interval")[[1]]
-  out_dti <- fix_unit(dti$value, dti$unit)
-  out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
+  dti <- fix_unit(dti$value, dti$unit)
+  out$dti <- paste(dti$value, abbrv_unit(dti$unit))
   
-  if (is.na(area$est)) out$area <- NA
-  else out$area <- paste(
-    scales::label_comma(.1)(area$est), abbrv_unit(area$unit))
+  if (target == "") {
+    out$N1 <- extract_dof(obj, name = "area")[[1]]
+    out$N2 <- extract_dof(obj, name = "speed")[[1]]
+  }
+  
+  if (target == "hr") {
+    out$N1 <- extract_dof(obj, name = "area")[[1]]
+    
+    if (is.na(area$est)) out$area <- NA
+    else out$area <- paste(
+      scales::label_comma(.1)(area$est), abbrv_unit(area$unit))
+    
+    out$area_err <- area_error$est
+    out$area_err_min <- area_error$lci
+    out$area_err_max <- area_error$uci
+    
+  } # end of if (target == "hr")
+  
+  if (target == "ctsd") {
+    out$N2 <- extract_dof(obj, name = "speed")[[1]]
+    
+    if (is.na(speed$est) || is.infinite(speed$est)) {
+      out$ctsd <- NA
+    } else {
+      out_ctsd <- fix_unit(speed$est, speed$unit)
+      out$ctsd <- paste(
+        scales::label_comma(.1)(out_ctsd$value), 
+        abbrv_unit(out_ctsd$unit))
+    }
+    
+    if (is.na(distance$est)) {
+      out$dist <- NA
+    } else {
+      out_dist <- fix_unit(distance$est, distance$unit, convert = TRUE)
+      out$dist <- paste(
+        scales::label_comma(.1)(out_dist$value), 
+        abbrv_unit(out_dist$unit))
+    }
+    
+    out$ctsd_err <- speed_error$est
+    out$ctsd_err_min <- speed_error$lci
+    out$ctsd_err_max <- speed_error$uci
+    out$dist_err <- distance_error$est
+
+  } # end of if (target == "ctsd")
   
   return(out)
   
-} # end of function, .build_tbl_hr
+} # end of function, .build_tbl()
+
 
 #' @title Build table for speed and distance
 #' @description Build table for speed and distance
@@ -1767,23 +1778,6 @@ devRow <- function(group = NULL,
   out_dti <- fix_unit(dti$value, dti$unit)
   out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
   
-  if (is.na(speed$est) || is.infinite(speed$est)) {
-    out$ctsd <- NA
-  } else {
-    out_ctsd <- fix_unit(speed$est, speed$unit)
-    out$ctsd <- paste(
-      scales::label_comma(.1)(out_ctsd$value), 
-      abbrv_unit(out_ctsd$unit))
-  }
-  
-  if (is.na(distance$est)) {
-    out$dist <- NA
-  } else {
-    out_dist <- fix_unit(distance$est, distance$unit, convert = TRUE)
-    out$dist <- paste(
-      scales::label_comma(.1)(out_dist$value), 
-      abbrv_unit(out_dist$unit))
-  }
   
   return(out)
   

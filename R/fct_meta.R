@@ -427,7 +427,6 @@ run_meta_permutations <- function(rv,
               subpop_detected = as.character(
                 subpop_detected[["All"]])))
           
-          
         } # end of if (is.null(out_meta[["All"]]))
         
         if (subpop) {
@@ -594,14 +593,14 @@ plot_meta_permutations <- function(rv,
   }
   
   dodge_width <- 0.25
-  plot_title <- if (length(rv$which_question) > 1) {
+  txt_title <- if (length(rv$which_question) > 1) {
     ifelse(set_target == "hr", 
            "For home range:", "For speed & distance:")
   }
   
   if (is.null(pal)) { pal_values <- c("Yes" = "#009da0",
-                                    "Near" = "#77b131",
-                                    "No" = "#dd4b39")
+                                      "Near" = "#77b131",
+                                      "No" = "#dd4b39")
   } else pal_values <- c("Yes" = pal[[1]],
                        "Near" = pal[[2]],
                        "No" = pal[[3]])
@@ -650,7 +649,7 @@ plot_meta_permutations <- function(rv,
       suppressMessages() %>% 
       suppressWarnings()
     
-    color_title <- paste0(
+    txt_color <- paste0(
       "Within error threshold (\u00B1",
       rv$error_threshold * 100, "%)?")
     
@@ -706,11 +705,11 @@ plot_meta_permutations <- function(rv,
         size = 3.5) +
       
       ggplot2::labs(
-        title = plot_title,
+        title = txt_title,
         subtitle = plot_subtitle,
         x = "<i>Population</i> sample size, <i>m</i>",
         y = "Relative error (%)",
-        color = color_title) +
+        color = txt_color) +
       
       ggplot2::scale_y_continuous(breaks = scales::breaks_pretty(),
                                   labels = scales::percent) +
@@ -748,7 +747,7 @@ plot_meta_permutations <- function(rv,
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
     
-    color_title <- paste0(
+    txt_color <- paste0(
       "Within error threshold (\u00B1",
       rv$error_threshold * 100, "%)?")
     
@@ -784,29 +783,33 @@ plot_meta_permutations <- function(rv,
           close_to_threshold ~ "Near",
           TRUE ~ "No"))
     
+    txt_caption <- NULL
     if (rv$which_meta == "compare") {
       dodge_width <- .4
       
       is_subpop <- rv$metaList_groups[["intro"]][[
         set_target]]$logs$subpop_detected
-      is_subpop
       
       is_final_subpop <- out_all %>%
         dplyr::filter(group == "All") %>%
         dplyr::pull(subpop_detected)
       is_final_subpop <- rep(is_final_subpop, each = 2)
-      is_final_subpop <- out$color <- ifelse(
+      is_final_subpop <- out$is_final_subpop <- ifelse(
         is_final_subpop == "FALSE", "No", "Yes")
-      is_final_subpop
+      out$color <- out$group
       
       # pal1 <- c("Yes" = pal_values[[1]], "No" = pal_values[[3]])
       # pal2 <- c("Yes" = pal_values[[3]], "No" = pal_values[[1]])
       # pal_values <- if(is_subpop) pal1 else pal2
       
-      pal_values <- c("Yes" = pal_values[[1]],
-                      "No" = pal_values[[3]])
+      # pal_values <- c("Yes" = pal_values[[1]],
+      #                 "No" = pal_values[[3]])
+      # txt_color <- "Sub-population detected?"
       
-      color_title <- "Sub-population detected?"
+      pal_values <- c("A" = "#77b131", "B" = "#009da0")
+      
+      txt_color <- "Groups:"
+      txt_caption <- "(*) Asterisks indicate significant subpopulations."
       
     } # Note: this refers to finding subpops within the population.
     
@@ -833,15 +836,27 @@ plot_meta_permutations <- function(rv,
                      ymax = error_uci),
         position = ggplot2::position_dodge(width = dodge_width)) +
       
+      { if (rv$which_meta == "compare")
+        ggplot2::geom_text(
+          data = subset(out, subpop_detected == TRUE),
+          mapping = ggplot2::aes(x = as.factor(m),
+                                 y = error_uci + 0.05,
+                                 label = "*"),
+          color = "black", size = 5, 
+          position = ggplot2::position_dodge(width = 0.4))
+        
+      } +
+      
       ggplot2::labs(
-        title = plot_title,
-        x = "Number of individuals",
-        y = "Error (%)",
-        color = color_title) +
+        title = txt_title,
+        x = "<i>Population</i> sample size, <i>m</i>",
+        y = "Relative error (%)",
+        color = txt_color,
+        caption = txt_caption) +
       
       ggplot2::scale_y_continuous(labels = scales::percent,
                                   breaks = scales::breaks_pretty()) +
-      ggplot2::scale_color_manual(values = pal_values) +
+      ggplot2::scale_color_manual("Group:", values = pal_values) +
       ggplot2::scale_shape_manual("Group:", values = c(16, 18)) +
       ggplot2::theme_minimal() +
       ggplot2::theme(legend.position = "bottom")

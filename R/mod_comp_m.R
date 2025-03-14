@@ -523,34 +523,30 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               
               to_keep_vec <- rep(1, nrow(x))
               if (failure_occurred) {
+                
                 to_keep_vec <- c(rep(1, 10), cumprod(
                   1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
-                if (!any(to_keep_vec == 0))
-                  failure_occurred <- FALSE
+                if (!any(to_keep_vec == 0)) failure_occurred <- FALSE
                 
                 rv$dev_failed <- c(rv$dev_failed, failure_occurred)
                 return(x[to_keep_vec == 1, ])
-              } else {
-                return(x)
-              }
-            })
+                
+              } else return(x)
+              
+            }) # end of lapply
             
-          } # end of input$device_failure
-        } else {
-          rv$dev_failed <- c(rv$dev_failed, failure_occurred)
-        }
+          } # end of if (rv$fail_prob > 0)
+        } else rv$dev_failed <- c(rv$dev_failed, failure_occurred)
         
         # If there is data loss:
         
         if (!is.null(rv$lost))
           if (rv$lost$perc > 0) {
             
-            to_keep <- round(sapply(simList, function(x)
-              nrow(x) * (1 - rv$lost$perc)))
-            
             simList <- lapply(simList, function(x) {
-              to_keep_vec <- sort(sample(1:nrow(x),
-                                         to_keep, replace = FALSE))
+              to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
+              to_keep_vec <- sort(
+                sample(1:nrow(x), to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
           } # end of data loss
@@ -759,19 +755,17 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             sigma <- rv$sigma[[group]]
           }
           
-          newrow <- devRow(
-            device = rv$device_type,
-            group = if (rv$grouped) group else NA,
-            
-            data = simList[[x]], 
-            seed = rv$seedList[[(rv$nsims - num_sims) + x]],
-            fit = simfitList[[x]],
-            
-            tau_p = tau_p,
-            tau_v = tau_v,
-            sigma = sigma)
-          
-          rv$dev$tbl <<- rbind(rv$dev$tbl, newrow)
+          rv$dev$tbl <<- rbind(
+            rv$dev$tbl,
+            .build_tbl(
+              device = rv$device_type,
+              group = if (rv$grouped) group else NA,
+              data = simList[[x]], 
+              seed = rv$seedList[[(rv$nsims - num_sims) + x]],
+              obj = simfitList[[x]],
+              tau_p = tau_p,
+              tau_v = tau_v,
+              sigma = sigma))
         })
         
       } else {
@@ -818,20 +812,17 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             sigma <- rv$sigma[[group]]
           }
           
-          
-          newrow <- devRow(
-            device = rv$device_type,
-            group = if (rv$grouped) group else NA,
-            
-            data = simList[[i]], 
-            seed = rv$seedList[[(rv$nsims - num_sims) + i]],
-            fit = fit,
-            
-            tau_p = tau_p,
-            tau_v = tau_v,
-            sigma = sigma)
-          
-          rv$dev$tbl <<- rbind(rv$dev$tbl, newrow)
+          rv$dev$tbl <<- rbind(
+            rv$dev$tbl,
+            .build_tbl(
+              device = rv$device_type,
+              group = if (rv$grouped) group else NA,
+              data = simList[[i]], 
+              seed = rv$seedList[[(rv$nsims - num_sims) + i]],
+              obj = fit,
+              tau_p = tau_p,
+              tau_v = tau_v,
+              sigma = sigma))
           
           msg_log(
             style = "warning",
@@ -915,9 +906,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       if (length(rv$simList) == 1) {
         m_max <- input$nsims_max
-      } else {
-        m_max <- input$nsims_max - length(rv$simList)
-      }
+      } else m_max <- input$nsims_max - length(rv$simList)
       
       if (m_max == 0) {
         msg_log(
@@ -940,21 +929,32 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       if (m < m_max) m_sets <- seq(m, m_max, by = m)
       
       # Initialize values:
-      threshold <- input$error_threshold/100 # default 5%
+      
       err <- 1
+      threshold <- input$error_threshold/100 # default is currently 5%
       hex <- rep("grey50", 5)
+      trace <- TRUE
       
       start_time <- Sys.time()
-      trace <- TRUE
       dt_meta <- data.frame(
         "type" = character(0),
         "m" = numeric(0),
-        "lci" = numeric(0),
+        "sample" = numeric(0),
+        "truth" = numeric(0),
         "est" = numeric(0),
+        "lci" = numeric(0),
         "uci" = numeric(0),
+        "error" = numeric(0),
+        "error_lci" = numeric(0),
+        "error_uci" = numeric(0),
+        "ratio_truth" = numeric(0),
+        "ratio_est" = numeric(0),
+        "ratio_lci" = numeric(0),
+        "ratio_uci" = numeric(0),
         "overlaps" = logical(0),
-        "subpop" = logical(0),
-        "group" = character(0))
+        "is_grouped" = logical(0),
+        "group" = character(0),
+        "subpop_detected" = character(0))
       
       i <- 0
       broke <- FALSE
@@ -964,8 +964,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         if (trace) shinyFeedback::showToast(
           type = "info",
-          message = paste0("Set ", i, " out of ",
-                           length(m_sets), "..."),
+          message = paste0("Set ", i, " out of ", length(m_sets), "..."),
           .options = list(
             progressBar = FALSE,
             closeButton = TRUE,
@@ -983,12 +982,14 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           # Running one extra simulation at the beginning:
           rv$seed0 <- generate_seed(rv$seedList)
           simList <- simulating_data()
+          names(simList) <- c(rv$seed0, rv$seed0 + 1)
           seedList <- list(rv$seed0)
           rv$seedList <- c(rv$seedList, rv$seed0)
         } else {
           if (rv$grouped) {
             rv$seed0 <- generate_seed(rv$seedList)
             simList <- simulating_data()
+            names(simList) <- c(rv$seed0, rv$seed0 + 1)
             seedList <- list(rv$seed0, rv$seed0 + 1)
             rv$seedList <- c(rv$seedList, rv$seed0, rv$seed0 + 1)
             
@@ -1000,8 +1001,11 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               return(out) 
             })
             seedList <- utils::tail(rv$seedList, m)
+            names(simList) <- seedList
           }
         }
+        
+        new_tmpnames <- names(simList)
         
         # If there is tag failure:
         
@@ -1018,34 +1022,30 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               
               to_keep_vec <- rep(1, nrow(x))
               if (failure_occurred) {
+                
                 to_keep_vec <- c(rep(1, 10), cumprod(
                   1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
-                if (!any(to_keep_vec == 0))
-                  failure_occurred <- FALSE
+                if (!any(to_keep_vec == 0)) failure_occurred <- FALSE
                 
                 rv$dev_failed <- c(rv$dev_failed, failure_occurred)
                 return(x[to_keep_vec == 1, ])
-              } else {
-                return(x)
-              }
-            })
+                
+              } else return(x)
+              
+            }) # end of lapply
             
-          } # end of input$device_failure
-        } else {
-          rv$dev_failed <- c(rv$dev_failed, failure_occurred)
-        }
+          } # end of if (rv$fail_prob > 0)
+        } else rv$dev_failed <- c(rv$dev_failed, failure_occurred)
         
         # If there is data loss:
         
         if (!is.null(rv$lost))
           if (rv$lost$perc > 0) {
             
-            to_keep <- round(sapply(simList, function(x)
-              nrow(x) * (1 - rv$lost$perc)))
-            
             simList <- lapply(simList, function(x) {
-              to_keep_vec <- sort(sample(1:nrow(x),
-                                         to_keep, replace = FALSE))
+              to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
+              to_keep_vec <- sort(
+                sample(1:nrow(x), to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
           } # end of input$device_fixsuccess
@@ -1064,11 +1064,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         tmpnames <- names(rv$simList)
         rv$simList <- c(rv$simList, simList)
-        if (rv$grouped) {
-          names(rv$simList) <- c(tmpnames, rv$seed0, rv$seed0 + 1)
-        } else {
-          names(rv$simList) <- unlist(rv$seedList)
-        }
         
         current_dur <- rv$dur$value %#% rv$dur$unit
         optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
@@ -1087,6 +1082,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           rv$simfitList <- c(rv$simfitList, list(out))
           return(out)
         })
+        names(rv$simfitList) <- names(rv$simList)
         
         req(length(rv$simList) == length(rv$simfitList))
         
@@ -1098,82 +1094,216 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           rv$akdeList <- c(rv$akdeList, list(out))
           return(out)
         })
+        names(rv$akdeList) <- names(rv$simList)
         
-        if (length(rv$simList) == length(rv$akdeList)) {
-          names(rv$akdeList) <- names(rv$simList)
-          in_list <- rv$akdeList
-          in_list[sapply(in_list, is.null)] <- NULL
-          out_meta <- .capture_meta(in_list,
-                                   variable = "area",
-                                   sort = TRUE,
-                                   units = FALSE,
-                                   verbose = TRUE,
-                                   plot = FALSE)
-          
-          if (rv$which_meta == "compare") {
-            
-            out_meta_groups <- .capture_meta(
-              .get_groups(rv$akdeList, rv$groups[[2]]),
-              variable = "area",
-              units = TRUE, 
-              verbose = TRUE,
-              plot = FALSE,
-              type = "hr") %>% 
-              suppressMessages() %>% 
-              suppressWarnings() %>% 
-              quiet()
-          }
-          
-        } else {
-          out_meta <- NULL
+        # Run meta-analyses:
+        
+        target <- "hr"
+        true_ratio <- c()
+        true_estimate <- c()
+        
+        lists <- .build_meta_objects(rv, 
+                                     set_target = target,
+                                     subpop = rv$grouped,
+                                     trace = FALSE)
+        
+        list2env(lists, envir = environment())
+        
+        true_estimate[[target]] <- truthList[["hr"]][["All"]]$area
+        if (rv$grouped) {
+          true_estimate[[
+            paste0(target, "_A")]] <- truthList[["hr"]][["A"]]$area
+          true_estimate[[
+            paste0(target, "_B")]] <- truthList[["hr"]][["B"]]$area
+          true_ratio[[target]] <- truthList[["hr"]][["A"]]$area/
+            truthList[["hr"]][["B"]]$area
         }
         
-        if (!is.null(out_meta)) {
+        input <- list()
+        input[["All"]] <- datList[["All"]][[target]]
+        input_groups <- list(input)
+        
+        if (rv$grouped) {
+          input_groups <- datList[["groups"]][[target]]
+          nms_group_A <- names(input[["All"]][rv$groups[[2]][["A"]]])
+          nms_group_B <- names(input[["All"]][rv$groups[[2]][["B"]]])
+          input[["groups"]] <- list(input_groups[["A"]],
+                                    input_groups[["B"]])
+        }
+        
+        out_meta <- setNames(lapply(input, \(x) {
+          return(.capture_meta(x,
+                               variable = "area",
+                               sort = TRUE,
+                               units = FALSE,
+                               verbose = TRUE,
+                               plot = FALSE) %>%
+                   suppressMessages())
+        }), names(datList))
+        
+        truth <- list()
+        out_est <- list()
+        out_err <- list()
+        subpop_detected <- list()
+        
+        nm_groups <- if (rv$grouped) c("A", "B") else c("All")
+        n_groups <- length(nm_groups)
+        
+        if (is.null(out_meta[["All"]])) {
           
-          hex <- c(hex, ifelse(
-            out_meta$logs$subpop_detected, pal$dgr, pal$sea))
+          dt_meta <- rbind(
+            dt_meta,
+            data.frame(
+              type = target,
+              m = m,
+              sample = sample,
+              truth = NA,
+              est = NA,
+              lci = NA,
+              uci = NA,
+              error = NA,
+              error_lci = NA,
+              error_uci = NA,
+              ratio_truth = NA,
+              ratio_est = NA,
+              ratio_lci = NA,
+              ratio_uci = NA,
+              overlaps = NA,
+              is_grouped = subpop,
+              group = "All",
+              subpop_detected = NA))
           
-          tmpname <- rownames(out_meta$meta)
-          tmpunit <- extract_units(tmpname[grep("^mean", tmpname)])
-          
-          truth_summarized <- get_true_hr(
-            sigma = rv$sigma,
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
-            grouped = rv$grouped,
-            groups = if (rv$grouped) rv$groups[[2]] else NULL,
-            summarized = TRUE)
-          truth <- truth_summarized[["All"]]$area
-          
-          out_est <- c(
-            "lci" = out_meta$meta[1, 1] %#% tmpunit, 
-            "est" = out_meta$meta[1, 2] %#% tmpunit, 
-            "uci" = out_meta$meta[1, 3] %#% tmpunit) 
-          out_err <- c( 
-            "lci" = ((out_est[["lci"]] %#% tmpunit) - truth) / truth, 
-            "est" = ((out_est[["est"]] %#% tmpunit) - truth) / truth, 
-            "uci" = ((out_est[["uci"]] %#% tmpunit) - truth) / truth) 
-          
-          err <- out_err[["est"]]
-          dt_meta <- dt_meta %>% dplyr::add_row(
-            type = "hr",
-            m = length(rv$simList),
-            lci = out_err[[1]], est = out_err[[2]], uci = out_err[[3]],
-            overlaps = dplyr::between(truth,
-                                      out_meta$meta[1, 1],
-                                      out_meta$meta[1, 3]),
-            subpop = out_meta$logs$subpop_detected,
-            group = "All")
-        } else {
           err <- rv$err_prev[length(rv$err_prev)]
-          dt_meta <- dt_meta %>% dplyr::add_row(
-            type = "hr",
-            m = length(rv$simList),
-            lci = NA, est = NA, uci = NA,
-            overlaps = NA,
-            subpop = NA,
-            group = "All")
-        }
+          
+        } else {
+          
+          truth[["All"]] <- true_estimate[[target]]
+          
+          out_est[["All"]] <- .get_estimates(out_meta[["All"]]$meta)
+          out_err[["All"]] <- sapply(out_est[["All"]], .get_errors,
+                                     truth = truth[["All"]])
+          
+          truth_ratio <- NA
+          out_ratio <- c("lci" = NA, "est" = NA, "uci" = NA)
+          subpop_detected[["All"]] <- out_meta[["All"]]$
+            logs$subpop_detected
+          
+          dt_meta <- rbind(
+            dt_meta,
+            data.frame(
+              type = target,
+              m = m,
+              sample = 1,
+              truth = truth[["All"]],
+              est = out_est[["All"]][["est"]],
+              lci = out_est[["All"]][["lci"]],
+              uci = out_est[["All"]][["uci"]],
+              error = out_err[["All"]][["est"]],
+              error_lci = out_err[["All"]][["lci"]],
+              error_uci = out_err[["All"]][["uci"]],
+              ratio_truth = truth_ratio,
+              ratio_est = out_ratio[["est"]],
+              ratio_lci = out_ratio[["lci"]],
+              ratio_uci = out_ratio[["uci"]],
+              overlaps = NA,
+              is_grouped = rv$grouped,
+              group = "All",
+              subpop_detected = as.character(
+                subpop_detected[["All"]])))
+          
+          hex <- c(hex, ifelse(subpop_detected[["All"]], pal$dgr, pal$sea))
+          err <- out_err[["All"]][["est"]]
+          
+        } # end of if (is.null(out_meta[["All"]]))
+        
+        # (Not currently using ratio error for threshold)
+        # if (subpop) {
+        #   
+        #   if (is.null(out_meta[["groups"]])) {
+        #     for (group in seq_len(n_groups)) {
+        #       
+        #       dt_meta <- rbind(
+        #         dt_meta,
+        #         data.frame(
+        #           type = target,
+        #           m = m,
+        #           sample = sample,
+        #           truth = NA,
+        #           est = NA,
+        #           lci = NA,
+        #           uci = NA,
+        #           error = NA,
+        #           error_lci = NA,
+        #           error_uci = NA,
+        #           ratio_truth = NA,
+        #           ratio_est = NA,
+        #           ratio_lci = NA,
+        #           ratio_uci = NA,
+        #           overlaps = NA,
+        #           is_grouped = subpop,
+        #           group = nm_groups[group],
+        #           subpop_detected = NA))
+        #       
+        #     } # end of [group] loop
+        #     
+        #   } else {
+        #     
+        #     truth_ratio <- true_ratio[[target]]
+        #     ratios <- .get_ratios(out_meta[["groups"]])
+        #     
+        #     out_ratio <- c(
+        #       "lci" = .get_ratios(out_meta[["groups"]])$lci,
+        #       "est" = .get_ratios(out_meta[["groups"]])$est,
+        #       "uci" = .get_ratios(out_meta[["groups"]])$uci)
+        #     
+        #     # out_ratio_err <- c(
+        #     #   "lci" = (ratio_lci - truth_ratio) / truth_ratio,
+        #     #   "est" = (ratio_est - truth_ratio) / truth_ratio,
+        #     #   "uci" = (ratio_uci - truth_ratio) / truth_ratio)
+        #     
+        #     truth[["A"]] <- true_estimate[[paste0(target, "_A")]]
+        #     truth[["B"]] <- true_estimate[[paste0(target, "_B")]]
+        #     
+        #     out_est[["A"]] <- .get_estimates(out_meta[["groups"]]$meta$A)
+        #     out_err[["A"]] <- sapply(out_est[["A"]], .get_errors,
+        #                              truth = truth[["A"]])
+        #     
+        #     out_est[["B"]] <- .get_estimates(out_meta[["groups"]]$meta$B)
+        #     out_err[["B"]] <- sapply(out_est[["B"]], .get_errors,
+        #                              truth = truth[["B"]])
+        #     
+        #     subpop_detected[["A"]] <- subpop_detected[["B"]] <- 
+        #       out_meta[["groups"]]$logs$subpop_detected
+        #     
+        #     for (group in seq_len(n_groups)) {
+        #       
+        #       dt_meta <- rbind(
+        #         dt_meta,
+        #         data.frame(
+        #           type = target,
+        #           m = m,
+        #           sample = sample,
+        #           truth = truth[[nm_groups[group]]],
+        #           est = out_est[[nm_groups[group]]][["est"]],
+        #           lci = out_est[[nm_groups[group]]][["lci"]],
+        #           uci = out_est[[nm_groups[group]]][["uci"]],
+        #           error = out_err[[nm_groups[group]]][["est"]],
+        #           error_lci = out_err[[nm_groups[group]]][["lci"]],
+        #           error_uci = out_err[[nm_groups[group]]][["uci"]],
+        #           ratio_truth = truth_ratio,
+        #           ratio_est = out_ratio[["est"]],
+        #           ratio_lci = out_ratio[["lci"]],
+        #           ratio_uci = out_ratio[["uci"]],
+        #           overlaps = NA,
+        #           is_grouped = subpop,
+        #           group = nm_groups[group],
+        #           subpop_detected = as.character(
+        #             subpop_detected[[nm_groups[group]]])))
+        #       
+        #     } # end of [group] loop
+        #     
+        #   } # end of if (is.null(out_meta[["groups"]]))
+        # } # end of if (subpop)
         
         if (trace) message(" - No. sims (total): ", length(rv$simList))
         if (trace) message(paste0(" - Error: ",
@@ -1203,14 +1333,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (all(rv$err_prev[last_values] < threshold)) {
             if (!is.null(out_meta)) {
               
-              means <- out_meta$meta[
-                grep("mean", rownames(out_meta$meta)), ]
-              tmpunit <- extract_units(rownames(out_meta$meta)[[1]])
-              
               overlaps_with_truth <- dplyr::between(
-                truth,
-                means[1, "low"] %#% tmpunit,
-                means[1, "high"] %#% tmpunit)
+                truth[["All"]],
+                out_est[["All"]][["lci"]], out_est[["All"]][["uci"]])
               
               if (overlaps_with_truth) {
                 broke <- TRUE
@@ -1218,6 +1343,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               }
             }
           }
+          
         } # end of if (rv$which_meta == "mean")
         
         if (rv$which_meta == "compare") {
@@ -1225,14 +1351,15 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           cov <- Inf
           if (all(rv$err_prev[last_values] < threshold)) {
             if (!is.na(dt_meta[nrow(dt_meta), ]$est)) {
-              cov <- out_meta$meta[
-                grep("CoV", rownames(out_meta$meta)), 2][[2]]
+              
+              cov <- out_meta[["All"]]$meta[
+                grep("CoV", rownames(out_meta[["All"]]$meta)), 2][[2]]
             }
             
             if (!is.null(out_meta_groups)) {
               meta_truth <- rv$metaList_groups[[1]][["hr"]]
               overlaps_with_truth <- dplyr::between(
-                .get_ratios(out_meta_groups)$est,
+                .get_ratios(out_meta[["groups"]])$est,
                 .get_ratios(meta_truth)$lci, 
                 .get_ratios(meta_truth)$uci)
             }
@@ -1248,19 +1375,17 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
       } # end of while()
       
-      truthList <- get_true_hr(
-        data = rv$simList,
-        seed = rv$seedList,
-        sigma = rv$sigma,
-        
-        emulated = rv$is_emulate,
-        fit = if (rv$is_emulate) rv$meanfitList else NULL,
-        
-        grouped = rv$grouped,
-        groups = if (rv$grouped) rv$groups[[2]] else NULL)
-      rv$truth$hr <- truthList
+      rv$truth$hr <- get_true_hr(
+          data = rv$simList,
+          seed = rv$seedList,
+          sigma = rv$sigma,
+          emulated = rv$is_emulate,
+          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL)
       
-      rv$meta_tbl <<- rbind(rv$meta_tbl, dt_meta)
+      # rv$meta_tbl <<- rbind(rv$meta_tbl, dt_meta)
+      
       rv$dev$n <- lapply(seq_along(rv$simList), function(x)
         n <- nrow(rv$simList[[x]]))
       
@@ -1276,6 +1401,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         seed <- as.character(rv$seedList[[i]])
         truth <- rv$truth$hr[[seed]]$area
         N1 <- extract_dof(rv$simfitList[[i]], "area")[[1]]
+        
+        truth <- truthList[["hr"]][["All"]]$area
         
         if (N1 < 0.001) {
           out_est <- rep(NA, 3) 
@@ -1297,36 +1424,47 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         }
         
         out_est_df <- data.frame(
-          seed = rv$seedList[[i]],
+          seed = names(rv$akdeList)[[i]], # TODO FIX others like this!
           lci = out_est[[1]], 
           est = out_est[[2]], 
           uci = out_est[[3]], 
           unit = tmpunit)
+        
         out_err_df <- data.frame(
-          seed = rv$seedList[[i]],
+          seed = names(rv$akdeList)[[i]], # TODO TO CHECK
           lci = out_err[[1]], 
           est = out_err[[2]], 
           uci = out_err[[3]])
         
         if (rv$is_emulate) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], 
-                           rv$seedList[[i]]),
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[i]]),
             "position")[[1]]
+          tau_v <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[i]]),
+            "velocity")[[1]]
+          sigma <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[i]]),
+            "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]
+          tau_v <- rv$tau_v[[group]]
+          sigma <- rv$sigma[[group]]
         }
         
         rv$hr$tbl <<- rbind(
           rv$hr$tbl, 
-          .build_tbl_hr(
+          .build_tbl(
+            target = "hr",
             group = if (rv$grouped) group else NA,
             data = rv$simList[[i]], 
-            seed = rv$seedList[[i]],
-            obj = rv$simfitList[[i]],
-            par = tau_p,
+            seed = names(rv$simList)[[i]],
+            obj = rv$akdeList[[i]],
+            tau_p = tau_p,
+            tau_v = tau_v,
+            sigma = sigma,
             area = out_est_df,
-            error = out_err_df))
+            area_error = out_err_df))
       }
       
       rv$hrEst <<- rbind(rv$hrEst, out_est_df)
@@ -1507,22 +1645,20 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               
               to_keep_vec <- rep(1, nrow(x))
               if (failure_occurred) {
+                
                 to_keep_vec <- c(rep(1, 10), cumprod(
                   1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
-                if (!any(to_keep_vec == 0))
-                  failure_occurred <- FALSE
+                if (!any(to_keep_vec == 0)) failure_occurred <- FALSE
                 
                 rv$dev_failed <- c(rv$dev_failed, failure_occurred)
                 return(x[to_keep_vec == 1, ])
-              } else {
-                return(x)
-              }
-            })
+                
+              } else return(x)
+              
+            }) # end of lapply
             
-          } # end of input$device_failure
-        } else {
-          rv$dev_failed <- c(rv$dev_failed, failure_occurred)
-        }
+          } # end of if (rv$fail_prob > 0)
+        } else rv$dev_failed <- c(rv$dev_failed, failure_occurred)
         
         # If there is data loss:
         
@@ -1530,10 +1666,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (rv$lost$perc > 0) {
             
             simList <- lapply(simList, function(x) {
-              
               to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
-              to_keep_vec <- sort(sample(1:nrow(x),
-                                         to_keep, replace = FALSE))
+              to_keep_vec <- sort(
+                sample(1:nrow(x), to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
           } # end of input$device_fixsuccess

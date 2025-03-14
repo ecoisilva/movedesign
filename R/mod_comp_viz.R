@@ -428,6 +428,7 @@ mod_comp_viz_server <- function(id, rv) {
       req(rv$which_question, rv$set_target, rv$grouped, rv$is_valid)
       req(length(rv$groups[[1]][["A"]]) > 0,
           length(rv$groups[[1]][["B"]]) > 0)
+      req(length(rv$fitList) > 0)
       
       txt_target <- list(
         "hr" = c("area", "home range area"),

@@ -1575,22 +1575,32 @@ mod_tab_ctsd_server <- function(id, rv) {
         }
         
         if (rv$is_emulate) {
+          tau_p <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], 
-                           rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
             "velocity")[[1]]
+          sigma <- extract_pars(
+            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            "sigma")[[1]]
         } else {
+          tau_p <- rv$tau_p[[group]]
           tau_v <- rv$tau_v[[group]]
+          sigma <- rv$sigma[[group]]
         }
         
         rv$sd$tbl <<- rbind(
           rv$sd$tbl, 
-          .build_tbl_sd(
+          .build_tbl(
+            target = "ctsd",
             group = if (rv$grouped) group else NA,
             data = rv$simList[[sim_no]],
-            seed = rv$seedList[[sim_no]],
+            seed = names(rv$simList)[[sim_no]],
             obj = rv$ctsdList[[sim_no]],
-            par = tau_v,
+            tau_p = tau_p,
+            tau_v = tau_v,
+            sigma = sigma,
             speed = rv$speedEst[sim_no, ],
             speed_error = rv$speedErr[sim_no, ],
             distance = rv$distEst[sim_no, ],
@@ -2343,22 +2353,30 @@ mod_tab_ctsd_server <- function(id, rv) {
       }
       
       if (rv$is_emulate) {
-          fit <- emulate_seeded(rv$meanfitList[[group]], 
-                                rv$seedList[[set_id]])
-          tau_v <- extract_pars(fit, "velocity")[[1]]
+        fit <- emulate_seeded(
+          rv$meanfitList[[group]], rv$seedList[[set_id]])
+        tau_p <- extract_pars(fit, "position")[[1]]
+        tau_v <- extract_pars(fit, "velocity")[[1]]
+        sigma <- extract_pars(fit, "sigma")[[1]]
+        
       } else {
+        tau_p <- rv$tau_p[[group]]
         tau_v <- rv$tau_v[[group]]
+        sigma <- rv$sigma[[group]]
       }
       
       rv$sd$tbl <<- rbind(
-        rv$sd$tbl,
-        .build_tbl_sd(
+        rv$sd$tbl, 
+        .build_tbl(
           data_type = "Modified",
+          target = "ctsd",
           group = group,
           data = rv$sd$simList[[1]],
-          seed = rv$seedList[[set_id]],
+          seed = names(rv$simList)[[set_id]],
           obj = rv$sd$ctsdList[[1]],
-          par = tau_v,
+          tau_p = tau_p,
+          tau_v = tau_v,
+          sigma = sigma,
           speed = rv$speedEst_new[1, ],
           speed_error = rv$speedErr_new[1, ],
           distance = rv$distEst_new[1, ],
@@ -2372,10 +2390,17 @@ mod_tab_ctsd_server <- function(id, rv) {
     ## Rendering output table: --------------------------------------------
 
     output$sdTable <- reactable::renderReactable({
-      req(rv$sd$tbl)
+      req(rv$sd$tbl, rv$ctsdList)
       
       dt_sd <- dplyr::select(rv$sd$tbl, -seed)
-      if (!rv$grouped) dt_sd <- dplyr::select(dt_sd, -group)
+      
+      if (!rv$grouped) {
+        dt_sd <- dplyr::select(
+          dt_sd, -c(device, group, taup, sigma, N1, area:area_err_max))
+      } else {
+        dt_sd <- dplyr::select(
+          dt_sd, -c(device, taup, sigma, N1, area:area_err_max))
+      }
       
       nms <- list(
         data = "Data",
@@ -2413,6 +2438,8 @@ mod_tab_ctsd_server <- function(id, rv) {
         nms <- nms[-1]
         colgroups <- colgroups[-1]
       }
+      
+      if (rv$grouped) dt_sd <- dplyr::rename(dt_sd,  Group = group)
       
       reactable::reactable(
         data = dt_sd,

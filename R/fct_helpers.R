@@ -891,7 +891,7 @@ extract_dof <- function(
   out <- list()
   out <- lapply(seq_along(obj), function(x) {
     
-    if (class(obj[[x]]) == "speed") {
+    if (inherits(obj[[x]], "speed")) {
       sum.obj <- obj[[x]]
     } else {
       sum.obj <- summary(obj[[x]])

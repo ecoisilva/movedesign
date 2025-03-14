@@ -916,6 +916,7 @@ mod_tab_design_server <- function(id, rv) {
       req(rv$which_meta, input$device_type)
       
       opt_limits <- NULL
+      
       switch(
         input$device_type,
         GPS = {
@@ -939,6 +940,7 @@ mod_tab_design_server <- function(id, rv) {
                             "Location error" = "error")
         },
         stop(paste0("No handler for ", input$device_type, "."))
+        
       ) # end of switch
       
       shinyWidgets::updateCheckboxGroupButtons(
@@ -2362,10 +2364,11 @@ mod_tab_design_server <- function(id, rv) {
       # If there is tag failure:
       
       rv$fail_prob <- NULL
-      rv$dev_failed <- FALSE
+      rv$dev_failed <- c()
       if (!is.null(input$device_failure))
         if (req(input$device_failure) > 0) {
           rv$fail_prob <- input$device_failure/100
+          rv$dev_failed <- rep(FALSE, length(simList))
         }
       
       # If there are errors associated with each location:
@@ -2513,17 +2516,16 @@ mod_tab_design_server <- function(id, rv) {
           
           rv$dev$tbl <<- rbind(
             rv$dev$tbl,
-            devRow(
-              device = input$device_type,
+            .build_tbl(
+              device = rv$device_type,
               group = if (rv$grouped) group else NA,
-              
               data = rv$simList[[x]],
               seed = rv$seedList[[x]],
-              fit = rv$simfitList[[x]],
-              
+              obj = rv$simfitList[[x]],
               tau_p = tau_p,
               tau_v = tau_v,
               sigma = sigma))
+        
         })
         
         rv$report_dev_yn <- TRUE
@@ -3026,9 +3028,7 @@ mod_tab_design_server <- function(id, rv) {
     ## Listing sampling designs: ------------------------------------------
     
     observe({
-      req(rv$seed0,
-          rv$dur, rv$dti,
-          rv$simList, rv$simfitList)
+      req(rv$dev$tbl)
       
       shinyjs::show(id = "devBox_summary")
       rv$dev$tbl <- dplyr::distinct(rv$dev$tbl)
@@ -3039,8 +3039,14 @@ mod_tab_design_server <- function(id, rv) {
     output$devTable <- reactable::renderReactable({
       req(rv$which_question, rv$dev$tbl)
       
-      dt_dev <- dplyr::select(rv$dev$tbl, -seed)
-      if (!rv$grouped) dt_dev <- dplyr::select(dt_dev, -group)
+      dt_dv <- dplyr::select(rv$dev$tbl, -c(seed, data))
+      if (!rv$grouped) {
+        dt_dv <- dplyr::select(
+          dt_dv, -c(group, area:dist_err))
+      } else {
+        dt_dv <- dplyr::select(
+          dt_dv, -c(area:dist_err))
+      }
       
       nms <- list(
         device = "Type",
@@ -3056,7 +3062,7 @@ mod_tab_design_server <- function(id, rv) {
         fit = "Fitted?")
       
       reactable::reactable(
-        dt_dev,
+        dt_dv,
         compact = TRUE,
         highlight = TRUE,
         striped = TRUE,
