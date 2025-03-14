@@ -58,7 +58,8 @@
 .cl-dgr { color: var(--danger) !important; }
 .cl-dgr-d { color: var(--danger-dark) !important; }
 
-.cl-gld { color: var(--gold-dark) !important; }
+.cl-gld { color: var(--gold-dawn) !important; }
+.cl-gld-d { color: var(--gold-dark) !important; }
 
 .cl-blk { color: #000 !important; }
 .cl-wht { color: #fff !important; }
@@ -1544,7 +1545,8 @@ table.dataTable.display tbody td {
   margin: 8px 0 !important;
   font-size: 28px !important;
   line-height: 25px !important;
-  font-weight: 100 !important;
+  font-family: var(--monosans);
+  font-style: normal; /* font-weight: 100 !important; */
 }
 
 .sweet-alert p {
