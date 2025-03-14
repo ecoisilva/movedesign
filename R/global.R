@@ -42,7 +42,7 @@ utils::globalVariables(
     "duration", "dur", "dur_unit",
     "interval", "dti", "dti_unit", "dti_notes",
     
-    "tau_p", "tau_v", 
+    "taup", "tau_p", "tauv", "tau_v", 
     
     "CI", "LCI", "UCI",
     "CI_low", "CI_high",
@@ -76,6 +76,9 @@ utils::globalVariables(
     "var_color",
     "color",
     
+    "area", "area_err_max",
+    "ctsd", "dist_err",
+
     "buffalo",
     "coati",
     "pelican",

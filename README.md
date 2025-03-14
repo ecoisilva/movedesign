@@ -13,8 +13,6 @@ state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 <!-- [![Hits](https://hits.sh/github.com/ecoisilva/hits.svg)](https://hits.sh/github.com/ecoisilva/movedesign/) <br> -->
 <!-- ![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)<br> -->
-<!-- [![Codecov test coverage](https://codecov.io/gh/ecoisilva/movedesign/branch/main/graph/badge.svg)](https://app.codecov.io/gh/ecoisilva/movedesign?branch=main) -->
-
 <!-- badges: end -->
 
 <br>
@@ -74,8 +72,7 @@ movedesign::run_app()
 Start with the guided tutorial in the `'Home'` tab. For a more detailed
 introduction, refer to the
 [vignette](https://ecoisilva.github.io/movedesign/articles/tutorial.html)
-or the
-[manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153).
+or the [manuscript](https://doi.org/10.1111/2041-210X.14153).
 
 <img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png"
      alt="This figure presents a conceptual workflow of the key elements of the ‘movedesign’ application, which provides an R Shiny-powered user interface to test different sampling designs for specified tracking projects." 
