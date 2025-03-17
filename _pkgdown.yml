@@ -14,9 +14,9 @@ template:
   bootstrap: 5
   bslib:
     base_font:
-      google: Fira Sans
+      google: Barlow
     heading_font:
-      google: Fira Sans
+      google: Barlow
     code_font:
       google: JetBrains Mono
     bg: '#ffffff'
