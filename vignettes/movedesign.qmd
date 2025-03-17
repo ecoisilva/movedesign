@@ -1,0 +1,101 @@
+---
+title: "movedesign"
+author: "Inês Silva"
+date: "`r Sys.Date()`"
+# description: "Get started"
+vignette: >
+  %\VignetteIndexEntry{Tutorial}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk: 
+    collapse: true
+    comment: '#>'
+bibliography: references.bib
+csl: mee.csl
+---
+
+```{=html}
+<style>
+body {
+    text-align: justify;
+}
+svg {
+  margin-right: 0.3em;
+}
+.custom-box {
+    background-color: #009DA0;
+    color: white;
+    padding: 10px 10px 2px 10px;
+    margin: 8px 0 8px 0;
+}
+code {
+  background-color: RGB(232, 232, 232) !important;
+}
+</style>
+```
+
+```{r, include = FALSE}
+library(fontawesome)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Why `movedesign`?
+
+`movedesign` is built using R language with Shiny for an easy-to-use user interface (GUI). This application will allow you to test different tracking regimes while considering an initially set research question (currently *home range* and *speed/distance* estimation).
+
+-   Doesn't require R coding experience.
+-   Leverages the `ctmm` R package for statistically unbiased methods.
+
+# How to start:
+
+The application includes a built-in guided tutorial to help you navigate its features. When you open the `'Home'` tab, you'll find the following:
+
+![](images/tutorial1_img1.png){fig-align="center"}
+
+This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly [highlighted]{style="color: white; background: #009DA0;"}. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking `'Next'` or pressing the right arrow key on your keyboard. The information from the guided tour is also partially available below.
+
+`r fontawesome::fa("circle-exclamation", fill = "#DB4545")` [Warning:]{style="color: #DB4545; font-weight: bold;"} [During the guided tutorial, refrain from interacting with anything outside the highlighted zones to avoid interruptions.]{style="color: #DB4545;"}
+
+This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive `r fontawesome::fa("circle-question")` **help tips** at any time. Documentation is also available on Silva *et al.* [-@silva2023movedesign].
+
+## Workflows
+
+These are the current options for `movedesign` workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target. All workflows follow a stepwise approach, with tabs displayed sequentially on the right sidebar. Irrelevant tabs for the current workflow will be automatically hidden.
+
+**Step 1.** *Data source:*
+
+Users can specify what is their data source:
+
+-   [ ] `Upload`: Import a dataset from a local file.
+-   [ ] `Select`: Choose from pre-existing datasets available in the application.
+-   [ ] `Simulate`: Generate synthetic data for testing or modeling purposes.
+
+**Step 2.** *Research target:*
+
+Users can define their research targets:
+
+-   [ ] `Home range`: Analyze long-term space-use requirements.
+-   [ ] `Speed & distance`: Investigate movement metrics such as speed and distance traveled.
+
+**Step 3.** *Analytical target:*
+
+Users can decide on their analytical target for the estimates:
+
+-   [ ] `Individual estimate`: Obtain metrics for a single individual.
+-   [ ] `Mean estimate of sampled population`: Obtain a mean estimate across a sampled group.
+-   [ ] `Compare estimates of two sampled populations`: Perform a comparative analysis between two groups (for the detection of sub-populations).
+
+Additionally, users have the option to:
+
+-   [ ] `Add individual variation`: Include variation among individuals during simulations (only available for mean and estimate comparisons).
+
+Go [here](https://ecoisilva.github.io/movedesign/articles/tutorial.html) for more detailed information regarding the `Individual estimate` workflow.
+
+## Related work
+
+-   The [ctmm](https://github.com/ctmm-initiative/ctmm) R package and [ctmmweb](https://github.com/ctmm-initiative/ctmmweb) Shiny application.
