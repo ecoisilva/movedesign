@@ -1569,10 +1569,12 @@ table.dataTable.display tbody td {
 }
 .modal_warning.sweet-alert h2 {
   font-size: 24px !important;
-  color: var(--gold-dawn) !important;
+   color: var(--danger) !important; /* var(--gold-dawn) !important; */
 }
 
-.modal_warning.sweet-alert .sa-icon.sa-error,
+.modal_warning.sweet-alert .sa-icon.sa-error {
+    border-color: var(--danger) !important;
+}
 .modal_warning.sweet-alert .sa-icon.sa-warning {
     border-color: var(--danger) !important;
 }
