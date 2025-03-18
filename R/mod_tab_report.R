@@ -1416,7 +1416,7 @@ mod_tab_report_server <- function(id, rv) {
               style = paste(css_mono, css_bold),
               "The number of simulations is likely insufficient",
               "to obtain an accurate mean", 
-              wrap_none(txt_type[[target]], color = pal$dgr, end = ","),
+              wrap_none(txt_target[[target]], color = pal$dgr, end = ","),
               txt_uncertainty)
           })
         
@@ -1492,7 +1492,7 @@ mod_tab_report_server <- function(id, rv) {
       css_mono <- "font-family: var(--monosans);"
       
       set_target <- c()
-      txt_type <- txt_title <- list()
+      txt_target <- txt_title <- list()
       get_N <- get_coi <- get_cri <- list()
       txt_ratio_order <- "(for group A/group B)"
       
@@ -1505,7 +1505,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if ("Home range" %in% rv$which_question) {
         set_target <- c(set_target, "hr")
-        txt_type[["hr"]] <- "home range area"
+        txt_target[["hr"]] <- "home range area"
         txt_title[["hr"]] <- "Home range meta-analyses:"
         
         get_coi[["hr"]] <- .extract_ci("hr")
@@ -1516,7 +1516,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if ("Speed & distance" %in% rv$which_question) {
         set_target <- c(set_target, "ctsd")
-        txt_type[["ctsd"]] <- "movement speed"
+        txt_target[["ctsd"]] <- "movement speed"
         txt_title[["ctsd"]] <- "Speed meta-analyses:"
         
         get_coi[["ctsd"]] <- .extract_ci("sd")
@@ -1581,7 +1581,7 @@ mod_tab_report_server <- function(id, rv) {
             observed_ratio$uci >= 1)
         
         txt_ratio <- span(
-          "The", txt_type[[target]], "ratio", txt_ratio_order,
+          "The", txt_target[[target]], "ratio", txt_ratio_order,
           ifelse(
             overlaps_with$one_observed,
             paste0("overlapped with one (i.e., ",
@@ -1599,11 +1599,11 @@ mod_tab_report_server <- function(id, rv) {
           
           if (sufficient_simulations) {
             tagList("The number of simulations is likely sufficient", 
-                    "to obtain", wrap_none(txt_type[[target]], 
+                    "to obtain", wrap_none(txt_target[[target]], 
                                            color = pal$sea, " ratios."))
           } else {
             tagList("The number of simulations is likely insufficient", 
-                    "to obtain", wrap_none(txt_type[[target]], 
+                    "to obtain", wrap_none(txt_target[[target]], 
                                            color = pal$dgr, " ratios."))
           }
         )

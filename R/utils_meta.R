@@ -196,9 +196,9 @@
                                  set_target = c("hr", "ctsd"),
                                  summarized = TRUE) {
   
-  truthList <- lapply(set_target, function(x) {
+  truthList <- setNames(lapply(set_target, function(target) {
     
-    if (set_target == "hr") {
+    if (target == "hr") {
       out <- get_true_hr(
         data = if (!summarized) rv$simList else NULL,
         sigma = rv$sigma,
@@ -208,10 +208,9 @@
         groups = if (rv$grouped) rv$groups[[2]] else NULL,
         summarized = summarized) 
       if (!summarized) names(out) <- names(rv$simList)
-      
     }
     
-    if (set_target == "ctsd") {
+    if (target == "ctsd") {
       out <- get_true_speed(
         data = if (!summarized) rv$simList else NULL,
         tau_p = rv$tau_p,
@@ -227,9 +226,8 @@
     
     return(out)
     
-  }) # end of lapply
+  }), set_target) # end of lapply
   
-  names(truthList) <- set_target
   return(truthList)
   
 }
