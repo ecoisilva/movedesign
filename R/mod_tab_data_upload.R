@@ -875,6 +875,13 @@ mod_tab_data_upload_server <- function(id, rv) {
       rv$svfList <- NULL
       rv$id <- NULL
       
+      rv$time <- list(
+        "upload" = c(0, 0),
+        "sims" = c(0, 0),
+        "hr" = c(0, 0),
+        "ctsd" = c(0, 0),
+        "total" = c(0, 0))
+      
       rv$data_type <- "uploaded"
       
       shinyjs::show(id = "uploadBox_viz")
@@ -1035,7 +1042,8 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       req(rv$fitList)
       time_fit <- difftime(Sys.time(), start_fit, units = "sec")
-      rv$time[1] <- rv$time[1] + time_fit[[1]]
+      rv$time[["upload"]][[1]] <- 
+        rv$time[["upload"]][[1]] + time_fit[[1]]
       
       msg_log(
         style = 'success',
@@ -1611,9 +1619,10 @@ mod_tab_data_upload_server <- function(id, rv) {
     # MISC ----------------------------------------------------------------
     
     output$upload_time <- renderText({
-      req(rv$time)
+      req(rv$time[["upload"]][[1]] > 0)
       
-      out <- fix_unit(rv$time[1], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time[["upload"]][[1]],
+                      "seconds", convert = TRUE)
       
       return(paste0("Model fitting took approximately ",
                     out$value, " ", out$unit, "."))

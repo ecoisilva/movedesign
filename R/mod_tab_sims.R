@@ -1027,14 +1027,14 @@ mod_tab_sims_server <- function(id, rv) {
         # 
         # rv$fitList <- fitting_ctmm()
         
-        rv$time_sims <- difftime(Sys.time(), start_sim,
-                                 units = "mins")
+        time_sims <- difftime(Sys.time(), start_sim, units = "sec")
+        rv$time[["sims"]][[1]] <- rv$time[["sims"]][[1]] + time_sims[[1]]
         
         # msg_log(
         #   style = "success",
         #   message = paste0("Model fitting ",
         #                    msg_success("completed"), "."),
-        #   run_time = rv$time_sims)
+        #   run_time = time_sims)
         
         shinyjs::enable("simButton_save")
         shinyjs::show(id = "simBox_misc")
@@ -1812,9 +1812,11 @@ mod_tab_sims_server <- function(id, rv) {
     # Display time elapsed:
     
     output$console_sims <- renderText({
-      req(rv$time_sims)
+      req(rv$time[["sims"]][[1]] > 0)
+      
+      time_mins <- "minutes" %#% rv$time[["sims"]][[1]]
       paste0("The simulation took approximately ",
-             round(rv$time_sims, 1), " minutes.")
+             round(time_mins, 1), " minutes.")
     })
     
   }) # end of moduleServer

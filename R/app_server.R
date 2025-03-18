@@ -77,8 +77,12 @@ app_server <- function(input, output, session) {
     alert_active = TRUE,
     overwrite_active = FALSE,
     crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0",
-    time = list("hr" = list("initial" = c(0, 0), "final" = c(0, 0)),
-                "ctsd" = list("initial" = c(0, 0), "final" = c(0, 0))),
+    time = list(
+      "upload" = c(0, 0),
+      "sims" = c(0, 0),
+      "hr" = c(0, 0),
+      "ctsd" = c(0, 0),
+      "total" = c(0, 0)),
     
     highlight_dur = "",
     highlight_dti = "",

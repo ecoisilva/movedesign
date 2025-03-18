@@ -547,6 +547,13 @@ mod_tab_data_select_server <- function(id, rv) {
       rv$fitList <- NULL
       rv$id <- NULL
       
+      rv$time <- list(
+        "upload" = c(0, 0),
+        "sims" = c(0, 0),
+        "hr" = c(0, 0),
+        "ctsd" = c(0, 0),
+        "total" = c(0, 0))
+      
       rv$data_type <- "selected"
       index <- rownames(rv$ctmm) %>% match(x = input$sp_selected)
       rv$species_common <- rv$ctmm[index, 1]

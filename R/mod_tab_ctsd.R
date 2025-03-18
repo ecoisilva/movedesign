@@ -347,22 +347,22 @@ mod_tab_ctsd_ui <- function(id) {
             #       icon =  icon("trash"),
             #       width = "110px")), br()
 
-          ) #, # end of box // sdBox_summary
+          ), # end of box // sdBox_summary
 
           ## Additional information: --------------------------------------
 
-          # shinydashboardPlus::box(
-          #   title = span("Additional information:", class = "ttl-box"),
-          #   id = ns("sdBox_misc"),
-          #   width = NULL,
-          #   solidHeader = FALSE,
-          # 
-          #   verbatimTextOutput(outputId = ns("out_time_sd")),
-          #   verbatimTextOutput(outputId = ns("out_time_sd_new")),
-          #   div(class = "pre-main",
-          #       verbatimTextOutput(outputId = ns("out_time_sd_total")))
-          #   
-          # ) # end of box
+          shinydashboardPlus::box(
+            title = span("Additional information:", class = "ttl-box"),
+            id = ns("sdBox_misc"),
+            width = NULL,
+            solidHeader = FALSE,
+
+            verbatimTextOutput(outputId = ns("out_time_sd")),
+            verbatimTextOutput(outputId = ns("out_time_sd_new")),
+            div(class = "pre-main",
+                verbatimTextOutput(outputId = ns("out_time_sd_total")))
+
+          ) # end of box
           
       ) # end of column (bottom)
 
@@ -1223,7 +1223,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       if ("DOF" %in% names(ctsd)) ctsd <- list(ctsd)
       
       time_sd <- difftime(Sys.time(), start_sd, units = "sec")
-      rv$sd$time[2] <- rv$sd$time[2] + time_sd[[1]]
+      rv$time[["ctsd"]][[1]] <- rv$time[["ctsd"]][[1]] + time_sd[[1]]
       
       return(ctsd)
       
@@ -1325,7 +1325,6 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       for (b in seq_along(boxes)) shinyjs::show(id = boxes[b])
       
-      rv$time_sd <- c(0,0)
       start <- Sys.time()
       
       num_sims <- length(rv$simList) - length(rv$ctsdList)
@@ -1611,8 +1610,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       shinyjs::show(id = "sdBlock_err")
       
       time_sd <- difftime(Sys.time(), start, units = "sec")
-      rv$time_sd[1] <- rv$time_sd[1] + 
-        difftime(Sys.time(), start, units = "sec")[[1]]
+      rv$time[["ctsd"]][[1]] <- rv$time[["ctsd"]][[1]] + time_sd[[1]]
       
       msg_log(
         style = "success",
@@ -2037,7 +2035,7 @@ mod_tab_ctsd_server <- function(id, rv) {
         rv$speedErr_new <- out_err
         
         time_sd <- difftime(Sys.time(), start_est, units = "sec")
-        rv$sd$time[2] <- rv$sd$time[2] + time_sd[[1]]
+        rv$time[["ctsd"]][[2]] <- rv$time[["ctsd"]][[2]] + time_sd[[1]]
         
         ### Calculating total and mean distance: --------------------------
         
@@ -2709,30 +2707,30 @@ mod_tab_ctsd_server <- function(id, rv) {
 
     observe({
       shinyjs::show(id = "sdBox_misc")  
-    }) %>% bindEvent(rv$sd$time[1] > 0)
+    }) %>% bindEvent(rv$time[["sd"]] > 0)
     
     output$out_time_sd <- renderText({
-      req(rv$sd$time[1] > 0)
+      req(rv$time[["sd"]][[1]] > 0)
       
-      out <- fix_unit(rv$sd$time[1], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time[["ctsd"]][[1]], "seconds", convert = TRUE)
       paste0("Initial sampling design took approximately ",
              out$value, " ", out$unit, ".")
 
     }) # end of renderText, "time_sd"
 
     output$out_time_sd_new <- renderText({
-      req(rv$sd$time[2] > 0)
+      req(rv$time[["sd"]][[2]] > 0)
 
-      out <- fix_unit(rv$sd$time[2], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time[["ctsd"]][[2]], "seconds", convert = TRUE)
       paste0("New sampling design took approximately ",
              out$value, " ", out$unit, ".")
 
     }) # end of renderText, "time_sd_new"
 
     output$out_time_sd_new <- renderText({
-      req(rv$sd$time[1] > 0, rv$sd$ctsdList)
+      req(rv$time[["sd"]][[2]] > 0, rv$sd$ctsdList)
 
-      total_time <- rv$sd$time[1] + rv$sd$time[2]
+      total_time <- rv$time[["sd"]][[1]] + rv$time[["sd"]][[2]]
 
       out <- fix_unit(total_time, "seconds", convert = TRUE)
       paste0("... In total, this section took approximately",

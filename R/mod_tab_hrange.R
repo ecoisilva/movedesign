@@ -365,18 +365,18 @@ mod_tab_hrange_ui <- function(id) {
           
           ## Additional information: --------------------------------------
           
-          # shinydashboardPlus::box(
-          #   title = span("Additional information:", class = "ttl-box"),
-          #   id = ns("hrBox_misc"),
-          #   width = NULL,
-          #   solidHeader = FALSE,
-          #   
-          #   verbatimTextOutput(outputId = ns("out_time_hr")),
-          #   verbatimTextOutput(outputId = ns("out_time_hr_new")),
-          #   div(class = "pre-main",
-          #       verbatimTextOutput(outputId = ns("out_time_hr_total")))
-          #   
-          # ) # end of box
+          shinydashboardPlus::box(
+            title = span("Additional information:", class = "ttl-box"),
+            id = ns("hrBox_misc"),
+            width = NULL,
+            solidHeader = FALSE,
+
+            verbatimTextOutput(outputId = ns("out_time_hr")),
+            verbatimTextOutput(outputId = ns("out_time_hr_new")),
+            div(class = "pre-main",
+                verbatimTextOutput(outputId = ns("out_time_hr_total")))
+
+          ) # end of box
           
       ) # end of column (bottom)
       
@@ -1058,7 +1058,6 @@ mod_tab_hrange_server <- function(id, rv) {
       
       for (b in 1:length(boxes)) shinyjs::show(id = boxes[b])
       
-      rv$time_hr <- c(0,0)
       start <- Sys.time()
       
       num_sims <- length(rv$simList) - length(rv$akdeList)
@@ -1250,7 +1249,7 @@ mod_tab_hrange_server <- function(id, rv) {
       rv$hrErr <<- rbind(rv$hrErr, out_err_df)
       
       time_hr <- difftime(Sys.time(), start, units = "sec")
-      rv$time[["hr"]][[1]][1] <- rv$time[["hr"]][[1]][1] + time_hr[[1]]
+      rv$time[["hr"]][[1]] <- rv$time[["hr"]][[1]] + time_hr[[1]]
       
       msg_log(
         style = "success",
@@ -1633,7 +1632,7 @@ mod_tab_hrange_server <- function(id, rv) {
         rv$is_analyses <- TRUE
         rv$hr$akdeList <- akde_new
         time_hr <- difftime(Sys.time(), start_est, units = "sec")
-        rv$time_hr[2] <- rv$time_hr[2] + 
+        rv$time[["hr"]][[2]] <- rv$time[["hr"]][[2]] + 
           difftime(Sys.time(), start, units = "sec")[[1]]
         
         msg_log(
@@ -2209,9 +2208,9 @@ mod_tab_hrange_server <- function(id, rv) {
     # MISC ----------------------------------------------------------------
 
     output$out_time_hr <- renderText({
-      req(rv$time_hr)
+      req(rv$time[["hr"]][[1]] > 0)
       
-      out <- fix_unit(rv$time_hr[1], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time[["hr"]][[1]], "seconds", convert = TRUE)
       out_txt <- paste0("Initial sampling design took approximately ",
                         out$value, " ", out$unit, ".")
       out_txt
@@ -2219,9 +2218,9 @@ mod_tab_hrange_server <- function(id, rv) {
     }) # end of renderText, "time_hr"
 
     output$out_time_hr_new <- renderText({
-      req(rv$time_hr, rv$hr$akdeList)
+      req(rv$time[["hr"]][[2]] > 0, rv$hr$akdeList)
 
-      out <- fix_unit(rv$time_hr[2], "seconds", convert = TRUE)
+      out <- fix_unit(rv$time[["hr"]][[2]], "seconds", convert = TRUE)
       out_txt <- paste0("New sampling design took approximately ",
                         out$value, " ", out$unit, ".")
       out_txt
@@ -2229,9 +2228,9 @@ mod_tab_hrange_server <- function(id, rv) {
     }) # end of renderText, "time_hr_new"
 
     output$out_time_hr_total <- renderText({
-      req(rv$time_hr, rv$hr$akdeList)
+      req(rv$time[["hr"]][[2]] > 0, rv$hr$akdeList)
 
-      total_time <- rv$time_hr[1] + rv$time_hr[2]
+      total_time <- rv$time[["hr"]][[1]] + rv$time[["hr"]][[2]]
 
       out <- fix_unit(total_time, "seconds", convert = TRUE)
       out_txt <- paste0("... In total, this section took ",
