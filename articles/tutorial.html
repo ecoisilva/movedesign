@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="../apple-touch-icon-60x60.png">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Fira_Sans-0.4.9/font.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Barlow-0.4.9/font.css" rel="stylesheet">
 <link href="../deps/JetBrains_Mono-0.4.9/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -68,7 +68,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>‘movedesign’ Walkthrough</h1>
 
       <p class="author">Inês Silva</p>
-      <p class="date">2025-03-14</p>
+      <p class="date">2025-03-18</p>
 
       <small class="dont-index">Source: <a href="https://github.com/ecoisilva/movedesign/tree/main/vignettes/tutorial.qmd" class="external-link"><code>vignettes/tutorial.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
@@ -83,6 +83,9 @@
 body {
     text-align: justify;
 }
+svg {
+  margin-right: 0.3em;
+}
 .custom-box {
     background-color: #009DA0;
     color: white;
@@ -95,42 +98,8 @@ code {
 </style>
 <section class="section level2"><h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>The application includes a built-in guided tutorial to help you navigate its features. When you open the <code>'Home'</code> tab, you’ll find the following:</p>
-<div class="quarto-figure quarto-figure-center">
-<figure><p><img src="images/tutorial1_img1.png" class="quarto-figure quarto-figure-center"></p>
-</figure>
-</div>
-<p>This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly <span style="color: white; background: #009DA0;">highlighted</span>. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking <code>'Next'</code> or pressing the right arrow key on your keyboard. The information from the guided tour is also partially available below.</p>
-<p><svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#DB4545;overflow:visible;position:relative;"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24V264c0 13.3-10.7 24-24 24s-24-10.7-24-24V152c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg><span style="color: #DB4545; font-weight: bold;">Warning:</span> <span style="color: #DB4545;">During the guided tutorial, refrain from interacting with anything outside the highlighted zones to avoid interruptions.</span></p>
-<p>This tutorial provides an overview of key features but does not cover detailed definitions. For more in-depth explanations, you can access comprehensive <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24V250.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1H222.6c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg><strong>help tips</strong> at any time. Documentation is also available on Silva <em>et al.</em> <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">2023</a>)</span>.</p>
-<section class="level2"><h3 id="workflows">Workflows<a class="anchor" aria-label="anchor" href="#workflows"></a>
-</h3>
-<p>These are the current options for <code>movedesign</code> workflows. Users may configure their study design by selecting different options for data source, research target, and analytical target. All workflows follow a stepwise approach, with tabs displayed sequentially on the right sidebar. Irrelevant tabs for the current workflow will be automatically hidden.</p>
-<p><strong>Step 1.</strong> <em>Data source:</em></p>
-<p>Users can specify what is their data source:</p>
-<ul class="task-list">
-<li><label><input type="checkbox"><code>Upload</code>: Import a dataset from a local file.</label></li>
-<li><label><input type="checkbox"><code>Select</code>: Choose from pre-existing datasets available in the application.</label></li>
-<li><label><input type="checkbox"><code>Simulate</code>: Generate synthetic data for testing or modeling purposes.</label></li>
-</ul>
-<p><strong>Step 2.</strong> <em>Research target:</em></p>
-<p>Users can define their research targets:</p>
-<ul class="task-list">
-<li><label><input type="checkbox"><code>Home range</code>: Analyze long-term space-use requirements.</label></li>
-<li><label><input type="checkbox"><code>Speed &amp; distance</code>: Investigate movement metrics such as speed and distance traveled.</label></li>
-</ul>
-<p><strong>Step 3.</strong> <em>Analytical target:</em></p>
-<p>Users can decide on their analytical target for the estimates:</p>
-<ul class="task-list">
-<li><label><input type="checkbox"><code>Individual estimate</code>: Obtain metrics for a single individual.</label></li>
-<li><label><input type="checkbox"><code>Mean estimate of sampled population</code>: Obtain a mean estimate across a sampled group.</label></li>
-<li><label><input type="checkbox"><code>Compare estimates of two sampled populations</code>: Perform a comparative analysis between two groups (for the detection of sub-populations).</label></li>
-</ul>
-<p>Additionally, users have the option to:</p>
-<ul class="task-list">
-<li><label><input type="checkbox"><code>Add individual variation</code>: Include variation among individuals during simulations (only available for mean and estimate comparisons).</label></li>
-</ul></section><section class="level2"><h3 id="study-design-for-an-individual-estimate">Study design for an individual estimate:<a class="anchor" aria-label="anchor" href="#study-design-for-an-individual-estimate"></a>
-</h3>
+</section><section class="section level2"><h2 id="study-design-for-an-individual-estimate">Study design for an individual estimate:<a class="anchor" aria-label="anchor" href="#study-design-for-an-individual-estimate"></a>
+</h2>
 <p>This workflow is presented in Silva <em>et al.</em> <span class="citation" data-cites="silva2023movedesign">(<a href="#ref-silva2023movedesign" role="doc-biblioref">2023</a>)</span>.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure><p><img src="images/tutorial1_img3.png" class="quarto-figure quarto-figure-center"></p>
@@ -233,7 +202,7 @@ code {
 </figure>
 </div>
 <p>You can compare your results to our simulations based on similar timescales and sampling parameters, allowing for a quick assessment of consistency.</p>
-</section></section><section class="level2 unnumbered"><h3 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</section><section class="level2 unnumbered"><h3 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h3>
 <div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list">
 <div id="ref-fleming2015" class="csl-entry" role="listitem">
