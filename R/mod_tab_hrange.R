@@ -1302,6 +1302,8 @@ mod_tab_hrange_server <- function(id, rv) {
       if (rv$is_emulate) {
         req(rv$meanfitList)
         fit <- emulate_seeded(rv$meanfitList[["All"]], seed)
+        if (length(fit$isotropic) > 1)
+          fit$isotropic <- fit$isotropic[["sigma"]]
         
         # Recenter to 0,0:
         fit$mu[["x"]] <- 0
@@ -1329,6 +1331,8 @@ mod_tab_hrange_server <- function(id, rv) {
         
         if (rv$is_emulate) {
           fit <- emulate_seeded(rv$meanfitList[[group]], seed)
+          if (length(fit$isotropic) > 1)
+            fit$isotropic <- fit$isotropic[["sigma"]]
           
           # Recenter to 0,0:
           fit$mu[["x"]] <- 0
@@ -1591,13 +1595,16 @@ mod_tab_hrange_server <- function(id, rv) {
         
         if (rv$is_emulate) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[set_id]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[set_id]]),
             "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[set_id]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[set_id]]),
             "velocity")[[1]]
           sigma <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[set_id]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[set_id]]),
             "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]

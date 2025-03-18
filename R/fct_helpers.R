@@ -510,7 +510,7 @@ weighted_average_speed <- function(tau_v, fit, seed,
 #' @importFrom ctmm %#%
 #' @noRd
 get_true_speed <- function(data,
-                           seed,
+                           seed = NULL,
                            
                            tau_p,
                            tau_v,
@@ -557,7 +557,9 @@ get_true_speed <- function(data,
           } else {
             tau_v <- tau[["velocity"]]
           }
-          truth <- weighted_average_speed(tau_v, fit, seed[[1]])
+          # truth <- weighted_average_speed(tau_v, fit, seed[[1]])
+          truth <- weighted_average_speed(tau_v, fit, rv$seedList[[1]])
+          
         }
         
       } else {
@@ -576,14 +578,14 @@ get_true_speed <- function(data,
     
   } else {
     
-    out <- lapply(seq_along(seed), function(x) {
+    out <- lapply(seq_along(data), function(x) {
+      nm <- names(data)[[x]]
       if (grouped) {
-        nm <- names(data)[[x]]
         group <- ifelse(nm %in% groups[["A"]], "A", "B")
       } else group <- "All"
       
       if (emulated) {
-        fit <- emulate_seeded(fit[[group]], seed[[x]])
+        fit <- emulate_seeded(fit[[group]], nm)
         sigma <- var.covm(fit$sigma, average = TRUE)
         
         sigma <- fit$sigma
@@ -609,7 +611,7 @@ get_true_speed <- function(data,
           } else {
             tau_v <- tau[["velocity"]]
           }
-          truth <- weighted_average_speed(tau_v, fit, seed[[1]])
+          truth <- weighted_average_speed(tau_v, fit, nm)
         }
         
       } else {
@@ -630,7 +632,7 @@ get_true_speed <- function(data,
     
   } # end of if (summarized)
   
-}
+} # end of function, get_true_speed()
 
 
 #' Calculate confidence intervals

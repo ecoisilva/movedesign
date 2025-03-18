@@ -25,7 +25,7 @@
   
   datList <- list(All = list(), groups = list())
   outList <- list(All = list(), groups = list())
-  truthList <- .get_expected_values(set_target, rv)
+  truthList <- .get_expected_values(rv, set_target)
   
   if ("hr" %in% set_target) {
     datList[[1]][["hr"]] <- rv$akdeList
@@ -300,9 +300,9 @@ run_meta_permutations <- function(rv,
       if (random && max_samples > 1) {
         n_samples <- if(subpop) nrow(arg[["A"]]$out_random) else 
           nrow(arg[["All"]]$out_random)
-
-        if (subpop) if (arg[["A"]]$sets == 1) n_samples <- 1
         
+        if (subpop) { if (arg[["A"]]$sets == 1) n_samples <- 1
+        } else { if (arg[["All"]]$sets == 1) n_samples <- 1 }
       }
       
       msg_error <- "Error during permutation testing."

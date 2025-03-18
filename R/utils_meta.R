@@ -192,22 +192,28 @@
 #' @keywords internal
 #'
 #' @noRd
-.get_expected_values <- function(set_target = c("hr", "ctsd"),
-                                 rv, summarized = TRUE) {
+.get_expected_values <- function(rv,
+                                 set_target = c("hr", "ctsd"),
+                                 summarized = TRUE) {
   
   truthList <- lapply(set_target, function(x) {
-    out <- switch(
-      x,
-      "hr" = get_true_hr(
+    
+    if (set_target == "hr") {
+      out <- get_true_hr(
+        data = if (!summarized) rv$simList else NULL,
         sigma = rv$sigma,
         emulated = rv$is_emulate,
         fit = if (rv$is_emulate) rv$meanfitList else NULL,
         grouped = rv$grouped,
         groups = if (rv$grouped) rv$groups[[2]] else NULL,
-        summarized = summarized),
-      "ctsd" = get_true_speed(
-        data = rv$simList,
-        seed = rv$seedList,
+        summarized = summarized) 
+      if (!summarized) names(out) <- names(rv$simList)
+      
+    }
+    
+    if (set_target == "ctsd") {
+      out <- get_true_speed(
+        data = if (!summarized) rv$simList else NULL,
         tau_p = rv$tau_p,
         tau_v = rv$tau_v,
         sigma = rv$sigma,
@@ -215,9 +221,13 @@
         fit = if (rv$is_emulate) rv$meanfitList else NULL,
         grouped = rv$grouped,
         groups = if (rv$grouped) rv$groups[[2]] else NULL,
-        summarized = summarized))
+        summarized = summarized)
+      if (!summarized) names(out) <- names(rv$simList)
+    }
+    
     return(out)
-  })
+    
+  }) # end of lapply
   
   names(truthList) <- set_target
   return(truthList)

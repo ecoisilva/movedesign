@@ -1132,8 +1132,7 @@ mod_tab_ctsd_server <- function(id, rv) {
                           seed = rv$seedList[1],
                           parallel = rv$parallel)
         
-        rv$ctsdList <- list()
-        rv$ctsdList[[1]] <- ctsd
+        rv$ctsdList <- ctsd
         names(rv$ctsdList) <- rv$seedList[1]
         
       } else {
@@ -1162,6 +1161,7 @@ mod_tab_ctsd_server <- function(id, rv) {
             parallel = rv$parallel)
           
           rv$ctsdList <<- c(rv$ctsdList, ctsd)
+          length(rv$ctsdList)
           names(rv$ctsdList) <- do.call(c, rv$seedList)
           
           msg_log(
@@ -1682,6 +1682,8 @@ mod_tab_ctsd_server <- function(id, rv) {
       if (rv$is_emulate) {
         req(rv$meanfitList)
         fit <- emulate_seeded(rv$meanfitList[["All"]], seed)
+        if (length(fit$isotropic) > 1)
+          fit$isotropic <- fit$isotropic[["sigma"]]
         
         # Recenter to 0,0:
         fit$mu[["x"]] <- 0
@@ -1709,6 +1711,8 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         if (rv$is_emulate) {
           fit <- emulate_seeded(rv$meanfitList[[group]], seed)
+          if (length(fit$isotropic) > 1)
+            fit$isotropic <- fit$isotropic[["sigma"]]
           
           # Recenter to 0,0:
           fit$mu[["x"]] <- 0
@@ -2687,7 +2691,7 @@ mod_tab_ctsd_server <- function(id, rv) {
             h4(style = "margin-top: 30px;", "For more information:"),
             
             p(style = "font-family: var(--monosans);",
-              "- Noonan, M. J., Fleming, C. H., Akre, T. S.,",
+              "Noonan, M. J., Fleming, C. H., Akre, T. S.,",
               "Drescher-Lehman, J., Gurarie, E., Harrison, A. L.,",
               "Kays, R. & Calabrese, J. M. (2019). Scale-insensitive",
               "estimation of speed and distance traveled from animal",

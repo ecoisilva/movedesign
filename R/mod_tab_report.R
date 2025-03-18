@@ -363,7 +363,9 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$which_question, rv$which_meta)
       req(rv$which_meta == "none")
       
-      # TODO show if tau values of pre-run sims match
+      # TODO
+      # req(rv$which_meta == "none" || rv$which_meta == "mean")
+      
       if ("Home range" %in% rv$which_question) {
         
         out <- out_hr <- shinyWidgets::pickerInput(
@@ -629,7 +631,7 @@ mod_tab_report_server <- function(id, rv) {
              "selected" = {
                out_species <- span(
                  "These outputs are based on parameters",
-                 "extracted from", out_id, "and species", 
+                 "extracted from", out_id, "of the species", 
                  span(rv$species_common, class = "cl-grn"),
                  wrap_none("(", em(rv$species_binom), ")."))
              },
@@ -660,7 +662,7 @@ mod_tab_report_server <- function(id, rv) {
       rv$report$species <- p(
         out_species, 
         span(style = paste(css_mono, css_bold),
-             "Please see the",
+             "Please see",
              icon("paw", class = "cl-sea"),
              span("Species", class = "cl-sea"),
              "parameters for more details."),
@@ -1311,10 +1313,11 @@ mod_tab_report_server <- function(id, rv) {
       css_bold <- "font-weight: bold;"
       css_mono <- "font-family: var(--monosans);"
       
-      # TODO TOCHECK after this point!
       list2env(.build_outputs(rv), envir = environment())
       
-      for (target in seq_along(set_target)) {
+      i <- 0
+      for (target in rv$set_target) {
+        i <- i + 1
         
         out <- as.data.frame(rv$metaList[[target]]$meta)
         tmpunit <- extract_units(rownames(
@@ -1356,7 +1359,7 @@ mod_tab_report_server <- function(id, rv) {
                "Yes" = {
                  txt_mean <- span(
                    style = css_mono,
-                   "The mean", txt_type[[i]], txt_nsims,
+                   "The mean", txt_target[[target]], txt_nsims,
                    "is", span("falls within", class = "cl-sea"),
                    "the set error margin of",
                    paste0(rv$error_threshold * 100, "%."))
@@ -1364,7 +1367,7 @@ mod_tab_report_server <- function(id, rv) {
                "Near" = {
                  txt_mean <- span(
                    style = css_mono,
-                   "The mean", txt_type[[i]], txt_nsims,
+                   "The mean", txt_target[[target]], txt_nsims,
                    "is", span("near", class = "cl-sea"),
                    "the set error margin of",
                    paste0(rv$error_threshold * 100, "%."))
@@ -1372,9 +1375,9 @@ mod_tab_report_server <- function(id, rv) {
                "No" = {
                  txt_mean <- span(
                    style = css_mono,
-                   "The mean", txt_type[[i]], txt_nsims,
+                   "The mean", txt_target[[target]], txt_nsims,
                    span("falls outside", class = "cl-dgr"),
-                   "the set error margin of",
+                   "the threshold error margin of",
                    paste0(rv$error_threshold * 100, "%."))
                })
         
@@ -1385,7 +1388,7 @@ mod_tab_report_server <- function(id, rv) {
         } else {
           txt_uncertainty <- ifelse(
             get_coi[[target]][["uci"]] < .3 && 
-              get_coi[[target]][["CI_lci"]] > -.3,
+              get_coi[[target]][["lci"]] > -.3,
             "with low uncertainty.",
             "with high uncertainty.")
         }
@@ -1397,7 +1400,7 @@ mod_tab_report_server <- function(id, rv) {
               style = paste(css_mono, css_bold),
               "The number of simulations is likely sufficient",
               "to obtain an accurate mean", 
-              wrap_none(txt_type[[i]], color = pal$sea, end = ","),
+              wrap_none(txt_target[[target]], color = pal$sea, end = ","),
               txt_uncertainty)
           },
           "Near" = {
@@ -1405,7 +1408,7 @@ mod_tab_report_server <- function(id, rv) {
               style = paste(css_mono, css_bold),
               "The number of simulations is unlikely sufficient",
               "to obtain an accurate mean", 
-              wrap_none(txt_type[[target]], color = pal$dgr, end = ","),
+              wrap_none(txt_target[[target]], color = pal$dgr, end = ","),
               txt_uncertainty)
           },
           "No" = {
@@ -1428,16 +1431,16 @@ mod_tab_report_server <- function(id, rv) {
         #     span("Analyses", class = "cl-sea"), "tab to confirm."))
         # }
         
-        if (i == 1 && length(type) == 1)
+        if (i == 1 && length(rv$set_target) == 1)
           out_meta <- p(
-            p(txt_title[[i]],
+            p(txt_title[[target]],
               style = paste("font-size: 18px;",
                             "color: var(--sea-dark);"),
               class = "ttl-tab"),
             p(out_meta,
               txt_mean,
               txt_final))
-        else if (i == 1 && length(type) > 1)
+        else if (i == 1 && length(rv$set_target) > 1)
           out_meta <- tagList(
             out_meta,
             txt_mean, 
@@ -1874,7 +1877,6 @@ mod_tab_report_server <- function(id, rv) {
           "Home range" %in% rv$which_question) {
         req(rv$highlight_dur)
         
-        browser() # TODO TOCHECK
         highlighted_dur <- as.numeric(rv$highlight_dur)
         
         est <- .err_to_txt(rv$hr_cri_new$est)
@@ -1891,28 +1893,28 @@ mod_tab_report_server <- function(id, rv) {
           "days")
         
         if (highlighted_dur >= ideal_dur$value) {
-          out_comp <- out_comp_hr <-
-            p("Your new sampling duration would likely be sufficient",
-              "for", span("home range", class = "cl-grn"),
-              "estimation,", txt_level, "uncertainty:",
-              "for a duration of",
-              highlighted_dur, "days, there is a",
-              wrap_none(est, "%", css = "cl-blk"),
-              "probability that the relative error will lie within",
-              wrap_none(lci, "%", css = "cl-blk"),
-              "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
+          out_comp <- out_comp_hr <- p(
+            "Your new sampling duration would likely be sufficient",
+            "for", span("home range", class = "cl-grn"),
+            "estimation,", txt_level, "uncertainty:",
+            "for a duration of",
+            highlighted_dur, "days, there is a",
+            wrap_none(est, "%", css = "cl-blk"),
+            "probability that the relative error will lie within",
+            wrap_none(lci, "%", css = "cl-blk"),
+            "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
           
         } else {
-          out_comp <- out_comp_hr <-
-            p("Your new sampling duration would likely be insufficient",
-              "for", span("home range", class = "cl-grn"),
-              "estimation.", br(),
-              "For a duration of", highlighted_dur,
-              "days, there is high uncertainty",
-              wrap_none("(", CI, "%", css = "cl-blk"),
-              "probability that the relative error will lie within",
-              wrap_none(LCI, "%", css = "cl-blk"),
-              "and", wrap_none(UCI, "%", end = ").", css = "cl-blk"))
+          out_comp <- out_comp_hr <- p(
+            "Your new sampling duration would likely be insufficient",
+            "for", span("home range", class = "cl-grn"),
+            "estimation.", br(),
+            "For a duration of", highlighted_dur,
+            "days, there is high uncertainty",
+            wrap_none("(", CI, "%", css = "cl-blk"),
+            "probability that the relative error will lie within",
+            wrap_none(LCI, "%", css = "cl-blk"),
+            "and", wrap_none(UCI, "%", end = ").", css = "cl-blk"))
         }
       } # end of 'Home range'
       

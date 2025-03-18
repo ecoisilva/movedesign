@@ -1593,7 +1593,8 @@ mod_tab_meta_server <- function(id, rv) {
       }
       
       truth <- c()
-      truthList <- .get_expected_values(get_analysis, rv)
+      truthList <- .get_expected_values(rv, get_analysis)
+      
       if (rv$set_analysis == "hr") {
         truth[["hr"]] <- truthList[["hr"]][["A"]]$area/
           truthList[["hr"]][["B"]]$area

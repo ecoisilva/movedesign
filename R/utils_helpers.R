@@ -1733,57 +1733,6 @@ tele_to_dt <- function(object) {
 } # end of function, .build_tbl()
 
 
-#' @title Build table for speed and distance
-#' @description Build table for speed and distance
-#' @keywords internal
-#' @noRd
-.build_tbl_sd <- function(data_type = "Initial",
-                          group = NULL,
-                          data,
-                          seed,
-                          obj,
-                          par,
-                          speed,
-                          speed_error,
-                          distance, 
-                          distance_error) {
-  
-  if (is.null(group)) group <- NA
-  N <- extract_dof(obj, name = "speed")[[1]]
-  
-  out <- data.frame(
-    seed = seed,
-    group = group,
-    data = data_type,
-    tauv = NA,
-    dur = NA,
-    dti = NA,
-    n = nrow(data),
-    N2 = N,
-    ctsd = NA,
-    ctsd_err = speed_error$est,
-    ctsd_err_min = speed_error$lci,
-    ctsd_err_max = speed_error$uci,
-    dist = NA,
-    dist_err = distance_error$est)
-  
-  out$tauv <- paste(
-    scales::label_comma(.1)(par$value[2]), abbrv_unit(par$unit[2]))
-  
-  dur <- extract_sampling(data, name = "period")[[1]]
-  out_dur <- fix_unit(dur$value, dur$unit, convert = TRUE)
-  out$dur <- paste(out_dur$value, abbrv_unit(out_dur$unit))
-  
-  dti <- extract_sampling(data, name = "interval")[[1]]
-  out_dti <- fix_unit(dti$value, dti$unit)
-  out$dti <- paste(out_dti$value, abbrv_unit(out_dti$unit))
-  
-  
-  return(out)
-  
-} # end of function, .build_tbl_sd()
-
-
 #' @title Chooser input
 #'
 #' @noRd
@@ -2154,16 +2103,16 @@ par.speed <- function(data,
                       parallel = TRUE,
                       seed = NULL) {
   
-  if (class(fit)[1] != "list" && class(fit[[1]])[1] != "ctmm") {
+  if (class(fit)[1] != "list" && class(fit[[1]])[1] != "ctmm")
     stop("'input' must be a list of ctmm objects.")
-  } else {
-    if (length(data) != length(fit)) 
-      stop("'data' and 'fit' must be same length.")
-    input <- lapply(seq_along(data),
-                    function(x) list(data[[x]], 
-                                     fit[[x]],
-                                     seed[[x]]))
-  }
+  
+  is_one <- length(data) == 1
+  if (length(data) != length(fit)) 
+    stop("'data' and 'fit' must be same length.")
+  input <- lapply(seq_along(data),
+                  function(x) list(data[[x]], 
+                                   fit[[x]],
+                                   seed[[x]]))
   
   try_speed <- function(input) {
     set.seed(input[[3]])
@@ -2177,11 +2126,13 @@ par.speed <- function(data,
   }
   
   if (length(input) == 1) {
+    
     # Process one individual on multiple cores:
     internal_cores <- if (parallel) -1 else 1
     out_speed <- try(try_speed(input[[1]]))
     
   } else {
+    
     # Process multiple animals on multiple cores:
     internal_cores <- 1
     out_speed <- par.lapply(input,
@@ -2194,9 +2145,10 @@ par.speed <- function(data,
     msg_log(
       style = "danger",
       message = paste0("Speed estimation ",
-                       msg_danger("failed"), ".")) #,
-    # detail = "May be due to low sample size.")
+                       msg_danger("failed"), "."))
   }
+  
+  if (is_one) out_speed <- list(out_speed)
   
   set.seed(NULL)
   return(out_speed)
