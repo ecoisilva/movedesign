@@ -2110,7 +2110,6 @@ mod_tab_design_server <- function(id, rv) {
             tau_v = rv$tau_v[[1]][2, ],
             sigma = rv$sigma[[1]][2, ],
             mu = rv$mu[[1]])
-          
         }
         
         if ("compare" %in% rv$which_meta) {
@@ -2530,7 +2529,8 @@ mod_tab_design_server <- function(id, rv) {
         
         rv$report_dev_yn <- TRUE
         
-        # (Re)start for every new set of sampling parameters:
+        # (Re)initialize for every new set of sampling parameters:
+        
         rv$akdeList <- list()
         rv$ctsdList <- list()
         rv$pathList <- list()
@@ -2538,6 +2538,9 @@ mod_tab_design_server <- function(id, rv) {
         rv$meta_tbl <- NULL
         rv$hr$tbl <- NULL
         rv$sd$tbl <- NULL
+        
+        rv$err_prev <- list("hr" = rep(1, 5),
+                            "ctsd" = rep(1, 5))
         
         shinyjs::disable("devButton_run")
         shinyjs::enable("devButton_save")

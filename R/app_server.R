@@ -70,7 +70,7 @@ app_server <- function(input, output, session) {
     is_font = FALSE,
     add_note = FALSE,
     
-    err_prev = rep(1, 5),
+    err_prev = list("hr" = rep(1, 5), "ctsd" = rep(1, 5)),
     dev_failed = c(),
     
     tour_active = FALSE,
