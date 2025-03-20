@@ -76,6 +76,9 @@ utils::globalVariables(
     "var_color",
     "color",
     
+    "out_meta",
+    "out_meta_groups",
+    
     "area", "area_err_max",
     "ctsd", "dist_err",
 
@@ -85,5 +88,16 @@ utils::globalVariables(
     "jaguar",
     "wolf",
     "gazelle",
-    "turtle")
+    "turtle",
+    
+    "TanhSolver",
+    "ctmm",
+    "get_coi",
+    "get_cri",
+    "out_link_meta",
+    "txt_ratio_order",
+    "txt_target",
+    "txt_title",
+    
+    "rv")
 )
