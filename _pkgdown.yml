@@ -35,6 +35,7 @@ articles:
     navbar: ~
     contents:
     - movedesign
-    - tutorial
+    - tutorial_ind
+    # - tutorial_pop
   - title: Installation issues
-    contents: installation
+    contents: issues

@@ -11,7 +11,8 @@
 [![Project Status: Active – The project has reached a stable, usable
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-<!-- [![Hits](https://hits.sh/github.com/ecoisilva/hits.svg)](https://hits.sh/github.com/ecoisilva/movedesign/) <br> -->
+[![Hits](https://hits.sh/github.com/ecoisilva/hits.svg)](https://hits.sh/github.com/ecoisilva/movedesign/)
+<br>
 <!-- ![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)<br> -->
 <!-- badges: end -->
 
@@ -30,8 +31,8 @@ Movement ecology studies frequently make use of data collected from
 animal tracking projects. Planning a successful animal tracking project
 requires careful consideration and clear objectives. It is crucial to
 plan ahead and understand how much data is required to accurately answer
-your chosen research questions, and choose the optimal tracking regime
-or schedule.
+your chosen research questions, and choose the optimal tracking
+regime/schedule.
 
 To assist with study design, `movedesign` integrates the continuous-time
 methods available with the
@@ -71,7 +72,7 @@ movedesign::run_app()
 
 Start with the guided tutorial in the `'Home'` tab. For a more detailed
 introduction, refer to the
-[vignette](https://ecoisilva.github.io/movedesign/articles/tutorial.html)
+[vignettes](https://ecoisilva.github.io/movedesign/articles/movedesign.html)
 or the [manuscript](https://doi.org/10.1111/2041-210X.14153).
 
 <img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png"
