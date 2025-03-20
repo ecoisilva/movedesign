@@ -122,14 +122,25 @@
   
 }
 
+#' @title Prepare CIs from meta outputs
+#' @noRd
+.extract_ci <- function(meta, type_key) {
+  CI <- meta[grep(type_key, meta$type), ]
+  c("lci" = CI[nrow(CI), "lci"],
+    "est" = CI[nrow(CI), "est"],
+    "uci" = CI[nrow(CI), "uci"])
+}
 
 #' @title Prepare outputs for the report
 #' @noRd
-.build_outputs <- function(rv) {
+.build_outputs <- function(rv, ratio = FALSE) {
   
   set_target <- NULL
   truth <- coi <- cri <- list()
   txt_target <- txt_title <- list()
+  if (ratio) {
+    txt_ratio_order <- "(for group A/group B)"
+  }
   
   if ("Home range" %in% rv$which_question) {
     set_target <- c(set_target, "hr")
@@ -144,13 +155,11 @@
       summarized = TRUE)
     
     truth[["hr"]] <- truth_summarized[["All"]]$area
-    tmp <- rv$metaErr[grep("hr", rv$metaErr$type), ]
-    coi[["hr"]] <- c("lci" = tmp[nrow(tmp), "lci"],
-                         "est" = tmp[nrow(tmp), "est"],
-                         "uci" = tmp[nrow(tmp), "uci"])
-    cri[["hr"]] <- c("lci" = rv$hr_cri$lci,
-                         "est" = rv$hr_cri$est,
-                         "uci" = rv$hr_cri$uci)
+    
+    coi[["hr"]] <- .extract_ci(rv$metaErr, "hr")
+    cri[["hr"]] <- c("lci" = rv$sd_cri$lci,
+                     "est" = rv$sd_cri$est,
+                     "uci" = rv$sd_cri$uci)
   }
   
   if ("Speed & distance" %in% rv$which_question) {
@@ -171,19 +180,36 @@
     
     truth[["ctsd"]] <- truth_summarized[["All"]]
     
-    tmp <- rv$metaErr[grep("ctsd", rv$metaErr$type), ]
-    coi[["ctsd"]] <- c("lci" = tmp[nrow(tmp), "lci"],
-                         "est" = tmp[nrow(tmp), "est"],
-                         "uci" = tmp[nrow(tmp), "uci"])
+    coi[["ctsd"]] <- .extract_ci(rv$metaErr, "sd")
     cri[["ctsd"]] <- c("lci" = rv$sd_cri$lci,
-                           "est" = rv$sd_cri$est,
-                           "uci" = rv$sd_cri$uci)
+                       "est" = rv$sd_cri$est,
+                       "uci" = rv$sd_cri$uci)
   }
   
+  
+  set_style_title <- paste("display: inline-block;",
+                           "font-family: var(--sans);",
+                           "font-weight: 400;",
+                           "font-style: italic;",
+                           "font-size: 18px;",
+                           "color: var(--sea-dark);",
+                           "margin-bottom: 8px;")
+  
+  out_link_meta <- p(
+    style = paste("font-size: 16px;",
+                  "text-align: center;",
+                  "font-weight: bold;",
+                  "font-family: var(--monosans);"),
+    "Check the", shiny::icon("layer-group", class = "cl-sea"),
+    span("Meta-analyses", class = "cl-sea"), "tab",
+    "for more information.")
+
   return(list(set_target = set_target,
               txt_target = txt_target,
               txt_title = txt_title,
               get_truth = truth,
               get_coi = coi,
-              get_cri = cri))
+              get_cri = cri,
+              set_style_title = set_style_title,
+              out_link_meta = out_link_meta))
 }

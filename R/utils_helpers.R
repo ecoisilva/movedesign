@@ -824,21 +824,24 @@ plotting_outlier <- function(data,
     error <- UERE$UERE[, "horizontal"]
     names(error) <- rownames(UERE$UERE)
     error <- ctmm::ctmm(error = error, axes = c("x", "y"))
-    error <- ctmm:::get.error(ind, error, calibrate = TRUE)
+    error <- get.error(ind, error, calibrate = TRUE)
     
     DT <- diff(data[[x]]$t)
-    time.res <- ctmm:::time_res(DT)
+    time.res <- time_res(DT)
     ZERO <- DT == 0
     if (any(ZERO)) {
       DT[ZERO] <- time.res[2]
     }
-    Vs <- ctmm:::assign_speeds(data[[x]], UERE = error, 
-                               DT = DT, axes = c("x", "y"))
+    
+    Vs <- assign_speeds(data[[x]],
+                        UERE = error, 
+                        DT = DT, axes = c("x", "y"))
+    
     v <- Vs$v.t
     VAR.v <- Vs$VAR.t
-    mu <- ctmm:::median.telemetry(data[[x]])
-    d <- ctmm:::get.telemetry(data[[x]], axes = c("x", "y"))
-    mu <- ctmm:::get.telemetry(mu, axes = c("x", "y"))
+    mu <- ctmm::median(data[[x]])
+    d <- get.telemetry(data[[x]], axes = c("x", "y"))
+    mu <- get.telemetry(mu, axes = c("x", "y"))
     mu <- c(mu)
     d <- t(d) - mu
     if (length(dim(error)) == 3) {
@@ -847,7 +850,7 @@ plotting_outlier <- function(data,
       d <- colSums(d^2)
       d <- sqrt(d)
     }
-    D <- ctmm:::distanceMLE(d, error, return.VAR = TRUE)
+    D <- distanceMLE(d, error, return.VAR = TRUE)
     d <- D[, 1]
     VAR.d <- D[, 2]
     rm(D)
@@ -856,15 +859,15 @@ plotting_outlier <- function(data,
     #   error <- UERE$UERE[, "vertical"]
     #   names(error) <- rownames(UERE$UERE)
     #   error <- ctmm::ctmm(error = error, axes = c("z"))
-    #   error <- ctmm::get.error(data[[x]], error, calibrate = TRUE)
-    #   Vz <- ctmm::assign_speeds(data[[x]], UERE = error, DT = DT,
+    #   error <- get.error(data[[x]], error, calibrate = TRUE)
+    #   Vz <- assign_speeds(data[[x]], UERE = error, DT = DT,
     #                       axes = "z")
     #   vz <- Vz$v.t
     #   VAR.vz <- Vz$VAR.t
-    #   dz <- ctmm:::get.telemetry(data[[x]], axes = c("z"))
+    #   dz <- get.telemetry(data[[x]], axes = c("z"))
     #   dz <- dz - stats::median(data[[x]]$z)
     #   dz <- abs(dz)
-    #   DZ <- ctmm::distanceMLE(dz, error, axes = "z", 
+    #   DZ <- distanceMLE(dz, error, axes = "z", 
     #                     return.VAR = TRUE)
     #   dz <- DZ[, 1]
     #   VAR.dz <- DZ[, 2]
@@ -2172,3 +2175,8 @@ align_lists <- function(...) {
   return(out_lists)
 }
 
+CI.upper <- Vectorize(function(k, level) {
+  stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
+
+CI.lower <- Vectorize(function(k, level) {
+  stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
