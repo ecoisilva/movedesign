@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 description: > 
   How to design an animal tracking project with 'movedesign' (for population-level inferences) 
 vignette: >
-  %\VignetteIndexEntry{Tutorial}
+  %\VignetteIndexEntry{Tutorial_pop}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 knitr:
