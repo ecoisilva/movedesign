@@ -324,7 +324,7 @@ mod_comp_tour_server <- function(id, rv) {
             fontawesome::fa("paper-plane"), "'Extract' button.")
         )))
       
-      element <- c(element, paste0(tab3, "selectBox_regime"))
+      element <- c(element, paste0(tab3, "selectBox_schedule"))
       intro <- c(
         intro,
         HTML(paste(

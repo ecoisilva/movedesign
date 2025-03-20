@@ -7,7 +7,7 @@
 #' @noRd 
 #'
 #' @importFrom shiny NS tagList
-mod_comp_alerts_ui <- function(id){
+mod_comp_alerts_ui <- function(id) {
   ns <- NS(id)
   tagList(
  
@@ -78,10 +78,10 @@ mod_comp_alerts_server <- function(id, rv) {
         if (!rv$is_analyses) 
           shinyalert::shinyalert(
             type = "error",
-            title = "Regime does not match analyses",
+            title = "Schedule does not match with analyses",
             text = tagList(span(
-              "You have changed the regime without re-running",
-              "estimations. Please go back to the",
+              "You have changed the sampling schedule without",
+              "re-running estimations. Please go back to the",
               icon("compass-drafting", class = "cl-mdn"),
               span("Analyses", class = "cl-mdn"), "tab",
               "and make sure to click the",

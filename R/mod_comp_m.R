@@ -709,7 +709,15 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
                           rv$tau_v[[1]]$unit[2]) / 3
         
-        if (optimal_dur <= current_dur && current_dti <= optimal_dti)
+        # optimal_dur <= current_dur && current_dti <= optimal_dti
+        if (rv$set_analysis == "hr") {
+          to_check <- optimal_dur <= current_dur
+        }
+        if (rv$set_analysis == "ctsd") {
+          to_check <- current_dti <= optimal_dti
+        }
+        
+        if (to_check)
           simfitList <- tryCatch(
             par.ctmm.fit(simList, guessList, parallel = rv$parallel),
             error = function(e) e)
@@ -896,8 +904,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     #   req(rv$set_analysis == set_analysis)
     #   
     #   rv$m$proceed_get_m <- NULL
-    #   
-    #   browser()
     #   
     #   loading_modal("Calculating run time")
     #   expt <- estimating_time()
@@ -1155,15 +1161,22 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
                           rv$tau_v[[1]]$unit[2]) / 3
         
-        # Fit movment models:
+        # optimal_dur <= current_dur && current_dti <= optimal_dti
+        if (rv$set_analysis == "hr") {
+          to_check <- optimal_dur <= current_dur
+        }
+        if (rv$set_analysis == "ctsd") {
+          to_check <- current_dti <= optimal_dti
+        }
+        
+        # Fit movement models:
         
         fitList <- lapply(seq_along(simList), function(x) {
           
           guess <- ctmm::ctmm.guess(simList[[x]], interactive = F)
-          if (optimal_dur <= current_dur && current_dti <= optimal_dti)
+          if (to_check)
             out <- ctmm::ctmm.fit(simList[[x]], guess, trace = F)
-          else
-            out <- ctmm::ctmm.select(simList[[x]], guess, trace = F)
+          else out <- ctmm::ctmm.select(simList[[x]], guess, trace = F)
           rv$simfitList <- c(rv$simfitList, list(out))
           return(out)
           
@@ -1563,13 +1576,14 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         nm <- names(rv$simList)[[i]]
         seed <- as.character(nm)
+        if (is.null(seed)) browser() # TODO TOREMOVE
         
         group <- 1
         if (subpop) group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
         
         if ("Home range" %in% rv$which_question) {
           
-          truth <- rv$truth$ctsd[[seed]]$area
+          truth <- rv$truth$hr[[seed]]$area
           N1 <- extract_dof(rv$akdeList[[i]], "area")[[1]]
           
           if (N1 < 0.001) {

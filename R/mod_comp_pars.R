@@ -29,7 +29,7 @@ mod_comp_pars_ui <- function(id) {
             width = 12,
             
             shinyWidgets::radioGroupButtons(
-              inputId = ns("parInput_type"),
+              inputId = ns("parInput_target"),
               label = "Show parameter:",
               choices = choose_pars,
               selected = "tau_p",
@@ -94,11 +94,11 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       
       if (rv$which_question == "Home range")
         shinyWidgets::updateRadioGroupButtons(
-          inputId = "parInput_type",
+          inputId = "parInput_target",
           selected = "tau_p")
       else if (rv$which_question == "Speed & distance")
         shinyWidgets::updateRadioGroupButtons(
-          inputId = "parInput_type",
+          inputId = "parInput_target",
           selected = "tau_v")
 
     }) # end of observe
@@ -226,7 +226,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     ## Rendering parameters for all individuals: --------------------------
     
     output$parUI_legend <- renderUI({
-      req(rv$which_question, rv$is_valid, input$parInput_type)
+      req(rv$which_question, rv$is_valid, input$parInput_target)
       req(rv$datList, rv$fitList)
       req(length(rv$fitList) > 1)
       
@@ -240,7 +240,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
           "with both", span("home range", class = "cl-dgr"), 
           "and",  span("speed/distance", class = "cl-dgr"), "estimation.")
       
-      if (input$parInput_type == "tau_p" && is.null(taup)) {
+      if (input$parInput_target == "tau_p" && is.null(taup)) {
         ui <- tagList(
           p(style = "margin-top: 15px;"),
           span(class = "help-block",
@@ -256,7 +256,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         shinyjs::show(id = "parPlot_all")
       }
       
-      if (input$parInput_type == "tau_v" && is.null(tauv)) {
+      if (input$parInput_target == "tau_v" && is.null(tauv)) {
         ui <- tagList(
           p(style = "margin-top: 15px;"),
           span(class = "help-block",
@@ -277,7 +277,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
     }) # end of renderUI, "parUI_legend"
     
     output$parPlot_all <- ggiraph::renderGirafe({
-      req(rv$which_question, input$parInput_type)
+      req(rv$which_question, input$parInput_target)
       req(rv$datList, length(rv$fitList) > 1)
       req(rv$which_meta != "none")
       
@@ -293,11 +293,11 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       fitList[sapply(fitList, is.null)] <- NULL
       req(length(fitList) > 0)
       
-      if (input$parInput_type == "tau_p") {
+      if (input$parInput_target == "tau_p") {
         name <- "position"
         x_label <- "Position autocorrelation (in " 
       }
-      if (input$parInput_type == "tau_v") {
+      if (input$parInput_target == "tau_v") {
         name <- "velocity"
         x_label <- "Velocity autocorrelation (in "
       }

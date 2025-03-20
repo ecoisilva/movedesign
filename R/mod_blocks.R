@@ -18,19 +18,15 @@ mod_blocks_ui <- function(id) {
 #'
 #' @noRd 
 mod_blocks_server <- function(id,
-                              
                               rv, 
                               type,
                               name = NULL,
                               get_id = 1,
                               get_group = 1,
-                              
                               n = NULL,
                               N = NULL,
-                              
                               data = NULL,
                               obj = NULL,
-                              
                               input_name = NULL, 
                               input_modal = NULL,
                               class = NULL,
@@ -97,7 +93,7 @@ mod_blocks_server <- function(id,
                
              }, # end of type == "species"
              
-             # Tracking regime:
+             # Tracking schedule:
              "design" = {
                
                subtitle <- NULL
