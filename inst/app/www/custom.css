@@ -145,11 +145,13 @@ body {
     display: block;
     float: left;
     width: 50%;
+    padding-left: 14px;
   }
   .col-report-right {
     display: block;
     float: left;
     width: 50%;
+    padding-right: 14px;
   }
 }
 
