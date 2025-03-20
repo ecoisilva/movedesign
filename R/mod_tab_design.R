@@ -153,7 +153,7 @@ mod_tab_design_ui <- function(id) {
                 label_on =
                   span("Select from",
                        span("plot", class = "cl-sea")),
-                label_off = "Set regime manually",
+                label_off = "Set schedule manually",
                 value = TRUE))
             
           ), # end of box // devBox_gps_device
@@ -432,7 +432,7 @@ mod_tab_design_ui <- function(id) {
               ) # end of box // devBox_pars
           ), # end of div
           
-          # Specify tracking regime parameters: ---------------------------
+          # Specify sampling parameters: ----------------------------------
           
           div(class = "col-lg-6 no-padding-left",
               
@@ -1088,9 +1088,9 @@ mod_tab_design_server <- function(id, rv) {
       
     }) # end of renderUI // devButton_vhf
     
-    ## Render regime text: ------------------------------------------------
+    ## Render schedule text: ----------------------------------------------
     
-    writing_regime <- reactive({
+    writing_schedule <- reactive({
       req(rv$dur, rv$dti)
       
       out_dur <- fix_unit(rv$dur$value, rv$dur$unit, convert = TRUE)
@@ -1166,10 +1166,10 @@ mod_tab_design_server <- function(id, rv) {
       
       return(out)
       
-    }) %>% # end of reactive, writing_regime(),
+    }) %>% # end of reactive, writing_schedule(),
       debounce(50)
     
-    output$devText <- renderUI(writing_regime())
+    output$devText <- renderUI(writing_schedule())
     
     ## Update GPS inputs: -------------------------------------------------
     
@@ -1344,7 +1344,7 @@ mod_tab_design_server <- function(id, rv) {
           column(
             align = "center", width = 12,
             
-            #### 1.1. Select tracking regime:
+            #### 1.1. Select sampling schedule:
             
             p("What sampling interval will you evaluate?") %>%
               tagAppendAttributes(class = 'subheader'),
@@ -1400,7 +1400,7 @@ mod_tab_design_server <- function(id, rv) {
             align = "center", width = 12,
             
             # p("Here, you can vizualize the impact of different",
-            #   "tracking regimes on",
+            #   "tracking schedules on",
             #   span("sample sizes", class = "cl-sea"),
             #   "by selecting the",
             #   span("study duration", class = "cl-dgr"),
@@ -1675,7 +1675,7 @@ mod_tab_design_server <- function(id, rv) {
       
     }) # end of observe
     
-    ## Regime... ----------------------------------------------------------
+    ## Schedule... --------------------------------------------------------
     ### ...GPS & Satellite loggers: ---------------------------------------
     
     # Alert if research question(s)/data are NOT available:
@@ -1732,7 +1732,7 @@ mod_tab_design_server <- function(id, rv) {
       ) {
         
         shinyalert::shinyalert(
-          title = "No regime selected",
+          title = "No schedule selected",
           text = tagList(span(
             "Please select a fix rate to set a",
             HTML(paste0(span("sampling design", class = "cl-sea-d"),
@@ -1829,7 +1829,7 @@ mod_tab_design_server <- function(id, rv) {
       if (is.null(input$vhf_dti)) {
         
         shinyalert::shinyalert(
-          title = "No regime selected",
+          title = "No schedule selected",
           text = tagList(span(
             "Please select a fix rate to set a",
             HTML(paste0(span("sampling design", class = "cl-sea-d"),
@@ -1875,7 +1875,7 @@ mod_tab_design_server <- function(id, rv) {
     }) %>% # end of observer,
       bindEvent(input$validate_vhf)
     
-    # Regime verified:
+    # Schedule verified:
     
     observe({
       updateTabsetPanel(
@@ -1887,7 +1887,7 @@ mod_tab_design_server <- function(id, rv) {
       
       shinyFeedback::showToast(
         type = "success",
-        message = "Regime validated!",
+        message = "Schedule validated!",
         .options = list(
           timeOut = 3000,
           extendedTimeOut = 3500,
@@ -2951,7 +2951,7 @@ mod_tab_design_server <- function(id, rv) {
         input_modal = "modal_tauv_dev")
     }) # end of observe
     
-    ## Tracking regime: -------------------------------------------------
+    ## Sampling schedule: -----------------------------------------------
     
     observe({
       req(rv$active_tab == 'device')

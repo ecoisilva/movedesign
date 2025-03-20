@@ -78,10 +78,6 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
 #' @param unit character vector of time units. For example, "hours" or "meters".
 #' @return A list with the corrected value and the corrected unit.
 #'
-#' @examples
-#' \dontrun{
-#' movedesign:::fix_unit(1, "hours")
-#' }
 #' @keywords internal
 #'
 #' @importFrom dplyr case_when

@@ -72,7 +72,7 @@ mod_tab_meta_ui <- function(id) {
               
               br(),
               shinyWidgets::radioGroupButtons(
-                inputId = ns("metaOutput_type"),
+                inputId = ns("metaOutput_target"),
                 width = "260px",
                 label = "Show outputs for:",
                 choices = c(
@@ -248,10 +248,8 @@ mod_tab_meta_ui <- function(id) {
             
             p(style = "margin-top: 10px;"),
             div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
-                ggiraph::girafeOutput(
-                  outputId = ns("metaPlot_m_optimal"),
-                  width = "100%", height = "100%")),
-            
+                mod_viz_meta_ui("viz_meta_1")),
+                
             div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
                 reactable::reactableOutput(
                   ns("metaTable_m_optimal"))),
@@ -317,18 +315,32 @@ mod_tab_meta_server <- function(id, rv) {
       
     rv$meta <- reactiveValues(n_resample = 1)
     
+    # Run meta-analyses multiple ways:
+    
+    observe({
+      rv$run_meta <- input$run_meta
+    }) %>% bindEvent(input$run_meta)
+    
+    observe({
+      rv$run_meta_resample <- input$run_meta_resample
+    }) %>% bindEvent(input$run_meta_resample)
+    
+    to_run_meta <- reactive({
+      list(input$run_meta, input$run_meta_resample)
+    })
+    
     ## Switch if both research targets are available: ---------------------
     
     observe({
       
       if (length(rv$which_question) == 2) {
-        req(input$metaOutput_type)
-        rv$set_analysis <- input$metaOutput_type
+        req(input$metaOutput_target)
+        rv$set_analysis <- input$metaOutput_target
       }
       
     }) %>% # end of observe,
       bindEvent(list(rv$which_question,
-                     input$metaOutput_type,
+                     input$metaOutput_target,
                      input$run_meta))
     
     ## Update number of resamples: ----------------------------------------
@@ -746,7 +758,6 @@ mod_tab_meta_server <- function(id, rv) {
       if (rv$grouped) {
         
         datList_groups <- list()
-        metaList_groups <- list()
         
         if ("Home range" %in% rv$which_question) {
           datList_groups <- datList[["groups"]][["hr"]]
@@ -820,8 +831,8 @@ mod_tab_meta_server <- function(id, rv) {
       }
       
       if (rv$grouped) {
-        for (i in seq_along(metaList_groups)) {
-          out_groups <- metaList_groups[[i]]
+        for (target in rv$set_target) {
+          out_groups <- rv$metaList_groups[[2]][[target]]
           
           sum.objA <- out_groups$meta$A
           sum.objB <- out_groups$meta$B
@@ -1115,8 +1126,8 @@ mod_tab_meta_server <- function(id, rv) {
     
     observe({
       if (length(rv$which_question) == 2)
-        shinyjs::show(id = "metaOutput_type") else
-          shinyjs::hide(id = "metaOutput_type")
+        shinyjs::show(id = "metaOutput_target") else
+          shinyjs::hide(id = "metaOutput_target")
       
     }) # end of observe
     
@@ -1994,16 +2005,6 @@ mod_tab_meta_server <- function(id, rv) {
     
     output$metaTable_m_optimal <- reactable::renderReactable({
       req(rv$which_question, rv$meta_tbl)
-      
-      # TODO TOREMOVE
-      # if (length(rv$which_question) == 2) {
-      #   req(rv$set_analysis)
-      #   set_analysis <- rv$set_analysis
-      # } else {
-      #   set_analysis <- switch(rv$which_question,
-      #                          "Home range" = "hr",
-      #                          "Speed & distance" = "ctsd")
-      # }
       
       dt_meta <- rv$meta_tbl %>%
         dplyr::filter(type == rv$set_analysis) %>% 

@@ -262,11 +262,11 @@ mod_tab_data_upload_ui <- function(id) {
             
           ), # end of box // uploadBox_species
           
-          # Tracking regime: ----------------------------------------------
+          # Sampling schedule: --------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Tracking regime:", class = "ttl-box"),
-            id = ns("uploadBox_regime"),
+            title = span("Sampling schedule:", class = "ttl-box"),
+            id = ns("uploadBox_schedule"),
             status = "info",
             width = NULL,
             solidHeader = FALSE,
@@ -277,7 +277,7 @@ mod_tab_data_upload_ui <- function(id) {
               column(width = 12, mod_blocks_ui(ns("uplBlock_dti")))
             ) # end of fluidRow
             
-          ) # end of box // uploadBox_regime
+          ) # end of box // uploadBox_schedule
       ), # end of div (left column)
       
       # [right column] ----------------------------------------------------
@@ -293,7 +293,7 @@ mod_tab_data_upload_ui <- function(id) {
             solidHeader = FALSE,
             collapsible = TRUE,
             
-            mod_comp_viz_ui("comp_viz_uploaded")
+            mod_viz_ui("comp_viz_uploaded")
             
           ) # end of box // uploadBox_viz
           
@@ -405,7 +405,7 @@ mod_tab_data_upload_server <- function(id, rv) {
     ## Hide all boxes at start: -------------------------------------------
     
     boxnames <- c("species",
-                  "regime",
+                  "schedule",
                   "parameters",
                   "sizes",
                   "misc")
@@ -1170,7 +1170,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           rv$data_type == "uploaded", rv$id, rv$is_valid)
       req(rv$datList, rv$fitList)
       
-      shinyjs::show(id = "uploadBox_regime")
+      shinyjs::show(id = "uploadBox_schedule")
       shinyjs::show(id = "uploadBox_sizes")
       shinyjs::show(id = "uploadBox_parameters")
       
@@ -1500,7 +1500,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       shinyjs::hide(id = "uploadVar_x")
       shinyjs::hide(id = "uploadVar_y")
       shinyjs::hide(id = "uploadVar_t")
-      shinyjs::show(id = "uploadBox_regime")
+      shinyjs::show(id = "uploadBox_schedule")
       
     }) %>% # end of observe, then:
       bindEvent(input$uploadButton_extract)
@@ -1563,7 +1563,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       bindEvent(rv$proceed)
     
     # BLOCKS --------------------------------------------------------------
-    ## Tracking regime: ---------------------------------------------------
+    ## Sampling schedule: -------------------------------------------------
     
     observe({
       req(rv$active_tab == 'data_upload')

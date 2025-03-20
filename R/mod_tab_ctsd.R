@@ -83,21 +83,21 @@ mod_tab_ctsd_ui <- function(id) {
           
           mod_comp_m_ui("comp_m_in_ctsd"),
           
-          ## Tracking regime: ---------------------------------------------
+          ## Tracking schedule: -------------------------------------------
 
           shinydashboardPlus::box(
             title = span("Sampling design", class = "ttl-box_solid"),
-            id = ns("sdBox_regime"),
+            id = ns("sdBox_schedule"),
             status = "info",
             width = NULL,
             solidHeader = TRUE,
             collapsible = FALSE,
 
             tabsetPanel(
-              id = ns("sdTabs_regime"),
+              id = ns("sdTabs_schedule"),
 
               tabPanel(
-                value = ns("sdPanel_regime"),
+                value = ns("sdPanel_schedule"),
                 title = icon("stopwatch", class = "cl-sea"),
                 p(),
                 fluidRow(
@@ -108,7 +108,7 @@ mod_tab_ctsd_ui <- function(id) {
               ), # end of panels (1 out of 2)
 
               tabPanel(
-                value = ns("sdPanel_regime_new"),
+                value = ns("sdPanel_schedule_new"),
                 title = icon("bolt", class = "cl-mdn"),
                 p(),
                 fluidRow(
@@ -120,7 +120,7 @@ mod_tab_ctsd_ui <- function(id) {
             ), # end of tabs
 
             footer = div(
-              id = "sdBox_regime_footer",
+              id = "sdBox_schedule_footer",
               column(
                 width = 12, align = "right",
                 style = "padding-left: 0px; padding-right: 0px;",
@@ -133,7 +133,7 @@ mod_tab_ctsd_ui <- function(id) {
                   width = "125px")
                 
               )) # end of column, div (footer)
-          ), # end of box // sdBox_regime
+          ), # end of box // sdBox_schedule
           
           ## Sample sizes: ------------------------------------------------
           
@@ -242,7 +242,9 @@ mod_tab_ctsd_ui <- function(id) {
                         mod_blocks_ui(ns("distBlock_err_new")))
                   ),
                   
-                  uiOutput(ns("sdUI_distLegend"))
+                  uiOutput(ns("sdUI_distLegend")),
+                  p(style = "margin-top: 35px;"),
+                  uiOutput(ns("sdBlock_group_dist"))
                   
                 ) # end of div
                 
@@ -291,7 +293,9 @@ mod_tab_ctsd_ui <- function(id) {
                         mod_blocks_ui(ns("sdBlock_err_new")))
                   ),
                   
-                  uiOutput(ns("sdUI_sdLegend"))
+                  uiOutput(ns("sdUI_sdLegend")),
+                  p(style = "margin-top: 35px;"),
+                  uiOutput(ns("sdBlock_group_speed"))
                   
                 ) # end of div
 
@@ -397,7 +401,7 @@ mod_tab_ctsd_server <- function(id, rv) {
         req(rv$modList_groups)
       }
       
-      shinyjs::hide(id = "sdBox_regime_footer")
+      shinyjs::hide(id = "sdBox_schedule_footer")
       
     }) # end of observe
     
@@ -409,14 +413,14 @@ mod_tab_ctsd_server <- function(id, rv) {
     })
 
     observe({
-      shinyjs::show(id = "sdBox_regime")
+      shinyjs::show(id = "sdBox_schedule")
       shinyjs::show(id = "sdBox_sizes")
       shinyjs::show(id = "sdBox_viz")
     }) %>% bindEvent(rv$simfitList)
     
     ## Hide elements at start: --------------------------------------------
     
-    boxnames <- c("regime",
+    boxnames <- c("schedule",
                   "sizes",
                   "outputs",
                   "summary",
@@ -426,12 +430,22 @@ mod_tab_ctsd_server <- function(id, rv) {
       shinyjs::hide(id = paste0("sdBox_", boxnames[i]))
     }
 
-    tabnames <- c("regime", "speed", "sizes", "dist", "viz")
+    tabnames <- c("schedule", "speed", "sizes", "dist", "viz")
     for (i in 1:length(tabnames)) {
       tmp_id <- paste0("sdTabs_", tabnames[i])
       tmp_target <- paste0("sdPanel_", tabnames[i], "_new")
       hideTab(inputId = tmp_id, target = ns(tmp_target))
     }
+    
+    observe({
+      req(!is.null(rv$grouped))
+      if (!rv$grouped) shinyjs::hide(id = "sdBlock_group_speed")
+      else shinyjs::show(id = "sdBlock_group_speed")
+      
+      if (!rv$grouped) shinyjs::hide(id = "sdBlock_group_dist")
+      else shinyjs::show(id = "sdBlock_group_dist")
+      
+    }) %>% bindEvent(rv$grouped)
     
     ## Update based on number of simulations: -----------------------------
     
@@ -578,9 +592,9 @@ mod_tab_ctsd_server <- function(id, rv) {
       
     }) # end of renderUI, "sdUI_show"
     
-    ## Writing new regime text: -------------------------------------------
+    ## Writing new schedule text: -----------------------------------------
     
-    writing_regime_new <- reactive({
+    writing_schedule_new <- reactive({
       req(rv$sd$dur, rv$sd$dti)
       
       out_dti <- fix_unit(rv$sd$dti$value, rv$sd$dti$unit)
@@ -610,11 +624,10 @@ mod_tab_ctsd_server <- function(id, rv) {
         "a new location every", span(txt_dti, class = "cl-sea-d"),
         txt_dur)
       
-    }) # end of reactive, "writing_regime_new"
+    }) # end of reactive, "writing_schedule_new"
     
-    output$sdText_new1 <- renderUI(writing_regime_new())
-    output$sdText_new2 <- renderUI(writing_regime_new())
-    
+    output$sdText_new1 <- renderUI(writing_schedule_new())
+    output$sdText_new2 <- renderUI(writing_schedule_new())
     
     ## Adding different datasets to trajectory plot: ----------------------
     
@@ -1424,7 +1437,8 @@ mod_tab_ctsd_server <- function(id, rv) {
           sdList[[i]] <- sdList[[i]]$CI
         
         # If speed() returns Inf
-        to_check <- sdList[[i]][1, "est"] 
+        to_check <- sdList[[i]][1, "est"]
+        
         if (is.infinite(to_check)) {
           out_est_df <- out_est_df %>%
             dplyr::add_row(seed = rv$seedList[[sim_no]],
@@ -1575,13 +1589,16 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         if (rv$is_emulate) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[sim_no]]),
             "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[sim_no]]),
             "velocity")[[1]]
           sigma <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[sim_no]]),
             "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]

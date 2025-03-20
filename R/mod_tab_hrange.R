@@ -86,17 +86,17 @@ mod_tab_hrange_ui <- function(id) {
           
           shinydashboardPlus::box(
             title = span("Sampling design", class = "ttl-box_solid"),
-            id = ns("hrBox_regime"),
+            id = ns("hrBox_schedule"),
             status = "info",
             width = NULL,
             solidHeader = TRUE,
             collapsible = FALSE,
             
             tabsetPanel(
-              id = ns("hrTabs_regime"),
+              id = ns("hrTabs_schedule"),
               
               tabPanel(
-                value = ns("hrPanel_regime"),
+                value = ns("hrPanel_schedule"),
                 title = icon("stopwatch", class = "cl-sea"),
                 p(),
                 
@@ -108,7 +108,7 @@ mod_tab_hrange_ui <- function(id) {
               ), # end of panels (1 out of 2)
               
               tabPanel(
-                value = ns("hrPanel_regime_new"),
+                value = ns("hrPanel_schedule_new"),
                 title = icon("bolt", class = "cl-mdn"),
                 p(),
                 
@@ -121,7 +121,7 @@ mod_tab_hrange_ui <- function(id) {
             ), # end of tabs
             
             footer = div(
-              id = "hrBox_regime_footer",
+              id = "hrBox_schedule_footer",
               column(
                 width = 12, align = "right",
                 style = "padding-left: 0px; padding-right: 0px;",
@@ -134,7 +134,7 @@ mod_tab_hrange_ui <- function(id) {
                   width = "125px")
                 
               )) # end of column, div (footer)
-          ), # end of box // hrBox_regime
+          ), # end of box // hrBox_schedule
           
           ## Sample sizes: ------------------------------------------------
           
@@ -248,7 +248,10 @@ mod_tab_hrange_ui <- function(id) {
                     mod_blocks_ui(ns("hrBlock_est")),
                     p(style = "margin-top: 35px;"),
                     mod_blocks_ui(ns("hrBlock_err")),
-                    uiOutput(ns("hrUI_errLegend"))
+                    uiOutput(ns("hrUI_errLegend")),
+                    
+                    p(style = "margin-top: 35px;"),
+                    uiOutput(ns("hrBlock_group"))
                     
                 ) # end of div()
                 
@@ -406,7 +409,7 @@ mod_tab_hrange_server <- function(id, rv) {
       req(length(rv$mu) == 3,
           length(rv$sigma) == 3)
       
-      shinyjs::hide(id = "hrBox_regime_footer")
+      shinyjs::hide(id = "hrBox_schedule_footer")
       
     }) # end of observe
     
@@ -418,14 +421,14 @@ mod_tab_hrange_server <- function(id, rv) {
     # })
     
     observe({
-      shinyjs::show(id = "hrBox_regime")
+      shinyjs::show(id = "hrBox_schedule")
       shinyjs::show(id = "hrBox_sizes")
       shinyjs::show(id = "hrBox_viz")
     }) %>% bindEvent(rv$simfitList)
     
     ## Hide elements at start: --------------------------------------------
     
-    boxnames <- c("regime",
+    boxnames <- c("schedule",
                   "sizes",
                   "viz",
                   "areas",
@@ -436,7 +439,7 @@ mod_tab_hrange_server <- function(id, rv) {
       shinyjs::hide(id = paste0("hrBox_", boxnames[i]))
     }
     
-    tabnames <- c("regime", "area", "sizes", "viz")
+    tabnames <- c("schedule", "area", "sizes", "viz")
     for (i in 1:length(tabnames)) {
       tmp_id <- paste0("hrTabs_", tabnames[i])
       tmp_target <- paste0("hrPanel_", tabnames[i], "_new")
@@ -444,6 +447,13 @@ mod_tab_hrange_server <- function(id, rv) {
     }
     
     shinyjs::hide(id = "hr_nsim")
+    
+    observe({
+      req(!is.null(rv$grouped))
+      if (!rv$grouped) shinyjs::hide(id = "hrBlock_group")
+      else shinyjs::show(id = "hrBlock_group")
+      
+    }) %>% bindEvent(rv$grouped)
     
     ## Update based on number of simulations: -----------------------------
     
@@ -589,9 +599,9 @@ mod_tab_hrange_server <- function(id, rv) {
       
     }) # end of renderUI, "hrUI_show"
     
-    ## Writing new regime text: -------------------------------------------
+    ## Writing new schedule text: -----------------------------------------
     
-    writing_regime_new <- reactive({
+    writing_schedule_new <- reactive({
       req(rv$hr$dur, rv$hr$dti)
       
       out_dti <- fix_unit(rv$hr$dti$value, rv$hr$dti$unit)
@@ -622,9 +632,9 @@ mod_tab_hrange_server <- function(id, rv) {
         "a new location every", span(txt_dti, class = "cl-sea-d"),
         txt_dur)
       
-    }) # end of reactive, "writing_regime_new"
+    }) # end of reactive, "writing_schedule_new"
     
-    output$hrText_new <- renderUI(writing_regime_new())
+    output$hrText_new <- renderUI(writing_schedule_new())
     
     ## Toggle checkbox for true home range: -------------------------------
     
@@ -2093,7 +2103,7 @@ mod_tab_hrange_server <- function(id, rv) {
                         rintrojs::readCallback('switchTabs')))
 
     }) %>% # end of observe,
-      bindEvent(input$hrHelp_regime)
+      bindEvent(input$hrHelp_schedule)
 
     ## Help modal (biases): -----------------------------------------------
 

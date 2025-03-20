@@ -598,12 +598,10 @@ plot_meta_permutations <- function(rv,
            "For home range:", "For speed & distance:")
   }
   
-  if (is.null(pal)) { pal_values <- c("Yes" = "#009da0",
-                                      "Near" = "#77b131",
-                                      "No" = "#dd4b39")
-  } else pal_values <- c("Yes" = pal[[1]],
-                       "Near" = pal[[2]],
-                       "No" = pal[[3]])
+  if (is.null(pal)) { pal_values <- c(
+    "Yes" = "#009da0", "Near" = "#77b131", "No" = "#dd4b39")
+  } else pal_values <- c(
+    "Yes" = pal[[1]], "Near" = pal[[2]], "No" = pal[[3]])
   
   if (random) {
     

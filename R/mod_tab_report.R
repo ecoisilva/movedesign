@@ -144,7 +144,7 @@ mod_tab_report_ui <- function(id) {
                   ), # end of panel (1 out of 2)
                   
                   tabPanel(title = "Sampling design:",
-                           value = ns("repPanel_regime"),
+                           value = ns("repPanel_schedule"),
                            icon = icon("stopwatch"),
                            
                            splitLayout(
@@ -182,7 +182,7 @@ mod_tab_report_ui <- function(id) {
       div(class = "col-xs-12 col-sm-8 col-md-8 col-lg-10",
           
           shinydashboardPlus::box(
-            title = span("Report:", class = "ttl-tab"),
+            title = span("General report:", class = "ttl-tab"),
             icon = fontawesome::fa(name = "box-archive",
                                    height = "21px",
                                    margin_left = "14px",
@@ -357,7 +357,7 @@ mod_tab_report_server <- function(id, rv) {
       
     }) # end of renderUI, "report_emulate"
     
-    ## Rendering regime comparison inputs: --------------------------------
+    ## Rendering schedule comparison inputs: ------------------------------
     
     output$highlighting_reg <- renderUI({
       req(rv$which_question, rv$which_meta)
@@ -725,7 +725,7 @@ mod_tab_report_server <- function(id, rv) {
       if ("Home range" %in% rv$which_question) {
         req(rv$hr_cri)
         
-        out_regime <- out_reg_hr <-
+        out_schedule <- out_reg_hr <-
           p("The minimum", span("sampling duration", class = "cl-sea"),
             "recommended for", span("home range", class = "cl-grn"),
             "estimation should be at least 30", icon(name = "xmark"),
@@ -747,7 +747,7 @@ mod_tab_report_server <- function(id, rv) {
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$sd_cri)
         
-        out_regime <- out_reg_ctsd <-
+        out_schedule <- out_reg_ctsd <-
           p("The ", span("sampling interval", class = "cl-sea"),
             "for", span("speed & distance", class = "cl-grn"),
             "estimation should ideally be near or less than the",
@@ -771,9 +771,9 @@ mod_tab_report_server <- function(id, rv) {
       ### Both home range and speed & distance:
       
       if (length(rv$which_question) > 1)
-        out_regime <- tagList(out_reg_hr, out_reg_ctsd)
+        out_schedule <- tagList(out_reg_hr, out_reg_ctsd)
       
-      rv$report$regime <- out_regime
+      rv$report$schedule <- out_schedule
       
     }) %>% # end of observe,
       bindEvent(input$build_report)
@@ -857,7 +857,7 @@ mod_tab_report_server <- function(id, rv) {
           rv$report$is_hr <- TRUE
           txt_hr <- span(
             style = css_bold,
-            "Your current sampling duration is likely sufficient",
+            "Your current sampling duration appears sufficient",
             "for home range", txt_hr_uncertainty)
           
         } else {
@@ -925,7 +925,7 @@ mod_tab_report_server <- function(id, rv) {
           rv$report$is_sd <- TRUE
           txt_sd <- span(
             style = paste(css_mono, css_bold),
-            "Your current sampling interval is likely sufficient",
+            "Your current sampling interval appears sufficient",
             "for speed & distance", txt_sd_uncertainty)
         } else if (N2 >= 30) {
           rv$report$is_sd <- FALSE
@@ -1086,7 +1086,7 @@ mod_tab_report_server <- function(id, rv) {
         out <- span(
           style = paste(css_mono, css_bold),
           
-          "Your current tracking regime is likely",
+          "Your current sampling schedule appears",
           sufficient, "for home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
@@ -1100,7 +1100,7 @@ mod_tab_report_server <- function(id, rv) {
           out <- span(
             style = paste(css_mono, css_bold),
 
-            "Your current tracking regime is likely",
+            "Your current sampling schedule appears",
             sufficient, "for home range",
             ifelse(is_hr_ci,
                    wrap_none("estimation ", txt_hr_uncertainty, ","),
@@ -1117,12 +1117,12 @@ mod_tab_report_server <- function(id, rv) {
         out <- span(
           style = paste(css_mono, css_bold),
 
-          "Your current tracking regime may be",
+          "Your current sampling schedule may be",
           insufficient, "for home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
                  "estimation,"),
-          "but likely", sufficient, "for speed & distance",
+          "but appears", sufficient, "for speed & distance",
           ifelse(is_sd_ci,
                  wrap_none("estimation ", txt_sd_uncertainty, "."),
                  "estimation."))
@@ -1132,7 +1132,7 @@ mod_tab_report_server <- function(id, rv) {
         out <- span(
           style = paste(css_mono, css_bold),
 
-          "Your current tracking regime is likely",
+          "Your current sampling schedule appears",
           sufficient, "for both home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
@@ -1147,7 +1147,7 @@ mod_tab_report_server <- function(id, rv) {
         out <- span(
           style = paste(css_mono, css_bold),
 
-          "Your current tracking regime may be",
+          "Your current sampling schedule may be",
           insufficient, "for both home range",
           ifelse(is_hr_ci,
                  wrap_none("estimation ", txt_hr_uncertainty, ","),
@@ -1161,7 +1161,7 @@ mod_tab_report_server <- function(id, rv) {
           out <- span(
             style = paste(css_mono, css_bold),
 
-            "Your current tracking regime may be",
+            "Your current sampling schedule may be",
             insufficient, "for home range",
             ifelse(is_hr_ci,
                    wrap_none("estimation ", txt_hr_uncertainty, ","),
@@ -1598,18 +1598,20 @@ mod_tab_report_server <- function(id, rv) {
           style = paste(css_mono, css_bold),
           
           if (sufficient_simulations) {
-            tagList("The number of simulations is likely sufficient", 
-                    "to obtain", wrap_none(txt_target[[target]], 
-                                           color = pal$sea, " ratios."))
+            tagList("The number of simulations appears sufficient", 
+                    "to obtain valid", wrap_none(
+                      txt_target[[target]], color = pal$sea, " ratios."))
           } else {
-            tagList("The number of simulations is likely insufficient", 
-                    "to obtain", wrap_none(txt_target[[target]], 
-                                           color = pal$dgr, " ratios."))
+            tagList("The number of simulations appears insufficient", 
+                    "to obtain valid", wrap_none(
+                      txt_target[[target]], color = pal$dgr, " ratios."))
           }
         )
         
         set_style_title <- paste("display: inline-block;",
-                                 "font-family: var(--monosans);",
+                                 "font-family: var(--sans);",
+                                 "font-weight: 400;",
+                                 "font-style: italic;",
                                  "font-size: 18px;",
                                  "color: var(--sea-dark);",
                                  "margin-bottom: 8px;")
@@ -1619,35 +1621,30 @@ mod_tab_report_server <- function(id, rv) {
         if (index == 1) {
           out_groups <- tagList(
             p(span(txt_title[[target]],
-                   style = set_style_title, class = "ttl-tab"),
+                   style = set_style_title),
               br(),
-              txt_subpop,
-              txt_subpop_detected,
-              txt_ratio, txt_simulations))
+              p(txt_subpop,
+                txt_subpop_detected,
+                txt_ratio, txt_simulations)))
           
         } else {
           out_groups <- tagList(
             out_groups,
+            br(),
             tagList(
               p(span(txt_title[[target]],
-                     style = set_style_title, class = "ttl-tab"),
+                     style = set_style_title),
                 br(),
-                txt_subpop,
-                txt_subpop_detected,
-                txt_ratio, txt_simulations)))
+                p(txt_subpop,
+                  txt_subpop_detected,
+                  txt_ratio, txt_simulations))))
         }
-      }
+        
+      } # end of [target] loop
       
       rv$report$groups <- tagList(
         out_groups,
-        br(),
-        p(style = paste("font-size: 16px;",
-                        "font-weight: 800;",
-                        "text-align: center;",
-                        "font-family: var(--monosans);"),
-          "Check the", shiny::icon("layer-group", class = "cl-sea"),
-          span("Meta-analyses", class = "cl-sea"), "tab for more",
-          "information."))
+        br(), out_link_meta)
       
     }) # end of observe
     
@@ -1656,7 +1653,7 @@ mod_tab_report_server <- function(id, rv) {
     observe({
       req(rv$which_question,
           rv$report$species,
-          rv$report$regime)
+          rv$report$schedule)
       
       if (is.null(rv$report$analyses)) {
         shinyjs::hide(id = "repBox_analyses")
@@ -1700,7 +1697,7 @@ mod_tab_report_server <- function(id, rv) {
               
               out <- tagList(
                 rv$report$species,
-                rv$report$regime,
+                rv$report$schedule,
                 
                 div(width = 12, align = "center",
                     style = "z-index: 999;",
@@ -1748,7 +1745,7 @@ mod_tab_report_server <- function(id, rv) {
               
               out <- tagList(
                 rv$report$species,
-                rv$report$regime,
+                rv$report$schedule,
                 
                 div(width = 12, align = "center",
                     style = "z-index: 999;",
@@ -1796,7 +1793,7 @@ mod_tab_report_server <- function(id, rv) {
           output$end_report <- renderUI({
             out <- tagList(
               rv$report$species,
-              rv$report$regime,
+              rv$report$schedule,
               rv$report$analyses)
           })
           
@@ -1844,12 +1841,12 @@ mod_tab_report_server <- function(id, rv) {
                 
                 uiOutput(ns("repPlotLegend2")),
                 
-                div(id = "report_meta",
-                    style = paste0("background-color: #f4f4f4;",
-                                   "padding: 20px;",
-                                   "margin-top: 20px;"),
-                    rv$report$meta,
-                    rv$report$groups)
+                # div(id = "report_meta",
+                #     style = paste0("background-color: #f4f4f4;",
+                #                    "padding: 20px;",
+                #                    "margin-top: 20px;"),
+                #     rv$report$meta,
+                #     rv$report$groups)
                 
               ) # end of tagList
             ) # end of div
@@ -1975,7 +1972,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if (length(rv$which_question) > 1) {
         out_analyses <-
-          span("Your new tracking regime (...)",
+          span("Your new sampling schedule (...)",
                "for", span("home range", class = "cl-grn"), "...",
                "for", span("speed & distance", class = "cl-grn"), "...")
       }
@@ -3969,7 +3966,7 @@ mod_tab_report_server <- function(id, rv) {
       
     }) # end of observe
     
-    ## Tracking regime: ---------------------------------------------------
+    ## Sampling schedule: -------------------------------------------------
     
     observe({
       req(rv$active_tab == 'report')

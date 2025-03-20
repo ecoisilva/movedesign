@@ -108,11 +108,11 @@ mod_tab_data_select_ui <- function(id) {
             
           ), # end of box // selectBox_species
           
-          # Tracking regime: ----------------------------------------------
+          # Tracking schedule: --------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Tracking regime:", class = "ttl-box"),
-            id = ns("selectBox_regime"),
+            title = span("Sampling schedule:", class = "ttl-box"),
+            id = ns("selectBox_schedule"),
             status = "info",
             width = NULL,
             solidHeader = FALSE,
@@ -123,7 +123,7 @@ mod_tab_data_select_ui <- function(id) {
               column(width = 12, mod_blocks_ui(ns("selBlock_dti")))
             ) # end of fluidRow
             
-          ) # end of box // selectBox_regime
+          ) # end of box // selectBox_schedule
       ), # end of div (left column)
       
       # [right column] ----------------------------------------------------
@@ -139,7 +139,7 @@ mod_tab_data_select_ui <- function(id) {
             solidHeader = FALSE,
             collapsible = TRUE,
             
-            mod_comp_viz_ui("comp_viz_selected")
+            mod_viz_ui("comp_viz_selected")
             
           ) # end of box // selectBox_viz
           
@@ -270,7 +270,7 @@ mod_tab_data_select_server <- function(id, rv) {
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide all boxes at start: -------------------------------------------
     
-    boxnames <- c("regime", 
+    boxnames <- c("schedule", 
                   "pars",
                   "sizes",
                   "misc")
@@ -780,7 +780,7 @@ mod_tab_data_select_server <- function(id, rv) {
         
       } else {
         
-        shinyjs::show(id = "selectBox_regime")
+        shinyjs::show(id = "selectBox_schedule")
         shinyjs::show(id = "selectBox_sizes")
         
         shinybusy::show_modal_spinner(
@@ -1031,15 +1031,7 @@ mod_tab_data_select_server <- function(id, rv) {
               preventDuplicates = TRUE,
               positionClass = "toast-bottom-right"))
           
-          msg_log(
-            style = "success",
-            message = paste0("Parameters ",
-                             msg_success("extracted"), "."),
-            detail = paste("Proceed to",
-                           msg_success('Sampling design'), "tab."))
-          
-          
-          
+          req(length(rv$fitList[rv$id]) > 0)
           rv$svfList <- extract_svf(dat0, rv$fitList[rv$id])
           
           rv$tmp$sp_common <- rv$species_common
@@ -1047,6 +1039,14 @@ mod_tab_data_select_server <- function(id, rv) {
           rv$tmp$id <- rv$id
           
           shinybusy::remove_modal_spinner()
+          
+          msg_log(
+            style = "success",
+            message = paste0("Parameters ",
+                             msg_success("extracted"), "."),
+            detail = paste("Proceed to",
+                           msg_success('Sampling design'), "tab."))
+          
           if (!rv$tour_active) shinyalert::shinyalert(
             className = "modal_success",
             type = "success",
@@ -1121,7 +1121,7 @@ mod_tab_data_select_server <- function(id, rv) {
       bindEvent(rv$proceed)
     
     # BLOCKS --------------------------------------------------------------
-    ## Tracking regime: ---------------------------------------------------
+    ## Tracking schedule: -------------------------------------------------
     
     observe({
       req(rv$active_tab == 'data_select')
