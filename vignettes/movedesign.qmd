@@ -12,7 +12,7 @@ knitr:
     collapse: true
     comment: '#>'
 bibliography: references.bib
-csl: mee.csl
+csl: style.csl
 ---
 
 ```{=html}
@@ -46,7 +46,7 @@ knitr::opts_chunk$set(
 
 # Why `movedesign`?
 
-`movedesign` is built using R language with Shiny for an easy-to-use user interface (GUI). This application will allow you to test different tracking regimes while considering an initially set research question (currently *home range* and *speed/distance* estimation).
+`movedesign` is built using R language with Shiny for an easy-to-use user interface (GUI). This application will allow you to test different tracking schedules while considering an initially set research question (currently *home range* and *speed/distance* estimation).
 
 -   Doesn't require R coding experience.
 -   Leverages the `ctmm` R package for statistically unbiased methods.
@@ -99,3 +99,5 @@ Go [here](https://ecoisilva.github.io/movedesign/articles/tutorial.html) for mor
 ## Related work
 
 -   The [ctmm](https://github.com/ctmm-initiative/ctmm) R package and [ctmmweb](https://github.com/ctmm-initiative/ctmmweb) Shiny application.
+
+## References

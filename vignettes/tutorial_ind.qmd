@@ -1,5 +1,5 @@
 ---
-title: "'movedesign' Walkthrough"
+title: "Walkthrough (single estimate)"
 author: "Inês Silva"
 date: "`r Sys.Date()`"
 description: > 
@@ -13,7 +13,7 @@ knitr:
     collapse: true
     comment: '#>'
 bibliography: references.bib
-csl: mee.csl
+csl: style.csl
 ---
 
 ```{=html}
@@ -48,7 +48,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Study design for an individual estimate:
+# Walkthrough
 
 This workflow is presented in Silva *et al.* [-@silva2023movedesign].
 
@@ -102,7 +102,7 @@ Here, you can configure two key parameters: `GPS battery life`, the expected ope
 
 **Step 3 (optional).** *Add device limitations:*
 
-You may include other device limitations, such as location error and success fix rate, to understand the precision and reliability of the sampling regime under various conditions.
+You may include other device limitations, such as location error and success fix rate, to understand the precision and reliability of the sampling schedule under various conditions.
 
 ::: custom-box
 `r fontawesome::fa("bell")` Change `Fix success rate (%)` to 85%, and the `Location error` to 10 meters.
@@ -162,7 +162,7 @@ For this step, we are using the **continuous-time speed & distance (CTSD)** esti
 
 **Step 2.** *Interpret the outputs:*
 
-The output types here are identical to those in the `r fa("map-location-dot")` `'Home range'` tab. However, in this case, they apply to **distance** (comparing the trajectory derived from the selected sampling regime to the true fine-scale trajectory, shown in grey), and **speed**. Ideally, both should closely align with the truth.
+The output types here are identical to those in the `r fa("map-location-dot")` `'Home range'` tab. However, in this case, they apply to **distance** (comparing the trajectory derived from the selected sampling schedule to the true fine-scale trajectory, shown in grey), and **speed**. Ideally, both should closely align with the truth.
 
 Wide confidence intervals indicate high uncertainty, suggesting that a shorter sampling interval may be necessary to improve accuracy.
 
