@@ -2026,6 +2026,31 @@ mod_tab_hrange_server <- function(id, rv) {
       
     }) # end of observe
     
+    ## Groups: ------------------------------------------------------------
+    
+    observe({
+      req(rv$which_meta == "compare", rv$grouped)
+      req(rv$simList, rv$akdeList, rv$hr_nsim)
+      
+      shinyjs::show(id = "hrBlock_group")
+      
+      set_id <- rv$hr_nsim
+      set_group <- names(rv$groups[[2]])[
+        sapply(rv$groups[[2]], function(x)
+          names(rv$simList)[[set_id]] %in% x)]
+      
+      output$hrBlock_group <- renderUI({
+        
+        parBlock(
+          icon = "object-ungroup",
+          header = "Group",
+          value = set_group)
+        
+      }) # end of renderUI, "hrBlock_group"
+      
+    }) %>% # end of observe,
+      bindEvent(list(rv$hr_nsim, rv$active_tab == 'sd'))
+  
     ## Home range outputs: ------------------------------------------------
     
     observe({

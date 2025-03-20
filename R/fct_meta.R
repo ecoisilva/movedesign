@@ -654,16 +654,14 @@ plot_meta_permutations <- function(rv,
     plot_subtitle <- paste(
       "<b>Maximum number of samples:</b>", max_samples)
     
-    if (rv$which_meta == "mean") {
-      p_error1 <- ggplot2::geom_hline(
-        yintercept = rv$error_threshold,
-        color = "black",
-        linetype = "dotted")
-      p_error2 <-  ggplot2::geom_hline(
-        yintercept = -rv$error_threshold,
-        color = "black",
-        linetype = "dotted")
-    }
+    p_error1 <- ggplot2::geom_hline(
+      yintercept = rv$error_threshold,
+      color = "black",
+      linetype = "dotted")
+    p_error2 <-  ggplot2::geom_hline(
+      yintercept = -rv$error_threshold,
+      color = "black",
+      linetype = "dotted")
     
     p.optimal <- out_mean %>% 
       ggplot2::ggplot(
@@ -678,8 +676,8 @@ plot_meta_permutations <- function(rv,
         linewidth = 0.3,
         linetype = "solid") +
       
-      { if (rv$which_meta == "mean") p_error1 } +
-      { if (rv$which_meta == "mean") p_error2 } +
+      p_error1 +
+      p_error2 +
       
       ggplot2::geom_jitter(
         data = out,
@@ -749,16 +747,14 @@ plot_meta_permutations <- function(rv,
       "Within error threshold (\u00B1",
       rv$error_threshold * 100, "%)?")
     
-    if (rv$which_meta == "mean") {
-      p_error1 <- ggplot2::geom_hline(
-        yintercept = rv$error_threshold,
-        color = "black",
-        linetype = "dotted")
-      p_error2 <- ggplot2::geom_hline(
-        yintercept = -rv$error_threshold,
-        color = "black",
-        linetype = "dotted")
-    }
+    p_error1 <- ggplot2::geom_hline(
+      yintercept = rv$error_threshold,
+      color = "black",
+      linetype = "dotted")
+    p_error2 <- ggplot2::geom_hline(
+      yintercept = -rv$error_threshold,
+      color = "black",
+      linetype = "dotted")
     
     out <- out %>%
       dplyr::group_by(type) %>% 
@@ -782,8 +778,12 @@ plot_meta_permutations <- function(rv,
           TRUE ~ "No"))
     
     txt_caption <- NULL
+    txt_color <- paste0(
+      "Within error threshold (\u00B1", rv$error_threshold * 100, "%)?")
+    
     if (rv$which_meta == "compare") {
       dodge_width <- .4
+      txt_color <- "Group:"
       
       is_subpop <- rv$metaList_groups[["intro"]][[
         set_target]]$logs$subpop_detected
@@ -795,14 +795,6 @@ plot_meta_permutations <- function(rv,
       is_final_subpop <- out$is_final_subpop <- ifelse(
         is_final_subpop == "FALSE", "No", "Yes")
       out$color <- out$group
-      
-      # pal1 <- c("Yes" = pal_values[[1]], "No" = pal_values[[3]])
-      # pal2 <- c("Yes" = pal_values[[3]], "No" = pal_values[[1]])
-      # pal_values <- if(is_subpop) pal1 else pal2
-      
-      # pal_values <- c("Yes" = pal_values[[1]],
-      #                 "No" = pal_values[[3]])
-      # txt_color <- "Sub-population detected?"
       
       pal_values <- c("A" = "#77b131", "B" = "#009da0")
       
@@ -819,8 +811,8 @@ plot_meta_permutations <- function(rv,
                      shape = group,
                      color = color)) +
       
-      { if (rv$which_meta == "mean") p_error1 } +
-      { if (rv$which_meta == "mean") p_error2 } +
+      p_error1 +
+      p_error2 +
       
       ggplot2::geom_hline(
         yintercept = 0,
@@ -854,7 +846,7 @@ plot_meta_permutations <- function(rv,
       
       ggplot2::scale_y_continuous(labels = scales::percent,
                                   breaks = scales::breaks_pretty()) +
-      ggplot2::scale_color_manual("Group:", values = pal_values) +
+      ggplot2::scale_color_manual(txt_color, values = pal_values) +
       ggplot2::scale_shape_manual("Group:", values = c(16, 18)) +
       ggplot2::theme_minimal() +
       ggplot2::theme(legend.position = "bottom")

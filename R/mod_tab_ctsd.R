@@ -1549,28 +1549,38 @@ mod_tab_ctsd_server <- function(id, rv) {
         truth <- sum(rv$pathList[[sim_no]]$dist, na.rm = TRUE)
         unit_old <- rv$speedEst$unit[sim_no]
         
-        dist_lci <- (unit_new %#% rv$speedEst$lci[sim_no]
-                     %#% unit_old) * dur_days
-        dist_est <- (unit_new %#% rv$speedEst$est[sim_no]
-                     %#% unit_old) * dur_days
-        dist_uci <- (unit_new %#% rv$speedEst$uci[sim_no]
-                     %#% unit_old) * dur_days
-        
-        dist_unit <- "kilometers"
-        truth <- dist_unit %#% truth
-        
-        out_dist_est_df <- out_dist_est_df %>%
-          dplyr::add_row(seed = rv$seedList[[sim_no]],
-                         lci = dist_lci, 
-                         est = dist_est, 
-                         uci = dist_uci, 
-                         unit = dist_unit)
-        
-        out_dist_err_df <- out_dist_err_df %>%
-          dplyr::add_row(seed = rv$seedList[[sim_no]],
-                         lci = (dist_lci - truth) / truth,
-                         est = (dist_est - truth) / truth,
-                         uci = (dist_uci - truth) / truth)
+       if (!is.na(rv$speedEst$est[sim_no])) {
+         
+         dist_lci <- (unit_new %#% rv$speedEst$lci[sim_no]
+                      %#% unit_old) * dur_days
+         dist_est <- (unit_new %#% rv$speedEst$est[sim_no]
+                      %#% unit_old) * dur_days
+         dist_uci <- (unit_new %#% rv$speedEst$uci[sim_no]
+                      %#% unit_old) * dur_days
+         
+         dist_unit <- "kilometers"
+         truth <- dist_unit %#% truth
+         
+         out_dist_est_df <- out_dist_est_df %>%
+           dplyr::add_row(seed = rv$seedList[[sim_no]],
+                          lci = dist_lci, 
+                          est = dist_est, 
+                          uci = dist_uci, 
+                          unit = dist_unit)
+         
+         out_dist_err_df <- out_dist_err_df %>%
+           dplyr::add_row(seed = rv$seedList[[sim_no]],
+                          lci = (dist_lci - truth) / truth,
+                          est = (dist_est - truth) / truth,
+                          uci = (dist_uci - truth) / truth)
+       } else {
+         out_dist_est_df <- out_dist_est_df %>%
+           dplyr::add_row(seed = rv$seedList[[sim_no]],
+                          lci = NA, est = NA, uci = NA, unit = NA)
+         out_dist_err_df <- out_dist_err_df %>%
+           dplyr::add_row(seed = rv$seedList[[sim_no]],
+                          lci = NA, est = NA, uci = NA)
+       }
       }
       
       rv$distEst <<- rbind(rv$distEst, out_dist_est_df)
@@ -2360,7 +2370,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       req(rv$sd$fitList, rv$speedEst_new, rv$distErr_new)
       
       set_id <- 1
-      if (!is.null(rv$hr_nsim)) set_id <- isolate(rv$hr_nsim)
+      if (!is.null(rv$sd_nsim)) set_id <- isolate(rv$sd_nsim)
       
       group <- "All"
       if (rv$grouped) {
@@ -2619,7 +2629,55 @@ mod_tab_ctsd_server <- function(id, rv) {
         type = "N", name = "speed", class = "cl-mdn")
 
     }) # end of observe
-
+    
+    ## Groups: ------------------------------------------------------------
+    
+    observe({
+      req(rv$which_meta == "compare", rv$grouped)
+      req(rv$simList, rv$akdeList, rv$sd_nsim)
+      
+      shinyjs::show(id = "sdBlock_group_speed")
+      
+      set_id <- rv$sd_nsim
+      set_group <- names(rv$groups[[2]])[
+        sapply(rv$groups[[2]], function(x)
+          names(rv$simList)[[set_id]] %in% x)]
+      
+      output$sdBlock_group_speed <- renderUI({
+        
+        parBlock(
+          icon = "object-ungroup",
+          header = "Group",
+          value = set_group)
+        
+      }) # end of renderUI, "sdBlock_group_speed"
+      
+    }) %>% # end of observe,
+      bindEvent(rv$sd_nsim)
+    
+    observe({
+      req(rv$which_meta == "compare", rv$grouped)
+      req(rv$simList, rv$akdeList, rv$sd_nsim)
+      
+      shinyjs::show(id = "sdBlock_group_dist")
+      
+      set_id <- rv$sd_nsim
+      set_group <- names(rv$groups[[2]])[
+        sapply(rv$groups[[2]], function(x)
+          names(rv$simList)[[set_id]] %in% x)]
+      
+      output$sdBlock_group_dist <- renderUI({
+        
+        parBlock(
+          icon = "object-ungroup",
+          header = "Group",
+          value = set_group)
+        
+      }) # end of renderUI, "sdBlock_group_dist"
+      
+    }) %>% # end of observe,
+      bindEvent(list(rv$sd_nsim, rv$active_tab == 'ctsd'))
+    
     ## Outputs: -----------------------------------------------------------
     ### Speed & distance estimates: ---------------------------------------
 

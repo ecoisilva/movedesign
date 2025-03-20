@@ -253,9 +253,13 @@ app_server <- function(input, output, session) {
   mod_comp_pars_server("comp_pars_selected", rv = rv, set_type = "select")
   
   # Data viz:
-  mod_comp_viz_server("comp_viz_uploaded", rv = rv)
-  mod_comp_viz_server("comp_viz_selected", rv = rv)
-
+  mod_viz_server("comp_viz_uploaded", rv = rv)
+  mod_viz_server("comp_viz_selected", rv = rv)
+  
+  # Meta viz:
+  mod_viz_meta_server("viz_meta_1", rv = rv)
+  mod_viz_meta_server("viz_meta_2", rv = rv)
+  
   # Header and control tabs:
   mod_comp_settings_server("comp_settings_1", rv = rv)
 

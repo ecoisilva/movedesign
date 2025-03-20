@@ -431,14 +431,15 @@ get_true_hr <- function(data = NULL,
     
   } else {
     
-    out <- lapply(seq_along(seed), function(x) {
+    out <- lapply(seq_along(data), function(x) {
+      
       if (grouped) {
         nm <- names(data)[[x]]
         group <- ifelse(nm %in% groups[["A"]], "A", "B")
       } else group <- "All"
       
       if (emulated) {
-        fit <- emulate_seeded(fit[[group]], seed[[x]])
+        fit <- emulate_seeded(fit[[group]], names(data)[[x]])
         
         if (fit$isotropic[["sigma"]]) {
           sig <- var.covm(fit$sigma, average = TRUE)
@@ -471,7 +472,7 @@ get_true_hr <- function(data = NULL,
       
     }) # end of lapply (x)
     
-    names(out) <- seed
+    names(out) <- names(data)
     return(out)
     
   } # end of if (summarized)
@@ -623,7 +624,7 @@ get_true_speed <- function(data,
       
     }) # end of lapply (x)
     
-    names(out) <- seed
+    names(out) <- names(data)
     return(out)
     
   } # end of if (summarized)
@@ -712,7 +713,7 @@ get_sigma <- function(x, level = 0.95) {
   
   DOF <- 2 * DOF
   # VAR <- 2*AREA^2/DOF
-  AREA <- ctmm:::chisq.ci(AREA, DOF = DOF, alpha = alpha)
+  AREA <- chisq.ci(AREA, DOF = DOF, alpha = alpha)
   return(AREA)
 }
 
@@ -921,11 +922,6 @@ extract_svf <- function(data, fit = NULL,
                         x_unit = "days", y_unit = "km^2") {
   
   single <- class(data)[1] != "list" && class(data[[1]])[1] != "ctmm"
-  CI.upper <- Vectorize(function(k, level) {
-    stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
-  
-  CI.lower <- Vectorize(function(k, level) {
-    stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
   
   out <- list()
   nms <- names(data)
@@ -936,6 +932,7 @@ extract_svf <- function(data, fit = NULL,
   
   out <- lapply(seq_along(data), function(x) {
     
+    VAR <- NULL
     if (is.null(fit[[x]])) {
       VAR <- ctmm::variogram(data = data[[x]])
     } else {
@@ -959,7 +956,8 @@ extract_svf <- function(data, fit = NULL,
     } else {
       if (!is.null(fit[[x]])) {
         fit[[x]]$tau <- fit[[x]]$tau[fit[[x]]$tau > 0]
-        SVF <- ctmm:::svf.func(fit[[x]], moment = TRUE)
+        
+        SVF <- svf.func(fit[[x]], moment = TRUE)
         svf <- SVF$svf
         DOF <- SVF$DOF
         
@@ -1538,36 +1536,3 @@ convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
   
   return(out)
 }
-
-# generate_missing_data <- function(x) {
-#   # If there is data loss:
-#   if (!is.null(input$device_loss))
-#     if (req(input$device_loss) > 0) {
-#       to_keep <- round(sapply(simList, function(x)
-#         nrow(x) * (1 - rv$lost$perc/100)))
-#       
-#       simList <- lapply(simList, function(x) {
-#         to_keep_vec <- sort(sample(1:nrow(x),
-#                                    to_keep, replace = FALSE))
-#         x[to_keep_vec, ] })
-#       
-#     } # end of input$device_loss
-#   
-# }
-#   
-# generate_loc_error <- function(x) {
-#   # If there are errors associated with each location:
-#   
-#   if (!is.null(input$device_error))
-#     if (req(input$device_error) > 0) {
-#       rv$error <- input$device_error
-#       simList <- lapply(simList, function(x) {
-#         error_x <- stats::rnorm(nrow(x), mean = 0,
-#                                 sd = input$device_error)
-#         error_y <- stats::rnorm(nrow(x), mean = 0,
-#                                 sd = input$device_error)
-#         x[c("x", "y")] <- x[c("x", "y")] + c(error_x, error_y)
-#         return(x) })
-#       
-#     } # end of input$device_error
-# }

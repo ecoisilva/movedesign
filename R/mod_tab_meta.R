@@ -1507,65 +1507,7 @@ mod_tab_meta_server <- function(id, rv) {
     
     ## Rendering plots for optimal population sample sizes: ---------------
     
-    output$metaPlot_m_optimal <- ggiraph::renderGirafe({
-      req(rv$meta_tbl, 
-          rv$which_m, 
-          rv$which_meta,
-          rv$which_question,
-          rv$set_analysis)
-      req(length(rv$simList) > 1)
-      if (rv$random) {
-        req(rv$meta_tbl_resample,
-            rv$error_threshold) }
-      if (rv$which_meta == "compare") {
-        req(rv$metaList_groups)
-        req(rv$metaList[[rv$set_analysis]]) }
-      
-      p.optimal <- plot_meta_permutations(
-        rv,
-        set_target = rv$set_analysis,
-        random = rv$random, 
-        subpop = rv$grouped, 
-        pal = c(pal$sea, 
-                pal$grn, 
-                pal$dgr))
-      
-      p.optimal <- p.optimal +
-        theme_movedesign(font_available = rv$is_font) +
-        ggplot2::theme(
-          legend.position = "bottom",
-          plot.title = ggtext::element_markdown(
-            size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
-      
-      if (rv$which_meta == "mean") {
-        p.optimal <- p.optimal +
-          ggplot2::guides(shape = "none")
-      }
-      
-      if (rv$which_meta == "mean") {
-        p.optimal <- p.optimal +
-          ggplot2::guides(shape = "none")
-      }
-      
-      ggiraph::girafe(
-        ggobj = p.optimal,
-        width_svg = 5.5, height_svg = 4,
-        options = list(
-          ggiraph::opts_selection(type = "none"),
-          ggiraph::opts_toolbar(saveaspng = FALSE),
-          ggiraph::opts_tooltip(
-            opacity = 1,
-            use_fill = TRUE),
-          ggiraph::opts_hover(
-            css = paste("fill: #1279BF;",
-                        "stroke: #1279BF;",
-                        "cursor: pointer;")))) %>%
-        suppressWarnings()
-      
-    }) %>% # end of renderGirafe, "metaPlot_m_optimal"
-      bindEvent(c(input$run_meta,
-                  input$run_meta_resample,
-                  rv$set_analysis))
+    ## Moved to mod_viz_meta.R
     
     ## Rendering error plot of optimal search outputs (ratios): -----------
     
@@ -1852,15 +1794,18 @@ mod_tab_meta_server <- function(id, rv) {
           low = reactable::colDef(
             minWidth = 40, name = "Low",
             # style = format_cov,
-            format = reactable::colFormat(digits = 2)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 3)),
           est = reactable::colDef(
             minWidth = 40, name = "Est",
             # style = format_cov,
-            format = reactable::colFormat(digits = 3)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 3)),
           high = reactable::colDef(
             minWidth = 40, name = "High",
             # style = format_cov,
-            format = reactable::colFormat(digits = 3))
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 3))
         ))
       
     }) # end of renderReactable, "metaTable_all"
@@ -1896,7 +1841,8 @@ mod_tab_meta_server <- function(id, rv) {
               list(color = case_when(
                 abs(value) > 2 ~ "black",
                 TRUE ~ "#dd4b39"))},
-            format = reactable::colFormat(digits = 3))
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 3))
         ))
       
     }) # end of renderReactable, "metaTable_groups"
@@ -2041,7 +1987,7 @@ mod_tab_meta_server <- function(id, rv) {
         pageSizeOptions = c(5, 10, 20),
         showPageInfo = FALSE,
         
-        defaultSorted = list(group ="asc", m = "asc"),
+        defaultSorted = list(m = "asc", group = "asc"),
         defaultColDef = reactable::colDef(
           headerClass = "rtable_header",
           align = "center",
@@ -2053,15 +1999,18 @@ mod_tab_meta_server <- function(id, rv) {
           error_lci = reactable::colDef(
             name = nms[["lci"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE, digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)),
           error = reactable::colDef(
             name = nms[["est"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE, digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)),
           error_uci = reactable::colDef(
             name = nms[["uci"]],
             style = format_perc,
-            format = reactable::colFormat(percent = TRUE, digits = 1)),
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 1)),
           subpop = reactable::colDef(
             name = nms[["subpop"]]),
           group = reactable::colDef(

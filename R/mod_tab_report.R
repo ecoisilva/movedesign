@@ -213,14 +213,41 @@ mod_tab_report_ui <- function(id) {
                     
                     uiOutput(outputId = ns("reportPlots_error")),
                     uiOutput(ns("repPlotLegend3")),
+                    uiOutput(ns("end_comparison"))
                     
-                    uiOutput(ns("end_comparison")),
-                    uiOutput(ns("end_meta"))
-                    
-                ) # end of div // section-comparison
+                ) # end of div [section-comparison]
                 
             ) # end of div
-          ) # end of box // repBox_analyses
+          ), # end of box, "repBox_analyses"
+          
+          shinydashboardPlus::box(
+            title = span("Meta-analyses report:", class = "ttl-tab"),
+            icon = fontawesome::fa(name = "box-archive",
+                                   height = "21px",
+                                   margin_left = "14px",
+                                   margin_right = "8px",
+                                   fill = "var(--sea-dark)"),
+            id = ns("repBox_meta"),
+            width = NULL,
+            headerBorder = FALSE,
+            
+            div(class = "col-report-left no-padding-left",
+                shinyWidgets::radioGroupButtons(
+                  inputId = ns("reportInput_target"),
+                  width = "100%",
+                  label = "Show outputs for:",
+                  choices = c(
+                    "Home range" = "hr",
+                    "Speed & distance" = "ctsd"),
+                  selected = "hr",
+                  checkIcon = list(yes = icon("circle-check")),
+                  justified = TRUE),
+                mod_viz_meta_ui("viz_meta_2")),
+            
+            div(class = "col-report-right no-padding-right",
+                uiOutput(ns("end_meta")))
+            
+          ) # end of box, "repBox_meta"
           
       ), # end of div
       
@@ -259,6 +286,21 @@ mod_tab_report_server <- function(id, rv) {
     rv$report <- reactiveValues()
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
+    
+    observe({
+      req(rv$which_question)
+      
+      if (length(rv$which_question) == 1) {
+        shinyjs::hide(id = "reportInput_target")
+      } else shinyjs::show(id = "reportInput_target")
+      
+    }) %>% # end of observe,
+      bindEvent(input$build_report)
+    
+    observe({
+      rv$set_analysis <- input$reportInput_target
+    }) %>% bindEvent(input$reportInput_target)
+    
     ## Hide elements at start: --------------------------------------------
     
     shinyjs::hide(id = "end_comparison")
@@ -272,7 +314,7 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$active_tab == 'report')
       
       rv$report$species <- NULL
-      rv$report$regime <- NULL
+      rv$report$schedule <- NULL
       rv$report$analyses <- NULL
       shinyjs::hide(id = "repBox_analyses")
       output$end_report <- renderUI({ NULL })
@@ -1288,18 +1330,22 @@ mod_tab_report_server <- function(id, rv) {
     
     output$end_meta <- renderUI({
       req(rv$which_meta != "none")
-      req(rv$report$meta, rv$report$groups, rv$grouped)
+      req(rv$report$meta, rv$report$groups, !is.null(rv$grouped))
       
       div(id = "report_meta",
-          style = paste0("background-color: #f4f4f4;",
-                         "padding: 20px;",
-                         "margin-top: 20px;"),
+          # style = paste0("background-color: #f4f4f4;",
+          #                "padding: 20px;",
+          #                "margin-top: 20px;"),
+          style = paste0(
+            "padding-left: 14px;",
+            "padding-right: 14px;"
+          ),
           rv$report$meta,
           rv$report$groups)
       
     }) # end of renderUI, "end_meta"
     
-    #### Mean of research target(s) ---------------------------------------
+    #### Mean of research target(s): --------------------------------------
     
     observe({
       req(rv$active_tab == "report")
@@ -1316,18 +1362,19 @@ mod_tab_report_server <- function(id, rv) {
       list2env(.build_outputs(rv), envir = environment())
       
       i <- 0
-      for (target in rv$set_target) {
+      for (target in set_target) {
         i <- i + 1
         
-        out <- as.data.frame(rv$metaList[[target]]$meta)
+        meta <- as.data.frame(rv$metaList[[target]]$meta)
         tmpunit <- extract_units(rownames(
-          out[grep("mean", rownames(out)), ]))
-        est <- out[grep("mean", rownames(out)), ]$est
-        lci <- out[grep("mean", rownames(out)), ]$low
-        uci <- out[grep("mean", rownames(out)), ]$high
+          meta[grep("mean", rownames(meta)), ]))
+        est <- meta[grep("mean", rownames(meta)), ]$est
+        lci <- meta[grep("mean", rownames(meta)), ]$low
+        uci <- meta[grep("mean", rownames(meta)), ]$high
         
         truth <- tmpunit %#% get_truth[[target]]
-        out_dt <- out[1, ] %>% 
+        
+        meta_dt <- meta[1, ] %>% 
           dplyr::mutate(est = (est - truth)/truth,
                         lci = (lci - truth)/truth,
                         uci = (uci - truth)/truth) %>% 
@@ -1352,33 +1399,33 @@ mod_tab_report_server <- function(id, rv) {
         
         txt_nsims <- ifelse(
           length(rv$simList) == 1,
-          "of a single simulation",
-          paste("of our", length(rv$simList), "simulations"))
+          "for a single simulation",
+          paste("for", length(rv$simList), "simulations"))
         
-        switch(out_dt$overlaps_with,
+        switch(meta_dt$overlaps_with,
                "Yes" = {
                  txt_mean <- span(
                    style = css_mono,
                    "The mean", txt_target[[target]], txt_nsims,
-                   "is", span("falls within", class = "cl-sea"),
-                   "the set error margin of",
-                   paste0(rv$error_threshold * 100, "%."))
+                   "is", span("within", class = "cl-sea"), "the",
+                   paste0("\u00B1", rv$error_threshold * 100, "%"),
+                   "error threshold.")
                },
                "Near" = {
                  txt_mean <- span(
                    style = css_mono,
                    "The mean", txt_target[[target]], txt_nsims,
-                   "is", span("near", class = "cl-sea"),
-                   "the set error margin of",
-                   paste0(rv$error_threshold * 100, "%."))
+                   "is", span("near", class = "cl-sea"), "the",
+                   paste0("\u00B1", rv$error_threshold * 100, "%"),
+                   "error threshold.")
                },
                "No" = {
                  txt_mean <- span(
                    style = css_mono,
                    "The mean", txt_target[[target]], txt_nsims,
-                   span("falls outside", class = "cl-dgr"),
-                   "the threshold error margin of",
-                   paste0(rv$error_threshold * 100, "%."))
+                   span("falls outside", class = "cl-dgr"), "the",
+                   paste0("\u00B1", rv$error_threshold * 100, "%"),
+                   "error threshold.")
                })
         
         if (is.na(get_coi[[target]][["lci"]]) &&
@@ -1394,92 +1441,78 @@ mod_tab_report_server <- function(id, rv) {
         }
         
         switch(
-          out_dt$overlaps_with,
+          meta_dt$overlaps_with,
           "Yes" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations is likely sufficient",
-              "to obtain an accurate mean", 
+              "The number of simulations appears sufficient",
+              "to accurately estimate mean", 
               wrap_none(txt_target[[target]], color = pal$sea, end = ","),
               txt_uncertainty)
           },
           "Near" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations is unlikely sufficient",
-              "to obtain an accurate mean", 
+              "The number of simulations appears insufficient",
+              "to accurately estimate mean", 
               wrap_none(txt_target[[target]], color = pal$dgr, end = ","),
               txt_uncertainty)
           },
           "No" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations is likely insufficient",
-              "to obtain an accurate mean", 
+              "The number of simulations appears insufficient",
+              "to accurately estimate mean", 
               wrap_none(txt_target[[target]], color = pal$dgr, end = ","),
               txt_uncertainty)
           })
         
-        # if (is.na(HDI$CI_lci) && is.na(HDI$uci)) {
-        #   txt_final <- tagList(
-        #     txt_final,
-        #     span(
-        #     style = paste("font-weight: 800;",
-        #                   "font-family: var(--monosans);"),
-        #     "Please run more simulations in the corresponding",
-        #     shiny::icon("compass-drafting", class = "cl-sea"),
-        #     span("Analyses", class = "cl-sea"), "tab to confirm."))
-        # }
+        if (length(get_cri) > 0) {
+        if (is.na(get_cri[[target]][["lci"]]) &&
+            is.na(get_cri[[target]][["uci"]])) {
+          browser()
+          txt_final <- tagList(
+            txt_final,
+            span(
+            style = paste("font-weight: 800;",
+                          "font-family: var(--monosans);"),
+            "Please run more simulations in the corresponding",
+            shiny::icon("compass-drafting", class = "cl-sea"),
+            span("Analyses", class = "cl-sea"), "tab to confirm."))
+        }
+        }
         
-        if (i == 1 && length(rv$set_target) == 1)
-          out_meta <- p(
-            p(txt_title[[target]],
-              style = paste("font-size: 18px;",
-                            "color: var(--sea-dark);"),
-              class = "ttl-tab"),
-            p(out_meta,
-              txt_mean,
+        index <- which(set_target == target)
+        
+        if (index == 1) {
+          out_meta <- tagList(
+            span(txt_title[[target]],
+                 style = set_style_title),
+            br(),
+            p(txt_mean,
               txt_final))
-        else if (i == 1 && length(rv$set_target) > 1)
+          
+        } else {
           out_meta <- tagList(
             out_meta,
-            txt_mean, 
-            txt_final)
-
-        if (i == 2)
-          out_meta <- p(
-            p("Home range meta-analyses:",
-              style = paste("font-family: var(--sans);",
-                            "font-weight: 400;",
-                            "font-style: italic;",
-                            "font-size: 18px;",
-                            "color: var(--sea-dark);")),
-            p(out_meta),
-            p(),
-            p("Speed & distance meta-analyses:",
-              style = paste("font-family: var(--sans);",
-                            "font-weight: 400;",
-                            "font-style: italic;",
-                            "font-size: 18px;",
-                            "color: var(--sea-dark);")),
-            p(txt_mean, 
-              txt_final),
-            p())
-      }
-
+            br(),
+            tagList(
+              span(txt_title[[target]],
+                   style = set_style_title),
+              br(),
+              p(txt_mean,
+                txt_final)))
+        }
+        
+      } # end of [target] loop
+      
       rv$report$meta <- tagList(
         out_meta,
-        p(style = paste("font-size: 16px;",
-                        "text-align: justify;",
-                        css_mono, css_bold),
-          "Check the", shiny::icon("layer-group",
-                                   class = "cl-sea"),
-          span("Meta-analyses", class = "cl-sea"), "tab",
-          "for more information."))
+        br(), out_link_meta)
       
     }) # end of observe
     
-    #### Ratios of research target(s) -------------------------------------
+    #### Ratios of research target(s): ------------------------------------
     
     observe({
       req(rv$active_tab == "report")
@@ -1491,41 +1524,11 @@ mod_tab_report_server <- function(id, rv) {
       css_bold <- "font-weight: bold;"
       css_mono <- "font-family: var(--monosans);"
       
-      set_target <- c()
-      txt_target <- txt_title <- list()
-      get_N <- get_coi <- get_cri <- list()
-      txt_ratio_order <- "(for group A/group B)"
+      list2env(.build_outputs(rv, ratio = TRUE), envir = environment())
       
-      .extract_ci <- function(type_key) {
-        CI <- rv$metaErr[grep(type_key, rv$metaErr$type), ]
-        c("lci" = CI[nrow(CI), "lci"],
-          "est" = CI[nrow(CI), "est"],
-          "uci" = CI[nrow(CI), "uci"])
-      }
-      
-      if ("Home range" %in% rv$which_question) {
-        set_target <- c(set_target, "hr")
-        txt_target[["hr"]] <- "home range area"
-        txt_title[["hr"]] <- "Home range meta-analyses:"
-        
-        get_coi[["hr"]] <- .extract_ci("hr")
-        get_cri[["hr"]] <- c("lci" = rv$hr_cri$lci,
-                             "est" = rv$hr_cri$est,
-                             "uci" = rv$hr_cri$uci)
-      }
-      
-      if ("Speed & distance" %in% rv$which_question) {
-        set_target <- c(set_target, "ctsd")
-        txt_target[["ctsd"]] <- "movement speed"
-        txt_title[["ctsd"]] <- "Speed meta-analyses:"
-        
-        get_coi[["ctsd"]] <- .extract_ci("sd")
-        get_cri[["ctsd"]] <- c("lci" = rv$sd_cri$lci,
-                               "est" = rv$sd_cri$est,
-                               "uci" = rv$sd_cri$uci)
-      }
-      
+      i <- 0
       for (target in set_target) {
+        i <- i + 1
         
         meta_truth <- rv$metaList_groups[["intro"]][[target]]
         meta <- rv$metaList_groups[["final"]][[target]]
