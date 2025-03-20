@@ -4,7 +4,7 @@ author: "Inês Silva"
 date: "`r Sys.Date()`"
 # description: "Get started"
 vignette: >
-  %\VignetteIndexEntry{Tutorial}
+  %\VignetteIndexEntry{Get started}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 knitr:
