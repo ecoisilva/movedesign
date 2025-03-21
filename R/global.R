@@ -88,6 +88,8 @@ utils::globalVariables(
     "ctmm",
     "get_coi",
     "get_cri",
+    
+    "set_style_title",
     "txt_link_meta",
     "txt_ratio_order",
     "txt_target",
