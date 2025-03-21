@@ -60,6 +60,7 @@ DOP.LIST <- list(
   )
 )
 
+
 DOP.match <- function (axes) {
   DOP.LIST <- DOP.LIST[-1]
   NAMES <- names(DOP.LIST)
@@ -69,9 +70,11 @@ DOP.match <- function (axes) {
   return("unknown")
 }
 
+
 outer <- function (X, Y = X, FUN = "*", ...) {
   base::outer(X, Y, FUN = FUN, ...)
 }
+
 
 get.telemetry <- function (data, axes = c("x", "y")) {
   if (all(axes %in% names(data))) {
@@ -79,6 +82,7 @@ get.telemetry <- function (data, axes = c("x", "y")) {
   } else data <- numeric(0)
   return(data)
 }
+
 
 get.class.mat <- function (data, LEVELS = levels(data$class)) {
   if ("class" %in% names(data)) {
@@ -94,10 +98,22 @@ get.class.mat <- function (data, LEVELS = levels(data$class)) {
   return(C)
 }
 
+
 continuity <- function (CTMM) {
   K <- sum(CTMM$tau > 0)
   return(K)
 }
+
+
+nant <- function(x,to) {
+  NAN <- is.na(x) # TRUE for NaN and NA
+  if (any(NAN)) {
+    to <- array(to,length(x))
+    x[NAN] <- to[NAN]
+  }
+  return(x)
+}
+
 
 get.error <- function(data, 
                       CTMM,
@@ -188,6 +204,7 @@ norm.ci <- function(MLE, VAR, level = 0.95, alpha = 1 - level) {
   return(CI)
 }
 
+
 chisq.hdr <- function (df, level = 0.95, alpha = 1 - level, pow = 1) {
   if (df <= pow) {
     CI <- c(0, 0, stats::qchisq(level, df, lower.tail = TRUE))
@@ -225,6 +242,7 @@ chisq.hdr <- function (df, level = 0.95, alpha = 1 - level, pow = 1) {
   }
   return(CI)
 }
+
 
 chisq.ci <- function (MLE, VAR = NULL, level = 0.95, alpha = 1 - level, 
                       DOF = 2 * MLE^2/VAR, robust = FALSE, HDR = FALSE) 
@@ -294,6 +312,7 @@ chisq.ci <- function (MLE, VAR = NULL, level = 0.95, alpha = 1 - level,
   return(CI)
 }
 
+
 axes2var <- function (CTMM, MEAN = TRUE) {
   PAR <- c("major", "minor", "angle")
   COV <- CTMM$COV
@@ -339,6 +358,7 @@ axes2var <- function (CTMM, MEAN = TRUE) {
   return(COV)
 }
 
+
 get.states <- function (CTMM) {
   dynamics <- CTMM$dynamics
   if (is.null(dynamics) || dynamics == "stationary") {
@@ -349,6 +369,7 @@ get.states <- function (CTMM) {
   }
   return(states)
 }
+
 
 get.taus <- function(CTMM, zeroes = FALSE, simplify = FALSE) {
   
@@ -441,10 +462,11 @@ get.taus <- function(CTMM, zeroes = FALSE, simplify = FALSE) {
   return(CTMM)
 }
 
+
 svf.func <- function (CTMM, moment = FALSE) {
   CTMM <- get.taus(CTMM)
   tau <- CTMM$tau
-  sigma <- var.covm(CTMM$sigma, ave = TRUE)
+  sigma <- var.covm(CTMM$sigma, average = TRUE)
   circle <- CTMM$circle
   COV <- CTMM[["COV"]]
   if (!is.null(COV)) {
@@ -600,6 +622,7 @@ svf.func <- function (CTMM, moment = FALSE) {
   return(list(svf = SVF, VAR = VAR, DOF = DOF, ACF = ACF))
 }
 
+
 time_res <- function (DT) {
   
   gcd <- function (x, y) {
@@ -609,7 +632,7 @@ time_res <- function (DT) {
   
   gcd.vec <- function (vec) {
     vec <- sort(vec, method = "quick")
-    GCD <- ctmm:::gcd(vec[1], vec[2])
+    GCD <- gcd(vec[1], vec[2])
     for (i in vec[-(1:2)]) {
       GCD <- gcd(i, GCD)
     }
@@ -644,6 +667,7 @@ time_res <- function (DT) {
   }
   return(c(dt, DT))
 }
+
 
 assign_speeds <- function(data, 
                           DT = NULL,
@@ -721,6 +745,7 @@ assign_speeds <- function(data,
   return(list(v.t = v, VAR.t = VAR, v.dt = v.dt, VAR.dt = VAR.dt))
 }
 
+
 speedMLE <- function(data,
                      DT = NULL,
                      UERE = 0,
@@ -771,6 +796,48 @@ speedMLE <- function(data,
   }
   RETURN <- data.frame(X = DR * f, VAR = VAR * f^2)
   return(RETURN)
+}
+
+
+abs_bivar <- function (mu, Sigma, return.VAR = FALSE) {
+  BESSEL_LIMIT <- 2^16
+  
+  sigma0 <- mean(diag(Sigma))
+  stdev0 <- sqrt(sigma0)
+  mu2 <- sum(mu^2)
+  mu <- sqrt(mu2)
+  sigma <- eigen(Sigma)$values
+  Barg <- mu2/(4 * sigma0)
+  if (sigma0 == 0 || Barg >= BESSEL_LIMIT) {
+    M1 <- mu
+  }
+  else {
+    B0 <- besselI(Barg, 0, expon.scaled = TRUE)
+    B1 <- besselI(Barg, 1, expon.scaled = TRUE)
+    sqrtpi2 <- sqrt(pi/2)
+    Bv <- sqrtpi2 * sqrt(Barg) * (B0 + B1) * mu
+    Bs <- B0/sqrtpi2 * sqrt(sigma[1]) * pracma::ellipke(
+      1 - sigma[2]/sigma[1])$e
+    M1 <- Bv + Bs
+  }
+  if (return.VAR) {
+    M2 <- mu2 + 2 * sigma0
+    VAR <- max(0, M2 - M1^2)
+    M1 <- c(M1, VAR)
+  }
+  return(M1)
+}
+
+
+rm.name <- function (object, name) {
+  if (length(dim(object)) == 2) {
+    object <- object[!rownames(object) %in% name, !colnames(object) %in% 
+                       name, drop = FALSE]
+  }
+  else {
+    object <- object[!names(object) %in% name]
+  }
+  return(object)
 }
 
 
@@ -855,7 +922,7 @@ distanceMLE <- function(dr,
     if (any(SUB)) {
       if (AXES == 2) {
         y <- DR[SUB]^2/error[SUB]
-        x <- ctmm:::BesselSolver(y)
+        x <- BesselSolver(y)
         DR[SUB] <- ifelse(error[SUB] < Inf, error[SUB]/DR[SUB] * 
                             x, 0)
       }
@@ -874,58 +941,4 @@ distanceMLE <- function(dr,
     dr <- dr[, 1]
   }
   return(dr)
-}
-
-abs_bivar <- function (mu, Sigma, return.VAR = FALSE) {
-  BESSEL_LIMIT <- 2^16
-  
-  sigma0 <- mean(diag(Sigma))
-  stdev0 <- sqrt(sigma0)
-  mu2 <- sum(mu^2)
-  mu <- sqrt(mu2)
-  sigma <- eigen(Sigma)$values
-  Barg <- mu2/(4 * sigma0)
-  if (sigma0 == 0 || Barg >= BESSEL_LIMIT) {
-    M1 <- mu
-  }
-  else {
-    B0 <- besselI(Barg, 0, expon.scaled = TRUE)
-    B1 <- besselI(Barg, 1, expon.scaled = TRUE)
-    sqrtpi2 <- sqrt(pi/2)
-    Bv <- sqrtpi2 * sqrt(Barg) * (B0 + B1) * mu
-    Bs <- B0/sqrtpi2 * sqrt(sigma[1]) * pracma::ellipke(
-      1 - sigma[2]/sigma[1])$e
-    M1 <- Bv + Bs
-  }
-  if (return.VAR) {
-    M2 <- mu2 + 2 * sigma0
-    VAR <- max(0, M2 - M1^2)
-    M1 <- c(M1, VAR)
-  }
-  return(M1)
-}
-
-rm.name <- function (object, name) {
-  if (length(dim(object)) == 2) {
-    object <- object[!rownames(object) %in% name, !colnames(object) %in% 
-                       name, drop = FALSE]
-  }
-  else {
-    object <- object[!names(object) %in% name]
-  }
-  return(object)
-}
-
-mean_info <- function (x) {
-  if (class(x)[1] != "list") {
-    return(attr(x, "info")$identity)
-  }
-  identity <- sapply(x, function(v) {
-    attr(v, "info")$identity
-  })
-  identity <- unique(identity)
-  identity <- paste(identity, collapse = " ")
-  info = attr(x[[1]], "info")
-  info$identity <- identity
-  return(info)
 }

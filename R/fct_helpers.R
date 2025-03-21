@@ -897,8 +897,8 @@ extract_dof <- function(
     }
     
     if (is.null(sum.obj)) return(NULL)
-    if (is.null(sum.obj$DOF) || length(sum.obj$DOF) == 0)
-      return(NULL)
+    if (is.null(sum.obj$DOF)) return(NULL)
+    if (length(sum.obj$DOF) == 0) return(NULL)
     
     nms.obj <- names(sum.obj$DOF)
     out_tmp <- sum.obj$DOF[grep(name, nms.obj)][[1]]

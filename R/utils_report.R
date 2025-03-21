@@ -136,9 +136,11 @@
 .build_outputs <- function(rv, ratio = FALSE) {
   
   set_target <- NULL
+  set_style_title <- NULL
+  txt_ratio_order <- txt_link_meta <- NULL
   truth <- coi <- cri <- list()
   txt_target <- txt_title <- list()
-  if (ratio) {
+  if (rv$grouped) {
     txt_ratio_order <- "(for group A/group B)"
   }
   
@@ -186,7 +188,6 @@
                        "uci" = rv$sd_cri$uci)
   }
   
-  
   set_style_title <- paste("display: inline-block;",
                            "font-family: var(--sans);",
                            "font-weight: 400;",
@@ -195,7 +196,7 @@
                            "color: var(--sea-dark);",
                            "margin-bottom: 8px;")
   
-  out_link_meta <- p(
+  txt_link_meta <- p(
     style = paste("font-size: 16px;",
                   "text-align: center;",
                   "font-weight: bold;",
@@ -211,5 +212,6 @@
               get_coi = coi,
               get_cri = cri,
               set_style_title = set_style_title,
-              out_link_meta = out_link_meta))
+              txt_link_meta = txt_link_meta,
+              txt_ratio_order = txt_ratio_order))
 }
