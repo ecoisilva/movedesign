@@ -136,7 +136,6 @@
 .build_outputs <- function(rv, ratio = FALSE) {
   
   set_target <- NULL
-  set_style_title <- NULL
   txt_ratio_order <- txt_link_meta <- NULL
   truth <- coi <- cri <- list()
   txt_target <- txt_title <- list()
