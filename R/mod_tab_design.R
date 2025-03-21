@@ -2321,16 +2321,7 @@ mod_tab_design_server <- function(id, rv) {
       
       start <- Sys.time()
       simList <- simulating_data()
-      # if (is.null(simList)) {
-      #   
-      #   shinybusy::remove_modal_spinner()
-      #   msg_log(
-      #     style = "danger",
-      #     message = paste0(
-      #       "Simulation ", msg_danger("failed"), "."))
-      # }
-      # 
-      # req(simList)
+      
       if (!rv$grouped) {
         rv$seedList <- list(rv$seed0)
         names(simList) <- c(rv$seed0)
@@ -2340,11 +2331,14 @@ mod_tab_design_server <- function(id, rv) {
                                B = as.character(rv$seed0 + 1))
         names(simList) <- c(rv$seed0, rv$seed0 + 1)
       }
+      
       rv$nsims <- NULL # length(simList)
       rv$needs_fit <- TRUE
       rv$is_analyses <- FALSE
       rv$hr_completed <- FALSE
       rv$sd_completed <- FALSE
+      
+      class(simList) <- c(class(simList), "movedesign")
       
       # If there is data loss:
       

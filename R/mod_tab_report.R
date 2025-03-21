@@ -292,7 +292,10 @@ mod_tab_report_server <- function(id, rv) {
       
       if (length(rv$which_question) == 1) {
         shinyjs::hide(id = "reportInput_target")
-      } else shinyjs::show(id = "reportInput_target")
+      } else {
+        rv$set_analysis <- "hr"
+        shinyjs::show(id = "reportInput_target")
+      }
       
     }) %>% # end of observe,
       bindEvent(input$build_report)
@@ -1317,7 +1320,7 @@ mod_tab_report_server <- function(id, rv) {
     }) %>% # end of observe,
       bindEvent(input$build_report)
     
-    ## Reporting META (if available): ------------------------------------
+    ## Reporting META: ----------------------------------------------------
     
     observe({
       req(rv$which_meta)
@@ -1330,30 +1333,30 @@ mod_tab_report_server <- function(id, rv) {
     
     output$end_meta <- renderUI({
       req(rv$which_meta != "none")
-      req(rv$report$meta, rv$report$groups, !is.null(rv$grouped))
+      req(rv$report$meta, !is.null(rv$grouped))
       
       div(id = "report_meta",
-          # style = paste0("background-color: #f4f4f4;",
-          #                "padding: 20px;",
-          #                "margin-top: 20px;"),
-          style = paste0(
-            "padding-left: 14px;",
-            "padding-right: 14px;"
-          ),
-          rv$report$meta,
-          rv$report$groups)
+          style = paste("padding-left: 14px;",
+                        "padding-right: 14px;"),
+          rv$report$meta)
       
     }) # end of renderUI, "end_meta"
     
-    #### Mean of research target(s): --------------------------------------
-    
     observe({
-      req(rv$active_tab == "report")
+      req(rv$active_tab == "report", 
+          rv$which_meta != "none")
       rv$report$meta <- out_meta <- span("")
       
-      req(!rv$grouped,
-          !is.null(rv$is_emulate),
-          rv$which_meta == "mean",
+      if (rv$which_meta == "none") {
+        req(!rv$grouped)
+      }
+      
+      if (rv$which_meta == "compare") {
+        req(rv$grouped, rv$groups)
+        req(rv$metaErr, rv$metaList, rv$metaList_groups[["is_final"]])
+      }
+      
+      req(!is.null(rv$is_emulate),
           rv$metaList)
       
       css_bold <- "font-weight: bold;"
@@ -1397,6 +1400,96 @@ mod_tab_report_server <- function(id, rv) {
               close_to_threshold ~ "Near",
               TRUE ~ "No"))
         
+        txt_meta_groups <- NULL
+        if (rv$which_meta == "compare") {
+          
+          meta_group_truth <- rv$metaList_groups[["intro"]][[target]]
+          meta_group <- rv$metaList_groups[["final"]][[target]]
+          
+          is_subpop <- meta_group_truth$logs$subpop_detected
+          is_subpop_detected <- meta_group$logs$subpop_detected
+          
+          txt_subpop_cont <- if (is_subpop == is_subpop_detected) 
+            "As expected, sub-populations were" else
+              "However, sub-populations were"
+          
+          if (meta_group_truth$mods$subpop_detected[[2,2]] < 2) {
+            txt_subpop <- span(
+              "There was insufficient evidence in the", rv$data_type,
+              "dataset to detect sub-populations.")
+            txt_subpop_cont <- "With the simulations, sub-populations were"
+          }  else if (is_subpop) {
+            txt_subpop <- span(
+              "We expected to detect a sub-population",
+              "through meta_group-analyses.")
+          } else {
+            txt_subpop <- span(
+              "We expected no sub-populations to be detected",
+              "through meta_group-analyses.")
+          }
+          
+          col_subpop <- dplyr::case_when(
+            is_subpop == is_subpop_detected ~ "cl-sea-d",
+            meta_group_truth$mods$subpop_detected[[2,2]] < 2 ~ "cl-gld",
+            TRUE ~ "cl-dgr"
+          )
+          
+          txt_subpop_detected <- span(
+            txt_subpop_cont, span(
+              if (is_subpop_detected) "detected" else "not detected",
+              class = col_subpop),
+            ifelse(meta_group$mods$subpop_detected[[2,2]] < 2,
+                   "(though with \u0394AICc \uFF1C 2).",
+                   "(\u0394AICc \uFF1E 2).")
+          )
+          
+          expected_ratio <- .get_ratios(meta_group_truth)
+          observed_ratio <- .get_ratios(meta_group)
+          
+          ratio <- paste0(round(observed_ratio$est, 2), ":1")
+          overlaps_with <- list(
+            "truth" = dplyr::between(observed_ratio$est,
+                                     expected_ratio$lci, 
+                                     expected_ratio$uci),
+            "one_expected" = expected_ratio$lci <= 1 &
+              expected_ratio$uci >= 1,
+            "one_observed" = observed_ratio$lci <= 1 &
+              observed_ratio$uci >= 1)
+          
+          txt_ratio <- span(
+            "The", txt_target[[target]], "ratio", txt_ratio_order,
+            ifelse(
+              overlaps_with$one_observed,
+              paste0("overlapped with one (i.e., ",
+                     "no difference between groups)."),
+              paste0("did not overlap with one (ratio point estimate of ",
+                     wrap_none(ratio, ")."))))
+          
+          sufficient_simulations <- overlaps_with$truth && 
+            overlaps_with$one_expected == overlaps_with$one_observed &&
+            !is.na(get_cri[[target]][["lci"]]) && 
+            !is.na(get_cri[[target]][["uci"]])
+          
+          txt_simulations <- span(
+            style = paste(css_mono, css_bold),
+            
+            if (sufficient_simulations) {
+              tagList("The number of simulations appears sufficient", 
+                      "to obtain valid", wrap_none(
+                        txt_target[[target]], color = pal$sea, " ratios."))
+            } else {
+              tagList("The number of simulations appears insufficient", 
+                      "to obtain valid", wrap_none(
+                        txt_target[[target]], color = pal$dgr, " ratios."))
+            }
+          )
+          
+          txt_meta_groups <- p(txt_subpop,
+                               txt_subpop_detected,
+                               txt_ratio, txt_simulations)
+          
+        } # end of if (rv$which_meta == "compare")
+        
         txt_nsims <- ifelse(
           length(rv$simList) == 1,
           "for a single simulation",
@@ -1430,8 +1523,7 @@ mod_tab_report_server <- function(id, rv) {
         
         if (is.na(get_coi[[target]][["lci"]]) &&
             is.na(get_coi[[target]][["uci"]])) {
-          txt_uncertainty <- 
-            "however, run more simulations to confirm."
+          txt_uncertainty <- "however, run more simulations to confirm."
         } else {
           txt_uncertainty <- ifelse(
             get_coi[[target]][["uci"]] < .3 && 
@@ -1468,18 +1560,18 @@ mod_tab_report_server <- function(id, rv) {
           })
         
         if (length(get_cri) > 0) {
-        if (is.na(get_cri[[target]][["lci"]]) &&
-            is.na(get_cri[[target]][["uci"]])) {
-          browser()
-          txt_final <- tagList(
-            txt_final,
-            span(
-            style = paste("font-weight: 800;",
-                          "font-family: var(--monosans);"),
-            "Please run more simulations in the corresponding",
-            shiny::icon("compass-drafting", class = "cl-sea"),
-            span("Analyses", class = "cl-sea"), "tab to confirm."))
-        }
+          if (!is.na(get_cri[[target]][["lci"]]) &&
+              !is.na(get_cri[[target]][["uci"]])) {
+            
+            txt_final <- tagList(
+              txt_final,
+              span(
+                style = paste("font-weight: 800;",
+                              "font-family: var(--monosans);"),
+                "Please run more simulations in the corresponding",
+                shiny::icon("compass-drafting", class = "cl-sea"),
+                span("Analyses", class = "cl-sea"), "tab to confirm."))
+          }
         }
         
         index <- which(set_target == target)
@@ -1490,7 +1582,8 @@ mod_tab_report_server <- function(id, rv) {
                  style = set_style_title),
             br(),
             p(txt_mean,
-              txt_final))
+              txt_final,
+              txt_meta_groups))
           
         } else {
           out_meta <- tagList(
@@ -1501,153 +1594,15 @@ mod_tab_report_server <- function(id, rv) {
                    style = set_style_title),
               br(),
               p(txt_mean,
-                txt_final)))
+                txt_final,
+                txt_meta_groups)))
         }
         
       } # end of [target] loop
       
       rv$report$meta <- tagList(
         out_meta,
-        br(), out_link_meta)
-      
-    }) # end of observe
-    
-    #### Ratios of research target(s): ------------------------------------
-    
-    observe({
-      req(rv$active_tab == "report")
-      rv$report$groups <- out_groups <- span("")
-      
-      req(rv$grouped, rv$groups, rv$which_meta == "compare")
-      req(rv$metaErr, rv$metaList, rv$metaList_groups[["is_final"]])
-      
-      css_bold <- "font-weight: bold;"
-      css_mono <- "font-family: var(--monosans);"
-      
-      list2env(.build_outputs(rv, ratio = TRUE), envir = environment())
-      
-      i <- 0
-      for (target in set_target) {
-        i <- i + 1
-        
-        meta_truth <- rv$metaList_groups[["intro"]][[target]]
-        meta <- rv$metaList_groups[["final"]][[target]]
-        
-        is_subpop <- meta_truth$logs$subpop_detected
-        is_subpop_detected <- meta$logs$subpop_detected
-        
-        txt_subpop_cont <- if (is_subpop == is_subpop_detected) 
-          "As expected, sub-populations were" else
-            "However, sub-populations were"
-        
-        if (meta_truth$mods$subpop_detected[[2,2]] < 2) {
-          txt_subpop <- span(
-            "There was insufficient evidence in the", rv$data_type,
-            "dataset to detect sub-populations.")
-          txt_subpop_cont <- "With the simulations, sub-populations were"
-        }  else if (is_subpop) {
-          txt_subpop <- span(
-            "We expected to detect a sub-population",
-            "through meta-analyses.")
-        } else {
-          txt_subpop <- span(
-            "We expected no sub-populations to be detected",
-            "through meta-analyses.")
-        }
-        
-        col_subpop <- dplyr::case_when(
-          is_subpop == is_subpop_detected ~ "cl-sea-d",
-          meta_truth$mods$subpop_detected[[2,2]] < 2 ~ "cl-gld",
-          TRUE ~ "cl-dgr"
-        )
-        
-        txt_subpop_detected <- span(
-          txt_subpop_cont, span(
-            if (is_subpop_detected) "detected" else "not detected",
-            class = col_subpop),
-          ifelse(meta$mods$subpop_detected[[2,2]] < 2,
-                 "(though with \u0394AICc \uFF1C 2).",
-                 "(\u0394AICc \uFF1E 2).")
-        )
-        
-        expected_ratio <- .get_ratios(meta_truth)
-        observed_ratio <- .get_ratios(meta)
-        
-        ratio <- paste0(round(observed_ratio$est, 2), ":1")
-        overlaps_with <- list(
-          "truth" = dplyr::between(observed_ratio$est,
-                                   expected_ratio$lci, 
-                                   expected_ratio$uci),
-          "one_expected" = expected_ratio$lci <= 1 &
-            expected_ratio$uci >= 1,
-          "one_observed" = observed_ratio$lci <= 1 &
-            observed_ratio$uci >= 1)
-        
-        txt_ratio <- span(
-          "The", txt_target[[target]], "ratio", txt_ratio_order,
-          ifelse(
-            overlaps_with$one_observed,
-            paste0("overlapped with one (i.e., ",
-                   "no difference between groups)."),
-            paste0("did not overlap with one (ratio point estimate of ",
-                   wrap_none(ratio, ")."))))
-        
-        sufficient_simulations <- overlaps_with$truth && 
-          overlaps_with$one_expected == overlaps_with$one_observed &&
-          !is.na(get_cri[[target]][["lci"]]) && 
-          !is.na(get_cri[[target]][["uci"]])
-        
-        txt_simulations <- span(
-          style = paste(css_mono, css_bold),
-          
-          if (sufficient_simulations) {
-            tagList("The number of simulations appears sufficient", 
-                    "to obtain valid", wrap_none(
-                      txt_target[[target]], color = pal$sea, " ratios."))
-          } else {
-            tagList("The number of simulations appears insufficient", 
-                    "to obtain valid", wrap_none(
-                      txt_target[[target]], color = pal$dgr, " ratios."))
-          }
-        )
-        
-        set_style_title <- paste("display: inline-block;",
-                                 "font-family: var(--sans);",
-                                 "font-weight: 400;",
-                                 "font-style: italic;",
-                                 "font-size: 18px;",
-                                 "color: var(--sea-dark);",
-                                 "margin-bottom: 8px;")
-        
-        index <- which(set_target == target)
-        
-        if (index == 1) {
-          out_groups <- tagList(
-            p(span(txt_title[[target]],
-                   style = set_style_title),
-              br(),
-              p(txt_subpop,
-                txt_subpop_detected,
-                txt_ratio, txt_simulations)))
-          
-        } else {
-          out_groups <- tagList(
-            out_groups,
-            br(),
-            tagList(
-              p(span(txt_title[[target]],
-                     style = set_style_title),
-                br(),
-                p(txt_subpop,
-                  txt_subpop_detected,
-                  txt_ratio, txt_simulations))))
-        }
-        
-      } # end of [target] loop
-      
-      rv$report$groups <- tagList(
-        out_groups,
-        br(), out_link_meta)
+        br(), txt_link_meta)
       
     }) # end of observe
     
@@ -1848,8 +1803,7 @@ mod_tab_report_server <- function(id, rv) {
                 #     style = paste0("background-color: #f4f4f4;",
                 #                    "padding: 20px;",
                 #                    "margin-top: 20px;"),
-                #     rv$report$meta,
-                #     rv$report$groups)
+                #     rv$report$meta)
                 
               ) # end of tagList
             ) # end of div

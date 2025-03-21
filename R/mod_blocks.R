@@ -173,6 +173,9 @@ mod_blocks_server <- function(id,
                out <- rv[[name]]
                
                if (grepl("Est", name)) {
+                 
+                 req(!is.na(out[get_id, 5]))
+                 
                  out <- fix_unit(
                    data.frame(value = unlist(out[get_id, 2:4]), 
                               unit = out[get_id, 5]), 

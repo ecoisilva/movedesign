@@ -1574,9 +1574,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       for (i in seq_for) {
         if (i > length(rv$simfitList)) next
         
+        N1 <- N2 <- NULL
         nm <- names(rv$simList)[[i]]
         seed <- as.character(nm)
-        if (is.null(seed)) browser() # TODO TOREMOVE
         
         group <- 1
         if (subpop) group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
@@ -1586,7 +1586,12 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           truth <- rv$truth$hr[[seed]]$area
           N1 <- extract_dof(rv$akdeList[[i]], "area")[[1]]
           
-          if (N1 < 0.001) {
+          if (is.null(N1)) {
+            out_est <- rep(NA, 3) 
+            out_err <- rep(NA, 3)
+            tmpunit <- NA
+            
+          } else if (N1 < 0.001) {
             out_est <- rep(NA, 3) 
             out_err <- rep(NA, 3)
             tmpunit <- NA

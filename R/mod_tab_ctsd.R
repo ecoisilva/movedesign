@@ -326,22 +326,16 @@ mod_tab_ctsd_ui <- function(id) {
               ) # end of splitLayout
               
             ) # end of column (footer)
-          ) # end of sdBox_outputs
+          ), # end of sdBox_outputs
           
-      ), # end of column (center)
-
-      # [bottom column] ---------------------------------------------------
-
-      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
-
           ## Table: -------------------------------------------------------
-
+          
           shinydashboardPlus::box(
             title = span("Summary table:", class = "ttl-box"),
             id = ns("sdBox_summary"),
             width = NULL,
             solidHeader = FALSE,
-
+            
             reactable::reactableOutput(ns("sdTable")) #,
             # br(),
             # div(style = "display:inline-block; float:right",
@@ -350,9 +344,15 @@ mod_tab_ctsd_ui <- function(id) {
             #       label = "Clear table",
             #       icon =  icon("trash"),
             #       width = "110px")), br()
+            
+          ), # end of box, "sdBox_summary"
+          
+      ), # end of column (center)
 
-          ), # end of box // sdBox_summary
+      # [bottom column] ---------------------------------------------------
 
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
+          
           ## Additional information: --------------------------------------
 
           shinydashboardPlus::box(
@@ -1370,11 +1370,11 @@ mod_tab_ctsd_server <- function(id, rv) {
                       exp_time = rv$sd$expt_time,
                       n = num_sims)
       
-      msg_log(
-        style = "warning",
-        message = paste0("Simulating for ",
-                         msg_warning("current trajectory"), ","),
-        detail = "This may take a while...")
+      # msg_log(
+      #   style = "warning",
+      #   message = paste0("Simulating for ",
+      #                    msg_warning("current trajectory"), ","),
+      #   detail = "This may take a while...")
       
       sdList <- estimating_speed()
       dataList <- estimating_speeds()
@@ -1403,8 +1403,6 @@ mod_tab_ctsd_server <- function(id, rv) {
         shinybusy::remove_modal_spinner()
         req(sdList)
       }
-      
-      req(length(rv$simList) == length(rv$ctsdList))
       
       out_est_df <- data.frame(seed = numeric(0),
                                lci = numeric(0), 
@@ -1582,6 +1580,12 @@ mod_tab_ctsd_server <- function(id, rv) {
                           lci = NA, est = NA, uci = NA)
        }
       }
+      
+      msg_log(
+        style = 'success',
+        message = paste0("Path estimation ",
+                         msg_success("completed"), "."),
+        run_time = difftime(Sys.time(), start, units = "sec"))
       
       rv$distEst <<- rbind(rv$distEst, out_dist_est_df)
       rv$distErr <<- rbind(rv$distErr, out_dist_err_df)
@@ -2131,92 +2135,108 @@ mod_tab_ctsd_server <- function(id, rv) {
       newdat <- rv$simList[[rv$sd_nsim]]
       alldat <- rv$pathList[[rv$sd_nsim]]
       
-      datasets <- input$show_paths
-      lims <- extract_limits(newdat, alldat)
-      
-      if (!is.null(rv$sd$simList)) {
-        lims <- extract_limits(newdat, alldat, 
-                               rv$sd$simList[[1]])
-      }
-      
-      if ("full" %in% datasets) {
-        p1 <- ggplot2::geom_path(
-          alldat, mapping = ggplot2::aes(
-            x = x, y = y),
-          col = "grey70", size = 1.5)
-        p1_main <- ggplot2::geom_path(
-          alldat, mapping = ggplot2::aes(
-            x = x, y = y),
-          col = "grey30", size = 0.4)
-      }
-
-      if ("initial" %in% datasets) {
-        p2 <- ggplot2::geom_path(
-          newdat, mapping = ggplot2::aes(
-            x = x, y = y),
-          linewidth = 0.2, col = pal$sea)
-        p2_points <- ggiraph::geom_point_interactive(
-          newdat, mapping = ggplot2::aes(
-            x = x, y = y,
-            tooltip = timestamp),
-          size = 0.8, col = pal$sea)
-      }
-
-      if ("new" %in% datasets) {
-        req(rv$sd$simList)
-
-        p3 <- ggplot2::geom_path(
-          rv$sd$simList[[1]], mapping = ggplot2::aes(
-            x = x, y = y),
-          linewidth = 0.2, col = pal$dgr)
-        p3_points <- ggiraph::geom_point_interactive(
-          rv$sd$simList[[1]], mapping = ggplot2::aes(
-            x = x, y = y,
-            tooltip = timestamp),
-          size = 0.4, col = pal$dgr)
-      }
-
-      p <- ggplot2::ggplot() +
-
-        { if ("full" %in% datasets) p1 } +
-        { if ("full" %in% datasets) p1_main } +
+      if (is.na(rv$distEst[rv$sd_nsim, ]$est)) {
+        p <- ggplot2::ggplot() +
+          ggtext::geom_richtext(
+            mapping = ggplot2::aes(x = 1, y = 1),
+            size = 5,
+            color = "grey50",
+            fill = NA, label.color = NA,
+            label = paste0("[Estimation for individual ",
+                           rv$sd_nsim,
+                           " <span style='color: #DB4545;'>",
+                           "failed</span>]")) +
+          ggplot2::theme_void()
         
-        { if ("initial" %in% datasets) p2 } +
-        { if ("initial" %in% datasets) p2_points } +
-
-        { if ("new" %in% datasets) p3 } +
-        { if ("new" %in% datasets) p3_points } +
-
-        ggplot2::labs(
-          x = "X coordinate",
-          y = "Y coordinate") +
-
-        ggplot2::scale_x_continuous(
-          labels = scales::comma,
-          limits = c(lims[["xmin"]], lims[["xmax"]])) +
-        ggplot2::scale_y_continuous(
-          labels = scales::comma,
-          limits = c(lims[["ymin"]], lims[["ymax"]])) +
-        viridis::scale_color_viridis(
-          name = "Tracking time:",
-          option = "D", trans = "time",
-          breaks = c(min(newdat$time),
-                     max(newdat$time)),
-          labels = c("Start", "End")) +
-
-        theme_movedesign(font_available = rv$is_font) +
-        ggplot2::guides(
-          color = ggplot2::guide_colorbar(
-            title.vjust = 1.02)) +
-        ggplot2::theme(
-          legend.position = c(0.76, 0.08),
-          legend.direction = "horizontal",
-          legend.title = ggplot2::element_text(
-            size = 11, face = "bold.italic"),
-          legend.key.height = ggplot2::unit(0.3, "cm"),
-          legend.key.width = ggplot2::unit(0.6, "cm")
-        )
-
+      } else {
+        
+        datasets <- input$show_paths
+        lims <- extract_limits(newdat, alldat)
+        
+        if (!is.null(rv$sd$simList)) {
+          lims <- extract_limits(newdat, alldat, 
+                                 rv$sd$simList[[1]])
+        }
+        
+        if ("full" %in% datasets) {
+          p1 <- ggplot2::geom_path(
+            alldat, mapping = ggplot2::aes(
+              x = x, y = y),
+            col = "grey70", size = 1.5)
+          p1_main <- ggplot2::geom_path(
+            alldat, mapping = ggplot2::aes(
+              x = x, y = y),
+            col = "grey30", size = 0.4)
+        }
+        
+        if ("initial" %in% datasets) {
+          p2 <- ggplot2::geom_path(
+            newdat, mapping = ggplot2::aes(
+              x = x, y = y),
+            linewidth = 0.2, col = pal$sea)
+          p2_points <- ggiraph::geom_point_interactive(
+            newdat, mapping = ggplot2::aes(
+              x = x, y = y,
+              tooltip = timestamp),
+            size = 0.8, col = pal$sea)
+        }
+        
+        if ("new" %in% datasets) {
+          req(rv$sd$simList)
+          
+          p3 <- ggplot2::geom_path(
+            rv$sd$simList[[1]], mapping = ggplot2::aes(
+              x = x, y = y),
+            linewidth = 0.2, col = pal$dgr)
+          p3_points <- ggiraph::geom_point_interactive(
+            rv$sd$simList[[1]], mapping = ggplot2::aes(
+              x = x, y = y,
+              tooltip = timestamp),
+            size = 0.4, col = pal$dgr)
+        }
+        
+        p <- ggplot2::ggplot() +
+          
+          { if ("full" %in% datasets) p1 } +
+          { if ("full" %in% datasets) p1_main } +
+          
+          { if ("initial" %in% datasets) p2 } +
+          { if ("initial" %in% datasets) p2_points } +
+          
+          { if ("new" %in% datasets) p3 } +
+          { if ("new" %in% datasets) p3_points } +
+          
+          ggplot2::labs(
+            x = "X coordinate",
+            y = "Y coordinate") +
+          
+          ggplot2::scale_x_continuous(
+            labels = scales::comma,
+            limits = c(lims[["xmin"]], lims[["xmax"]])) +
+          ggplot2::scale_y_continuous(
+            labels = scales::comma,
+            limits = c(lims[["ymin"]], lims[["ymax"]])) +
+          viridis::scale_color_viridis(
+            name = "Tracking time:",
+            option = "D", trans = "time",
+            breaks = c(min(newdat$time),
+                       max(newdat$time)),
+            labels = c("Start", "End")) +
+          
+          theme_movedesign(font_available = rv$is_font) +
+          ggplot2::guides(
+            color = ggplot2::guide_colorbar(
+              title.vjust = 1.02)) +
+          ggplot2::theme(
+            legend.position = c(0.76, 0.08),
+            legend.direction = "horizontal",
+            legend.title = ggplot2::element_text(
+              size = 11, face = "bold.italic"),
+            legend.key.height = ggplot2::unit(0.3, "cm"),
+            legend.key.width = ggplot2::unit(0.6, "cm")
+          )
+      }
+     
       ggiraph::girafe(
         ggobj = p,
         width_svg = 6, height_svg = 6,
@@ -2229,7 +2249,7 @@ mod_tab_ctsd_server <- function(id, rv) {
                         "stroke:#1279BF;",
                         "cursor:pointer;")),
           ggiraph::opts_toolbar(saveaspng = FALSE)))
-
+      
     }) # end of renderGirafe, "sdPlot_path"
     
     ## Plotting speed (estimate vs. time): --------------------------------
@@ -2239,6 +2259,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       unit <- ifelse(input$sd_unit == "minutes", "mins", input$sd_unit)
       dat <- rv$speedDatList[[rv$sd_nsim]]
       ctsd <- rv$speedEst[rv$sd_nsim, ]
+      req(!is.na(ctsd$est))
       
       t_origin <- "1111-11-10 23:06:32"
       dat <- dat %>%
@@ -2294,49 +2315,63 @@ mod_tab_ctsd_server <- function(id, rv) {
       #     high = sims_ci[[1]] %#% rv$speedEst$unit[3])
       # }
       
-      p <- preparing_speed()[["data"]] %>%
-        
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$t_new, 
-                       y = .data$est, 
-                       group = 1)) +
-        
-        ggplot2::geom_ribbon(
-          ggplot2::aes(ymin = .data$low, 
-                       ymax = .data$high),
-          fill = pal$sea, alpha = .3) +
-        
-        ggplot2::geom_line(
-          color = pal$sea_m) +
-        
-        # { if (rv$sd_nsim > 1)
-        #   ggplot2::geom_ribbon(
-        #     data = sims_ci,
-        #     mapping = ggplot2::aes(ymin = low, ymax = high), 
-        #     fill = pal$sea_d, alpha = .5)
-        # } +
-      
-        { if ("full" %in% datasets)
-          ggplot2::geom_hline(
-            yintercept = preparing_speed()[["yline_truth"]], 
-            linewidth = 1, linetype = "solid") } +
-        
-        { if ("initial" %in% datasets)
-          ggplot2::geom_hline(
-            yintercept = preparing_speed()[["yline"]], 
-            linewidth = 1.1, linetype = "dashed",
-            col = pal$sea) } +
-        
-        { if (!is.null(rv$sd$ctsdList) && "new" %in% datasets)
-          ggplot2::geom_hline(
-            yintercept = preparing_speed()[["yline_new"]],
-            linewidth = 1.1, linetype = "dashed",
-            col = pal$dgr)  } +
-        
-        ggplot2::labs(
-          x = "Time lag",
-          y = "Speed estimate (meters/second)") +
-        theme_movedesign(font_available = rv$is_font)
+      if (is.na(rv$speedEst[rv$sd_nsim, ]$est)) {
+        p <- ggplot2::ggplot() +
+          ggtext::geom_richtext(
+            mapping = ggplot2::aes(x = 1, y = 1),
+            size = 5,
+            color = "grey50",
+            fill = NA, label.color = NA,
+            label = paste0("[Estimation for individual ",
+                           rv$sd_nsim,
+                           " <span style='color: #DB4545;'>",
+                           "failed</span>]")) +
+          ggplot2::theme_void()
+      } else {
+        p <- preparing_speed()[["data"]] %>%
+          
+          ggplot2::ggplot(
+            ggplot2::aes(x = .data$t_new, 
+                         y = .data$est, 
+                         group = 1)) +
+          
+          ggplot2::geom_ribbon(
+            ggplot2::aes(ymin = .data$low, 
+                         ymax = .data$high),
+            fill = pal$sea, alpha = .3) +
+          
+          ggplot2::geom_line(
+            color = pal$sea_m) +
+          
+          # { if (rv$sd_nsim > 1)
+          #   ggplot2::geom_ribbon(
+          #     data = sims_ci,
+          #     mapping = ggplot2::aes(ymin = low, ymax = high), 
+          #     fill = pal$sea_d, alpha = .5)
+          # } +
+          
+          { if ("full" %in% datasets)
+            ggplot2::geom_hline(
+              yintercept = preparing_speed()[["yline_truth"]], 
+              linewidth = 1, linetype = "solid") } +
+          
+          { if ("initial" %in% datasets)
+            ggplot2::geom_hline(
+              yintercept = preparing_speed()[["yline"]], 
+              linewidth = 1.1, linetype = "dashed",
+              col = pal$sea) } +
+          
+          { if (!is.null(rv$sd$ctsdList) && "new" %in% datasets)
+            ggplot2::geom_hline(
+              yintercept = preparing_speed()[["yline_new"]],
+              linewidth = 1.1, linetype = "dashed",
+              col = pal$dgr)  } +
+          
+          ggplot2::labs(
+            x = "Time lag",
+            y = "Speed estimate (meters/second)") +
+          theme_movedesign(font_available = rv$is_font)
+      }
       
       ggiraph::girafe(ggobj = p)
       
@@ -2714,7 +2749,6 @@ mod_tab_ctsd_server <- function(id, rv) {
     
     observe({
       req(rv$ctsdList, rv$speedEst, rv$distEst)
-      req(any(!is.na(rv$speedEst$est)))
       
       mod_blocks_server(
         id = "distBlock_est",

@@ -351,14 +351,14 @@ mod_tab_hrange_ui <- function(id) {
           ## Table: -------------------------------------------------------
           
           shinydashboardPlus::box(
-            title = span("Table:", class = "ttl-box"),
+            title = span("Summary table:", class = "ttl-box"),
             id = ns("hrBox_summary"),
             width = NULL,
             solidHeader = FALSE,
             
             reactable::reactableOutput(ns("hrTable"))
             
-          ), # end of box // hrBox_summary
+          ), # end of box, "hrBox_summary"
           
       ), # end of column (center)
       

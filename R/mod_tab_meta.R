@@ -980,15 +980,25 @@ mod_tab_meta_server <- function(id, rv) {
       get_analysis <- c()
       if ("Home range" %in% rv$which_question) {
         req(rv$akdeList)
-        req(length(rv$akdeList) > 0)
+        req(length(rv$akdeList) > 1)
         req(length(rv$simList) == length(rv$akdeList))
+        if (any(is.null(rv$akdeList))) {
+          tmp <- rv$akdeList
+          tmp[sapply(tmp, is.null)] <- NULL
+          req(length(tmp) > 1)
+        }
         get_analysis <- c(get_analysis, "hr")
       }
       
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$ctsdList)
-        req(length(rv$ctsdList) > 0)
+        req(length(rv$ctsdList) > 1)
         req(length(rv$simList) == length(rv$ctsdList))
+        if (any(is.null(rv$ctsdList))) {
+          tmp <- rv$ctsdList
+          tmp[sapply(tmp, is.null)] <- NULL
+          req(length(tmp) > 1)
+        }
         get_analysis <- c(get_analysis, "ctsd")
       }
       
@@ -1102,6 +1112,7 @@ mod_tab_meta_server <- function(id, rv) {
         rv$simfitList,
         input$n_resamples))
     
+    
     observe({
       req(rv$active_tab == 'meta')
       req(rv$which_question,
@@ -1111,11 +1122,10 @@ mod_tab_meta_server <- function(id, rv) {
       
       rv$random <- TRUE
       n_resamples <- input$n_resamples
-      # rv$meta$n_resample <- rv$meta$n_resample + input$n_resamples
+      rv$meta_tbl_resample <- NULL
       
       tmp <- get_meta_permutation_outputs()
-      rv$meta_tbl_resample <<- rbind(rv$meta_tbl_resample,
-                                     dplyr::distinct(tmp))
+      rv$meta_tbl_resample <- dplyr::distinct(tmp)
       
 
     }) %>% # end of observe,
