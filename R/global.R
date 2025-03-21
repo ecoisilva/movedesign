@@ -25,24 +25,19 @@ rlang::on_load(rlang::local_use_cli(inline = TRUE))
 # Global variables:
 
 utils::globalVariables(
-  c(".data", "group", "seed",
-    
-    "datList",
-    "outList",
-    "truthList",
+  c(".data", "datList", "outList", "truthList",
     
     "id",
-    "x", "y",
-    "x0", "y0", "x1", "y1",
-    "long", "lat",
-    "longitude", "latitude",
+    "group", "seed",
+    "x", "y", "x0", "y0", "x1", "y1",
+    "long", "lat", "longitude", "latitude",
     "time", "timestamp", "lag",
+    
+    "taup", "tau_p", "tauv", "tau_v", 
     
     "device",
     "duration", "dur", "dur_unit",
     "interval", "dti", "dti_unit", "dti_notes",
-    
-    "taup", "tau_p", "tauv", "tau_v", 
     
     "CI", "LCI", "UCI",
     "CI_low", "CI_high",
@@ -90,11 +85,10 @@ utils::globalVariables(
     "gazelle",
     "turtle",
     
-    "TanhSolver",
     "ctmm",
     "get_coi",
     "get_cri",
-    "out_link_meta",
+    "txt_link_meta",
     "txt_ratio_order",
     "txt_target",
     "txt_title",

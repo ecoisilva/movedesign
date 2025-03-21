@@ -4,11 +4,12 @@ Version: 0.3.0
 Authors@R: 
     person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"),
            comment = c(ORCID = "0000-0003-4850-6193"))
-Description: A Shiny application that helps researchers design movement ecology studies.  
-    The tool focuses on two key objectives: (1) estimating home range areas and  
-    (2) estimating fine-scale movement behavior, specifically speed and distance traveled.  
-    It provides interactive simulations and methodological guidance to support  
-    study planning and decision-making. 
+Description: A Shiny application that helps researchers design movement
+    ecology studies.  The tool focuses on two key objectives: (1)
+    estimating home range areas and (2) estimating fine-scale movement
+    behavior, specifically speed and distance traveled.  It provides
+    interactive simulations and methodological guidance to support study
+    planning and decision-making.
 License: GPL (>= 3)
 URL: https://github.com/ecoisilva/movedesign,
     https://ecoisilva.github.io/movedesign/
@@ -33,6 +34,7 @@ Imports:
     ggtext,
     golem (>= 0.3.2),
     grDevices,
+    gsl,
     parallel,
     parsedate,
     plyr,
