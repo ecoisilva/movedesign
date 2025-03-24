@@ -50,15 +50,13 @@ knitr::opts_chunk$set(
 
 # Walkthrough
 
-This workflow is presented in Silva *et al.* [-@silva2023movedesign].
+This workflow is presented in Silva *et al.* [-@silva2023movedesign], and is a simplified case study, designed for quick execution. We will use a GPS tracking dataset of African buffalos (*Syncerus caffer*) tracked in Kruger National Park between 2005 and 2006 [@cross2009], to inform our simulations. Our primary goal is to reliably estimate **home range area** for a single African Buffalo. 
 
 ![](images/tutorial1_img3.png){fig-align="center"}
 
-You will be guided through a real animal tracking project available through the package. To simulate data from scratch, exit the tutorial (click the `×` button above the tutorial box) and navigate to the `r fa("file-pen", fill = "#009DA0")` `'Simulate data'` tab, where another guided tour is available.
+First, we will navigate to (1) the `r fa("file-circle-plus", fill = "#009DA0")` `'Select data'` tab to load a dataset available within the package. Then, we will move to (2) the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab to define the sampling duration and interval. Finally, we will proceed to (3) the `r fa("compass-drafting")` `'Analyses'` tabs.
 
-First, we will navigate to (1) the `r fa("file-circle-plus", fill = "#009DA0")` `'Select data'` tab to load a dataset available within the package. Then, we will move to (2) the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab to define the sampling duration and interval. Finally, we will proceed to (3) the `r fa("compass-drafting")` `'Analyses'` tab.
-
-Afterwards, you can review a detailed summary of all outputs in the `'Report'` tab.
+Afterwards, we can review a detailed summary of all outputs in the `'Report'` tab.
 
 ::: custom-box
 `r fontawesome::fa("bell")` Please choose `Select` as your data source to choose from a list of available species. Then, set `Home range` and `Speed & distance` as your research targets. For the analytical target, choose `Individual estimate`.
@@ -66,13 +64,13 @@ Afterwards, you can review a detailed summary of all outputs in the `'Report'` t
 
 ### Data
 
-By navigating to the `r fa("file-circle-plus", fill = "#009DA0")` `'Select data'` tab, you can choose from seven species available in the `ctmm` package. Parameters extracted from these species can inform tracking studies of other species with similar movement behaviors.
+By navigating to the `r fa("file-circle-plus", fill = "#009DA0")` `'Select data'` tab, we can choose from seven species available in the `ctmm` package. Parameters extracted from these species can inform tracking studies of other species with similar movement behaviors.
 
 ::: custom-box
 `r fontawesome::fa("bell")` First, select the `African Buffalo` (*Syncerus caffer*) as your study species. From the dropdown menu, select `Cilla` as your focal individual and click the `'Validate'` button.
 :::
 
-When choosing an individual, ensure it accurately represents the movement behavior you aim to emulate. The validation step ensures that we can detect the **position autocorrelation timescale** ($\tau_p$), essential for home range estimation, and the **velocity autocorrelation timescale** ($\tau_v$), for speed & distance estimation.
+When choosing an individual, we must ensure it accurately represents the movement behavior we aim to emulate. The validation step ensures that we can detect the **position autocorrelation timescale** ($\tau_p$), essential for home range estimation, and the **velocity autocorrelation timescale** ($\tau_v$), for speed & distance estimation.
 
 ::: custom-box
 `r fontawesome::fa("bell")` Once validation is successful, the button should now read `'Validated!'` Proceed by clicking the `'Extract'` button.
@@ -82,7 +80,7 @@ When choosing an individual, ensure it accurately represents the movement behavi
 
 ### Sampling design
 
-Navigate to the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab. Now, we are ready to evaluate the intended sampling design for a future tracking project by simulating data conditioned on the extracted movement parameters.
+Next, we navigate to the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab. Here, we evaluate an intended sampling design for a future tracking project, by simulating data conditioned on the extracted movement parameters.
 
 **Step 1.** *Select a tracking device:*
 
@@ -94,7 +92,7 @@ GPS/Satellite loggers automate sampling using satellite systems. However, both *
 
 **Step 2.** *Adjust battery life and fix rate:*
 
-Here, you can configure two key parameters: `GPS battery life`, the expected operational duration of the GPS device, and `Maximum GPS fix rate`, the longest possible time interval between recorded locations (fixes) over that duration. The device manufacturer typically provides this information, which is listed in the model’s documentation.
+Here, we can configure two key parameters: `GPS battery life`, the expected operational duration of the GPS device, and `Maximum GPS fix rate`, the longest possible time interval between recorded locations (fixes) over that duration. The device manufacturer typically provides this information, which is listed in the model’s documentation.
 
 ::: custom-box
 `r fontawesome::fa("bell")` Now, adjust the settings as follows: set `GPS battery life` to 2 years, and set the `Maximum GPS fix rate` to 1 fix every 6 hours. Then, from the sampling parameters plot, choose a sampling interval of `2 hours`.
@@ -102,7 +100,7 @@ Here, you can configure two key parameters: `GPS battery life`, the expected ope
 
 **Step 3 (optional).** *Add device limitations:*
 
-You may include other device limitations, such as location error and success fix rate, to understand the precision and reliability of the sampling schedule under various conditions.
+We may include other device limitations, such as location error and success fix rate, to understand the precision and reliability of the sampling schedule under various conditions.
 
 ::: custom-box
 `r fontawesome::fa("bell")` Change `Fix success rate (%)` to 85%, and the `Location error` to 10 meters.
@@ -140,7 +138,7 @@ This tab presents three key outputs:
 
 -   **Relative error (%)**: The percentage deviation of the estimate and its CIs from the true home range. Lower error values indicate a more precise estimate.
 
--   **Effective sample size (N<sub>area</sub>)**: The number of home range crossing events, which influences the reliability of the estimate.
+-   **Effective sample size (N**<sub>area</sub>): The number of home range crossing events, which influences the reliability of the estimate.
 
 Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), N<sub>area</sub> ≈ 42, indicating approximately 42 home range crossing events occurred within the sampling period.
 
@@ -176,10 +174,10 @@ Given the current sampling parameters (sampling interval of *one fix every 2 hou
 `r fontawesome::fa("bell")` Click the `Build report` button to generate a detailed evaluation of how well your sampling design meets your research targets.
 :::
 
-The report compiles all settings and outputs in one place, helping you assess whether the *sampling parameters* were sufficient for a reliable **home range area estimate**, and/or **speed and distance estimate**. Use this report to fine-tune your sampling design to ensure robust outputs.
+The report compiles all settings and outputs in one place, helping us assess whether the *sampling parameters* were sufficient for a reliable **home range area estimate**, and/or **speed and distance estimate**. Use this report to fine-tune your sampling design to ensure robust outputs.
 
 ![](images/tutorial1_img8.png){fig-align="center"}
 
-You can compare your results to our simulations based on similar timescales and sampling parameters, allowing for a quick assessment of consistency.  
+You can compare your results to our simulations based on similar timescales and sampling parameters, allowing for a quick assessment of consistency.
 
 ## References

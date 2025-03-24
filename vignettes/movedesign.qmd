@@ -94,7 +94,7 @@ Additionally, users have the option to:
 
 -   [ ] `Add individual variation`: Include variation among individuals during simulations (only available for mean and estimate comparisons).
 
-Go [here](https://ecoisilva.github.io/movedesign/articles/tutorial.html) for more detailed information regarding the `Individual estimate` workflow.
+Go [here](https://ecoisilva.github.io/movedesign/articles/tutorial_ind.html) for more detailed information regarding the `Individual estimate` workflow.
 
 ## Related work
 
