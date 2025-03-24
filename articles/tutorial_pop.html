@@ -80,15 +80,98 @@
 
 
 
-    <div class="quarto-figure quarto-figure-center">
-<figure><p><img src="images/tutorial2_img1.png" class="quarto-figure quarto-figure-center"></p>
+    <style>
+body {
+    text-align: justify;
+}
+svg {
+  margin-right: 0.3em;
+}
+.custom-box {
+    background-color: #009DA0;
+    color: white;
+    padding: 10px 10px 2px 10px;
+    margin: 8px 0 8px 0;
+}
+code {
+  background-color: RGB(232, 232, 232) !important;
+}
+</style>
+<section class="section level2"><h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h2>
+</section><section class="section level2"><h2 id="walkthrough">Walkthrough<a class="anchor" aria-label="anchor" href="#walkthrough"></a>
+</h2>
+<p>This workflow is in Silva <em>et al.</em> (in prep), and is a simplified case study, designed for quick execution. We will use a GPS tracking dataset of African buffalos (<em>Syncerus caffer</em>) tracked in Kruger National Park between 2005 and 2006 <span class="citation" data-cites="cross2009">(<a href="#ref-cross2009" role="doc-biblioref">Cross et al., 2009</a>)</span>, to inform our simulations. Our primary goal is to reliably estimate <strong>mean home range area</strong> of a population of African Buffalos. Please see the manuscript for a more detailed workflow, incorporating both research targets.</p>
+<p><img src="images/tutorial2_img1.png" class="quarto-figure quarto-figure-center"> Similarly to the <a href="https://ecoisilva.github.io/movedesign/articles/movedesign.html">single estimate</a> vignette, we begin by selecting the appropriate workflow in the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M575.8 255.5c0 18-15 32.1-32 32.1h-32l.7 160.2c0 2.7-.2 5.4-.5 8.1V472c0 22.1-17.9 40-40 40H456c-1.1 0-2.2 0-3.3-.1c-1.4 .1-2.8 .1-4.2 .1H416 392c-22.1 0-40-17.9-40-40V448 384c0-17.7-14.3-32-32-32H256c-17.7 0-32 14.3-32 32v64 24c0 22.1-17.9 40-40 40H160 128.1c-1.5 0-3-.1-4.5-.2c-1.2 .1-2.4 .2-3.6 .2H104c-22.1 0-40-17.9-40-40V360c0-.9 0-1.9 .1-2.8V287.6H32c-18 0-32-14-32-32.1c0-9 3-17 10-24L266.4 8c7-7 15-8 22-8s15 2 21 7L564.8 231.5c8 7 12 15 11 24z"></path></svg><code>Home</code> tab. Please check that vignette first, as some information is omitted here to avoid repetition. In this tutorial, we will showcase a workflow for <strong>deploying a set number of units</strong>.</p>
+<div class="custom-box">
+<p><svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V208c0-61.9 50.1-112 112-112zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z"></path></svg> Please choose <code>Select</code> as your data source to choose from a list of available species. Then, set <code>Home range</code> as your research target. For the analytical target, choose <code>Mean estimate of sampled population</code>. A new option will show up for deployment; please select the <code>"I plan to deploy a set number of VHF/GPS tags."</code> In addition, tick the <code>Add individual variation</code> checkbox. This allows us to account for individual differences, rather than assuming all individuals behave identically.</p>
+</div>
+<section class="level3"><h4 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
+</h4>
+<p>Differently from the <a href="https://ecoisilva.github.io/movedesign/articles/movedesign.html">single estimate</a> workflow, we are now able to select multiple individuals, which enable us to extract <strong>population-level species parameters</strong>.</p>
+<p>First, select the <code>African Buffalo</code> (<em>Syncerus caffer</em>) as your study species. From the dropdown menu, select all six individuals and click the <code>'Validate'</code> button. Once validation is successful, the button should now read <code>'Validated!'</code>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial2_img2.png" class="quarto-figure quarto-figure-center"></p>
 </figure>
 </div>
-<p>WIP</p>
-
-
-
-<script id="quarto-html-after-body" type="application/javascript">
+<p>Before proceeding further, you should visually inspect the variograms to confirm range-residency through the <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M64 64c0-17.7-14.3-32-32-32S0 46.3 0 64V400c0 44.2 35.8 80 80 80H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H80c-8.8 0-16-7.2-16-16V64zm406.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L320 210.7l-57.4-57.4c-12.5-12.5-32.8-12.5-45.3 0l-112 112c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L240 221.3l57.4 57.4c12.5 12.5 32.8 12.5 45.3 0l128-128z"></path></svg><code>Variogram</code> tab of the <code>Data Visualization</code> box. Variograms allow users to check if semivariance reaches an asymptote, and facilitate a cursory confirmation of range residency <span class="citation" data-cites="calabrese2016 silva2022">(<a href="#ref-calabrese2016" role="doc-biblioref">Calabrese et al., 2016</a>; <a href="#ref-silva2022" role="doc-biblioref">Silva et al., 2022</a>)</span>. Downstream results may be unreliable if we violate the range residency assumption as, from this point onward, the <code>movedesign</code> application will operate under the assumption that the data originates from a range-resident species.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial2_img3.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+<p>For this tutorial, we will proceed with all six individuals. In a real workflow, however, we would likely exclude <code>Gabs</code> and proceed with the remaining individuals.</p>
+<p>Proceed by clicking the <code>'Extract'</code> button. Upon successful extraction, the <code>Displaying parameters</code> box presents our extracted species parameters: the <strong>position autocorrelation</strong> (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mi>p</mi></msub><annotation encoding="application/x-tex">\tau_p</annotation></semantics></math>) and the <strong>velocity autocorrelation timescale</strong> (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mi>v</mi></msub><annotation encoding="application/x-tex">\tau_v</annotation></semantics></math>). For the African buffalos, the mean <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mi>p</mi></msub><annotation encoding="application/x-tex">\tau_p</annotation></semantics></math> is 10.1 days (95% CI: 6.9, 14.7), and a mean <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mi>v</mi></msub><annotation encoding="application/x-tex">\tau_v</annotation></semantics></math> is 32.5 minutes (95% CI: 24.9, 42.6). These parameters serve as the foundation for all subsequent simulations as we evaluate study design.</p>
+</section><section class="level3"><h4 id="sampling-design">Sampling design<a class="anchor" aria-label="anchor" href="#sampling-design"></a>
+</h4>
+<p>Next, we navigate to the <svg aria-hidden="true" role="img" viewbox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:#009DA0;overflow:visible;position:relative;"><path d="M176 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h16V98.4C92.3 113.8 16 200 16 304c0 114.9 93.1 208 208 208s208-93.1 208-208c0-41.8-12.3-80.7-33.5-113.2l24.1-24.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L355.7 143c-28.1-23-62.2-38.8-99.7-44.6V64h16c17.7 0 32-14.3 32-32s-14.3-32-32-32H224 176zm72 192V320c0 13.3-10.7 24-24 24s-24-10.7-24-24V192c0-13.3 10.7-24 24-24s24 10.7 24 24z"></path></svg><code>'Sampling design'</code> tab, where we input our sampling parameters. For this tutorial, we will consider the following sampling schedule: a <strong><em>sampling duration</em></strong> of <code>3 months</code>, with 12 new locations collected per day (<strong><em>sampling interval</em></strong> of <code>2 hours</code>). To set this particular schedule, we ensure that <code>GPS/Satellite logger</code> is selected in the first dropdown menu, and untick the <code>Select from plot</code> checkbox in the <code>Device settings</code> box before proceeding, which will prompt us to manually input the sampling interval. Then, we set <code>GPS battery life</code> (equivalent to the maximum sampling duration) to <code>3 months</code> and <code>What sampling interval will you evaluate?</code> to <code>2 hours</code>.</p>
+<p>We incorporate three additional components: <strong>fix success rate</strong> (here expected to be, on average, <code>85%</code>), reflecting the reliability of the GPS signal; <strong>tag failure</strong> (<code>5%</code> chance of a tag failing during data collection); and <strong>location error</strong> (averaging <code>15 meters</code>). At this point, we click the <code>Validate</code> button (verifying once again that it switches to <code>Validated!</code>) and, afterwards, the <code>Run</code> button.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial2_img4.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+<p>Once a message appears confirming that this step has been successfully completed, we proceed to the <svg aria-hidden="true" role="img" viewbox="0 0 576 512" style="height:1em;width:1.12em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M408 120c0 54.6-73.1 151.9-105.2 192c-7.7 9.6-22 9.6-29.6 0C241.1 271.9 168 174.6 168 120C168 53.7 221.7 0 288 0s120 53.7 120 120zm8 80.4c3.5-6.9 6.7-13.8 9.6-20.6c.5-1.2 1-2.5 1.5-3.7l116-46.4C558.9 123.4 576 135 576 152V422.8c0 9.8-6 18.6-15.1 22.3L416 503V200.4zM137.6 138.3c2.4 14.1 7.2 28.3 12.8 41.5c2.9 6.8 6.1 13.7 9.6 20.6V451.8L32.9 502.7C17.1 509 0 497.4 0 480.4V209.6c0-9.8 6-18.6 15.1-22.3l122.6-49zM327.8 332c13.9-17.4 35.7-45.7 56.2-77V504.3L192 449.4V255c20.5 31.3 42.3 59.6 56.2 77c20.5 25.6 59.1 25.6 79.6 0zM288 152a40 40 0 1 0 0-80 40 40 0 1 0 0 80z"></path></svg><code>Home range</code> tab below <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M352 96c0 14.3-3.1 27.9-8.8 40.2L396 227.4c-23.7 25.3-54.2 44.1-88.5 53.6L256 192h0 0l-68 117.5c21.5 6.8 44.3 10.5 68.1 10.5c70.7 0 133.8-32.7 174.9-84c11.1-13.8 31.2-16 45-5s16 31.2 5 45C428.1 341.8 347 384 256 384c-35.4 0-69.4-6.4-100.7-18.1L98.7 463.7C94 471.8 87 478.4 78.6 482.6L23.2 510.3c-5 2.5-10.9 2.2-15.6-.7S0 501.5 0 496V440.6c0-8.4 2.2-16.7 6.5-24.1l60-103.7C53.7 301.6 41.8 289.3 31.2 276c-11.1-13.8-8.8-33.9 5-45s33.9-8.8 45 5c5.7 7.1 11.8 13.8 18.2 20.1l69.4-119.9c-5.6-12.2-8.8-25.8-8.8-40.2c0-53 43-96 96-96s96 43 96 96zm21 297.9c32.6-12.8 62.5-30.8 88.9-52.9l43.7 75.5c4.2 7.3 6.5 15.6 6.5 24.1V496c0 5.5-2.9 10.7-7.6 13.6s-10.6 3.2-15.6 .7l-55.4-27.7c-8.4-4.2-15.4-10.8-20.1-18.9L373 393.9zM256 128a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"></path></svg><code>Analyses</code>.</p>
+</section><section class="level3"><h4 id="analyses">Analyses<a class="anchor" aria-label="anchor" href="#analyses"></a>
+</h4>
+<section class="level4"><h5 id="home-range-estimation">Home range estimation<a class="anchor" aria-label="anchor" href="#home-range-estimation"></a>
+</h5>
+<p>To start the estimation process, we click the <code>Run estimation</code> button located in the top box. We can now see the outputs for a single simulation, providing a starting point. The relative error in home range area is an overestimation of <code>4.5%</code> (95% CI: <code>-56.9</code>, <code>344%</code>). Note that due to the randomized nature of seed generation and the inclusion of individual variation, values may differ substantially across runs.</p>
+<p><img src="images/tutorial2_img5.png" class="quarto-figure quarto-figure-center"> We can view the outputs for each simulation using the <code>Show simulation no.:</code> slider. Most importantly, in the <code>Simulations</code> box (top right corner), we set the total number of tags and the error threshold. We set the error threshold for our estimates at <code>±5%</code>, and the total number of tags to <code>20</code> individuals, before clicking the <code>Simulate</code> button. A message then appears, indicating the expected runtime; we must wait for this process to complete before we can explore all the outputs.</p>
+</section></section><section class="level3"><h4 id="meta-analyses">Meta-analyses<a class="anchor" aria-label="anchor" href="#meta-analyses"></a>
+</h4>
+<p>Next, in the <code>Meta-analyses</code> tab, we click the <code>Run meta-analyses</code> button to obtain information on population-level inferences. Once completed, a new box on the left indicates that, on average, the population-level home range area is underestimated by <code>-11%</code> (<code>-29.2</code>, <code>9.6%</code>). In addition, two plots are generated: first with the <strong>individual estimates of home range areas</strong>, and then the <strong>population-level estimates of home range areas</strong>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial2_img6.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+<p>The first plot illustrates the relative error in <strong>individual-level home range area estimates</strong> by displaying the estimated home range area (x-axis, in km²) for each individual (y-axis), along with the associated 95% confidence intervals. The black square represents the population-level estimate (mean across all individuals) with its corresponding 95% confidence interval. The vertical solid line indicate the expected true value for the inputted species parameters.</p>
+<p>The second plot illustrates how an increasing number of individuals (from a <strong>population sample size</strong> of <code>2</code> to a maximum of <code>20</code>) affects our population-level mean estimates. Each point represents the mean relative error (%) of this metric and its associated 95% confidence intervals, plotted against the number of tracked individuals. The dashed horizontal lines indicate a predefined error threshold of ±5%. An accompanying table provides detailed numerical values, as well as whether a sub-population was detected at each population sample size.</p>
+<p>To verify these outputs, we can resample through <strong>permutation testing</strong> to assess the spread of estimates, randomly reassigning individuals into new sets and rerunning the estimation of population-level mean estimates multiple times.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial2_img7.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+<p>This allows us to evaluate whether the observed mean estimates fall within the error threshold due to random chance, and assess the contribution of individual estimates. We set the resamples to <code>15</code> here, but higher values are recommended if simulating higher population sample sizes. Then, we click the <code>Resample</code> button. The new plot illustrates how different sets of individuals shape the observed mean estimate across population sample sizes. The influence of individual variation remains noticeable, suggesting that additional simulations could help stabilize the mean estimate of home range areas.</p>
+</section><section class="level3"><h4 id="report">Report<a class="anchor" aria-label="anchor" href="#report"></a>
+</h4>
+<p>Finally, in the <svg aria-hidden="true" role="img" viewbox="0 0 512 512" style="height:1em;width:1em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M32 32H480c17.7 0 32 14.3 32 32V96c0 17.7-14.3 32-32 32H32C14.3 128 0 113.7 0 96V64C0 46.3 14.3 32 32 32zm0 128H480V416c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64V160zm128 80c0 8.8 7.2 16 16 16H336c8.8 0 16-7.2 16-16s-7.2-16-16-16H176c-8.8 0-16 7.2-16 16z"></path></svg><code>Report</code> tab, clicking <code>Build report</code> generates a comprehensive summary of our sampling schedule outputs. This report consolidates key findings, highlighting how our current sampling effort affects estimation accuracy. Specifically, it reveals that a <strong>population sample size</strong> of <code>20</code> individuals fails to meet the <code>±5%</code> error threshold for <strong>mean home range area</strong>, suggesting insufficient data to achieve reliable estimates. Although the confidence intervals overlap with the error margins, the observed individual variation may still lead to inaccurate conclusions. The report provides a clear visual representation of these uncertainties, allowing us to assess whether adjustments to the sampling schedule are necessary.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="images/tutorial2_img8.png" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+</section><section class="level2 unnumbered"><h3 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h3>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list">
+<div id="ref-calabrese2016" class="csl-entry" role="listitem">
+Calabrese, J. M., Fleming, C. H., &amp; Gurarie, E. (2016). Ctmm: An r package for analyzing animal relocation data as a continuous<span>-</span>time stochastic process. <em>Methods in Ecology and Evolution</em>, <em>7</em>(9), 1124–1132.
+</div>
+<div id="ref-cross2009" class="csl-entry" role="listitem">
+Cross, P. C., Heisey, D. M., Bowers, J. A., Hay, C. T., Wolhuter, J., Buss, P., Hofmeyr, M., Michel, A. L., Bengis, R. G., &amp; Bird, T. L. F. (2009). Disease, predation and demography: Assessing the impacts of bovine tuberculosis on african buffalo by monitoring at individual and population levels. <em>Journal of Applied Ecology</em>, <em>46</em>(2), 467–475.
+</div>
+<div id="ref-silva2022" class="csl-entry" role="listitem">
+Silva, I., Fleming, C. H., Noonan, M. J., Alston, J., Folta, C., Fagan, W. F., &amp; Calabrese, J. M. (2022). Autocorrelation<span>-</span>informed home range estimation: A review and practical guide. <em>Methods in Ecology and Evolution</em>, <em>13</em>(3), 534–544. <a href="https://doi.org/10.1111/2041-210X.13786" class="external-link">https://doi.org/10.1111/2041-210X.13786</a>
+</div>
+</div>
+</section></section><script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
     const mode = bsSheetEl.getAttribute("data-mode");
@@ -189,7 +272,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     }
   }
 });
-</script></main>
+</script></main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 
