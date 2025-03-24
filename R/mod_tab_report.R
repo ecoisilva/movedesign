@@ -1815,9 +1815,11 @@ mod_tab_report_server <- function(id, rv) {
       if (rv$which_meta == "none") {
         shinyjs::show(id = "section-highlight_dur")
         shinyjs::show(id = "section-highlight_dti")
+        shinyjs::hide(id = "section-repBox_meta")
       } else {
         shinyjs::hide(id = "section-highlight_dur")
         shinyjs::hide(id = "section-highlight_dti")
+        shinyjs::show(id = "section-repBox_meta")
       }
       
     }) %>% bindEvent(input$build_report)
