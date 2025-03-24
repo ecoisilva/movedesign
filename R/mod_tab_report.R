@@ -1228,23 +1228,23 @@ mod_tab_report_server <- function(id, rv) {
         } else {
           out_hr_err <- span(
             ifelse(hrErr_est == 0, "less than 0.01%",
-                   paste0(round(hrErr_est * 100, 1), "%")),
-            paste0("[", round(hrErr_lci * 100, 1),
-                   ", ", round(hrErr_uci * 100, 1), "%]"),
+                   paste0(hrErr_est, "%")),
+            paste0("[", hrErr_lci,
+                   ", ", hrErr_uci, "%]"),
             "for home range estimation,")
         }
         
         if (is.na(sdErr_lci) || is.na(sdErr_uci)) {
           out_sd_err <- span(
             "and", ifelse(sdErr_est == 0, "less than 0.01%",
-                          paste0(round(sdErr_est * 100, 1), "%")),
+                          paste0(sdErr_est, "%")),
             "for speed estimation.")
         } else {
           out_sd_err <- span(
             "and", ifelse(sdErr_est == 0, "less than 0.01%",
-                          paste0(round(sdErr_est * 100, 1), "%")),
-            paste0("[", round(sdErr_lci * 100, 1),
-                   ", ", round(sdErr_uci * 100, 1), "%]"),
+                          paste0(sdErr_est, "%")),
+            paste0("[", sdErr_lci,
+                   ", ", sdErr_uci, "%]"),
             "for speed estimation.")
         }
         
@@ -1260,23 +1260,23 @@ mod_tab_report_server <- function(id, rv) {
         } else {
           out_hr_err <- span(
             ifelse(hrmetaErr$est == 0, "less than 0.01%",
-                   paste0(round(hrmetaErr$est * 100, 1), "%")),
-            paste0("[", round(hrmetaErr$lci * 100, 1),
-                   ", ", round(hrmetaErr$uci * 100, 1), "%]"),
+                   paste0(hrmetaErr$est, "%")),
+            paste0("[", hrmetaErr$lci,
+                   ", ", hrmetaErr$uci, "%]"),
             "for home range estimation,")
         }
         
         if (is.na(sdmetaErr$lci) || is.na(sdmetaErr$uci)) {
           out_sd_err <- span(
             "and", ifelse(sdmetaErr$est == 0, "less than 0.01%",
-                          paste0(round(sdmetaErr$est * 100, 1), "%")),
+                          paste0(sdmetaErr$est, "%")),
             "for speed estimation.")
         } else {
           out_sd_err <- span(
             "and", ifelse(sdmetaErr$est == 0, "less than 0.01%",
-                          paste0(round(sdmetaErr$est * 100, 1), "%")),
-            paste0("[", round(sdmetaErr$lci * 100, 1),
-                   ", ", round(sdmetaErr$uci * 100, 1), "%]"),
+                          paste0(sdmetaErr$est, "%")),
+            paste0("[", sdmetaErr$lci,
+                   ", ", sdmetaErr$uci, "%]"),
             "for speed estimation.")
         }
       }
