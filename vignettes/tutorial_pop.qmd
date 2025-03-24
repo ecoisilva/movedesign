@@ -16,4 +16,7 @@ bibliography: references.bib
 csl: style.csl
 ---
 
+
+![](images/tutorial2_img1.png){fig-align="center"}
+
 WIP

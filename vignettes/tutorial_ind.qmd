@@ -142,7 +142,7 @@ This tab presents three key outputs:
 
 -   **Effective sample size (N<sub>area</sub>)**: The number of home range crossing events, which influences the reliability of the estimate.
 
-Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), N<sub>area</sub> ≈ 34, indicating approximately 34 home range crossing events occurred within the sampling period.
+Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), N<sub>area</sub> ≈ 42, indicating approximately 42 home range crossing events occurred within the sampling period.
 
 The visualization compares the estimated home range to the true home range. Ideally, the point estimate should closely match the true home range. The 95% confidence intervals should be as narrow as possible and tightly follow the point estimate.
 
@@ -166,7 +166,7 @@ The output types here are identical to those in the `r fa("map-location-dot")` `
 
 Wide confidence intervals indicate high uncertainty, suggesting that a shorter sampling interval may be necessary to improve accuracy.
 
-Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), we have an N<sub>speed</sub> ≈ 1,995. This is the equivalent to 1,995 independently sampled velocities. A higher N<sub>speed</sub> enhances estimate precision and reduces uncertainty.
+Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), we have an N<sub>speed</sub> ≈ 1,127. This is the equivalent to 1,127 independently sampled velocities. A higher N<sub>speed</sub> enhances estimate precision and reduces uncertainty.
 
 ![](images/tutorial1_img7.png){fig-align="center"}
 
