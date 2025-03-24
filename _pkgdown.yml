@@ -36,6 +36,6 @@ articles:
     contents:
     - movedesign
     - tutorial_ind
-    # - tutorial_pop
+    - tutorial_pop
   - title: Installation issues
     contents: issues
