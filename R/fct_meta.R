@@ -150,6 +150,7 @@
 #' @param max_samples Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.
 #' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
 #' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
+#' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
 #' @param .lists A list containing already created meta inputs. Default is NULL.
 #' 
 #' @examples
@@ -169,6 +170,7 @@ run_meta_permutations <- function(rv,
                                   random = FALSE,
                                   max_samples = 100,
                                   trace = FALSE,
+                                  .only_max_m = FALSE,
                                   .lists = NULL) {
   
   if (!is.logical(random) || length(random) != 1) {
@@ -262,6 +264,7 @@ run_meta_permutations <- function(rv,
     
     m_iter <- NULL
     m_iter <- .get_sequence(input[["All"]], grouped = subpop)
+    if (.only_max_m) m_iter <- max(m_iter)
     
     for (m in m_iter) {
       if (m == 1) next
@@ -545,15 +548,121 @@ run_meta_permutations <- function(rv,
 run_meta <- function(rv,
                      set_target = c("hr", "ctsd"),
                      subpop = FALSE, 
-                     trace = FALSE) {
+                     trace = FALSE,
+                     .only_max_m = FALSE,
+                     .lists = NULL) {
   
   return(run_meta_permutations(rv,
                                set_target = set_target,
                                subpop = subpop,
                                random = FALSE,
                                max_samples = NULL,
-                               trace = trace))
+                               trace = trace,
+                               .only_max_m = .only_max_m,
+                               .lists = .lists))
 }
+
+
+#' @title Running \eqn{\chi^2}-IG hierarchical model meta-analyses (LOOCV)
+#'
+#' @description This function performs a meta-analysis on movement tracking data,
+#' for mean home range area (AKDE) or continuous-time speed and distance (CTSD)
+#' estimates for a sampled population. It leverages the `ctmm` R package,
+#' specifically the `meta()` function, to obtain population-level mean parameters.
+#' This function helps to assess outputs via leave-one-out cross-validation (LOOCV).
+#'
+#' @param rv A list containing outputs, settings and data objects. Must not be NULL.
+#' @param set_target Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.
+#' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
+#' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
+#' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
+#' @param .lists A list containing already created meta inputs. Default is NULL.
+#' 
+#' @examples
+#'\dontrun{
+#' # Running:
+#' run_meta_loocv(rv, set_target = "hr")
+#'}
+#'
+#' @encoding UTF-8
+#' @return A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
+#' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
+#' 
+#' @export
+run_meta_loocv <- function(rv,
+                           set_target = c("hr", "ctsd"),
+                           subpop = FALSE,
+                           trace = FALSE,
+                           .only_max_m = TRUE,
+                           .lists = NULL) {
+  
+  dt_meta <- NULL
+  rv_list <- reactiveValuesToList(rv)
+  
+  out <- lapply(set_target, \(target) {
+    
+    if (target == "ctsd") {
+      is_ctsd <- .check_for_inf_speed(rv$ctsdList)
+      simList <- rv$simList[is_ctsd]
+      ctsdList <- rv$ctsdList[is_ctsd]
+    } else {
+      simList <- rv$simList
+    }
+    
+    x <- 1
+    for (x in seq_along(simList)) {
+      if (trace)
+        message(paste("---", x, "out of", length(rv$simList)))
+      
+      tmp_file <- rlang::duplicate(rv_list, shallow = FALSE)
+      tmp_file$seedList <- rv_list$seedList[-x]
+      tmp_file$simList <- simList[-x]
+      tmp_file$simfitList <- rv_list$simfitList[-x]
+      if (target == "hr") tmp_file$akdeList <- rv_list$akdeList[-x]
+      if (target == "ctsd") tmp_file$ctsdList <- ctsdList[-x]
+      tmp_file$seedList <- rv_list$seedList[-x]
+      
+      if (target == "ctsd" && length(tmp_file$ctsdList) > 0) {
+        tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
+        
+        new_i <- 0
+        new_list <- list()
+        for (i in seq_along(tmp_file$ctsdList)) {
+          if (tmp_file$ctsdList[[i]]$CI[, "est"] != "Inf") {
+            new_i <- new_i + 1
+            new_list[[new_i]] <- tmp_file$ctsdList[[i]]
+          }
+        }
+        
+        if (length(new_list) == 0) new_list <- NULL
+        
+        tmp_file$ctsdList <- new_list
+        tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
+        
+      } # end of if (target == "ctsd" && length(tmp_file$ctsdList) > 0)
+      
+      tmp_dt <- NULL
+      tmp_dt <- run_meta(tmp_file, set_target = target, .only_max_m = TRUE)
+      
+      if (nrow(tmp_dt) > 0) {
+        tmp_dt$x <- x
+        if (is.null(dt_meta)) {
+          dt_meta <- tmp_dt
+        } else {
+          dt_meta <- rbind(dt_meta, tmp_dt)
+        }
+      }
+      
+    } # end of [x] loop (individuals)
+    
+    return(dt_meta)
+    
+  }) # end of [set_target] lapply
+  
+  return(dplyr::distinct(do.call(rbind, out)))
+  
+}
+
 
 #' @title Plot meta
 #'

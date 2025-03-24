@@ -1078,6 +1078,12 @@ mod_tab_meta_server <- function(id, rv) {
         get_analysis <- c(get_analysis, "ctsd")
       }
       
+      # rv$meta_tbl_loocv <- run_meta_loocv(
+      #   rv, set_target = get_analysis,
+      #   subpop = rv$grouped,
+      #   trace = TRUE,
+      #   .only_max_m = TRUE)
+      
       tmp <- run_meta_permutations(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
@@ -1746,6 +1752,106 @@ mod_tab_meta_server <- function(id, rv) {
         suppressWarnings()
       
     }) %>% # end of renderGirafe, "metaPlot_m_ratio_optimal"
+      bindEvent(list(input$run_meta,
+                     input$run_meta_resample,
+                     rv$set_analysis))
+    
+    ## Rendering error plot of optimal search outputs (LOOCV): -----------
+    
+    output$metaPlot_m_loocv <- ggiraph::renderGirafe({
+      req(rv$meta_tbl, rv$which_m, rv$which_meta,
+          rv$which_question, rv$set_analysis)
+      req(length(rv$simList) > 1)
+      
+      req(rv$meta_tbl_loocv)
+      
+      plot_title <- NULL
+      if (length(rv$which_question) > 1) {
+        plot_title <- ifelse(rv$set_analysis == "hr",
+                             "For home range:",
+                             "For speed & distance:")
+      }
+      
+      pal_values <- c("Yes" = pal$sea,
+                      "Near" = pal$grn,
+                      "No" = pal$dgr)
+      
+      color_title <- "Sub-population detected?"
+        
+      out <- rv$meta_tbl_loocv %>% 
+        dplyr::mutate(overlaps = dplyr::between(
+          error, -rv$error_threshold, rv$error_threshold)) %>% 
+        dplyr::mutate(overlaps = factor(
+          overlaps, levels = c("TRUE", "FALSE"))) %>% 
+        dplyr::distinct()
+      
+      p.loocv <- out %>%
+        ggplot2::ggplot(
+          ggplot2::aes(x = x,
+                       y = error,
+                       group = group,
+                       color = overlaps)) +
+        
+        ggplot2::geom_hline(
+          yintercept = rv$error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.7) +
+        ggplot2::geom_hline(
+          yintercept = - rv$error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.7) +
+        
+        ggplot2::geom_hline(
+          yintercept = 0,
+          linewidth = 0.3,
+          linetype = "solid") +
+        
+        ggplot2::geom_point(
+          position = ggplot2::position_dodge(width = 0.4),
+          show.legend = TRUE,
+          size = 2) +
+        
+        ggplot2::geom_linerange(
+          ggplot2::aes(ymin = error_lci,
+                       ymax = error_uci),
+          show.legend = TRUE,
+          position = ggplot2::position_dodge(width = 0.4),
+          linewidth = 2.2, alpha = 0.3) +
+        
+        ggplot2::labs(
+          title = "Leave-one-out cross-validation",
+          x = "Individual removed",
+          y = "Relative error (%)",
+          color = paste0("Within error threshold (\u00B1",
+                         rv$error_threshold * 100, "%)?")) +
+        
+        ggplot2::scale_x_continuous(breaks = scales::breaks_pretty()) +
+        ggplot2::scale_y_continuous(labels = scales::percent,
+                                    breaks = scales::breaks_pretty()) +
+        # ggplot2::scale_shape_manual("Group:", values = c(16,17)) +
+        
+        theme_movedesign(font_available = rv$is_font) +
+        ggplot2::theme(
+          legend.position = "bottom",
+          plot.title = ggtext::element_markdown(
+            size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
+      
+      ggiraph::girafe(
+        ggobj = p.loocv,
+        width_svg = 5.5, height_svg = 4,
+        options = list(
+          ggiraph::opts_selection(type = "none"),
+          ggiraph::opts_toolbar(saveaspng = FALSE),
+          ggiraph::opts_tooltip(
+            opacity = 1,
+            use_fill = TRUE),
+          ggiraph::opts_hover(
+            css = paste("fill: #1279BF;",
+                        "stroke: #1279BF;",
+                        "cursor: pointer;")))) %>%
+        suppressWarnings()
+      
+    }) %>% # end of renderGirafe, "metaPlot_m_loocv"
       bindEvent(list(input$run_meta,
                      input$run_meta_resample,
                      rv$set_analysis))

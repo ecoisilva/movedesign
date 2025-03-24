@@ -4,7 +4,14 @@
 \alias{run_meta}
 \title{Running \eqn{\chi^2}-IG hierarchical model meta-analyses}
 \usage{
-run_meta(rv, set_target = c("hr", "ctsd"), subpop = FALSE, trace = FALSE)
+run_meta(
+  rv,
+  set_target = c("hr", "ctsd"),
+  subpop = FALSE,
+  trace = FALSE,
+  .only_max_m = FALSE,
+  .lists = NULL
+)
 }
 \arguments{
 \item{rv}{A list containing outputs, settings and data objects. Must not be NULL.}
@@ -14,6 +21,10 @@ run_meta(rv, set_target = c("hr", "ctsd"), subpop = FALSE, trace = FALSE)
 \item{subpop}{Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.}
 
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
+
+\item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
+
+\item{.lists}{A list containing already created meta inputs. Default is NULL.}
 }
 \value{
 The outputs of the `run_meta_permutations` function for a single permutation.

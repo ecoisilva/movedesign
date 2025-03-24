@@ -1320,7 +1320,7 @@ mod_tab_report_server <- function(id, rv) {
     }) %>% # end of observe,
       bindEvent(input$build_report)
     
-    ## Reporting META: ----------------------------------------------------
+    ## Reporting META-ANALYSES: -------------------------------------------
     
     observe({
       req(rv$which_meta)
@@ -1394,9 +1394,9 @@ mod_tab_report_server <- function(id, rv) {
                 dplyr::c_across(c(est, lci, uci)) <= 
                 (rv$error_threshold * 2)),
             overlaps_with = dplyr::case_when(
-              (lci < -rv$error_threshold &
-                 uci > rv$error_threshold) ~ "Yes",
-              within_threshold ~ "Yes",
+              (est >= -rv$error_threshold &
+                 est <= rv$error_threshold) ~ "Yes",
+              within_threshold ~ "Near",
               close_to_threshold ~ "Near",
               TRUE ~ "No"))
         

@@ -2,6 +2,7 @@
 
 export(run_app)
 export(run_meta)
+export(run_meta_loocv)
 export(run_meta_permutations)
 import(shiny)
 importFrom(crayon,make_style)
