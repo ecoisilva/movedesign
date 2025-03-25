@@ -600,69 +600,73 @@ run_meta_loocv <- function(rv,
   
   if (inherits(rv, "reactivevalues"))
     rv_list <- reactiveValuesToList(rv) else rv_list <- rv
-  
-  out <- lapply(set_target, \(target) {
     
-    if (target == "ctsd") {
-      is_ctsd <- .check_for_inf_speed(rv$ctsdList)
-      simList <- rv$simList[is_ctsd]
-      ctsdList <- rv$ctsdList[is_ctsd]
-    } else {
-      simList <- rv$simList
-    }
-    
-    x <- 1
-    for (x in seq_along(simList)) {
-      if (trace)
-        message(paste("---", x, "out of", length(rv$simList)))
+    out <- lapply(set_target, \(target) {
       
-      tmp_file <- rlang::duplicate(rv_list, shallow = FALSE)
-      tmp_file$seedList <- rv_list$seedList[-x]
-      tmp_file$simList <- simList[-x]
-      tmp_file$simfitList <- rv_list$simfitList[-x]
-      if (target == "hr") tmp_file$akdeList <- rv_list$akdeList[-x]
-      if (target == "ctsd") tmp_file$ctsdList <- ctsdList[-x]
-      tmp_file$seedList <- rv_list$seedList[-x]
+      if (target == "ctsd") {
+        is_ctsd <- .check_for_inf_speed(rv_list$ctsdList)
+        simList <- rv_list$simList[is_ctsd]
+        ctsdList <- rv_list$ctsdList[is_ctsd]
+      } else {
+        simList <- rv_list$simList
+      }
       
-      if (target == "ctsd" && length(tmp_file$ctsdList) > 0) {
-        tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
+      x <- 1
+      for (x in seq_along(simList)) {
         
-        new_i <- 0
-        new_list <- list()
-        for (i in seq_along(tmp_file$ctsdList)) {
-          if (tmp_file$ctsdList[[i]]$CI[, "est"] != "Inf") {
-            new_i <- new_i + 1
-            new_list[[new_i]] <- tmp_file$ctsdList[[i]]
+        if (trace)
+          message(paste("---", x, "out of", length(rv_list$simList)))
+        
+        tmp_file <- rlang::duplicate(rv_list, shallow = FALSE)
+        tmp_file$seedList <- rv_list$seedList[-x]
+        tmp_file$simList <- simList[-x]
+        tmp_file$simfitList <- rv_list$simfitList[-x]
+        if (target == "hr") tmp_file$akdeList <- rv_list$akdeList[-x]
+        if (target == "ctsd") tmp_file$ctsdList <- ctsdList[-x]
+        tmp_file$seedList <- rv_list$seedList[-x]
+        
+        if (target == "ctsd" && length(tmp_file$ctsdList) > 0) {
+          tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
+          
+          new_i <- 0
+          new_list <- list()
+          for (i in seq_along(tmp_file$ctsdList)) {
+            if (tmp_file$ctsdList[[i]]$CI[, "est"] != "Inf") {
+              new_i <- new_i + 1
+              new_list[[new_i]] <- tmp_file$ctsdList[[i]]
+            }
+          }
+          
+          if (length(new_list) == 0) new_list <- NULL
+          
+          tmp_file$ctsdList <- new_list
+          tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
+          
+        } # end of if (target == "ctsd" &&
+        #              length(tmp_file$ctsdList) > 0)
+        
+        tmp_dt <- NULL
+        tmp_dt <- run_meta(tmp_file, 
+                           set_target = target,
+                           .only_max_m = TRUE)
+        
+        if (nrow(tmp_dt) > 0) {
+          tmp_dt$x <- x
+          if (is.null(dt_meta)) {
+            dt_meta <- tmp_dt
+          } else {
+            dt_meta <- rbind(dt_meta, tmp_dt)
           }
         }
         
-        if (length(new_list) == 0) new_list <- NULL
-        
-        tmp_file$ctsdList <- new_list
-        tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
-        
-      } # end of if (target == "ctsd" && length(tmp_file$ctsdList) > 0)
+      } # end of [x] loop (individuals)
       
-      tmp_dt <- NULL
-      tmp_dt <- run_meta(tmp_file, set_target = target, .only_max_m = TRUE)
+      return(dt_meta)
       
-      if (nrow(tmp_dt) > 0) {
-        tmp_dt$x <- x
-        if (is.null(dt_meta)) {
-          dt_meta <- tmp_dt
-        } else {
-          dt_meta <- rbind(dt_meta, tmp_dt)
-        }
-      }
-      
-    } # end of [x] loop (individuals)
+    }) # end of [set_target] lapply
     
-    return(dt_meta)
+    return(dplyr::distinct(do.call(rbind, out)))
     
-  }) # end of [set_target] lapply
-  
-  return(dplyr::distinct(do.call(rbind, out)))
-  
 }
 
 
