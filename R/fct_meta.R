@@ -597,7 +597,9 @@ run_meta_loocv <- function(rv,
                            .lists = NULL) {
   
   dt_meta <- NULL
-  rv_list <- reactiveValuesToList(rv)
+  
+  if (inherits(rv, "reactivevalues"))
+    rv_list <- reactiveValuesToList(rv) else rv_list <- rv
   
   out <- lapply(set_target, \(target) {
     
