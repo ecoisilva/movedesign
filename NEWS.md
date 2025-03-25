@@ -17,9 +17,9 @@
 
 ## Bug fixes
 
--   Fixed issue during data upload due to missing argument (https://github.com/ecoisilva/movedesign/issues/3).
--   Fixed Report tab bug, should now display the correct CIs (https://github.com/ecoisilva/movedesign/issues/3).
--   Fixed bug where sampling duration/interval did not display correctly (https://github.com/ecoisilva/movedesign/issues/5)
+-   Fixed issue during data upload due to missing argument (#3).
+-   Fixed Report tab bug, should now display the correct CIs (#3).
+-   Fixed bug where sampling duration/interval did not display correctly (#5).
 
 # movedesign 0.2.0
 

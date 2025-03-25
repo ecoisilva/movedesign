@@ -9,7 +9,8 @@ Description: A Shiny application that helps researchers design movement
     estimating home range areas and (2) estimating fine-scale movement
     behavior, specifically speed and distance traveled.  It provides
     interactive simulations and methodological guidance to support study
-    planning and decision-making.
+    planning and decision-making. See
+    <https://ecoisilva.github.io/movedesign/> for more details.
 License: GPL (>= 3)
 URL: https://github.com/ecoisilva/movedesign,
     https://ecoisilva.github.io/movedesign/
@@ -35,6 +36,7 @@ Imports:
     golem (>= 0.3.2),
     grDevices,
     gsl,
+    lubridate,
     parallel,
     parsedate,
     plyr,

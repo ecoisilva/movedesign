@@ -10,6 +10,7 @@ run_meta_loocv(
   set_target = c("hr", "ctsd"),
   subpop = FALSE,
   trace = FALSE,
+  .progress = FALSE,
   .only_max_m = TRUE,
   .lists = NULL
 )
