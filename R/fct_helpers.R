@@ -303,49 +303,6 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
   return(mod)
 }
 
-#' Simulate movement data
-#'
-#' @description Simulate movement data through ctmm
-#' @keywords internal
-#'
-#' @param mod0 movement model
-#' @param dur0 numeric, integer. sampling duration.
-#' @param dur0_units character vector of sampling duration units.
-#' @param tau_v0 numeric, integer. sampling interval.
-#' @param tau_v0_units character vector of sampling interval units.
-#' @param seed0 random seed value for simulation.
-#'
-#' @importFrom ctmm %#%
-#' @noRd
-simulate_data <- function(data = NULL,
-                          mod,
-                          dur,
-                          dur_units,
-                          dti,
-                          dti_units,
-                          seed) {
-  
-  dur <- round(dur %#% dur_units, 0) # duration
-  dti <- round(dti %#% dti_units, 0) # interval
-  
-  t0 <- seq(0, dur, by = dti)[-1]
-  if (!is.null(data)) {
-    dat <- ctmm::simulate(data = data, 
-                          fit = mod,
-                          t = t0, 
-                          seed = seed)
-  } else {
-    dat <- ctmm::simulate(mod,
-                          t = t0, 
-                          seed = seed)
-  }
-  
-  dat <- pseudonymize(dat)
-  dat$index <- 1:nrow(dat)
-  
-  return(list(dat))
-}
-
 #' ctmm::emulate() but seeded
 #' 
 #' @noRd

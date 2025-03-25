@@ -591,6 +591,23 @@ mod_tab_design_server <- function(id, rv) {
       tbl = NULL
     )
     
+    ## If using simulated data (from scratch): ----------------------------
+    
+    observe({
+      req(rv$active_tab == 'device')
+      req(!rv$sims$grouped,
+          rv$which_meta != "compare",
+          rv$data_type == "simulated",
+          rv$datList)
+      
+      if (!is.null(rv$modList0) && is.null(rv$modList)) {
+        rv$modList <- rv$modList0[length(rv$modList0)]
+        rv$seedList <- rv$seedList0[length(rv$modList0)]
+        rv$is_isotropic <- TRUE
+      }
+      
+    }) # end of observe
+    
     ## Sampling parameters: -----------------------------------------------
     
     ### Initial sampling parameters:
@@ -2081,120 +2098,6 @@ mod_tab_design_server <- function(id, rv) {
     
     ## Simulating new conditional data: -----------------------------------
     
-    simulating_data <- reactive({
-      
-      dur <- rv$dur$value %#% rv$dur$unit
-      dti <- rv$dti$value %#% rv$dti$unit
-      t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
-      
-      if (rv$data_type == "simulated") {
-        fit <- fitA <- rv$modList[[1]]
-        if (rv$grouped) fitB <- rv$modList[[2]]
-      }
-      
-      if (rv$data_type != "simulated") {
-        
-        if (rv$is_emulate) {
-          req(rv$meanfitList)
-          fit <- emulate_seeded(rv$meanfitList[[1]], rv$seed0)
-          if (length(fit$isotropic) > 1)
-            fit$isotropic <- fit$isotropic[["sigma"]]
-          
-          # Recenter to 0,0:
-          fit$mu[["x"]] <- 0
-          fit$mu[["y"]] <- 0
-          
-        } else {
-          fit <- prepare_mod(
-            tau_p = rv$tau_p[[1]][2, ],
-            tau_v = rv$tau_v[[1]][2, ],
-            sigma = rv$sigma[[1]][2, ],
-            mu = rv$mu[[1]])
-        }
-        
-        if ("compare" %in% rv$which_meta) {
-          if (length(rv$tau_p) == 3 ||
-              length(rv$tau_v) == 3 ||
-              length(rv$sigma) == 3 || 
-              length(rv$mu) == 3) {
-            req(rv$groups)
-            
-            if (rv$is_emulate) {
-              fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
-              fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
-              if (length(fitA$isotropic) > 1)
-                fitA$isotropic <- fitA$isotropic[["sigma"]]
-              if (length(fitB$isotropic) > 1)
-                fitB$isotropic <- fitB$isotropic[["sigma"]]
-              
-              # Recenter to 0,0:
-              fitA$mu[["x"]] <- 0
-              fitA$mu[["y"]] <- 0
-              fitB$mu[["x"]] <- 0
-              fitB$mu[["y"]] <- 0
-              
-            } else {
-              fitA <- prepare_mod(
-                tau_p = rv$tau_p[[2]][2, ],
-                tau_v = rv$tau_v[[2]][2, ],
-                sigma = rv$sigma[[2]][2, ],
-                mu = rv$mu[[2]])
-              
-              fitB <- prepare_mod(
-                tau_p = rv$tau_p[[3]][2, ],
-                tau_v = rv$tau_v[[3]][2, ],
-                sigma = rv$sigma[[3]][2, ],
-                mu = rv$mu[[3]])
-            }
-            
-          }
-        }
-        # rv$modList <- list(fit)
-      }
-      
-      if (rv$grouped) {
-        
-        # rv$modList_groups <- list(A = fitA, B = fitB)
-        
-        simA <- NULL
-        simB <- NULL
-        simA <- ctmm::simulate(fitA, t = t_new, seed = rv$seed0)
-        simB <- ctmm::simulate(fitB, t = t_new, seed = rv$seed0 + 1)
-        
-        if (is.null(simA) || is.null(simB)) {
-          bug_group <- c()
-          if (is.null(simA)) bug_group <- c(bug_group, "A")
-          if (is.null(simB)) bug_group <- c(bug_group, "B")
-          
-          msg_log(
-            style = "danger",
-            message = paste0(
-              "Simulation ", msg_danger("failed"),
-              " for group(s): ", msg_danger(bug_group)),
-            detail = "Try again with different groupings.")
-          shinybusy::remove_modal_spinner()
-        }
-        
-        req(!is.null(simA), !is.null(simB))
-        
-        simA <- pseudonymize(simA)
-        simB <- pseudonymize(simB)
-        sim <- list(simA, simB)
-        return(sim)
-        
-      } else {
-        sim <- ctmm::simulate(fit, t = t_new, seed = rv$seed0)
-        sim <- pseudonymize(sim)
-        return(list(sim))
-      }
-      
-    }) %>% # end of reactive, simulating_data()
-      bindCache(c(rv$species,
-                  rv$id,
-                  rv$dur, 
-                  rv$dti,
-                  rv$seed0))
-    
     estimating_time <- reactive({
       
       loading_modal("Calculating run time")
@@ -2317,10 +2220,11 @@ mod_tab_design_server <- function(id, rv) {
       )
       
       if (rv$which_meta == "compare")
-        req(length(rv$tau_p) == 3)
+        req(length(rv$tau_p) == 3, rv$groups)
+      if (rv$is_emulate) req(rv$meanfitList)
       
       start <- Sys.time()
-      simList <- simulating_data()
+      simList <- simulating_data(rv)
       
       if (!rv$grouped) {
         rv$seedList <- list(rv$seed0)
@@ -2383,12 +2287,18 @@ mod_tab_design_server <- function(id, rv) {
       rv$simList <- simList
       rv$dev$n <- lapply(simList, function(x) nrow(x))
       
-      msg_log(
-        style = "success",
-        message = paste0("Simulation ",
-                         msg_success("completed"), "."),
-        run_time = difftime(Sys.time(), start, units = "sec"))
-      
+      if (is.null(rv$simList)) {
+        msg_log(
+          style = "danger",
+          message = paste0(
+            "Simulation ", msg_danger("failed"), "."))
+      } else {
+        msg_log(
+          style = "success",
+          message = paste0("Simulation ",
+                           msg_success("completed"), "."),
+          run_time = difftime(Sys.time(), start, units = "sec"))
+      }
       shinybusy::remove_modal_spinner()
       req(rv$simList)
       
@@ -3120,14 +3030,6 @@ mod_tab_design_server <- function(id, rv) {
     #   rv$dev$tbl <- NULL
     # }) %>% # end of observe,
     #   bindEvent(input$devTable_clear)
-    
-    ## Additional information: --------------------------------------------
-    
-    # # Export values for tests:
-    # 
-    # shiny::exportTestValues(
-    #   simList = simulating_data()
-    # )
     
   }) # end of moduleServer
 }

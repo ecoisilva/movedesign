@@ -44,17 +44,17 @@ mod_comp_m_ui <- function(id) {
             currencySymbolPlacement = "s",
             decimalPlaces = 0,
             minimumValue = 2,
-            maximumValue = 100,
+            maximumValue = 500,
             value = 2, wheelStep = 2),
-          
+
           # shinyWidgets::autonumericInput(
           #   inputId = ns("nsims_iter"),
-          #   label = NULL,
+          #   label = "Simulation steps:",
           #   currencySymbol = " tag(s)",
           #   currencySymbolPlacement = "s",
           #   decimalPlaces = 0,
           #   minimumValue = 2,
-          #   maximumValue = 100,
+          #   maximumValue = 50,
           #   value = 2, wheelStep = 2),
           
           fluidRow(
@@ -121,97 +121,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       req(input$error_threshold)
       rv$error_threshold <- input$error_threshold/100
     })
-    
-    ## Simulating data: ---------------------------------------------------
-    
-    simulating_data <- reactive({
-      
-      dur <- rv$dur$value %#% rv$dur$unit
-      dti <- rv$dti$value %#% rv$dti$unit
-      t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
-      
-      if (rv$data_type == "simulated") {
-        fit <- fitA <- rv$modList[[1]]
-        if (rv$grouped) fitB <- rv$modList[[2]]
-      }
-      
-      if (rv$data_type != "simulated") {
-        
-        if (rv$is_emulate) {
-          req(rv$meanfitList)
-          fit <- emulate_seeded(rv$meanfitList[[1]], rv$seed0)
-          if (length(fit$isotropic) > 1)
-            fit$isotropic <- fit$isotropic[["sigma"]]
-          
-          # Recenter to 0,0:
-          fit$mu[["x"]] <- 0
-          fit$mu[["y"]] <- 0
-          
-        } else {
-          fit <- prepare_mod(
-            tau_p = rv$tau_p[[1]][2, ],
-            tau_v = rv$tau_v[[1]][2, ],
-            sigma = rv$sigma[[1]][2, ],
-            mu = rv$mu[[1]])
-        }
-        
-        if ("compare" %in% rv$which_meta) {
-          req(rv$groups)
-          
-          if (rv$is_emulate) {
-            fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
-            fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
-            if (length(fitA$isotropic) > 1)
-              fitA$isotropic <- fitA$isotropic[["sigma"]]
-            if (length(fitB$isotropic) > 1)
-              fitB$isotropic <- fitB$isotropic[["sigma"]]
-            
-            # Recenter to 0,0:
-            fitA$mu[["x"]] <- 0
-            fitA$mu[["y"]] <- 0
-            fitB$mu[["x"]] <- 0
-            fitB$mu[["y"]] <- 0
-            
-          } else {
-            fitA <- prepare_mod(
-              tau_p = rv$tau_p[[2]][2, ],
-              tau_v = rv$tau_v[[2]][2, ],
-              sigma = rv$sigma[[2]][2, ],
-              mu = rv$mu[[2]])
-            
-            fitB <- prepare_mod(
-              tau_p = rv$tau_p[[3]][2, ],
-              tau_v = rv$tau_v[[3]][2, ],
-              sigma = rv$sigma[[3]][2, ],
-              mu = rv$mu[[3]])
-          }
-        }
-        
-        # rv$modList <- list(fit)
-      }
-      
-      if (rv$grouped) {
-        # rv$modList_groups <- list(A = fitA, B = fitB)
-        simA <- ctmm::simulate(fitA, t = t_new, seed = rv$seed0)
-        simB <- ctmm::simulate(fitB, t = t_new, seed = rv$seed0 + 1)
-        simA <- pseudonymize(simA)
-        simB <- pseudonymize(simB)
-        sim <- list(simA, simB)
-        
-        rv$groups[[2]][["A"]] <- c(as.character(rv$groups[[2]]$A),
-                                   as.character(rv$seed0))
-        rv$groups[[2]][["B"]] <- c(as.character(rv$groups[[2]]$B),
-                                   as.character(rv$seed0 + 1))
-        
-        return(sim)
-        
-      } else {
-        sim <- ctmm::simulate(fit, t = t_new, seed = rv$seed0)
-        sim <- pseudonymize(sim)
-        return(list(sim))
-      }
-      
-    }) # end of reactive, simulating_data()
     
     ## Estimating time: ---------------------------------------------------
     
@@ -485,7 +394,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       req(length(num_sims) > 0)
       req(num_sims > 0)
-      
+      if (rv$which_meta == "compare") req(rv$groups)
+      if (rv$is_emulate) req(rv$meanfitList)
+        
       rv$meta_tbl <- NULL
       
       shinybusy::show_modal_spinner(
@@ -517,10 +428,16 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       for (i in seq_len(num_sims)) {
         
         rv$seed0 <- generate_seed(rv$seedList)
-        simList <- simulating_data()
+        simList <- simulating_data(rv)
         if (!rv$grouped) {
           names(simList) <- c(rv$seed0)
-        } else names(simList) <- c(rv$seed0, rv$seed0 + 1)
+        } else {
+          rv$groups[[2]][["A"]] <- c(as.character(rv$groups[[2]]$A),
+                                     as.character(rv$seed0))
+          rv$groups[[2]][["B"]] <- c(as.character(rv$groups[[2]]$B),
+                                     as.character(rv$seed0 + 1))
+          names(simList) <- c(rv$seed0, rv$seed0 + 1)
+        }
         
         # If there is tag failure:
         
@@ -999,7 +916,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         message = paste0("Simulations ",
                          msg_warning("in progress"), "..."))
       
-      m <- 2 # TODO turn m into input
+      m <- 2 # input$nsims_iter
       m_sets <- 1
       if (m < m_max) m_sets <- seq(m, m_max, by = m)
       
@@ -1062,7 +979,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
           # Running one extra simulation at the beginning:
           rv$seed0 <- generate_seed(rv$seedList)
-          simList <- simulating_data()
+          simList <- simulating_data(rv)
           
           names(simList) <- c(rv$seed0)
           seedList <- list(rv$seed0)
@@ -1072,7 +989,12 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (subpop) {
             
             rv$seed0 <- generate_seed(rv$seedList)
-            simList <- simulating_data()
+            simList <- simulating_data(rv)
+            
+            rv$groups[[2]][["A"]] <- c(as.character(rv$groups[[2]]$A),
+                                       as.character(rv$seed0))
+            rv$groups[[2]][["B"]] <- c(as.character(rv$groups[[2]]$B),
+                                       as.character(rv$seed0 + 1))
             
             names(simList) <- c(rv$seed0, rv$seed0 + 1)
             seedList <- list(rv$seed0, rv$seed0 + 1)
@@ -1082,7 +1004,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             
             simList <- lapply(seq_len(m), function(x) {
               rv$seed0 <- generate_seed(rv$seedList)
-              out <- simulating_data()[[1]]
+              out <- simulating_data(rv)[[1]]
               rv$seedList <- c(rv$seedList, rv$seed0)
               return(out) 
             })
@@ -1835,15 +1757,15 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                style = "font-weight: bold;"), ".")
       )
       
-      txt_reference <- tagList(
-        h4(style = "margin-top: 30px;", "For more information:"),
-        
-        p(style = "font-family: var(--monosans);",
-          "Silva, I., Fleming, C. H., Noonan, M. J.,",
-          "Fagan, W. F. & Calabrese, J. M. (2025). Too few, too",
-          "many, or just right? Optimizing sample sizes for",
-          "population-level inferences in animal tracking",
-          "projects (in prep)."))
+      # txt_reference <- tagList(
+      #   h4(style = "margin-top: 30px;", "For more information:"),
+      #   
+      #   p(style = "font-family: var(--monosans);",
+      #     "Silva, I., Fleming, C. H., Noonan, M. J.,",
+      #     "Fagan, W. F. & Calabrese, J. M. (2025). Too few, too",
+      #     "many, or just right? Optimizing sample sizes for",
+      #     "population-level inferences in animal tracking",
+      #     "projects (in prep)."))
       
       if (length(rv$simList) < rv$nsims) {
         
@@ -1856,8 +1778,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               style = paste("margin-right: 20px;",
                             "margin-left: 20px;"),
               
-              txt_full,
-              txt_reference
+              txt_full #,
+              # txt_reference
               
             ), # end of fluidRow
             
@@ -1877,8 +1799,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                 style = paste("margin-right: 20px;",
                               "margin-left: 20px;"),
                 
-                txt_full,
-                txt_reference
+                txt_full #,
+                # txt_reference
                 
               ), # end of fluidRow
               
@@ -1912,9 +1834,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                   "and through", wrap_none(
                     span("permutation testing",
                          style = "font-weight: bold;"), ".")
-                ),
+                ) #,
                 
-                txt_reference
+                # txt_reference
                 
               ), # end of fluidRow
               

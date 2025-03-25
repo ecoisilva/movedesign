@@ -562,8 +562,7 @@ mod_tab_sims_server <- function(id, rv) {
     
     observe({
       req(rv$datList,
-          !rv$sims$grouped,
-          # rv$report_sims_yn,
+          rv$sims$grouped,
           rv$active_tab == 'sims',
           rv$which_meta == "compare",
           rv$data_type == "simulated")
@@ -807,7 +806,7 @@ mod_tab_sims_server <- function(id, rv) {
     
     ## Prepare model and run simulation: ----------------------------------
     
-    simulating_data <- reactive({
+    simulate_data <- reactive({
       if (rv$sims$m == 0) reset_reactiveValues(rv) 
         
       rv$sims$m <- rv$sims$m + 1
@@ -868,30 +867,34 @@ mod_tab_sims_server <- function(id, rv) {
         tmp_tauv <= 3600 ~ "minutes",
         TRUE ~ "hours")
       
-      out <- simulate_data(
-        mod = mod,
-        dur = rv$dur0, dur_units = rv$dur0_units,
-        dti = rv$dti0, dti_units = rv$dti0_units,
-        seed = rv$seed0)
+      dur <- round(rv$dur0 %#% rv$dur0_units, 0)
+      dti <- round(rv$dti0 %#% rv$dti0_units, 0)
+        
+      t0 <- seq(0, dur, by = dti)[-1]
+      out <- ctmm::simulate(mod, t = t0, seed = rv$seed0)
+      out <- pseudonymize(out)
+      out$index <- 1:nrow(out)
+      out <- list(out)
+      
       rv$sims$grouped <- FALSE
       
-      if (is.null(rv$modList)) {
-        rv$modList <- list(mod)
-        names(rv$modList) <- as.character(rv$sims$m)
-        rv$seedList <- list(rv$seed0)
+      if (is.null(rv$modList0)) {
+        rv$modList0 <- list(mod)
+        names(rv$modList0) <- as.character(rv$sims$m)
+        rv$seedList0 <- list(rv$seed0)
         
       } else {
-        rv$modList[[length(rv$modList) + 1]] <- mod
-        names(rv$modList)[[length(rv$modList)]] <- 
+        rv$modList0[[length(rv$modList0) + 1]] <- mod
+        names(rv$modList0)[[length(rv$modList0)]] <- 
           as.character(rv$sims$m)
         
-        rv$seedList <<- c(rv$seedList, rv$seed0)
+        rv$seedList0 <<- c(rv$seedList0, rv$seed0)
       }
       
       names(out) <- as.character(rv$sims$m)
       return(out)
       
-    }) %>% # end of reactive, simulating_data()
+    }) %>% # end of reactive, simulate_data()
       bindCache(input$tau_p0,
                 input$tau_p0_units,
                 input$tau_v0,
@@ -974,7 +977,7 @@ mod_tab_sims_server <- function(id, rv) {
         ) # end of show_modal_spinner
         
         start_sim <- Sys.time()
-        rv$datList <- simulating_data()
+        rv$datList <- simulate_data()
         
         # Store relevant values:
         rv$data_type <- "simulated"
