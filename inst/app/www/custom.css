@@ -65,6 +65,8 @@
 .cl-wht { color: #fff !important; }
 .cl-grey { color: var(--grey-300) !important; }
 
+.txt_bold { font-weight: bold; }
+.txt_mono { font-family: var(--monosans); }
 
 /* GENERAL ------------------------------------------------------------- */
 
