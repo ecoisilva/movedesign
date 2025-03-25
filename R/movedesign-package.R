@@ -1,7 +1,7 @@
 #' movedesign: Study design of movement ecology studies
 #' 
-#' The `movedesign` package contains an R shiny application that can be used
-#' to assist researchers in designing movement ecology studies.
+#' The `movedesign` package contains an R shiny application that
+#' assists researchers in designing movement ecology studies.
 #'
 #' @keywords internal
 "_PACKAGE"
@@ -20,4 +20,6 @@
 #' @importFrom stats rbinom
 #' @importFrom utils tail
 #' @importFrom stats setNames
+#' @importFrom utils setTxtProgressBar
+#' @importFrom utils txtProgressBar
 NULL

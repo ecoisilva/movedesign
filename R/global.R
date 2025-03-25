@@ -90,6 +90,7 @@ utils::globalVariables(
     "get_cri",
     
     "set_style_title",
+    "txtProgressBar",
     "txt_link_meta",
     "txt_ratio_order",
     "txt_target",

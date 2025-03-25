@@ -24,6 +24,8 @@ run_meta_loocv(
 
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
 
+\item{.progress}{Logical. If TRUE, will display a progress bar. Default is FALSE.}
+
 \item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
 
 \item{.lists}{A list containing already created meta inputs. Default is NULL.}

@@ -576,6 +576,7 @@ run_meta <- function(rv,
 #' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
 #' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
 #' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
+#' @param .progress Logical. If TRUE, will display a progress bar. Default is FALSE.
 #' @param .lists A list containing already created meta inputs. Default is NULL.
 #' 
 #' @examples
