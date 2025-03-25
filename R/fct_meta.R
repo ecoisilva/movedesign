@@ -593,6 +593,7 @@ run_meta_loocv <- function(rv,
                            set_target = c("hr", "ctsd"),
                            subpop = FALSE,
                            trace = FALSE,
+                           .progress = FALSE,
                            .only_max_m = TRUE,
                            .lists = NULL) {
   
@@ -604,11 +605,18 @@ run_meta_loocv <- function(rv,
     out <- lapply(set_target, \(target) {
       
       if (target == "ctsd") {
-        is_ctsd <- .check_for_inf_speed(rv_list$ctsdList)
+        is_ctsd <- !.check_for_inf_speed(rv_list$ctsdList)
         simList <- rv_list$simList[is_ctsd]
         ctsdList <- rv_list$ctsdList[is_ctsd]
       } else {
         simList <- rv_list$simList
+      }
+      
+      if (length(simList) == 0) return(NULL)
+      
+      if (.progress) {
+        total_steps <- length(simList)
+        pb <- txtProgressBar(min = 0, max = total_steps, style = 3)
       }
       
       x <- 1
@@ -658,12 +666,17 @@ run_meta_loocv <- function(rv,
             dt_meta <- rbind(dt_meta, tmp_dt)
           }
         }
+        if (.progress) {
+          setTxtProgressBar(pb, x)
+        }
         
       } # end of [x] loop (individuals)
       
       return(dt_meta)
       
     }) # end of [set_target] lapply
+    
+    # close(pb)
     
     return(dplyr::distinct(do.call(rbind, out)))
     
