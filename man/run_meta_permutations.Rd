@@ -12,6 +12,7 @@ run_meta_permutations(
   random = FALSE,
   max_samples = 100,
   trace = FALSE,
+  .iter_size = 2,
   .only_max_m = FALSE,
   .lists = NULL
 )
@@ -28,6 +29,8 @@ run_meta_permutations(
 \item{max_samples}{Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.}
 
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
+
+\item{.iter_size}{Numeric. The size of each iteration step. Default is 2.}
 
 \item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
 
