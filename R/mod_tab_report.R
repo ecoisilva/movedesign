@@ -1378,26 +1378,21 @@ mod_tab_report_server <- function(id, rv) {
         truth <- tmpunit %#% get_truth[[target]]
         
         meta_dt <- meta[1, ] %>% 
-          dplyr::mutate(est = (est - truth)/truth,
-                        lci = (lci - truth)/truth,
-                        uci = (uci - truth)/truth) %>% 
+          dplyr::mutate(err_est = (est - truth)/truth,
+                        err_lci = (lci - truth)/truth,
+                        err_uci = (uci - truth)/truth) %>% 
+          dplyr::select(err_est, err_lci, err_uci) %>% 
           dplyr::rowwise() %>%
           dplyr::mutate(
-            within_threshold = any(
-              dplyr::c_across(c(est, lci, uci)) >=
-                -rv$error_threshold & 
-                dplyr::c_across(c(est, lci, uci)) <=
-                rv$error_threshold),
-            close_to_threshold = any(
-              dplyr::c_across(c(est, lci, uci)) >= 
-                -(rv$error_threshold * 2) & 
-                dplyr::c_across(c(est, lci, uci)) <= 
-                (rv$error_threshold * 2)),
-            overlaps_with = dplyr::case_when(
-              (est >= -rv$error_threshold &
-                 est <= rv$error_threshold) ~ "Yes",
-              within_threshold ~ "Near",
-              close_to_threshold ~ "Near",
+            within_threshold = 
+              (err_est >= -rv$error_threshold &
+                 err_est <= rv$error_threshold),
+            overlaps_with_threshold = 
+              (err_lci <= rv$error_threshold & 
+                 err_uci >= -rv$error_threshold),
+            status = dplyr::case_when(
+              within_threshold ~ "Yes",
+              !within_threshold & overlaps_with_threshold ~ "Near",
               TRUE ~ "No"))
         
         txt_meta_groups <- NULL
@@ -1447,7 +1442,7 @@ mod_tab_report_server <- function(id, rv) {
           observed_ratio <- .get_ratios(meta_group)
           
           ratio <- paste0(round(observed_ratio$est, 2), ":1")
-          overlaps_with <- list(
+          status_ratio <- list(
             "truth" = dplyr::between(observed_ratio$est,
                                      expected_ratio$lci, 
                                      expected_ratio$uci),
@@ -1459,14 +1454,14 @@ mod_tab_report_server <- function(id, rv) {
           txt_ratio <- span(
             "The", txt_target[[target]], "ratio", txt_ratio_order,
             ifelse(
-              overlaps_with$one_observed,
+              status$one_observed,
               paste0("overlapped with one (i.e., ",
                      "no difference between groups)."),
               paste0("did not overlap with one (ratio point estimate of ",
                      wrap_none(ratio, ")."))))
           
-          sufficient_simulations <- overlaps_with$truth && 
-            overlaps_with$one_expected == overlaps_with$one_observed &&
+          sufficient_simulations <- status_ratio$truth && 
+            (status_ratio$one_expected == status_ratio$one_observed) &&
             !is.na(get_cri[[target]][["lci"]]) && 
             !is.na(get_cri[[target]][["uci"]])
           
@@ -1495,7 +1490,7 @@ mod_tab_report_server <- function(id, rv) {
           "for a single simulation",
           paste("for", length(rv$simList), "simulations"))
         
-        switch(meta_dt$overlaps_with,
+        switch(meta_dt$status,
                "Yes" = {
                  txt_mean <- span(
                    style = css_mono,
@@ -1508,7 +1503,7 @@ mod_tab_report_server <- function(id, rv) {
                  txt_mean <- span(
                    style = css_mono,
                    "The mean", txt_target[[target]], txt_nsims,
-                   "is", span("near", class = "cl-sea"), "the",
+                   "is", span("near", class = "cl-grn"), "the",
                    paste0("\u00B1", rv$error_threshold * 100, "%"),
                    "error threshold.")
                },
@@ -1533,29 +1528,32 @@ mod_tab_report_server <- function(id, rv) {
         }
         
         switch(
-          meta_dt$overlaps_with,
+          meta_dt$status,
           "Yes" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations appears sufficient",
+              "The number of simulations appears",
+              wrap_none("sufficient",, color = pal$sea),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], color = pal$sea, end = ","),
+              wrap_none(txt_target[[target]], end = ","),
               txt_uncertainty)
           },
           "Near" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations appears insufficient",
+              "The number of simulations appears",
+              wrap_none("insufficient",, color = pal$grn),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], color = pal$dgr, end = ","),
+              wrap_none(txt_target[[target]], end = ","),
               txt_uncertainty)
           },
           "No" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations appears insufficient",
+              "The number of simulations appears",
+              wrap_none("insufficient",, color = pal$dgr),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], color = pal$dgr, end = ","),
+              wrap_none(txt_target[[target]], end = ","),
               txt_uncertainty)
           })
         

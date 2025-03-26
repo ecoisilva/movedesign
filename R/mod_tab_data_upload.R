@@ -1195,7 +1195,6 @@ mod_tab_data_upload_server <- function(id, rv) {
         
         fit0 <- fit0[-to_remove]
         nm_mods <- lapply(fit0, function(x) summary(x)$name)
-        
       }
       
       # to_filter <- "^IOU|^OUF|^OU(?!f)"
@@ -1210,12 +1209,12 @@ mod_tab_data_upload_server <- function(id, rv) {
           # to_filter <- "^OU(?!f)|^OUF"
         }
 
-        # if ("Speed & distance" == rv$which_question) {
-        #   to_filter <- "^IOU|^OUF"
-        # }
+        if ("Speed & distance" == rv$which_question) {
+          # to_filter <- "^IOU|^OUF"
+        }
       }
-
-      fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
+      
+      # fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
       
       if (length(fit0) == 0) {
         msg_log(
@@ -1258,7 +1257,8 @@ mod_tab_data_upload_server <- function(id, rv) {
           msg_log(
             style = "danger",
             message = paste0(
-              "Cannot add ", msg_danger("population variation"), ","),
+              "Cannot incorporate ",
+              msg_danger("population variation"), ","),
             detail = "Reverting to population mean estimates only.")
           
           fit0 <- rv$fitList[rv$id]
@@ -1270,6 +1270,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           rv$is_emulate <- FALSE
           
         } else {
+          
           rv$sigma <- extract_pars(meanfit0, name = "sigma")
           rv$tau_p <- extract_pars(meanfit0, name = "position")
           rv$tau_v <- extract_pars(meanfit0, name = "velocity")
@@ -1305,6 +1306,8 @@ mod_tab_data_upload_server <- function(id, rv) {
       if (!is.null(rv$tau_v)) names(rv$tau_v) <- c("All")
       if (!is.null(rv$speed)) names(rv$speed) <- c("All")
       names(rv$mu) <- c("All")
+      
+      rv$proceed <- TRUE
       
       if (rv$grouped) {
         
@@ -1406,6 +1409,7 @@ mod_tab_data_upload_server <- function(id, rv) {
               "altogether, before proceeding.")),
             html = TRUE,
             size = "xs")
+          rv$proceed <- FALSE
           
         } else {
           
@@ -1505,6 +1509,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       req(rv$is_valid,
           rv$which_question,
           rv$data_type == "uploaded",
+          rv$which_meta == "compare", 
           rv$active_tab == 'data_upload')
       req(length(rv$sigma) == 1)
       req(rv$datList, rv$fitList, rv$groups)
