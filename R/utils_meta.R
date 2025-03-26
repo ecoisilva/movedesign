@@ -239,32 +239,38 @@
 #' @keywords internal
 #'
 #' @noRd
-.get_sequence <- function(input, grouped = FALSE) {
-  if (is.null(input)) stop("ERROR!")
+.get_sequence <- function(input, .iter_size = 2, grouped = FALSE) {
+  
+  if (is.null(input)) stop("No input!")
   
   n <- length(input)
-  if (grouped) { 
-    n <- n / 2
-  }
+  if (grouped) n <- n / 2
   
   if (n == 1) return(stop("Cannot run meta() on one individual."))
-  if (n == 3) return(3)
-  if (n == 5) return(c(3, 5))
   
-  set_seq <- if (n %% 2 == 0) seq(2, n, by = if (n <= 6) 1 else 2) 
-  else seq(1, n, by = 2)[-1 * (n > 5)]
-  
-  while (length(set_seq) >= 14 && n >= 18) {
-    set_seq <- set_seq[seq_along(set_seq) %% 2 == (length(set_seq) %% 2)]
+  if (.iter_size == 2) {
+    start_value <- ifelse(n %% 2 == 0, 2, 1)
+  } else {
+    start_value <- n %% .iter_size
+    if (start_value == 0) start_value <- .iter_size
   }
   
-  if (length(set_seq) == 0) return(NULL)
+  out_seq <- seq(start_value, n, by = .iter_size)
+  if (grouped && 1 %in% out_seq) {
+    out_seq <- out_seq[out_seq != 1]
+  }
   
-  if (max(set_seq) != n) 
+  while (length(out_seq) >= 18) {
+    out_seq <- out_seq[
+      seq_along(out_seq) %% 2 == (length(out_seq) %% 2)]
+  }
+  
+  if (max(out_seq) != n) 
     stop("Error: max(output) does not equal length(input)")
   
-  return(set_seq)
+  return(out_seq)
 }
+
 
 #' @title Get sets for meta-analyses
 #'
