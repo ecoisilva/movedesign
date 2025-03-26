@@ -899,7 +899,7 @@ plot_meta_permutations <- function(rv,
         overlaps_with_threshold = 
           (error_lci <= rv$error_threshold & 
              error_uci >= -rv$error_threshold),
-        status = dplyr::case_when(
+        color = dplyr::case_when(
           within_threshold ~ "Yes",
           !within_threshold & overlaps_with_threshold ~ "Near",
           TRUE ~ "No"))
@@ -936,7 +936,7 @@ plot_meta_permutations <- function(rv,
                      y = error,
                      group = group,
                      shape = group,
-                     color = status)) +
+                     color = color)) +
       
       p_error1 +
       p_error2 +

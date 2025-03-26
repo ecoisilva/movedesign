@@ -49,7 +49,7 @@ mod_comp_m_ui <- function(id) {
 
           # shinyWidgets::autonumericInput(
           #   inputId = ns("nsims_iter"),
-          #   label = "Simulation steps:",
+          #   label = "Check every _ tags:",
           #   currencySymbol = " tag(s)",
           #   currencySymbolPlacement = "s",
           #   decimalPlaces = 0,

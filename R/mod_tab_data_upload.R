@@ -1395,6 +1395,8 @@ mod_tab_data_upload_server <- function(id, rv) {
               " of group(s): ", msg_danger(toString(bug_group))),
             detail = "Try again with different groupings.")
           
+          rv$is_valid <- FALSE
+          
           shinybusy::remove_modal_spinner()
           
           shinyalert::shinyalert(

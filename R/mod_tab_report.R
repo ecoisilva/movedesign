@@ -1533,7 +1533,7 @@ mod_tab_report_server <- function(id, rv) {
             txt_final <- span(
               style = paste(css_mono, css_bold),
               "The number of simulations appears",
-              wrap_none("sufficient",, color = pal$sea),
+              wrap_none("sufficient", color = pal$sea),
               "to accurately estimate mean", 
               wrap_none(txt_target[[target]], end = ","),
               txt_uncertainty)
@@ -1542,8 +1542,8 @@ mod_tab_report_server <- function(id, rv) {
             txt_final <- span(
               style = paste(css_mono, css_bold),
               "The number of simulations appears",
-              wrap_none("insufficient",, color = pal$grn),
-              "to accurately estimate mean", 
+              wrap_none("insufficient", color = pal$grn),
+              "to accurately estimate man", 
               wrap_none(txt_target[[target]], end = ","),
               txt_uncertainty)
           },
@@ -1551,7 +1551,7 @@ mod_tab_report_server <- function(id, rv) {
             txt_final <- span(
               style = paste(css_mono, css_bold),
               "The number of simulations appears",
-              wrap_none("insufficient",, color = pal$dgr),
+              wrap_none("insufficient", color = pal$dgr),
               "to accurately estimate mean", 
               wrap_none(txt_target[[target]], end = ","),
               txt_uncertainty)

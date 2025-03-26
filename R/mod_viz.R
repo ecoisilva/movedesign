@@ -801,7 +801,19 @@ mod_viz_server <- function(id, rv) {
                                   name = "speed")), 1)
           }
         })
-      }
+        
+      } # end of if (!is.null(rv$fitList))
+      
+      if (rv$grouped) {
+        if (!is.null(rv$groups[[2]]))
+          if (!is.null(rv$groups[[2]][["A"]]) &&
+              !is.null(rv$groups[[2]][["B"]])) {
+            
+            out_sum$group <- sapply(names(rv$datList), function(x)
+              ifelse(x %in% rv$groups[[2]][["A"]], "A", "B"))
+          }
+        
+      } # end of if (rv$grouped)
       
       is_selection <- "multiple"
       if (rv$which_meta == "none") {
@@ -809,7 +821,13 @@ mod_viz_server <- function(id, rv) {
         if(length(id) > 1) id <- NULL
       }
       
+      if (rv$which_meta == "compare") {
+        if (!is.null(rv$groups[[2]][["A"]]))
+        out_sum <- dplyr::relocate(out_sum, group)
+      }
+      
       if (anyNA(id)) id <- NULL
+      
       reactable::reactable(
         out_sum,
         onClick = "select",
@@ -822,22 +840,37 @@ mod_viz_server <- function(id, rv) {
         defaultSelected = id,
         defaultColDef =
           reactable::colDef(
-            headerClass = "rtable_header", align = "left"),
+            headerClass = "rtable_header", 
+            align = "left",
+            minWidth = 120),
         columns = list(
-          n = reactable::colDef(name = "n"),
+          n = reactable::colDef(
+            name = "n",
+            minWidth = 60,
+            style = format_num,
+            format = reactable::colFormat(
+              separators = TRUE, locale = "en-US", digits = 0)),
+          mod = if ("mod" %in% names(out_sum)) {
+            reactable::colDef(
+              minWidth = 80, name = "Model:") },
+          group = if (rv$grouped) {
+            reactable::colDef(
+              name = "Group:",
+              minWidth = 80) },
           longitude = reactable::colDef(
             format = reactable::colFormat(digits = 3)),
           latitude = reactable::colDef(
             format = reactable::colFormat(digits = 3)),
-          N1 = if ("N_area" %in% names(out_sum)) {
+          N_area = if ("N_area" %in% names(out_sum)) {
             reactable::colDef(
-              minWidth = 80, name = "N (area)",
+              minWidth = 90, name = "N (area)",
               style = format_num,
               format = reactable::colFormat(separators = TRUE,
                                             digits = 1)) },
-          N2 = if ("N_speed" %in% names(out_sum)) {
+          N_speed = if ("N_speed" %in% names(out_sum)) {
             reactable::colDef(
-              minWidth = 80, name = "N (speed)",
+              name = "N (speed)",
+              minWidth = 90,
               style = format_num,
               format = reactable::colFormat(separators = TRUE,
                                             digits = 1)) }
