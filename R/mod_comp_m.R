@@ -608,7 +608,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       guessList <- lapply(seq_along(simList), function (x)
         ctmm::ctmm.guess(simList[[x]],
                          interactive = FALSE))
-      
+        
       if (rv$parallel) {
         
         msg_log(
@@ -618,52 +618,14 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                            msg_warning("in progress"), ","),
           detail = "This may take a while...")
         
-        current_dur <- rv$dur$value %#% rv$dur$unit
-        optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
-                          rv$tau_p[[1]]$unit[2]) * 10
-        
-        current_dti <- rv$dti$value %#% rv$dti$unit
-        optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
-                          rv$tau_v[[1]]$unit[2]) / 3
-        
-        # optimal_dur <= current_dur && current_dti <= optimal_dti
-        if (rv$set_analysis == "hr") {
-          to_check <- optimal_dur <= current_dur
-        }
-        if (rv$set_analysis == "ctsd") {
-          to_check <- current_dti <= optimal_dti
-        }
-        
-        if (to_check)
-          simfitList <- tryCatch(
-            par.ctmm.fit(simList, guessList, parallel = rv$parallel),
-            error = function(e) e)
-        else
-          simfitList <- tryCatch(
-            par.ctmm.select(simList, guessList, parallel = rv$parallel),
-            error = function(e) e)
-        
-        if (num_sims == 1) {
-          simfitList <- list(simfitList)
-        }
-        
-        N_type <- ifelse(rv$set_analysis == "hr", "area", "speed")
-        N <- extract_dof(simfitList, N_type)
-        to_rerun <- which(N < 0.1)
-        
-        if (any(N < 0.1)) {
-          for (z in seq_along(to_rerun)) {
-            simfitList[[z]] <- par.ctmm.select(
-              simList[to_rerun[[z]]], 
-              guessList[to_rerun[[z]]],
-              parallel = rv$parallel)
-          }
-        }
-        
-        lapply(seq_along(simfitList), function (x) {
-          simfitList[[x]]$mu[[1, "x"]] <- 0
-          simfitList[[x]]$mu[[1, "y"]] <- 0 # recenter to 0,0
-        })
+        simfitList <- fitting_model(simList,
+                                    set_target = rv$set_analysis,
+                                    .dur = rv$dur,
+                                    .dti = rv$dti,
+                                    .tau_p = rv$tau_p,
+                                    .tau_v = rv$tau_v,
+                                    .check_sampling = TRUE,
+                                    .rerun = TRUE)
         
         rv$dev$N1 <- c(rv$dev$N1, extract_dof(simfitList, "area"))
         rv$dev$N2 <- c(rv$dev$N2, extract_dof(simfitList, "speed"))
@@ -705,7 +667,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             .build_tbl(
               device = rv$device_type,
               group = if (rv$grouped) group else NA,
-              data = simList[[x]], 
+              data = simList[[x]],
               # seed = rv$seedList[[(rv$nsims - num_sims) + x]],
               seed = names(simList)[[x]],
               obj = simfitList[[x]],

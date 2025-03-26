@@ -2112,68 +2112,28 @@ mod_tab_design_server <- function(id, rv) {
                   rv$dur, 
                   rv$dti))
     
-    fitting_ctmm <- reactive({
+    fit_model <- reactive({
       
       simList <- rv$simList
-      guessList <- tryCatch(
-        lapply(seq_along(simList), function (x)
-          ctmm::ctmm.guess(simList[[x]],
-                           interactive = FALSE)),
-        error = function(e) e)
+      simfitList <- fitting_model(simList,
+                                  .dur = rv$dur,
+                                  .dti = rv$dti,
+                                  .tau_p = rv$tau_p,
+                                  .tau_v = rv$tau_v,
+                                  .check_sampling = TRUE,
+                                  .rerun = TRUE)
       
-      if (inherits(guessList, "error")) {
+      if (is.null(simfitList)) {
         msg_log(
           style = "danger",
           message = paste0(
-            "Parameter guesstimation ", msg_danger("failed"), "."))
+            "Model selection ", msg_danger("failed"), "."))
         return(NULL)
       }
       
-      current_dur <- rv$dur$value %#% rv$dur$unit
-      optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
-                        rv$tau_p[[1]]$unit[2]) * 10
+      return(simfitList)
       
-      current_dti <- rv$dti$value %#% rv$dti$unit
-      optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
-                        rv$tau_v[[1]]$unit[2]) / 3
-      
-      if (optimal_dur <= current_dur && current_dti <= optimal_dti) {
-        out <- tryCatch(
-          par.ctmm.fit(simList, guessList, parallel = rv$parallel),
-          warning = function(w) w,
-          error = function(e) e)
-      } else {
-        out <- tryCatch(
-          par.ctmm.select(simList, guessList, parallel = rv$parallel),
-          error = function(e) e)
-      }
-      
-      if (length(simList) == 1) {
-        if (inherits(out, "error")) {
-          msg_log(
-            style = "danger",
-            message = paste0(
-              "Model selection ", msg_danger("failed"), "."))
-          return(NULL)
-        }
-        out <- list(out)
-      }
-      
-      N <- extract_dof(out, "area")
-      to_rerun <- which(N < 0.1)
-      
-      if (any(N < 0.1)) {
-        for (z in seq_along(to_rerun)) {
-          out[[z]] <- par.ctmm.select(
-            simList[to_rerun[[z]]], 
-            guessList[to_rerun[[z]]],
-            parallel = rv$parallel)
-        }
-      }
-      
-      return(out)
-      
-    }) %>% # end of reactive, fitting_ctmm()
+    }) %>% # end of reactive, fit_model()
       bindCache(rv$datList,
                 rv$simList,
                 rv$dur,
@@ -2368,7 +2328,7 @@ mod_tab_design_server <- function(id, rv) {
       ) # end of modal
       
       start <- Sys.time()
-      fitList <- fitting_ctmm()
+      fitList <- fit_model()
       time_fit <- difftime(Sys.time(), start, units = "secs")
       
       if (!is.null(fitList)) {

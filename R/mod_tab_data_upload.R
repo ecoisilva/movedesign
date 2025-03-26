@@ -927,7 +927,8 @@ mod_tab_data_upload_server <- function(id, rv) {
                 rv$species_binom)
     
     
-    fitting_ctmm <- reactive({
+    fit_model <- reactive({
+      out <- NULL
       
       datList <- rv$datList[rv$id]
       guessList <- tryCatch(
@@ -945,15 +946,9 @@ mod_tab_data_upload_server <- function(id, rv) {
         return(NULL)
       }
       
-      out <- tryCatch(
-        par.ctmm.select(datList, guessList, parallel = rv$parallel),
-        error = function(e) e)
+      out <- fitting_model(datList)
       
-      # out <- tryCatch(
-      #   par.ctmm.fit(datList, guessList, parallel = rv$parallel),
-      #   error = function(e) e) # dev only
-      
-      if (inherits(out, "error")) {
+      if (is.null(out)) {
         msg_log(
           style = "danger",
           message = paste0(
@@ -962,11 +957,9 @@ mod_tab_data_upload_server <- function(id, rv) {
         return(NULL)
       }
       
-      if (class(out)[1] != "list" && class(out[[1]])[1] != "ctmm")
-        out <- list(out)
       return(out)
       
-    }) %>% # end of reactive, fitting_ctmm()
+    }) %>% # end of reactive, fit_model()
       bindCache(rv$datList,
                 rv$id, 
                 rv$species_binom)
@@ -1019,7 +1012,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       loading_modal("Selecting movement model",
                     exp_time = expt, parallel = rv$parallel, n = m)
-      fitList <- fitting_ctmm()
+      fitList <- fit_model()
       
       if (inherits(fitList, "error")) {
         proceed <- NULL

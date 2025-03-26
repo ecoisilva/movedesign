@@ -1377,7 +1377,7 @@ mod_tab_hrange_server <- function(id, rv) {
                   rv$hr$dti,
                   rv$hr$simList))
     
-    fitting_model <- reactive({
+    fitting_new_model <- reactive({
       
       newsimList <- rv$hr$simList
       guessList <- tryCatch(
@@ -1400,7 +1400,7 @@ mod_tab_hrange_server <- function(id, rv) {
       
       return(out_fit)
       
-    }) %>% # end of reactive, fitting_model()
+    }) %>% # end of reactive, fitting_new_model()
       bindCache(c(rv$hr$dur,
                   rv$hr$dti,
                   rv$hr$simList))
@@ -1513,7 +1513,7 @@ mod_tab_hrange_server <- function(id, rv) {
       
       loading_modal("Selecting new movement model", exp_time = expt)
       
-      rv$hr$fitList <- fitting_model()
+      rv$hr$fitList <- fitting_new_model()
       time_sd <- difftime(Sys.time(), start_fit, units = "sec")
       
       msg_log(

@@ -903,7 +903,7 @@ mod_tab_sims_server <- function(id, rv) {
                 input$sigma0_units,
                 rv$seed0, cache = "app")
     
-    fitting_ctmm <- reactive({
+    fit_model <- reactive({
       req(rv$datList, rv$modList)
       
       datList <- rv$datList
@@ -923,8 +923,8 @@ mod_tab_sims_server <- function(id, rv) {
         return(NULL)
       }
       
-      if (class(out)[1] != "list" && class(out[[1]])[1] != "ctmm")
-        out <- list(out)
+      if (class(out)[1] != "list" &&
+          class(out[[1]])[1] != "ctmm") out <- list(out)
       names(out) <- names(datList)
       return(out)
       
@@ -1028,7 +1028,7 @@ mod_tab_sims_server <- function(id, rv) {
         #                    " movement model."),
         #   detail = "Please wait for model fit to finish.")
         # 
-        # rv$fitList <- fitting_ctmm()
+        # rv$fitList <- fit_model()
         
         time_sims <- difftime(Sys.time(), start_sim, units = "sec")
         rv$time[["sims"]][[1]] <- rv$time[["sims"]][[1]] + time_sims[[1]]

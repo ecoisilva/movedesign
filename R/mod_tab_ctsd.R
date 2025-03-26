@@ -1767,7 +1767,7 @@ mod_tab_ctsd_server <- function(id, rv) {
                 rv$sd$dti,
                 rv$simList)
     
-    fitting_model <- reactive({
+    fitting_new_model <- reactive({
       
       newsimList <- rv$sd$simList
       guessList <- tryCatch(
@@ -1790,7 +1790,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       return(list(out_fit))
       
-    }) %>% # end of reactive, fitting_model()
+    }) %>% # end of reactive, fitting_new_model()
       bindCache(rv$sd$dur,
                 rv$sd$dti,
                 rv$sd$simList)
@@ -1901,7 +1901,7 @@ mod_tab_ctsd_server <- function(id, rv) {
         detail = "Please wait for model selection to finish:")
       
       start_fit <- Sys.time()
-      rv$sd$fitList <- fitting_model()
+      rv$sd$fitList <- fitting_new_model()
       time_sd <- difftime(Sys.time(), start_fit, units = "sec")
       
       msg_log(
