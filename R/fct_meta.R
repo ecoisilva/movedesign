@@ -150,6 +150,7 @@
 #' @param max_samples Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.
 #' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
 #' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
+#' @param .iter_size Numeric. The size of each iteration step. Default is 2.
 #' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
 #' @param .lists A list containing already created meta inputs. Default is NULL.
 #' 
@@ -170,6 +171,7 @@ run_meta_permutations <- function(rv,
                                   random = FALSE,
                                   max_samples = 100,
                                   trace = FALSE,
+                                  .iter_size = 2,
                                   .only_max_m = FALSE,
                                   .lists = NULL) {
   
@@ -263,7 +265,9 @@ run_meta_permutations <- function(rv,
     }
     
     m_iter <- NULL
-    m_iter <- .get_sequence(input[["All"]], grouped = subpop)
+    m_iter <- .get_sequence(input[["All"]],
+                            .iter_size = .iter_size,
+                            grouped = subpop)
     if (.only_max_m) m_iter <- max(m_iter)
     
     for (m in m_iter) {
