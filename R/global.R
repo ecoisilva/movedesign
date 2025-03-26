@@ -27,7 +27,7 @@ rlang::on_load(rlang::local_use_cli(inline = TRUE))
 utils::globalVariables(
   c(".data", "datList", "outList", "truthList",
     
-    "id",
+    "i", "id",
     "group", "seed",
     "x", "y", "x0", "y0", "x1", "y1",
     "long", "lat", "longitude", "latitude",
