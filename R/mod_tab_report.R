@@ -1454,7 +1454,7 @@ mod_tab_report_server <- function(id, rv) {
           txt_ratio <- span(
             "The", txt_target[[target]], "ratio", txt_ratio_order,
             ifelse(
-              status$one_observed,
+              status_ratio$one_observed,
               paste0("overlapped with one (i.e., ",
                      "no difference between groups)."),
               paste0("did not overlap with one (ratio point estimate of ",

@@ -332,7 +332,6 @@ mod_tab_meta_server <- function(id, rv) {
     ## Switch if both research targets are available: ---------------------
     
     observe({
-      
       if (length(rv$which_question) == 2) {
         req(input$metaOutput_target)
         rv$set_analysis <- input$metaOutput_target
@@ -367,7 +366,7 @@ mod_tab_meta_server <- function(id, rv) {
     
     boxnames <- c("simulations",
                   "outputs",
-                  # "summary",
+                  "summary",
                   "err_hr",
                   "err_speed")
     
@@ -635,7 +634,6 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$is_meta, rv$which_m)
       
       if (rv$which_m == "get_m") {
-        shinyjs::show(id = "metaBox_summary")
         
         return(tagList(
           column(
@@ -663,7 +661,6 @@ mod_tab_meta_server <- function(id, rv) {
         ) # end of return
         
       } else {
-        shinyjs::hide(id = "metaBox_summary")
         return(NULL)
       }
       
