@@ -7,13 +7,16 @@
 
 ![Static Badge](https://img.shields.io/badge/version-0.3.0-blue)
 [![DOI](https://zenodo.org/badge/474098792.svg)](https://zenodo.org/badge/latestdoi/474098792)<br>
-[![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)<br>
+[![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)
+[![R build
+status](https://github.com/ecoisilva/movedesign/workflows/R-hub/badge.svg)](https://github.com/ecoisilva/movedesign/actions)<br>
 [![Project Status: Active – The project has reached a stable, usable
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![Hits](https://hits.sh/github.com/ecoisilva/hits.svg)](https://hits.sh/github.com/ecoisilva/movedesign/)
 <br>
-<!-- ![HitCount](https://img.shields.io/endpoint?color=%234bc61e&url=https%3A%2F%2Fhits.dwyl.com%2Fecoisilva%2Fmovedesign.json)<br> -->
+<!-- [![Github last commit date](https://img.shields.io/github/last-commit/ecoisilva/movedesign.svg?label=Updated&logo=github&cacheSeconds=600)](https://github.com/ecoisilva/movedesign/commits) -->
+<!-- [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/movedesign)](https://cran.r-project.org/package=movedesign) -->
 <!-- badges: end -->
 
 <br>
@@ -73,7 +76,7 @@ movedesign::run_app()
 Start with the guided tutorial in the `'Home'` tab. For a more detailed
 introduction, refer to the
 [vignettes](https://ecoisilva.github.io/movedesign/articles/movedesign.html)
-or the [manuscript](https://doi.org/10.1111/2041-210X.14153).
+or the manuscripts (references below).
 
 <img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/app_overview.png"
      alt="This figure presents a conceptual workflow of the key elements of the ‘movedesign’ application, which provides an R Shiny-powered user interface to test different sampling designs for specified tracking projects." 
@@ -97,6 +100,6 @@ citation("movedesign")
 > Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese,
 > J. M. (2023). movedesign: Shiny R app to evaluate sampling design for
 > animal movement studies. Methods in Ecology and Evolution, 14(9),
-> 2216–2225. <https://doi.org/10.1111/2041-210X.14153>
+> 2216–2225. DOI: 10.1111/2041-210X.14153
 
 </div>

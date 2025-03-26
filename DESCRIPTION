@@ -1,13 +1,13 @@
 Package: movedesign
-Title: Study design tool for movement ecology studies
+Title: Study Design Toolbox for Movement Ecology Studies
 Version: 0.3.0
 Authors@R: 
     person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"),
            comment = c(ORCID = "0000-0003-4850-6193"))
-Description: A Shiny application that helps researchers design movement
-    ecology studies.  The tool focuses on two key objectives: (1)
+Description: An R package and Shiny application that helps researchers design
+    movement ecology studies. The tool focuses on two key objectives: (1)
     estimating home range areas and (2) estimating fine-scale movement
-    behavior, specifically speed and distance traveled.  It provides
+    behavior, specifically speed and distance traveled. It provides
     interactive simulations and methodological guidance to support study
     planning and decision-making. See
     <https://ecoisilva.github.io/movedesign/> for more details.
