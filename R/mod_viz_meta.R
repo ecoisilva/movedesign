@@ -48,9 +48,9 @@ mod_viz_meta_server <- function(id, rv) {
         set_target = rv$set_analysis,
         random = rv$random, 
         subpop = rv$grouped, 
-        pal = c(pal$sea, 
-                pal$grn, 
-                pal$dgr))
+        colors = c(pal$sea, 
+                   pal$grn, 
+                   pal$dgr))
       
       p.optimal <- p.optimal +
         theme_movedesign(font_available = rv$is_font) +

@@ -707,7 +707,7 @@ plot_meta_permutations <- function(rv,
                                    set_target = c("hr", "ctsd"),
                                    random = FALSE, 
                                    subpop = FALSE, 
-                                   pal = NULL) {
+                                   colors = NULL) {
   
   stopifnot(!is.null(rv$meta_tbl),
             !is.null(rv$which_m),
@@ -731,10 +731,10 @@ plot_meta_permutations <- function(rv,
            "For home range:", "For speed & distance:")
   }
   
-  if (is.null(pal)) { pal_values <- c(
+  if (is.null(colors)) { pal_values <- c(
     "Yes" = "#009da0", "Near" = "#77b131", "No" = "#dd4b39")
   } else pal_values <- c(
-    "Yes" = pal[[1]], "Near" = pal[[2]], "No" = pal[[3]])
+    "Yes" = colors[[1]], "Near" = colors[[2]], "No" = colors[[3]])
   
   if (random) {
     
@@ -893,21 +893,15 @@ plot_meta_permutations <- function(rv,
       dplyr::group_by(type) %>% 
       dplyr::rowwise() %>%
       dplyr::mutate(
-        within_threshold = any(
-          dplyr::c_across(c(error, error_lci, error_uci)) >=
-            -rv$error_threshold & 
-            dplyr::c_across(c(error, error_lci, error_uci)) <=
-            rv$error_threshold),
-        close_to_threshold = any(
-          dplyr::c_across(c(error, error_lci, error_uci)) >= 
-            -(rv$error_threshold * 2) & 
-            dplyr::c_across(c(error, error_lci, error_uci)) <= 
-            (rv$error_threshold * 2)),
-        color = dplyr::case_when(
-          (error_lci < -rv$error_threshold &
-             error_uci > rv$error_threshold) ~ "Yes",
+        within_threshold = 
+          (error >= -rv$error_threshold & 
+             error <= rv$error_threshold),
+        overlaps_with_threshold = 
+          (error_lci <= rv$error_threshold & 
+             error_uci >= -rv$error_threshold),
+        status = dplyr::case_when(
           within_threshold ~ "Yes",
-          close_to_threshold ~ "Near",
+          !within_threshold & overlaps_with_threshold ~ "Near",
           TRUE ~ "No"))
     
     txt_caption <- NULL
@@ -934,7 +928,7 @@ plot_meta_permutations <- function(rv,
       txt_color <- "Groups:"
       txt_caption <- "(*) Asterisks indicate significant subpopulations."
       
-    } # Note: this refers to finding subpops within the population.
+    } # Note: refers to finding subpops within the population.
     
     p.optimal <- out %>%
       ggplot2::ggplot(
@@ -942,7 +936,7 @@ plot_meta_permutations <- function(rv,
                      y = error,
                      group = group,
                      shape = group,
-                     color = color)) +
+                     color = status)) +
       
       p_error1 +
       p_error2 +
