@@ -82,7 +82,7 @@
   
   if (subpop) {
     datList[[2]] <- lapply(
-      set_target, \(x)
+      set_target, function(x)
       .get_groups(datList[[1]][[x]], groups = rv$groups[[2]]))
     names(datList[[2]]) <- set_target
     
@@ -220,7 +220,7 @@ run_meta_permutations <- function(rv,
   true_estimate <- c()
   true_ratio <- c()
   
-  out <- lapply(set_target, \(target) {
+  out <- lapply(set_target, function(target) {
     
     if (trace) {
       if (target == "hr") message("-- Running for home range:")
@@ -351,7 +351,7 @@ run_meta_permutations <- function(rv,
         if (target == "hr") variable <- "area"
         if (target == "ctsd") variable <- "speed"
         
-        out_meta <- setNames(lapply(inputList, \(x) {
+        out_meta <- setNames(lapply(inputList, function(x) {
           # x[sapply(x, is.null)] <- NULL
           return(.capture_meta(x,
                               variable = variable,
@@ -603,7 +603,7 @@ run_meta_loocv <- function(rv,
   if (inherits(rv, "reactivevalues"))
     rv_list <- reactiveValuesToList(rv) else rv_list <- rv
     
-    out <- lapply(set_target, \(target) {
+    out <- lapply(set_target, function(target) {
       
       if (target == "ctsd") {
         is_ctsd <- !.check_for_inf_speed(rv_list$ctsdList)

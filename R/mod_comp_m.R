@@ -1168,7 +1168,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (target == "hr") variable <- "area"
           if (target == "ctsd") variable <- "speed"
           
-          out_meta[[target]] <- setNames(lapply(input, \(x) {
+          out_meta[[target]] <- setNames(lapply(input, function(x) {
             return(.capture_meta(x,
                                  variable = variable,
                                  sort = TRUE,

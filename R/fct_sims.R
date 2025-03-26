@@ -219,7 +219,7 @@ fitting_model <- function(obj,
   if (.rerun) {
     N <- setNames(lapply(N, function(x) extract_dof(out, x)), set_target)
     
-    lapply(set_target, \(target) {
+    lapply(set_target, function(target) {
       to_rerun <- which(N[[target]] < 0.1)
       
       if (any(N[[target]] < 0.1)) {

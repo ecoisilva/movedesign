@@ -435,7 +435,7 @@ mod_viz_server <- function(id, rv) {
         "ctsd" = c("speed", "movement speed"))
       
       out <- get_meta_inputs()
-      detected <- sapply(out, \(x) x$logs$subpop_detected)
+      detected <- sapply(out, function(x) x$logs$subpop_detected)
       
       if (length(detected) == 1) {
         

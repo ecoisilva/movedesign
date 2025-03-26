@@ -49,7 +49,7 @@
     x[[1]][sapply(x[[1]], is.null)] <- NULL
     x[[2]][sapply(x[[2]], is.null)] <- NULL
     
-    # x <- lapply(x, \(y) y[sapply(y, is.null)] <- NULL)
+    # x <- lapply(x, fuunction(y) y[sapply(y, is.null)] <- NULL)
   }
   
   out <- tryCatch({
