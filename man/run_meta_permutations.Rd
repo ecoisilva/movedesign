@@ -12,7 +12,7 @@ run_meta_permutations(
   random = FALSE,
   max_samples = 100,
   trace = FALSE,
-  .iter_size = 2,
+  .iter_step = 2,
   .only_max_m = FALSE,
   .lists = NULL
 )
@@ -30,7 +30,7 @@ run_meta_permutations(
 
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
 
-\item{.iter_size}{Numeric. The size of each iteration step. Default is 2.}
+\item{.iter_step}{Numeric. The size of each iteration step. Default is 2.}
 
 \item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
 
