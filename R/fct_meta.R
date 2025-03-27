@@ -150,7 +150,7 @@
 #' @param max_samples Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.
 #' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
 #' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
-#' @param .iter_size Numeric. The size of each iteration step. Default is 2.
+#' @param .iter_step Numeric. The size of each iteration step. Default is 2.
 #' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
 #' @param .lists A list containing already created meta inputs. Default is NULL.
 #' 
@@ -171,7 +171,7 @@ run_meta_permutations <- function(rv,
                                   random = FALSE,
                                   max_samples = 100,
                                   trace = FALSE,
-                                  .iter_size = 2,
+                                  .iter_step = 2,
                                   .only_max_m = FALSE,
                                   .lists = NULL) {
   
@@ -266,7 +266,7 @@ run_meta_permutations <- function(rv,
     
     m_iter <- NULL
     m_iter <- .get_sequence(input[["All"]],
-                            .iter_size = .iter_size,
+                            .iter_step = .iter_step,
                             grouped = subpop)
     if (.only_max_m) m_iter <- max(m_iter)
     
@@ -688,17 +688,6 @@ run_meta_loocv <- function(rv,
 }
 
 
-#' @title Plot meta
-#'
-#' @noRd 
-#' 
-plot_meta <- function() {
-  
-  
-  
-  
-}
-
 #' @title Plot meta (permutations)
 #'
 #' @noRd 
@@ -738,43 +727,39 @@ plot_meta_permutations <- function(rv,
   
   if (random) {
     
-    out <- rv$meta_tbl_resample %>% 
-      dplyr::mutate(m == as.integer(m)) %>% 
-      dplyr::filter(type == set_target) 
+    if (!is.null(rv$meta_nresample))
+      out <- dplyr::filter(rv$meta_tbl_resample,
+                           sample <= rv$meta_nresample)
+    else out <- rv$meta_tbl_resample
     
-    if (subpop) {
-      out <- out %>%
-        dplyr::filter(group != "All")
-    }
+    out <- out %>% 
+      dplyr::mutate(m = as.integer(m)) %>% 
+      dplyr::filter(type == set_target)
+    if (subpop) out <- dplyr::filter(out, group != "All")
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
     
     max_samples <- max(unique(out$sample))
+    max_samples
     
     out_mean <- out %>% 
       dplyr::group_by(type, group, m) %>% 
       dplyr::summarize(
         n = dplyr::n(),
         error = mean(error, na.rm = TRUE),
-        lci = mean(error_lci, na.rm = TRUE),
-        uci = mean(error_uci, na.rm = TRUE)) %>%
+        error_lci = mean(error_lci, na.rm = TRUE),
+        error_uci = mean(error_uci, na.rm = TRUE)) %>%
       dplyr::rowwise() %>%
       dplyr::mutate(
-        within_threshold = any(
-          dplyr::c_across(c(error, lci, uci)) >=
-            -rv$error_threshold & 
-            dplyr::c_across(c(error, lci, uci)) <=
-            rv$error_threshold),
-        close_to_threshold = any(
-          dplyr::c_across(c(error, lci, uci)) >= 
-            -(rv$error_threshold * 2) & 
-            dplyr::c_across(c(error, lci, uci)) <= 
-            (rv$error_threshold * 2)),
-        color = dplyr::case_when(
-          (lci < -rv$error_threshold &
-             uci > rv$error_threshold) ~ "Yes",
+        within_threshold = 
+          (error >= -rv$error_threshold &
+             error <= rv$error_threshold),
+        overlaps_with_threshold = 
+          (error_lci <= rv$error_threshold & 
+             error_uci >= -rv$error_threshold),
+        status = dplyr::case_when(
           within_threshold ~ "Yes",
-          close_to_threshold ~ "Near",
+          !within_threshold & overlaps_with_threshold ~ "Near",
           TRUE ~ "No")) %>% 
       quiet() %>% 
       suppressMessages() %>% 
@@ -787,30 +772,27 @@ plot_meta_permutations <- function(rv,
     plot_subtitle <- paste(
       "<b>Maximum number of samples:</b>", max_samples)
     
-    p_error1 <- ggplot2::geom_hline(
-      yintercept = rv$error_threshold,
-      color = "black",
-      linetype = "dotted")
-    p_error2 <-  ggplot2::geom_hline(
-      yintercept = -rv$error_threshold,
-      color = "black",
-      linetype = "dotted")
-    
     p.optimal <- out_mean %>% 
       ggplot2::ggplot(
         ggplot2::aes(x = as.factor(m),
                      y = error,
                      group = group,
                      shape = group,
-                     color = color)) + 
+                     color = status)) + 
       
       ggplot2::geom_hline(
         yintercept = 0,
         linewidth = 0.3,
         linetype = "solid") +
       
-      p_error1 +
-      p_error2 +
+      ggplot2::geom_hline(
+        yintercept = rv$error_threshold,
+        color = "black",
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        yintercept = -rv$error_threshold,
+        color = "black",
+        linetype = "dotted") +
       
       ggplot2::geom_jitter(
         data = out,
@@ -818,13 +800,13 @@ plot_meta_permutations <- function(rv,
                                y = error,
                                group = group,
                                shape = group,
-                               color = color),
+                               color = status),
         position = ggplot2::position_jitterdodge(dodge.width = 0.4),
         size = 3.5, color = "grey80", alpha = 0.9) +
       
       ggplot2::geom_linerange(
-        ggplot2::aes(ymin = lci,
-                     ymax = uci),
+        ggplot2::aes(ymin = error_lci,
+                     ymax = error_uci),
         show.legend = TRUE,
         position = ggplot2::position_dodge(width = 0.4),
         linewidth = 2.2, alpha = 0.3) +
@@ -855,6 +837,7 @@ plot_meta_permutations <- function(rv,
           margin = ggplot2::margin(b = 2)),
         plot.subtitle = ggtext::element_markdown(
           size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
+    p.optimal
     
     if (rv$which_meta == "mean") {
       p.optimal <- p.optimal +
@@ -869,25 +852,13 @@ plot_meta_permutations <- function(rv,
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
     
-    if (subpop) {
-      out <- out %>% 
-        dplyr::filter(group != "All")
-    }
+    if (subpop) out <- dplyr::filter(out, group != "All")
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
     
     txt_color <- paste0(
       "Within error threshold (\u00B1",
       rv$error_threshold * 100, "%)?")
-    
-    p_error1 <- ggplot2::geom_hline(
-      yintercept = rv$error_threshold,
-      color = "black",
-      linetype = "dotted")
-    p_error2 <- ggplot2::geom_hline(
-      yintercept = -rv$error_threshold,
-      color = "black",
-      linetype = "dotted")
     
     out <- out %>%
       dplyr::group_by(type) %>% 
@@ -926,7 +897,7 @@ plot_meta_permutations <- function(rv,
       pal_values <- c("A" = "#77b131", "B" = "#009da0")
       
       txt_color <- "Groups:"
-      txt_caption <- "(*) Asterisks indicate significant subpopulations."
+      txt_caption <- "(*) Asterisks indicate subpopulations were found."
       
     } # Note: refers to finding subpops within the population.
     
@@ -938,8 +909,14 @@ plot_meta_permutations <- function(rv,
                      shape = group,
                      color = color)) +
       
-      p_error1 +
-      p_error2 +
+      ggplot2::geom_hline(
+        yintercept = rv$error_threshold,
+        color = "black",
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        yintercept = -rv$error_threshold,
+        color = "black",
+        linetype = "dotted") +
       
       ggplot2::geom_hline(
         yintercept = 0,

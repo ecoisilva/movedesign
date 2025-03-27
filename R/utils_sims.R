@@ -88,3 +88,132 @@
   return(obj)
   
 } # end of function, .trigger_error()
+
+
+#' Generate an irregular time sequence based on day/night intervals
+#'
+#' This function generates a sequence of timestamps with different step sizes
+#' for day and night periods.
+#'
+#' @param start_day The start time of the daytime period (as "HH:MM:SS").
+#' @param start_night The start time of the nighttime period (as "HH:MM:SS").
+#' @param dti_day The step size during the daytime period (in seconds, must be positive).
+#' @param dti_night The step size during the nighttime period (in seconds, must be positive).
+#' @param start_time The start timestamp (default: "00:00:00").
+#' @param end_time The end timestamp (default: "23:59:59").
+#' 
+#' @keywords internal
+#' 
+#' @return A sorted vector of POSIXct timestamps.
+#' 
+#' @examples
+#'  \dontrun{
+#' .generate_day_night_t("06:00:00", "18:00:00", 3600, 4 * 3600)
+#' }
+#' 
+#' @noRd
+.generate_day_night_t <- function(start_day, 
+                                  start_night,
+                                  dti_day,
+                                  dti_night, 
+                                  start_time = "00:00:00",
+                                  end_time = "23:59:59") {
+  
+  start_time = "00:00:00"
+  end_time = "23:59:59"
+  
+  if (start_time >= end_time)
+    stop("'start_time' must be before 'end_time'!")
+  
+  # Validate time format function
+  validate_time_format <- function(time_str) {
+    if (!grepl("^\\d{2}:\\d{2}:\\d{2}$", time_str)) {
+      stop(paste("Invalid time format for", 
+                 time_str, "Expected format: HH:MM:SS"))
+    }
+  }
+  
+  # Validate the time format for each input time
+  lapply(c(start_day, start_night,
+           start_time, end_time), validate_time_format)
+  
+  # Validate dti_day and dti_night
+  stopifnot(is.numeric(dti_day) & dti_day > 0,
+            is.numeric(dti_night) & dti_night > 0)
+  
+  # Convert times to numeric seconds (total seconds since midnight)
+  start_time <- as.numeric(lubridate::hms(start_time))
+  end_time <- as.numeric(lubridate::hms(end_time))
+  start_day <- as.numeric(lubridate::hms(start_day))
+  start_night <- as.numeric(lubridate::hms(start_night))
+  
+  if (start_day >= start_night) 
+    stop("'start_day' must be before 'start_night'!")
+  if (start_time >= end_time) 
+    stop("'start_time' must be before 'end_time'!")
+  
+  # Create intervals for day and night periods
+  intervals <- data.frame(
+    start = c(start_time, start_day, start_night),
+    end = c(start_day, start_night, end_time),
+    step = c(dti_night, dti_day, dti_night)
+  )
+  
+  return(.generate_irregular_t(intervals, 
+                               start_time = start_time, 
+                               end_time = end_time))
+  
+} # end of function, .generate_day_night_t()
+
+
+#' Generate an irregular time sequence based on custom intervals
+#'
+#' This function generates a sequence of timestamps with different step sizes
+#' for different time intervals.
+#'
+#' @param intervals A data frame with columns 'start', 'end', and 'step',
+#'   defining time intervals and their respective step sizes (in seconds).
+#' @param start_time The start timestamp (default: "00:00:00").
+#' @param end_time The end timestamp (default: "23:59:59").
+#' 
+#' @keywords internal
+#' 
+#' @return A sorted vector of POSIXct timestamps.
+#' 
+#' @examples
+#'  \dontrun{
+#' intervals <- data.frame(
+#'   start = hms("00:00:00"),
+#'   end = hms("06:00:00"),
+#'   step = 14400)
+#'  
+#' .generate_irregular_t(intervals)
+#' }
+#' 
+#' @noRd
+.generate_irregular_t <- function(intervals, 
+                                  start_time = start_time, 
+                                  end_time = end_time) {
+  
+  # Validate the intervals dataframe
+  if (!is.data.frame(intervals) ||
+      !all(c("start", "end", "step") %in% names(intervals))) {
+    stop(paste("'intervals' must be a data frame with 'start',",
+               "'end', and 'step' columns"))
+  }
+  
+  if (any(intervals$step <= 0))
+    stop("All step values must be positive!")
+  
+  # Generate the time sequence for each interval:
+  
+  out <- unique(sort(unlist(
+    mapply(seq,
+           intervals$start,
+           intervals$end,
+           intervals$step, SIMPLIFY = FALSE))))
+  
+  return(out)
+  
+} # end of function, .generate_irregular_t()
+

@@ -239,7 +239,7 @@
 #' @keywords internal
 #'
 #' @noRd
-.get_sequence <- function(input, .iter_size = 2, grouped = FALSE) {
+.get_sequence <- function(input, .iter_step = 2, grouped = FALSE) {
   
   if (is.null(input)) stop("No input!")
   
@@ -248,14 +248,14 @@
   
   if (n == 1) return(stop("Cannot run meta() on one individual."))
   
-  if (.iter_size == 2) {
+  if (.iter_step == 2) {
     start_value <- ifelse(n %% 2 == 0, 2, 1)
   } else {
-    start_value <- n %% .iter_size
-    if (start_value == 0) start_value <- .iter_size
+    start_value <- n %% .iter_step
+    if (start_value == 0) start_value <- .iter_step
   }
   
-  out_seq <- seq(start_value, n, by = .iter_size)
+  out_seq <- seq(start_value, n, by = .iter_step)
   if (grouped && 1 %in% out_seq) {
     out_seq <- out_seq[out_seq != 1]
   }
@@ -312,9 +312,7 @@
 #' @noRd
 .get_groups <- function(input, groups) {
   group_A <- input[groups[["A"]]]
-  # group_A[sapply(group_A, is.null)] <- NULL # TODO TOCHECK
   group_B <- input[groups[["B"]]]
-  # group_B[sapply(group_B, is.null)] <- NULL # TODO TOCHECK
   return(list(A = group_A,
               B = group_B))
 }

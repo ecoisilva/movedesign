@@ -17,13 +17,16 @@
   if (!inherits(out, "error")) {
     out <- data.frame(
       "lci" = ifelse(is.null(out$CI_low), NA, out$CI_low),
-      "est" = ci,
-      "uci" = ifelse(is.null(out$CI_high), NA, out$CI_high))
+      "est" = mean(x, na.rm = TRUE),
+      "uci" = ifelse(is.null(out$CI_high), NA, out$CI_high),
+      "ci" = ci)
   } else {
     out <- data.frame(
       "lci" = NA,
-      "est" = ci,
-      "uci" = NA)
+      "est" = mean(x, na.rm = TRUE),
+      "uci" = NA,
+      "ci" = ci)
+    
   }
   
   return(out)
