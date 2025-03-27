@@ -1194,6 +1194,7 @@ mod_tab_data_upload_server <- function(id, rv) {
           detail = "Movement model OU\u03A9 is invalid.")
         
         fit0 <- fit0[-to_remove]
+        rv$id <- rv$id[-to_remove]
         nm_mods <- lapply(fit0, function(x) summary(x)$name)
       }
       
@@ -1396,7 +1397,7 @@ mod_tab_data_upload_server <- function(id, rv) {
             detail = "Try again with different groupings.")
           
           rv$is_valid <- FALSE
-          
+          are_groups_valid <- FALSE
           shinybusy::remove_modal_spinner()
           
           shinyalert::shinyalert(
@@ -1425,13 +1426,19 @@ mod_tab_data_upload_server <- function(id, rv) {
               "\n", "   Group B is ",
               msg_success(toString(rv$groups[["intro"]][["B"]])), "."))
           rv$proceed <- TRUE
+          are_groups_valid <- TRUE
           
           shinybusy::remove_modal_spinner()
         }
         
-      } # end of if (rv$grouped)
+        # end of if (rv$grouped)
+        
+      } else are_groups_valid <- TRUE
       
-      req(rv$proceed)
+      if (!rv$proceed || !are_groups_valid) {
+        
+      }
+      req(rv$proceed, are_groups_valid)
       
       ### Extract variogram:
       

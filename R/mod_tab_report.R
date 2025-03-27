@@ -408,9 +408,6 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$which_question, rv$which_meta)
       req(rv$which_meta == "none")
       
-      # TODO
-      # req(rv$which_meta == "none" || rv$which_meta == "mean")
-      
       if ("Home range" %in% rv$which_question) {
         
         out <- out_hr <- shinyWidgets::pickerInput(
@@ -501,9 +498,10 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       rv$hr_coi <- data.frame(
-        est = mean(newdat$error, na.rm = TRUE),
         lci = min(newdat$error, na.rm = TRUE),
-        uci = max(newdat$error, na.rm = TRUE))
+        est = mean(newdat$error, na.rm = TRUE),
+        uci = max(newdat$error, na.rm = TRUE),
+        ci = ci)
       
       # Credible intervals:
       rv$hr_cri <- .extract_cri(newdat$error, ci)
@@ -513,6 +511,8 @@ mod_tab_report_server <- function(id, rv) {
     observe({ # For comparison with new duration:
       req(rv$highlight_dur > 0)
       shinyjs::show(id = "end_comparison")
+      
+      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       
       input_taup <- "days" %#% rv$tau_p[[1]]$value[2] %#%
         rv$tau_p[[1]]$unit[2]
@@ -528,11 +528,11 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::filter(tau_p == out_taup) %>%
         dplyr::filter(duration == out_dur)
       
-      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       rv$hr_coi_new <- data.frame(
-        est = mean(newdat$error, na.rm = TRUE),
         lci = mean(newdat$error_lci, na.rm = TRUE),
-        uci = mean(newdat$error_uci, na.rm = TRUE))
+        est = mean(newdat$error, na.rm = TRUE),
+        uci = mean(newdat$error_uci, na.rm = TRUE),
+        ci = ci)
       
       # Credible intervals:
       rv$hr_cri_new <- .extract_cri(newdat$error, ci)
@@ -578,9 +578,10 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       rv$sd_coi <- data.frame(
-        est = mean(newdat$error, na.rm = TRUE),
         lci = mean(newdat$error_lci, na.rm = TRUE),
-        uci = mean(newdat$error_uci, na.rm = TRUE))
+        est = mean(newdat$error, na.rm = TRUE),
+        uci = mean(newdat$error_uci, na.rm = TRUE),
+        ci = ci)
       
       # Credible intervals:
       rv$sd_cri <- .extract_cri(newdat$error, ci)
@@ -590,6 +591,8 @@ mod_tab_report_server <- function(id, rv) {
     observe({ # For comparison with new interval:
       req(rv$highlight_dti > 0)
       shinyjs::show(id = "end_comparison")
+      
+      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       
       input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       
@@ -606,11 +609,11 @@ mod_tab_report_server <- function(id, rv) {
         dplyr::filter(tau_v == out_tauv) %>%
         dplyr::filter(dti == out_dti$value)
       
-      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       rv$sd_coi_new <- data.frame(
-        est = mean(newdat$error, na.rm = TRUE),
         lci = mean(newdat$error_lci, na.rm = TRUE),
-        uci = mean(newdat$error_uci, na.rm = TRUE))
+        est = mean(newdat$error, na.rm = TRUE),
+        uci = mean(newdat$error_uci, na.rm = TRUE),
+        ci = ci)
       
       # Credible intervals:
       rv$sd_cri_new <- .extract_cri(newdat$error, ci)
@@ -832,6 +835,8 @@ mod_tab_report_server <- function(id, rv) {
           rv$simList)
       if (rv$which_meta != "none") req(rv$meta_tbl)
       
+      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
+      
       if ("Home range" %in% rv$which_question) {
         req(rv$hr_cri, rv$hrErr)
       }
@@ -919,7 +924,7 @@ mod_tab_report_server <- function(id, rv) {
           
           if (!is.na(hr_cri[1]) && !is.na(hr_cri[3])) {
             txt_hr_extra <- span(
-              "There is a", wrap_none(hr_cri[2], "%", css = "cl-blk"),
+              "There is a", wrap_none(ci, "%", css = "cl-blk"),
               "probability the relative error will lie between",
               wrap_none(hr_cri[1], "%", css = "cl-blk"),
               "and", wrap_none(hr_cri[3], "%", end = ".", css = "cl-blk"))
@@ -941,9 +946,9 @@ mod_tab_report_server <- function(id, rv) {
         
         if (rv$is_ctsd) {
           
-          sdCI <- c(round(rv$sd_cri$lci * 100, 1),
-                    round(rv$sd_cri$est * 100, 0),
-                    round(rv$sd_cri$uci * 100, 1))
+          sd_cri <- c(round(rv$sd_cri$lci * 100, 1),
+                      round(rv$sd_cri$est * 100, 0),
+                      round(rv$sd_cri$uci * 100, 1))
           
           txt_sd_uncertainty <- "estimation."
           if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$uci))
@@ -997,12 +1002,12 @@ mod_tab_report_server <- function(id, rv) {
           
           if (rv$which_meta == "none") txt_sd_extra <- txt_single
           else {
-            if (!is.na(sdCI[1]) && !is.na(sdCI[3]))
+            if (!is.na(sd_cri[1]) && !is.na(sd_cri[3]))
               txt_sd_extra <- span(
-                "There is a", wrap_none(sdCI[2], "%", css = "cl-blk"),
+                "There is a", wrap_none(ci, "%", css = "cl-blk"),
                 "probability that the relative error will lie within",
-                wrap_none(sdCI[1], "%", css = "cl-blk"), "and",
-                wrap_none(sdCI[3], "%", end = ".", css = "cl-blk"))
+                wrap_none(sd_cri[1], "%", css = "cl-blk"), "and",
+                wrap_none(sd_cri[3], "%", end = ".", css = "cl-blk"))
             else txt_sd_extra <- txt_meta_no_ci
           }
           
@@ -1378,18 +1383,18 @@ mod_tab_report_server <- function(id, rv) {
         truth <- tmpunit %#% get_truth[[target]]
         
         meta_dt <- meta[1, ] %>% 
-          dplyr::mutate(err_est = (est - truth)/truth,
-                        err_lci = (lci - truth)/truth,
-                        err_uci = (uci - truth)/truth) %>% 
-          dplyr::select(err_est, err_lci, err_uci) %>% 
+          dplyr::mutate(error_est = (est - truth)/truth,
+                        error_lci = (lci - truth)/truth,
+                        error_uci = (uci - truth)/truth) %>% 
+          dplyr::select(error_est, error_lci, error_uci) %>% 
           dplyr::rowwise() %>%
           dplyr::mutate(
             within_threshold = 
-              (err_est >= -rv$error_threshold &
-                 err_est <= rv$error_threshold),
+              (error_est >= -rv$error_threshold &
+                 error_est <= rv$error_threshold),
             overlaps_with_threshold = 
-              (err_lci <= rv$error_threshold & 
-                 err_uci >= -rv$error_threshold),
+              (error_lci <= rv$error_threshold & 
+                 error_uci >= -rv$error_threshold),
             status = dplyr::case_when(
               within_threshold ~ "Yes",
               !within_threshold & overlaps_with_threshold ~ "Near",
@@ -1827,6 +1832,8 @@ mod_tab_report_server <- function(id, rv) {
     observe({
       out_comp <- out_comp_hr <- span("")
       
+      ci <- ifelse(is.null(input$ci), .95, input$ci/100)
+      
       if (length(rv$which_question) == 1 &
           "Home range" %in% rv$which_question) {
         req(rv$highlight_dur)
@@ -1853,7 +1860,7 @@ mod_tab_report_server <- function(id, rv) {
             "estimation,", txt_level, "uncertainty:",
             "for a duration of",
             highlighted_dur, "days, there is a",
-            wrap_none(est, "%", css = "cl-blk"),
+            wrap_none(ci, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
             wrap_none(lci, "%", css = "cl-blk"),
             "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
@@ -1865,10 +1872,10 @@ mod_tab_report_server <- function(id, rv) {
             "estimation.", br(),
             "For a duration of", highlighted_dur,
             "days, there is high uncertainty",
-            wrap_none("(", CI, "%", css = "cl-blk"),
+            wrap_none("(", ci, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
-            wrap_none(LCI, "%", css = "cl-blk"),
-            "and", wrap_none(UCI, "%", end = ").", css = "cl-blk"))
+            wrap_none(lci, "%", css = "cl-blk"),
+            "and", wrap_none(uci, "%", end = ").", css = "cl-blk"))
         }
       } # end of 'Home range'
       
@@ -1905,7 +1912,7 @@ mod_tab_report_server <- function(id, rv) {
             "estimation,", txt_level, "uncertainty:",
             "for a sampling interval of",
             wrap_none(out_dti$value, " ", out_dti$unit, ", there"),
-            "is a", wrap_none(est, "%", css = "cl-blk"),
+            "is a", wrap_none(ci, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
             wrap_none(lci, "%", css = "cl-blk"),
             "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
@@ -1917,7 +1924,7 @@ mod_tab_report_server <- function(id, rv) {
             "estimation. For a sampling interval of",
             wrap_none(out_dti$value, " ", out_dti$unit, ", there is"),
             "high uncertainty",
-            wrap_none("(", est, "%", css = "cl-blk"),
+            wrap_none("(", ci, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
             wrap_none(lci, "%", css = "cl-blk"),
             "and", wrap_none(uci, "%", end = ").", css = "cl-blk"))
@@ -2280,7 +2287,7 @@ mod_tab_report_server <- function(id, rv) {
       
       lbl <- c(
         paste0("AKDE error"),
-        paste0("Median AKDE error + ", rv$hr_cri$est * 100,
+        paste0("Median AKDE error + ", rv$hr_cri$ci * 100,
                "% HDI for ", rv$report$dur_for_hr))
       brk <- c("now", "est")
       
@@ -2293,7 +2300,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if (is_dur) {
         lbl <- c(
-          lbl, paste0("Median AKDE error + ", rv$hr_cri$est * 100,
+          lbl, paste0("Median AKDE error + ", rv$hr_cri$ci * 100,
                       "% HDI for ", rv$highlight_dur, " days"))
         brk <- c(brk, "est_new")
         
@@ -2574,7 +2581,7 @@ mod_tab_report_server <- function(id, rv) {
       
       lbl <- c(
         paste0("CTSD error"),
-        paste0("Median CTSD error + ", rv$sd_cri$est * 100,
+        paste0("Median CTSD error + ", rv$sd_cri$ci * 100,
                "% HDI for ", txt_dti))
       brk <- c("now", "est")
       
@@ -2589,7 +2596,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if (is_dti) {
         lbl <- c(
-          lbl, paste0("Median CTSD error + ", rv$sd_cri$est * 100,
+          lbl, paste0("Median CTSD error + ", rv$sd_cri$ci * 100,
                       "% HDI for ", txt_dti_new))
         brk <- c(brk, "est_new")
         

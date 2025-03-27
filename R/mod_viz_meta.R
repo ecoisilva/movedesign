@@ -35,10 +35,8 @@ mod_viz_meta_server <- function(id, rv) {
           rv$set_analysis)
       req(length(rv$simList) > 1)
       if (rv$random) {
-        req(rv$meta_tbl_resample, rv$error_threshold)
-        req(nrow(rv$meta_tbl_resample %>% 
-                   dplyr::filter(type == rv$set_analysis) > 0))
-      }
+        req(rv$error_threshold, 
+            rv$meta_tbl_resample) }
       if (rv$which_meta == "compare") {
         req(rv$metaList_groups)
         req(rv$metaList[[rv$set_analysis]]) }
@@ -87,7 +85,8 @@ mod_viz_meta_server <- function(id, rv) {
     }) %>% # end of renderGirafe, "metaPlot_m_optimal"
       bindEvent(list(rv$run_meta,
                      rv$run_meta_resample,
-                     rv$set_analysis))
+                     rv$set_analysis,
+                     rv$meta_nresample))
     
   }) # end of moduleServer
 }

@@ -799,33 +799,43 @@ mod_tab_data_select_server <- function(id, rv) {
         nm_mods <- lapply(rv$fitList, function(x) summary(x)$name)
         n_OUf <- sum(grepl("^OUf", nm_mods))
         
+        
         to_filter_out <- paste0("^OU\u03A9")
         if (any(grep(to_filter_out, unlist(nm_mods), perl = TRUE))) {
-          fit0 <- fit0[-grep(to_filter_out, unlist(nm_mods), perl = TRUE)]
+          to_remove <- grep(to_filter_out, unlist(nm_mods), perl = TRUE)
+          
+          msg_log(
+            style = "danger",
+            message = paste0(
+              "Individual(s) ", msg_danger("removed"), ": ",
+              msg_danger(toString(names(fit0)[to_remove]))),
+            detail = "Movement model OU\u03A9 is invalid.")
+          
+          fit0 <- fit0[-to_remove]
+          rv$id <- rv$id[-to_remove]
           nm_mods <- lapply(fit0, function(x) summary(x)$name)
         }
         
-        to_filter <- "^IOU|^OUF|^OU(?!f)"
+        # to_filter <- "^IOU|^OUF|^OU(?!f)"
         if (length(rv$which_question) == 1) {
           if ("Home range" == rv$which_question) {
-            # does assume range residency for rv$id
             msg_log(
               style = "danger",
               message = paste0(
                 "Assuming ", msg_danger("range residency"), ","),
               detail = paste("Assuming all selected individuals",
                              "are range resident."))
-            to_filter <- "^OU(?!f)|^OUF"
+            # to_filter <- "^OU(?!f)|^OUF"
           }
           
           if ("Speed & distance" == rv$which_question) {
-            to_filter <- "^IOU|^OUF"
+            # to_filter <- "^IOU|^OUF"
           }
         }
         
-        fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
+        # fit0 <- fit0[grep(to_filter, unlist(nm_mods), perl = TRUE)]
         
-        if (length(fit0) == 0 && n_OUf == 0) {
+        if (length(fit0) == 0) {
           msg_log(
             style = "error",
             message = paste0(
@@ -833,6 +843,21 @@ mod_tab_data_select_server <- function(id, rv) {
             detail = paste("No individuals left after",
                            "filtering for movement processes."))
           shinybusy::remove_modal_spinner()
+          
+          shinyalert::shinyalert(
+            type = "error",
+            title = "Individuals invalid",
+            text = tagList(span(
+              "No individuals left after filtering for",
+              "movement models with a signature of the relevant",
+              wrap_none(
+                span(" autocorrelation timescale",
+                     class = "cl-dgr"), "."),
+              "Please select different individuals to proceed.")),
+            confirmButtonText = "Dismiss",
+            html = TRUE,
+            size = "xs")
+          
           return(NULL)
         }
         
@@ -898,6 +923,8 @@ mod_tab_data_select_server <- function(id, rv) {
         if (!is.null(rv$tau_v)) names(rv$tau_v) <- c("All")
         if (!is.null(rv$speed)) names(rv$speed) <- c("All")
         names(rv$mu) <- c("All")
+        
+        rv$proceed <- TRUE
         
         if (rv$grouped) {
           
@@ -984,6 +1011,7 @@ mod_tab_data_select_server <- function(id, rv) {
                 " of group(s): ", msg_danger(toString(bug_group))),
               detail = "Try again with different groupings.")
             
+            rv$is_valid <- FALSE
             are_groups_valid <- FALSE
             shinybusy::remove_modal_spinner()
             
@@ -999,6 +1027,7 @@ mod_tab_data_select_server <- function(id, rv) {
                 "altogether, before proceeding.")),
               html = TRUE,
               size = "xs")
+            rv$proceed <- FALSE
             
           } else {
             
@@ -1019,6 +1048,8 @@ mod_tab_data_select_server <- function(id, rv) {
           
         } else are_groups_valid <- TRUE
         
+        shinybusy::remove_modal_spinner()
+        
         if (are_groups_valid) {
           shinyFeedback::showToast(
             type = "success",
@@ -1037,8 +1068,6 @@ mod_tab_data_select_server <- function(id, rv) {
           rv$tmp$sp_common <- rv$species_common
           rv$tmp$sp <- rv$species_binom
           rv$tmp$id <- rv$id
-          
-          shinybusy::remove_modal_spinner()
           
           msg_log(
             style = "success",
@@ -1067,17 +1096,20 @@ mod_tab_data_select_server <- function(id, rv) {
     ## Extract parameters for groups: -------------------------------------
     
     observe({
-      req(rv$proceed,
+      req(rv$proceed)
+      req(rv$is_valid,
           rv$which_question,
           rv$data_type == "selected",
+          rv$which_meta == "compare",
           rv$active_tab == 'data_select')
-      req(rv$datList, rv$fitList, rv$groups, rv$is_valid)
       req(length(rv$sigma) == 1)
+      req(rv$datList, rv$fitList, rv$groups)
       
       dat <- list(A = rv$datList[rv$groups[[1]]$A],
                   B = rv$datList[rv$groups[[1]]$B])
       fit <- list(A = rv$fitList[rv$groups[[1]]$A],
                   B = rv$fitList[rv$groups[[1]]$B])
+      
       
       lapply(1:2, function(x) {
         extract_pars(

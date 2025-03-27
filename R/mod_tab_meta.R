@@ -252,7 +252,14 @@ mod_tab_meta_ui <- function(id) {
                 
             div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
                 reactable::reactableOutput(
-                  ns("metaTable_m_optimal"))),
+                  ns("metaTable_m_optimal")),
+                p(style = "margin-top: 30px;"),
+                div(class = "sims-irs",
+                    shinyWidgets::sliderTextInput(
+                      inputId = ns("meta_nresample"),
+                      label = "Show resamples up to:",
+                      choices = seq(1, 100, by = 1)))
+                ),
             
             footer = column(
               width = 12,
@@ -276,7 +283,7 @@ mod_tab_meta_ui <- function(id) {
                   label = span("Resample"),
                   icon =  icon("wand-sparkles"),
                   width = "100%",
-                  class = "btn-info"),
+                  class = "btn-sims"),
                 br(),
                 shinyWidgets::autonumericInput(
                   inputId = ns("n_resamples"),
@@ -506,13 +513,41 @@ mod_tab_meta_server <- function(id, rv) {
     
     ## Show/hide summary table: -------------------------------------------
     
-    # observe({
-    #   req(input$add_meta_table)
-    #   if (input$add_meta_table) 
-    #        shinyjs::toggle(id = "metaBox_summary")
-    #   
-    # }) %>% # end of observe,
-    #   bindEvent(input$add_meta_table)
+    observe({
+      req(rv$active_tab == 'meta')
+      
+      if (is.null(rv$meta_tbl_resample))
+        shinyjs::hide(id = "meta_nresample")
+      else shinyjs::show(id = "meta_nresample")
+      
+    }) # end of observe
+    
+    ## Update meta_nresample based on outputs: --------------------------
+    
+    observe({
+      req(rv$active_tab == 'meta',
+          rv$meta_tbl_resample)
+      rv$meta_nresample <- max(rv$meta_tbl_resample$sample)
+      
+      if (rv$meta_nresample <= 1) {
+        shinyjs::hide(id = "meta_nresample")
+      } else {
+        shinyjs::show(id = "meta_nresample")
+        div(class = "sims-irs",
+            shinyWidgets::updateSliderTextInput(
+              session = session,
+              inputId = "meta_nresample",
+              label = "Show resamples up to:",
+              choices = seq(1, rv$meta_nresample, by = 1),
+              selected = rv$meta_nresample))
+      }
+      
+    }) %>% # end of observer,
+      bindEvent(rv$meta_tbl_resample)
+    
+    observe({
+      rv$meta_nresample <- input$meta_nresample
+    }) %>% bindEvent(input$meta_nresample)
     
     ## Add notes explaining table outputs: --------------------------------
     
@@ -1084,7 +1119,7 @@ mod_tab_meta_server <- function(id, rv) {
       tmp <- run_meta_permutations(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
-        random = TRUE, max_samples = input$n_resamples,
+        random = TRUE, max_samples = rv$n_resamples,
         trace = TRUE)
       
       msg_log(
@@ -1113,7 +1148,7 @@ mod_tab_meta_server <- function(id, rv) {
         rv$which_question, 
         rv$simList, 
         rv$simfitList,
-        input$n_resamples))
+        rv$n_resamples))
     
     
     observe({
@@ -1124,13 +1159,24 @@ mod_tab_meta_server <- function(id, rv) {
           rv$meta_tbl)
       
       rv$random <- TRUE
-      n_resamples <- input$n_resamples
-      rv$meta_tbl_resample <- NULL
+      rv$n_resamples <- input$n_resamples
+      
+      if (!is.null(rv$meta_tbl_resample)) {
+        max_n_resamples <- max(rv$meta_tbl_resample$sample)
+        rv$n_resamples <- input$n_resamples - max_n_resamples
+      }
       
       tmp <- get_meta_permutation_outputs()
-      rv$meta_tbl_resample <- dplyr::distinct(tmp)
+      if (!is.null(rv$meta_tbl_resample)) {
+        tmp <- dplyr::mutate(tmp, sample = sample + max_n_resamples) 
+      }
       
-
+      rv$meta_tbl_resample <<- dplyr::bind_rows(rv$meta_tbl_resample, tmp)
+      
+      # rv$meta_tbl_resample <- NULL
+      # tmp <- get_meta_permutation_outputs()
+      # rv$meta_tbl_resample <- dplyr::distinct(tmp)
+      
     }) %>% # end of observe,
       bindEvent(input$run_meta_resample)
     
@@ -2063,8 +2109,9 @@ mod_tab_meta_server <- function(id, rv) {
     ## Rendering meta-analyses outputs (permutations): --------------------
     
     output$metaTable_m_optimal <- reactable::renderReactable({
-      req(rv$which_question, rv$meta_tbl)
+      req(rv$which_question, rv$meta_tbl, rv$set_analysis)
       
+      n_digits <- 1
       dt_meta <- rv$meta_tbl %>%
         dplyr::filter(type == rv$set_analysis) %>% 
         dplyr::select(-overlaps, -type) %>%
@@ -2076,7 +2123,7 @@ mod_tab_meta_server <- function(id, rv) {
       nms <- list(
         m = "m",
         lci = "95% LCI",
-        est = "Est",
+        est = "Mean",
         uci = "95% UCI",
         subpop = "Detected?",
         group = "Group"
@@ -2113,18 +2160,22 @@ mod_tab_meta_server <- function(id, rv) {
             name = nms[["lci"]],
             style = format_perc,
             format = reactable::colFormat(
-              separators = TRUE, locale = "en-US", digits = 1)),
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = n_digits)),
           error = reactable::colDef(
             name = nms[["est"]],
             style = format_perc,
             format = reactable::colFormat(
-              separators = TRUE, locale = "en-US", digits = 1)),
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = n_digits)),
           error_uci = reactable::colDef(
             name = nms[["uci"]],
             style = format_perc,
             format = reactable::colFormat(
-              separators = TRUE, locale = "en-US", digits = 1)),
+              separators = TRUE, locale = "en-US",
+              percent = TRUE, digits = n_digits)),
           subpop = reactable::colDef(
+            minWidth = 80,
             name = nms[["subpop"]]),
           group = reactable::colDef(
             name = nms[["group"]])),

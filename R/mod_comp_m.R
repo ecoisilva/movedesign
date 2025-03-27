@@ -1161,8 +1161,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             input_groups <- datList[["groups"]][[target]]
             nms_group_A <- names(input[["All"]][rv$groups[[2]][["A"]]])
             nms_group_B <- names(input[["All"]][rv$groups[[2]][["B"]]])
-            input[["groups"]] <- list(input_groups[["A"]],
-                                      input_groups[["B"]])
+            input[["groups"]] <- list("A" = input_groups[["A"]],
+                                      "B" = input_groups[["B"]])
           }
           
           if (target == "hr") variable <- "area"
@@ -1221,7 +1221,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             out_err[["All"]] <- sapply(out_est[["All"]], .get_errors,
                                        truth = truth[["All"]])
             
-            truth_ratio <- NA # TODO
+            truth_ratio <- NA
             out_ratio <- c("lci" = NA, "est" = NA, "uci" = NA)
             subpop_detected[["All"]] <- out_meta[[target]][["All"]]$
               logs$subpop_detected
@@ -1413,21 +1413,17 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               
             }) # end of lapply
             
-            if (!is.null(out_meta_groups)) {
+            overlaps_with_truth <- FALSE
+            if (!is.null(out_meta[[rv$set_target]][["groups"]])) {
+              
               meta_truth <- rv$metaList_groups[[1]][[rv$set_target]]
               overlaps_with_truth <- dplyr::between(
-                .get_ratios(out_meta[["groups"]])$est,
+                .get_ratios(out_meta[[rv$set_target]][["groups"]])$est,
                 .get_ratios(meta_truth)$lci, 
                 .get_ratios(meta_truth)$uci)
             }
             
             cov <- cov_list[[rv$set_target]]
-            
-            print("!is.infinite(cov)")
-            print(!is.infinite(cov))
-            
-            print("!is.infinite(cov) && overlaps_with_truth")
-            print(!is.infinite(cov) && overlaps_with_truth)
             
             # if cov -> infinity,
             # still sensitive to small changes in the mean.
