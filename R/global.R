@@ -14,7 +14,6 @@ rlang::on_load(rlang::local_use_cli(inline = TRUE))
   rlang::inform(
     class = "packageStartupMessage",
     message = c(
-      # "i" = paste("Loading movedesign, version:", version),
       "i" = 'To cite, run: {.code citation("movedesign")}',
       "!" = paste("Bugs?", website),
       "x" = "Silence? {.code suppressPackageStartupMessages(library(movedesign))}"
@@ -46,6 +45,8 @@ utils::globalVariables(
     "error", "error_lci", "error_uci",
     "ratio_est", "ratio_lci", "ratio_uci",
     "subpop_detected",
+    "area", "area_err_max",
+    "ctsd", "dist_err",
     
     "svf",
     "svf_lower",
@@ -74,9 +75,6 @@ utils::globalVariables(
     "out_meta",
     "out_meta_groups",
     
-    "area", "area_err_max",
-    "ctsd", "dist_err",
-
     "buffalo",
     "coati",
     "pelican",
