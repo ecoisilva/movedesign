@@ -64,7 +64,7 @@ DOP.LIST <- list(
 DOP.match <- function (axes) {
   DOP.LIST <- DOP.LIST[-1]
   NAMES <- names(DOP.LIST)
-  for (i in 1:length(DOP.LIST)) {
+  for (i in seq_along(DOP.LIST)) {
     if (all(axes == DOP.LIST[[i]]$axes)) return(NAMES[i])
   }
   return("unknown")

@@ -1702,7 +1702,7 @@ tele_to_dt <- function(object) {
     out$ctsd_err_min <- speed_error$lci
     out$ctsd_err_max <- speed_error$uci
     out$dist_err <- distance_error$est
-
+    
   } # end of if (target == "ctsd")
   
   return(out)
@@ -2156,11 +2156,11 @@ align_lists <- function(...) {
 #' 
 #' @noRd
 ellipse <- function(x, scale = c(1, 1),
-                     centre = c(0, 0),
-                     level = 0.95,
-                     t = sqrt(qchisq(level, 2)),
-                     which = c(1, 2), npoints = 100,
-                     center = centre, ...) {
+                    centre = c(0, 0),
+                    level = 0.95,
+                    t = sqrt(qchisq(level, 2)),
+                    which = c(1, 2), npoints = 100,
+                    center = centre, ...) {
   
   if(!missing(centre) && !missing(center)) {
     warning("Specify centre or center, not both. The value from center will be used.")
