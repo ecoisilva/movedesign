@@ -9,6 +9,7 @@ run_meta(
   set_target = c("hr", "ctsd"),
   subpop = FALSE,
   trace = FALSE,
+  .iter_step = 2,
   .only_max_m = FALSE,
   .lists = NULL
 )
@@ -21,6 +22,8 @@ run_meta(
 \item{subpop}{Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.}
 
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
+
+\item{.iter_step}{Numeric. The size of each iteration step. Default is 2.}
 
 \item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
 
