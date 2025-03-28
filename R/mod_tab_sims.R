@@ -1110,7 +1110,9 @@ mod_tab_sims_server <- function(id, rv) {
         
         ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(
-            x = .data$x, y = .data$y, color = timestamp),
+            x = .data$x,
+            y = .data$y,
+            color = .data$timestamp),
           linewidth = 0.5, alpha = .6) +
         ggiraph::geom_point_interactive(
           newdat, mapping = ggplot2::aes(
@@ -1246,13 +1248,15 @@ mod_tab_sims_server <- function(id, rv) {
         
         ggplot2::geom_path(
           data = dat,
-          mapping = ggplot2::aes(x = .data$x, y = .data$y,
-                                 color = timestamp),
+          mapping = ggplot2::aes(x = .data$x, 
+                                 y = .data$y,
+                                 color = .data$timestamp),
           size = 1.2) +
         ggplot2::geom_point(
           data = dat,
-          mapping = ggplot2::aes(x = .data$x, y = .data$y,
-                                 color = timestamp),
+          mapping = ggplot2::aes(x = .data$x,
+                                 y = .data$y,
+                                 color = .data$timestamp),
           size = 2.5) +
         
         # Time elapsed:

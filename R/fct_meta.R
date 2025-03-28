@@ -210,6 +210,8 @@ run_meta_permutations <- function(rv,
     "group" = character(0),
     "subpop_detected" = character(0))
   
+  datList <- truthList <- NULL
+  
   if (is.null(.lists)) {
     lists <- .build_meta_objects(rv, 
                                  set_target = set_target,
@@ -862,7 +864,7 @@ plot_meta_permutations <- function(rv,
       rv$error_threshold * 100, "%)?")
     
     out <- out %>%
-      dplyr::group_by(type) %>% 
+      dplyr::group_by(.data$type) %>% 
       dplyr::rowwise() %>%
       dplyr::mutate(
         within_threshold = 
@@ -933,7 +935,7 @@ plot_meta_permutations <- function(rv,
       
       { if (rv$which_meta == "compare")
         ggplot2::geom_text(
-          data = subset(out, subpop_detected == TRUE),
+          data = subset(out, .data$subpop_detected == TRUE),
           mapping = ggplot2::aes(x = as.factor(.data$m),
                                  y = .data$error_uci + 0.05,
                                  label = "*"),

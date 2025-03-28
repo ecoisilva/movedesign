@@ -728,6 +728,14 @@ mod_tab_report_server <- function(id, rv) {
           rv$simList)
       
       N1 <- N2 <- NULL
+      tau_p <- tau_p <- NULL
+      tau_v <- tau_v <- NULL
+      dur <- dur <- NULL
+      dti <- dti <- NULL
+      dur_unit <- dur_unit <- NULL
+      dti_unit <- dti_unit <- NULL
+      ideal_dti <- ideal_dti <- NULL
+      ideal_dur <- ideal_dur <- NULL
       
       if ("Home range" %in% rv$which_question) req(rv$hr_completed)
       if ("Speed & distance" %in% rv$which_question) req(rv$sd_completed)
@@ -836,6 +844,16 @@ mod_tab_report_server <- function(id, rv) {
           rv$is_analyses,
           rv$simList)
       if (rv$which_meta != "none") req(rv$meta_tbl)
+      
+      N1 <- N2 <- NULL
+      tau_p <- tau_p <- NULL
+      tau_v <- tau_v <- NULL
+      dur <- dur <- NULL
+      dti <- dti <- NULL
+      dur_unit <- dur_unit <- NULL
+      dti_unit <- dti_unit <- NULL
+      ideal_dti <- ideal_dti <- NULL
+      ideal_dur <- ideal_dur <- NULL
       
       ci <- ifelse(is.null(input$ci), .95, input$ci/100)
       
@@ -1397,8 +1415,8 @@ mod_tab_report_server <- function(id, rv) {
         meta_dt <- meta[1, ] %>% 
           dplyr::mutate(
             error_est = (.data$est - truth)/truth,
-            error_lci = (.data$lci - truth)/truth,
-            error_uci = (.data$uci - truth)/truth) %>% 
+            error_lci = (.data$low - truth)/truth,
+            error_uci = (.data$high - truth)/truth) %>% 
           dplyr::select(.data$error_est,
                         .data$error_lci,
                         .data$error_uci) %>% 
@@ -3615,7 +3633,7 @@ mod_tab_report_server <- function(id, rv) {
         tmphr <- dt_hr %>% dplyr::select(-c(.data$device))
         tmpdat <- suppressMessages(
           tmpdat %>%
-            dplyr::group_by(seed) %>% 
+            dplyr::group_by(.data$seed) %>% 
             dplyr::full_join(dt_hr))
       }
       
@@ -3627,7 +3645,7 @@ mod_tab_report_server <- function(id, rv) {
       
       tmpdat <- tmpdat %>%
         dplyr::distinct() %>% 
-        dplyr::group_by(seed) %>%
+        dplyr::group_by(.data$seed) %>%
         dplyr::summarize(dplyr::across(
           dplyr::everything(), 
           ~ifelse(all(is.na(.)), NA, .[!is.na(.)][1])))

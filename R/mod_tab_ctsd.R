@@ -2173,7 +2173,7 @@ mod_tab_ctsd_server <- function(id, rv) {
           p2_points <- ggiraph::geom_point_interactive(
             newdat, mapping = ggplot2::aes(
               x = .data$x, y = .data$y,
-              tooltip = timestamp),
+              tooltip = .data$timestamp),
             size = 0.8, col = pal$sea)
         }
         
@@ -2187,7 +2187,7 @@ mod_tab_ctsd_server <- function(id, rv) {
           p3_points <- ggiraph::geom_point_interactive(
             rv$sd$simList[[1]], mapping = ggplot2::aes(
               x = .data$x, y = .data$y,
-              tooltip = timestamp),
+              tooltip = .data$timestamp),
             size = 0.4, col = pal$dgr)
         }
         

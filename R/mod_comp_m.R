@@ -567,6 +567,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       loading_modal("Calculating run time")
       expt <- estimating_time()
       
+      x <- NULL
       confirm_time <- NULL
       if ((as.numeric(expt$max) %#% expt$unit) > 900) {
         

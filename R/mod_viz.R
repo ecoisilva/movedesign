@@ -532,10 +532,11 @@ mod_viz_server <- function(id, rv) {
       p.all <- ggplot2::ggplot() +
         ggiraph::geom_point_interactive(
           data = newdat.all,
-          ggplot2::aes(x, y,
-                       color = id,
-                       tooltip = id,
-                       data_id = id),
+          ggplot2::aes(x = .data$x,
+                       y = .data$y,
+                       color = .data$id,
+                       tooltip = .data$id,
+                       data_id = .data$id),
           size = 1.2) +
         ggplot2::labs(x = "x coordinate",
                       y = "y coordinate") +
@@ -612,8 +613,10 @@ mod_viz_server <- function(id, rv) {
       p <- ggplot2::ggplot(
         data = newdat, 
         ggplot2::aes(
-          x = .data$x, y = .data$y,
-          color = .data$t, tooltip = .data$t,
+          x = .data$x,
+          y = .data$y,
+          color = .data$t,
+          tooltip = .data$t,
           data_id = .data$t)) +
 
         ggplot2::geom_path(alpha = .9) +

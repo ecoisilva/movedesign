@@ -2665,7 +2665,8 @@ mod_tab_design_server <- function(id, rv) {
           
           ggplot2::geom_path(
             sim_new, mapping = ggplot2::aes(
-              x = .data$x, y = .data$y),
+              x = .data$x,
+              y = .data$y),
             color = pal$sea,
             linewidth = .6, alpha = .8) +
           
@@ -2909,7 +2910,7 @@ mod_tab_design_server <- function(id, rv) {
       dt_dv <- dplyr::select(rv$dev$tbl, -c(.data$seed, .data$data))
       if (!rv$grouped) {
         dt_dv <- dplyr::select(
-          dt_dv, -c(group, .data$area:.data$dist_err))
+          dt_dv, -c(.data$group, .data$area:.data$dist_err))
       } else {
         dt_dv <- dplyr::select(
           dt_dv, -c(.data$area:.data$dist_err))

@@ -775,6 +775,8 @@ mod_tab_meta_server <- function(id, rv) {
             length(rv$groups[[2]]$B) > 0)
       }
       
+      datList <- truthList <- NULL
+      
       lists <- .build_meta_objects(rv,
                                    set_target = set_target,
                                    subpop = rv$grouped,
@@ -1490,9 +1492,10 @@ mod_tab_meta_server <- function(id, rv) {
       out <- out %>%
         dplyr::mutate(
           group = dplyr::recode(
-            group, "A" = "Group A", "B" = "Group B")) %>%
+            .data$group, "A" = "Group A", "B" = "Group B")) %>%
         dplyr::mutate(
-          group = factor(group, levels = c("All", "Group A", "Group B")))
+          group = factor(
+            .data$group, levels = c("All", "Group A", "Group B")))
       
       x_label <- paste0(x_label, as.character(out$unit[1]), ")")
       x_color <- c("black", "#77b131", pal$sea)
@@ -1753,12 +1756,12 @@ mod_tab_meta_server <- function(id, rv) {
         req(nrow(out) > 0)
         
         out <- out %>%
-          dplyr::group_by(type) %>% 
+          dplyr::group_by(.data$type) %>% 
           dplyr::rowwise() %>%
           dplyr::mutate(
             color = dplyr::case_when(
-              (ratio_lci < truth[[rv$set_analysis]] &
-                 ratio_uci > truth[[rv$set_analysis]]) ~ "Yes",
+              (.data$ratio_lci < truth[[rv$set_analysis]] &
+                 .data$ratio_uci > truth[[rv$set_analysis]]) ~ "Yes",
               TRUE ~ "No"))
         
         p.ratio.optimal <- out %>%
