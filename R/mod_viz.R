@@ -824,7 +824,7 @@ mod_viz_server <- function(id, rv) {
       
       if (rv$which_meta == "compare") {
         if (!is.null(rv$groups[[2]][["A"]]))
-        out_sum <- dplyr::relocate(out_sum, group)
+        out_sum <- dplyr::relocate(out_sum, .data$group)
       }
       
       if (anyNA(id)) id <- NULL

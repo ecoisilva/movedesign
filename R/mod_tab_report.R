@@ -2177,6 +2177,7 @@ mod_tab_report_server <- function(id, rv) {
     output$repPlot_hr <- ggiraph::renderGirafe({
       req(rv$which_question, rv$which_meta, input$ci)
       
+      x <- NULL
       m <- ifelse(rv$which_meta == "none", 400, length(rv$simList))
       
       taup_unit <- ifelse(rv$which_meta == "none", 
@@ -2293,12 +2294,14 @@ mod_tab_report_server <- function(id, rv) {
         
         hr_p1 <- ggplot2::geom_line(
           data = ds2_hr, mapping = ggplot2::aes(
-            x = .data$x, y = .data$y),
+            x = .data$x,
+            y = .data$y),
           col = pal$mdn, linetype = "dotted")
         
         hr_p2 <- ggplot2::geom_area(
           data = ci2_hr,
-          mapping = ggplot2::aes(x = .data$x, y = .data$y),
+          mapping = ggplot2::aes(x = .data$x,
+                                 y = .data$y),
           alpha = 0.2, fill = pal$mdn)
         
         hr_p3 <- ggplot2::geom_segment(
@@ -2313,7 +2316,8 @@ mod_tab_report_server <- function(id, rv) {
         
         hr_p4 <- ggplot2::geom_point(
           mapping = ggplot2::aes(
-            x = rv$report$ds2_hr[["median"]], y = 0,
+            x = rv$report$ds2_hr[["median"]],
+            y = 0,
             col = "est_new", shape = "est_new"),
           size = 6) %>% 
           suppressWarnings()
@@ -2350,7 +2354,8 @@ mod_tab_report_server <- function(id, rv) {
                       "Probability density", "Density")
       
       p <- ds1_hr %>%
-        ggplot2::ggplot(ggplot2::aes(x = .data$x, y = .data$y)) +
+        ggplot2::ggplot(ggplot2::aes(x = .data$x,
+                                     y = .data$y)) +
         ggplot2::geom_vline(xintercept = 0, alpha = 1) +
         
         { if (is_dur) hr_p1 } +
@@ -2363,7 +2368,9 @@ mod_tab_report_server <- function(id, rv) {
         { if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci))
           ggplot2::geom_area(
             data = ci1_hr,
-            mapping = ggplot2::aes(x = .data$x, y = .data$y, fill = "est"),
+            mapping = ggplot2::aes(x = .data$x, 
+                                   y = .data$y,
+                                   fill = "est"),
             alpha = 0.4) } +
         
         { if (is_dur) hr_p3 } +
@@ -2588,12 +2595,14 @@ mod_tab_report_server <- function(id, rv) {
           ds2_sd, x >= rv$sd_cri_new$lci & x <= rv$sd_cri_new$uci)
         
         sd_p1 <- ggplot2::geom_line(
-          data = ds2_sd, mapping = ggplot2::aes(x = .data$x, y = .data$y),
+          data = ds2_sd, mapping = ggplot2::aes(x = .data$x,
+                                                y = .data$y),
           col = pal$mdn, linetype = "dotted")
         
         sd_p2 <- ggplot2::geom_area(
           data = ci2_sd,
-          mapping = ggplot2::aes(x = .data$x, y = .data$y),
+          mapping = ggplot2::aes(x = .data$x,
+                                 y = .data$y),
           alpha = 0.2, fill = pal$mdn)
         
         sd_p3 <- ggplot2::geom_segment(
@@ -2608,7 +2617,7 @@ mod_tab_report_server <- function(id, rv) {
         sd_p4 <- ggplot2::geom_point(
           data = ds2_sd,
           mapping = ggplot2::aes(
-            x = mean(x), y = 0,
+            x = mean(.data$x), y = 0,
             col = "est_new", shape = "est_new"),
           size = 6)
       }
@@ -2649,7 +2658,8 @@ mod_tab_report_server <- function(id, rv) {
       output$repPlot_sd <- ggiraph::renderGirafe({
         
         p <- ds1_sd %>%
-          ggplot2::ggplot(ggplot2::aes(x = .data$x, y = .data$y)) +
+          ggplot2::ggplot(ggplot2::aes(x = .data$x,
+                                       y = .data$y)) +
           ggplot2::geom_vline(xintercept = 0, alpha = 1) +
           
           {if (is_dti) sd_p1 } +
