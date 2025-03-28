@@ -552,7 +552,7 @@ run_meta <- function(rv,
                      set_target = c("hr", "ctsd"),
                      subpop = FALSE, 
                      trace = FALSE,
-                     .iter_size = 2,
+                     .iter_step = 2,
                      .only_max_m = FALSE,
                      .lists = NULL) {
   
