@@ -422,12 +422,12 @@ mod_tab_ctsd_server <- function(id, rv) {
                   "summary",
                   "misc")
 
-    for (i in 1:length(boxnames)) {
+    for (i in seq_along(boxnames)) {
       shinyjs::hide(id = paste0("sdBox_", boxnames[i]))
     }
 
     tabnames <- c("schedule", "speed", "sizes", "dist", "viz")
-    for (i in 1:length(tabnames)) {
+    for (i in seq_along(tabnames)) {
       tmp_id <- paste0("sdTabs_", tabnames[i])
       tmp_target <- paste0("sdPanel_", tabnames[i], "_new")
       hideTab(inputId = tmp_id, target = ns(tmp_target))
@@ -493,7 +493,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       tabs <- paste0("sdTabs_", tabnames)
       panels <- paste0("sdPanel_", tabnames)
       
-      for (i in 1:length(tabnames)) {
+      for (i in seq_along(tabnames)) {
         updateTabsetPanel(
           session,
           inputId = paste0(tabs[i]),
@@ -506,7 +506,7 @@ mod_tab_ctsd_server <- function(id, rv) {
                paste("distInfo", c("est", "err"), sep = "_"))
       tmp_new <- paste0(tmp, "_new")
       
-      for (i in 1:length(tmp)) {
+      for (i in seq_along(tmp)) {
         
         if (input$sdInput_show == 1) {
           shinyjs::show(id = tmp[i])
@@ -554,7 +554,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       req(rv$sd$fitList)
       
       # Show new conditional simulation panels:
-      for (i in 1:length(tabnames)) {
+      for (i in seq_along(tabnames)) {
         tmp_id <- paste0("sdTabs_", tabnames[i])
         tmp_target <- paste0("sdPanel_", tabnames[i], "_new")
         showTab(inputId = tmp_id, target = ns(tmp_target))
@@ -563,7 +563,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       # Select new conditional simulation panels:
       tabs <- paste0("sdTabs_", tabnames)
       panels <- paste0("sdPanel_", tabnames)
-      for (i in 1:length(tabnames))
+      for (i in seq_along(tabnames))
         updateTabsetPanel(
           session,
           inputId = paste0(tabs[i]),
@@ -1148,7 +1148,7 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         n_sims <- length(rv$simList) - length(rv$ctsdList)
         if (length(rv$ctsdList) == 0) {
-          seq_for_est <- 1:length(rv$simList)
+          seq_for_est <- seq_along(rv$simList)
         } else {
           seq_for_est <- (length(rv$ctsdList) + 1):length(rv$simList)
         }
@@ -1338,7 +1338,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       num_sims <- length(rv$simList) - length(rv$ctsdList)
       if (length(rv$ctsdList) == 0) {
-        seq_for <- 1:length(rv$simList)
+        seq_for <- seq_along(rv$simList)
       } else {
         seq_for <- (length(rv$ctsdList) + 1):length(rv$simList)
       }
@@ -1755,7 +1755,7 @@ mod_tab_ctsd_server <- function(id, rv) {
       # Fill in the gaps of original dataset + new duration:
       sim <- ctmm::simulate(dat, fit, t = t_new, seed = seed)
       sim <- pseudonymize(sim)
-      sim$index <- 1:nrow(sim)
+      sim$index <- seq_len(nrow(sim))
       return(list(sim))
       
     }) %>% # end of reactive, comparing_data()
@@ -2157,22 +2157,22 @@ mod_tab_ctsd_server <- function(id, rv) {
         if ("full" %in% datasets) {
           p1 <- ggplot2::geom_path(
             alldat, mapping = ggplot2::aes(
-              x = x, y = y),
+              x = .data$x, y = .data$y),
             col = "grey70", size = 1.5)
           p1_main <- ggplot2::geom_path(
             alldat, mapping = ggplot2::aes(
-              x = x, y = y),
+              x = .data$x, y = .data$y),
             col = "grey30", size = 0.4)
         }
         
         if ("initial" %in% datasets) {
           p2 <- ggplot2::geom_path(
             newdat, mapping = ggplot2::aes(
-              x = x, y = y),
+              x = .data$x, y = .data$y),
             linewidth = 0.2, col = pal$sea)
           p2_points <- ggiraph::geom_point_interactive(
             newdat, mapping = ggplot2::aes(
-              x = x, y = y,
+              x = .data$x, y = .data$y,
               tooltip = timestamp),
             size = 0.8, col = pal$sea)
         }
@@ -2182,11 +2182,11 @@ mod_tab_ctsd_server <- function(id, rv) {
           
           p3 <- ggplot2::geom_path(
             rv$sd$simList[[1]], mapping = ggplot2::aes(
-              x = x, y = y),
+              x = .data$x, y = .data$y),
             linewidth = 0.2, col = pal$dgr)
           p3_points <- ggiraph::geom_point_interactive(
             rv$sd$simList[[1]], mapping = ggplot2::aes(
-              x = x, y = y,
+              x = .data$x, y = .data$y,
               tooltip = timestamp),
             size = 0.4, col = pal$dgr)
         }
@@ -2259,11 +2259,12 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       t_origin <- "1111-11-10 23:06:32"
       dat <- dat %>%
-        dplyr::mutate(timestamp = as.POSIXct(t, origin = t_origin),
-               t_new = if (unit != "weeks") {
-                 as.POSIXct(round.POSIXt(timestamp, units = unit), 
-                            format = "%Y-%m-%d %H:%M:%OS")
-               } else { format(timestamp, "%U") })
+        dplyr::mutate(
+          timestamp = as.POSIXct(.data$t, origin = t_origin),
+          t_new = if (unit != "weeks") {
+            as.POSIXct(round.POSIXt(.data$timestamp, units = unit), 
+                       format = "%Y-%m-%d %H:%M:%OS")
+            } else { format(.data$timestamp, "%U") })
       
       dat <- dat %>%
         dplyr::group_by(.data$t_new) %>%

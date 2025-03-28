@@ -652,20 +652,22 @@ plotting_hr <- function(input1,
     { if (show_truth)
       ggplot2::geom_polygon(
         data = truth,
-        mapping = ggplot2::aes(x = x, y = y, group = id),
+        mapping = ggplot2::aes(x = .data$x,
+                               y = .data$y,
+                               group = .data$id),
         fill = "#353c42", alpha = .2)
     } +
     
     { if (show_locations)
       ggplot2::geom_path(
         data = data,
-        mapping = ggplot2::aes(x = x, y = y),
+        mapping = ggplot2::aes(x = .data$x, y = .data$y),
         color = pal[2], linewidth = 0.4, alpha = .4)
     } +
     { if (show_locations)
       ggplot2::geom_point(
         data = data,
-        mapping = ggplot2::aes(x = x, y = y),
+        mapping = ggplot2::aes(x = .data$x, y = .data$y),
         color = pal[2], size = 1, alpha = .3)
     } +
     
@@ -676,7 +678,7 @@ plotting_hr <- function(input1,
     { if (show_both)
       ggplot2::geom_point(
         data = data1,
-        mapping = ggplot2::aes(x = x, y = y),
+        mapping = ggplot2::aes(x = .data$x, y = .data$y),
         color = show_col, alpha = show_alpha, 
         size = 1)
     } +

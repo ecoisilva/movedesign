@@ -377,26 +377,26 @@
   true_estimate <- list()
   true_ratio <- list()
   
-  if (target == "hr") {
-    true_estimate[[target]] <- truthList[["hr"]][["All"]]$area
+  if (set_target == "hr") {
+    true_estimate[[set_target]] <- truthList[["hr"]][["All"]]$area
     if (subpop) {
       true_estimate[[
-        paste0(target, "_A")]] <- truthList[["hr"]][["A"]]$area
+        paste0(set_target, "_A")]] <- truthList[["hr"]][["A"]]$area
       true_estimate[[
-        paste0(target, "_B")]] <- truthList[["hr"]][["B"]]$area
-      true_ratio[[target]] <- truthList[["hr"]][["A"]]$area / 
+        paste0(set_target, "_B")]] <- truthList[["hr"]][["B"]]$area
+      true_ratio[[set_target]] <- truthList[["hr"]][["A"]]$area / 
         truthList[["hr"]][["B"]]$area
     }
   }
   
-  if (target == "ctsd") {
+  if (set_target == "ctsd") {
     true_estimate[["ctsd"]] <- truthList[["ctsd"]][["All"]]
     if (subpop) {
       true_estimate[[
-        paste0(target, "_A")]] <- truthList[["ctsd"]][["A"]]
+        paste0(set_target, "_A")]] <- truthList[["ctsd"]][["A"]]
       true_estimate[[
-        paste0(target, "_B")]] <- truthList[["ctsd"]][["B"]]
-      true_ratio[[target]] <- truthList[["ctsd"]][["A"]] /
+        paste0(set_target, "_B")]] <- truthList[["ctsd"]][["B"]]
+      true_ratio[[set_target]] <- truthList[["ctsd"]][["A"]] /
         truthList[["ctsd"]][["B"]]
     }
   }

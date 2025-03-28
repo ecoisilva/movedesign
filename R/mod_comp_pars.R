@@ -316,9 +316,10 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       pars$m <- rep(nms, each = 3)
       
       pars$variable <- rep(c("low", "est", "high"), length(nms))
-      pars <- pars %>% tidyr::pivot_wider(
-        names_from = variable,
-        values_from = value) %>% 
+      pars <- tidyr::pivot_wider(
+        pars,
+        names_from = .data$variable,
+        values_from = .data$value) %>% 
         dplyr::mutate(m = as.factor(.data$m))
       
       max_index <- which.max(
@@ -329,7 +330,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
                            unit = pars[max_index, "unit"][[1]],
                            convert = TRUE)$unit
       
-      for (i in 1:nrow(pars)) {
+      for (i in seq_len(nrow(pars))) {
         pars[i, "est"] <- out_unit %#% pars[i, "est"][[1]]
         pars[i, "low"] <- out_unit %#% pars[i, "low"][[1]]
         pars[i, "high"] <- out_unit %#% pars[i, "high"][[1]]
@@ -425,9 +426,9 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       nms <- nms_all
       if (length(nms_all) > 1) {
         nms <- as.data.frame(nms) %>% 
-          dplyr::count(nms) %>%
+          dplyr::count(.data$nms) %>%
           dplyr::slice(which.max(.data$n)) %>%
-          dplyr::pull(nms)
+          dplyr::pull(.data$nms)
         subtitle <- toString(nms_all[!nms_all %in% nms])
         if (length(subtitle) == 0) {
           subtitle <- NULL

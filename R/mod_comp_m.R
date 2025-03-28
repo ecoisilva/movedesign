@@ -477,7 +477,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             simList <- lapply(simList, function(x) {
               to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
               to_keep_vec <- sort(
-                sample(1:nrow(x), to_keep, replace = FALSE))
+                sample(seq_len(nrow(x)), to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
           } # end of data loss
@@ -520,7 +520,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       names(rv$tmpList) <- do.call(c, tmpnames_new)
       
       rv$dev$n <- lapply(seq_along(rv$simList), function(x)
-        n <- nrow(rv$simList[[x]]))
+        nrow(rv$simList[[x]]))
       
       rv$m$needs_fit <- TRUE
       rv$is_analyses <- FALSE
@@ -1016,7 +1016,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             simList <- lapply(simList, function(x) {
               to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
               to_keep_vec <- sort(
-                sample(1:nrow(x), to_keep, replace = FALSE))
+                sample(seq_len(nrow(x)), to_keep, replace = FALSE))
               x[to_keep_vec, ] })
             
           } # end of input$device_fixsuccess
@@ -1118,6 +1118,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         true_ratio <- c()
         true_estimate <- c()
+        
+        datList <- truthList <- NULL
         
         lists <- .build_meta_objects(rv, 
                                      set_target = rv$set_target,
@@ -1401,7 +1403,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             
             cov_list <- lapply(rv$set_target, function(target) {
               
-              tmp_dt_meta <- dplyr::filter(dt_meta, type == target)
+              tmp_dt_meta <- dplyr::filter(dt_meta, .data$type == target)
               if (!is.na(tmp_dt_meta[nrow(tmp_dt_meta), ]$est)) {
                 cov <- out_meta[[target]][["All"]]$meta[
                   grep("CoV", rownames(
@@ -1449,7 +1451,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       }
       
       rv$dev$n <- lapply(seq_along(rv$simList), function(x)
-        n <- nrow(rv$simList[[x]]))
+        nrow(rv$simList[[x]]))
       
       for (i in seq_for) {
         if (i > length(rv$simfitList)) next

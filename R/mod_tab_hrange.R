@@ -1876,7 +1876,7 @@ mod_tab_hrange_server <- function(id, rv) {
       colgroups <- list(nms_sizes, nms_error)
       
       if (length(unique(dt_hr$data)) == 1) {
-        dt_hr <- dplyr::select(dt_hr, -data)
+        dt_hr <- dplyr::select(dt_hr, -.data$data)
         nms <- nms[-1]
         colgroups <- colgroups[-1]
       }

@@ -35,7 +35,7 @@ dti_notes <- data.frame(
   )
 )
 
-dti_notes <- mutate(dti_notes, dti = as.numeric(dti))
+dti_notes <- mutate(dti_notes, dti = as.numeric(.data$dti))
 
 out <- left_join(out, dti_notes, by = "dti")
 out_summary <- left_join(out_summary, dti_notes, by = "dti")

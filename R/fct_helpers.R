@@ -155,7 +155,7 @@ fix_unit <- function(input,
     y[i] <- ifelse(convert, value[i] %#% x[i], value[i])
     
     # Convert time units:
-    if ((x[i] %in% units_tm) & convert) {
+    if ((x[i] %in% units_tm) && convert) {
       x_new <- dplyr::case_when(
         y[i] < 60 ~ "second",
         y[i] < 3600 ~ "minute",
@@ -167,13 +167,13 @@ fix_unit <- function(input,
     }
     
     # Convert spatial units:
-    if ((x[i] %in% units_sp) & convert) {
+    if ((x[i] %in% units_sp) && convert) {
       x_new <- ifelse(y[i] >= 1000, "km", "m")
       if (ui) x_html[i] <- x_new
     }
     
     # Convert area units:
-    if ((x[i] %in% units_ar) & convert) {
+    if ((x[i] %in% units_ar) && convert) {
       x_new <- dplyr::case_when(
         y[i] < 1e4 ~ "m^2",
         y[i] < 1e6 ~ "ha",
@@ -186,7 +186,7 @@ fix_unit <- function(input,
     }
     
     # Convert speed units:
-    if ((x[i] %in% units_vl) & convert) {
+    if ((x[i] %in% units_vl) && convert) {
       x_new <- dplyr::case_when(
         y[i] < 0.01 ~ "m/s",
         y[i] < 0.25 ~ "km/day",
@@ -223,14 +223,14 @@ fix_unit <- function(input,
   out <- data.frame(value = y, unit = x)
   
   # Match all units to one unit (if length > 1):
-  if (match_all & length(value) > 1) {
+  if (match_all && length(value) > 1) {
     
     max_y <- sapply(seq_along(value),
                     function(i) value[i] %#% unit[i])
     max_index <- which.max(max_y)
     
     out_unit <- out[max_index, 2]
-    for (i in 1:nrow(out))
+    for (i in seq_len(nrow(out)))
       out[i,1] <- out_unit %#% out[i,1] %#% out[i,2] 
     out[, 2] <- rep(out_unit, nrow(out))
   }
@@ -511,9 +511,7 @@ get_true_speed <- function(data,
           } else {
             tau_v <- tau[["velocity"]]
           }
-          # truth <- weighted_average_speed(tau_v, fit, seed[[1]])
-          truth <- weighted_average_speed(tau_v, fit, rv$seedList[[1]])
-          
+          truth <- weighted_average_speed(tau_v, fit, seed[[1]])
         }
         
       } else {
@@ -929,8 +927,8 @@ extract_svf <- function(data, fit = NULL,
       VAR <- data.frame(svf = VAR$SVF,
                         dof = VAR$DOF,
                         lag = VAR$lag) %>%
-        dplyr::slice_min(lag, prop = fraction) %>%
-        dplyr::mutate(lag = x_unit %#% lag)
+        dplyr::slice_min(.data$lag, prop = fraction) %>%
+        dplyr::mutate(lag = x_unit %#% .data$lag)
       
       VAR$svf_lower <- y_unit %#% ( VAR$svf * CI.lower(VAR$dof, level) )
       VAR$svf_upper <- y_unit %#% ( VAR$svf * CI.upper(VAR$dof, level) )
@@ -1038,12 +1036,12 @@ extract_outputs <- function(obj,
   
   out <- dplyr::arrange(out, as.numeric(.data$id))
   out <- out %>% 
-    dplyr::mutate(lci = as.numeric(lci),
-                  est = as.numeric(est),
-                  uci = as.numeric(uci))
+    dplyr::mutate(lci = as.numeric(.data$lci),
+                  est = as.numeric(.data$est),
+                  uci = as.numeric(.data$uci))
   if (meta && length(obj) > 1) out <- rbind(out, out_meta)
   if (!is.null(groups)) out <- out %>%
-    dplyr::mutate(group = as.factor(group))
+    dplyr::mutate(group = as.factor(.data$group))
   else out$group <- out$subject
   return(out)
 }
@@ -1210,10 +1208,10 @@ simulate_gps <- function(data,
       newdata$dur_sec >= cutoff ~ "N"))
   } else { newdata$cutoff <- "Y" }
   
-  newdata$id <- 1:nrow(newdata)
+  newdata$id <- seq_len(nrow(newdata))
   newdata <- dplyr::left_join(
     newdata,
-    data %>% dplyr::select(dti, dti_scale, dti_yn),
+    data %>% dplyr::select(.data$dti, .data$dti_scale, .data$dti_yn),
     by = "dti")
   
   if (set_seed) set.seed(NULL)

@@ -54,11 +54,12 @@
     txt_nsim <- span(
       "Your mean error estimate based on",
       span(nsims, style = "font-weight: bold;"), "was",
-      wrap_none(round(rv$meta_tbl %>%
-                        dplyr::filter(group == "All") %>%
-                        dplyr::filter(type == set_target) %>%
-                        dplyr::slice(which.max(.data$m)) %>% 
-                        dplyr::pull(.data$error) * 100, 1), "%."))
+      wrap_none(round(
+        rv$meta_tbl %>%
+          dplyr::filter(.data$group == "All") %>%
+          dplyr::filter(.data$type == set_target) %>%
+          dplyr::slice(which.max(.data$m)) %>% 
+          dplyr::pull(.data$error) * 100, 1), "%."))
   }
   return(txt_nsim)
 }

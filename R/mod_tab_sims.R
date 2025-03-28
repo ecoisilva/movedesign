@@ -1101,22 +1101,22 @@ mod_tab_sims_server <- function(id, rv) {
       p <- ggplot2::ggplot() +
         ggplot2::geom_path(
           rv$datList[[1]], mapping = ggplot2::aes(
-            x = x, y = y),
+            x = .data$x, y = .data$y),
           col = "grey90", linewidth = 1) +
         ggplot2::geom_point(
           rv$datList[[1]], mapping = ggplot2::aes(
-            x = x, y = y),
+            x = .data$x, y = .data$y),
           col = "grey75", size = 1.2) +
         
         ggplot2::geom_path(
           newdat, mapping = ggplot2::aes(
-            x = x, y = y, color = timestamp),
+            x = .data$x, y = .data$y, color = timestamp),
           linewidth = 0.5, alpha = .6) +
         ggiraph::geom_point_interactive(
           newdat, mapping = ggplot2::aes(
-            x = x, y = y,
-            color = timestamp,
-            tooltip = timestamp),
+            x = .data$x, y = .data$y,
+            color = .data$timestamp,
+            tooltip = .data$timestamp),
           size = 1.5) +
         
         ggplot2::labs(
@@ -1236,19 +1236,23 @@ mod_tab_sims_server <- function(id, rv) {
       p <- ggplot2::ggplot() +
         
         ggplot2::geom_path(
-          data = datfull, mapping = ggplot2::aes(x = x, y = y),
+          data = datfull, mapping = ggplot2::aes(x = .data$x,
+                                                 y = .data$y),
           col = "grey90") +
         ggplot2::geom_point(
-          data = datfull, mapping = ggplot2::aes(x = x, y = y),
+          data = datfull, mapping = ggplot2::aes(x = .data$x,
+                                                 y = .data$y),
           col = "grey90", size = 2) +
         
         ggplot2::geom_path(
           data = dat,
-          mapping = ggplot2::aes(x = x, y = y, color = timestamp),
+          mapping = ggplot2::aes(x = .data$x, y = .data$y,
+                                 color = timestamp),
           size = 1.2) +
         ggplot2::geom_point(
           data = dat,
-          mapping = ggplot2::aes(x = x, y = y, color = timestamp),
+          mapping = ggplot2::aes(x = .data$x, y = .data$y,
+                                 color = timestamp),
           size = 2.5) +
         
         # Time elapsed:

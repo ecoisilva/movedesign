@@ -1336,10 +1336,10 @@ mod_tab_meta_server <- function(id, rv) {
       x_label <- paste0(x_label, out$unit[[1]], ")")
       p.all <- out %>%
         ggplot2::ggplot(
-          ggplot2::aes(x = est,
-                       y = id,
-                       group = as.factor(group),
-                       color = as.factor(group))) +
+          ggplot2::aes(x = .data$est,
+                       y = .data$id,
+                       group = as.factor(.data$group),
+                       color = as.factor(.data$group))) +
         
         ggplot2::geom_vline(xintercept = truth,
                             color = "black",
@@ -1360,11 +1360,12 @@ mod_tab_meta_server <- function(id, rv) {
         } +
         
         ggplot2::geom_point(
-          ggplot2::aes(shape = as.factor(group)),
+          ggplot2::aes(shape = as.factor(.data$group)),
           size = 3) +
         
         ggplot2::geom_linerange(
-          ggplot2::aes(xmin = lci, xmax = uci),
+          ggplot2::aes(xmin = .data$lci,
+                       xmax = .data$uci),
           linewidth = 2,
           alpha = 0.5) +
         
@@ -1376,10 +1377,11 @@ mod_tab_meta_server <- function(id, rv) {
         { if (rv$is_emulate)
           ggplot2::geom_point(
             data = out_truth,
-            mapping = ggplot2::aes(x = as.numeric(true_value),
-                                   y = id,
-                                   group = as.factor(group),
-                                   fill = "True area"),
+            mapping = ggplot2::aes(
+              x = as.numeric(.data$true_value),
+              y = .data$id,
+              group = as.factor(.data$group),
+              fill = "True area"),
             size = 3,
             shape = 4) } +
         
@@ -1432,11 +1434,11 @@ mod_tab_meta_server <- function(id, rv) {
       }
       
       # out <- rbind(rv$metaErr, rv$metaErr_groups) %>% 
-      #   dplyr::filter(type == set_analysis)
+      #   dplyr::filter(.data$type == set_analysis)
       #  out$truth <- rep(0, nrow(out))
       
       out <- rbind(rv$metaEst, rv$metaEst_groups) %>%
-        dplyr::filter(type == set_analysis)
+        dplyr::filter(.data$type == set_analysis)
       
       # x_label <- "Error (%)"
       if (set_analysis == "hr") {
@@ -1494,17 +1496,17 @@ mod_tab_meta_server <- function(id, rv) {
       
       x_label <- paste0(x_label, as.character(out$unit[1]), ")")
       x_color <- c("black", "#77b131", pal$sea)
-      x_shape <- c(15,16,17)
+      x_shape <- c(15, 16, 17)
       x_linetype <- c("solid", "dotted", "dotted")
       f <- .65
       
       p.groups <- out %>% 
         ggplot2::ggplot(
-          ggplot2::aes(x = est,
-                       y = id, 
-                       shape = as.factor(group),
-                       group = as.factor(group),
-                       color = as.factor(group))) +
+          ggplot2::aes(x = .data$est,
+                       y = .data$id, 
+                       shape = as.factor(.data$group),
+                       group = as.factor(.data$group),
+                       color = as.factor(.data$group))) +
         
         ggplot2::geom_vline(
           xintercept = truth,
@@ -1522,10 +1524,11 @@ mod_tab_meta_server <- function(id, rv) {
                             linetype = "solid") +
         
         ggplot2::geom_point(size = 4.5) +
-        ggplot2::geom_linerange(ggplot2::aes(xmin = lci,
-                                             xmax = uci),
-                                linewidth = 3,
-                                alpha = 0.5) +
+        ggplot2::geom_linerange(
+          ggplot2::aes(xmin = .data$lci,
+                       xmax = .data$uci),
+          linewidth = 3,
+          alpha = 0.5) +
         
         ggplot2::facet_grid(group ~ .,
                             switch = "y",
@@ -1626,9 +1629,9 @@ mod_tab_meta_server <- function(id, rv) {
       is_subpop <- rv$metaList_groups[["intro"]][[
         rv$set_analysis]]$logs$subpop_detected
       is_final_subpop <- out_all %>%
-        dplyr::filter(type == rv$set_analysis) %>% 
-        dplyr::filter(group == "All") %>%
-        dplyr::pull(subpop_detected)
+        dplyr::filter(.data$type == rv$set_analysis) %>% 
+        dplyr::filter(.data$group == "All") %>%
+        dplyr::pull(.data$subpop_detected)
       is_final_subpop <- ifelse(is_final_subpop == "FALSE", "No", "Yes")
       # Note: this refers to finding subpops within the population.
       
@@ -1651,7 +1654,7 @@ mod_tab_meta_server <- function(id, rv) {
                .data$error_lci, 
                .data$error_uci,
                .data$group)) %>%
-          dplyr::filter(type == rv$set_analysis) %>% 
+          dplyr::filter(.data$type == rv$set_analysis) %>% 
           dplyr::mutate(m == as.integer(.data$m)) %>% 
           tidyr::drop_na(.data$ratio_est) %>% 
           dplyr::distinct()
@@ -1744,7 +1747,7 @@ mod_tab_meta_server <- function(id, rv) {
                .data$error_lci,
                .data$error_uci,
                .data$group)) %>%
-          dplyr::filter(type == rv$set_analysis) %>% 
+          dplyr::filter(.data$type == rv$set_analysis) %>% 
           dplyr::distinct()
         req(all(!is.na(out$est)))
         req(nrow(out) > 0)
@@ -2040,7 +2043,7 @@ mod_tab_meta_server <- function(id, rv) {
     #     out_dt <- rv$sd$tbl[, -1]
     #   }
     #   
-    #   out_dt <- dplyr::select(out_dt, -data)
+    #   out_dt <- dplyr::select(out_dt, -.data$data)
     #   
     #   nms <- list(
     #     group = "Group:",
@@ -2123,7 +2126,7 @@ mod_tab_meta_server <- function(id, rv) {
       
       n_digits <- 1
       dt_meta <- rv$meta_tbl %>%
-        dplyr::filter(type == rv$set_analysis) %>% 
+        dplyr::filter(.data$type == rv$set_analysis) %>% 
         dplyr::select(-c(.data$overlaps, .data$type)) %>%
         dplyr::mutate(subpop = as.logical(.data$subpop_detected)) %>% 
         dplyr::select(
@@ -2247,7 +2250,7 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$metaErr,
           "Speed & distance" %in% rv$which_question)
       
-      tmp <- dplyr::filter(rv$metaErr, type == "ctsd")
+      tmp <- dplyr::filter(rv$metaErr, .data$type == "ctsd")
       req(nrow(tmp) > 0)
       
       mod_blocks_server(

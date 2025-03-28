@@ -473,15 +473,15 @@ mod_tab_report_server <- function(id, rv) {
       
       if (rv$which_meta == "none") {
         dat <- movedesign::sims_hrange[[1]] %>%
-          dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-          dplyr::mutate(duration = round("days" %#% duration, 1))
+          dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+          dplyr::mutate(duration = round("days" %#% .data$duration, 1))
         
         out_taup <- dat$tau_p[which.min(abs(dat$tau_p - input_taup))]
         out_dur <- dat$dur[which.min(abs(dat$dur - input_dur))]
         
         newdat <- dat %>%
-          dplyr::filter(tau_p == out_taup) %>%
-          dplyr::filter(duration == out_dur)
+          dplyr::filter(.data$tau_p == out_taup) %>%
+          dplyr::filter(.data$duration == out_dur)
         
       } else {
         req(rv$hr$tbl)
@@ -518,15 +518,15 @@ mod_tab_report_server <- function(id, rv) {
         rv$tau_p[[1]]$unit[2]
       
       dat <- movedesign::sims_hrange[[1]] %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-        dplyr::mutate(duration = round("days" %#% duration, 1))
+        dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
       out_taup <- dat$tau_p[which.min(abs(dat$tau_p - input_taup))]
       out_dur <- as.numeric(rv$highlight_dur)
       
       newdat <- dat %>%
-        dplyr::filter(tau_p == out_taup) %>%
-        dplyr::filter(duration == out_dur)
+        dplyr::filter(.data$tau_p == out_taup) %>%
+        dplyr::filter(.data$duration == out_dur)
       
       rv$hr_coi_new <- data.frame(
         lci = mean(newdat$error_lci, na.rm = TRUE),
@@ -554,16 +554,16 @@ mod_tab_report_server <- function(id, rv) {
       
       if (rv$which_meta == "none") {
         dat <- movedesign::sims_speed[[1]] %>%
-          dplyr::mutate(dur = round("days" %#% dur, 0))
+          dplyr::mutate(dur = round("days" %#% .data$dur, 0))
         
         out_tauv <- dat$tau_v[which.min(abs(dat$tau_v - input_tauv))]
         out_dti <- dat$dti[which.min(abs(dat$dti - input_dti))]
         out_dur <- dat$dur[which.min(abs(dat$dur - input_dur))]
         
         newdat <- dat %>%
-          dplyr::filter(tau_v == out_tauv) %>%
-          dplyr::filter(dur == out_dur) %>%
-          dplyr::filter(dti == out_dti)
+          dplyr::filter(.data$tau_v == out_tauv) %>%
+          dplyr::filter(.data$dur == out_dur) %>%
+          dplyr::filter(.data$dti == out_dti)
         
       } else {
         req(rv$sd$tbl)
@@ -606,8 +606,8 @@ mod_tab_report_server <- function(id, rv) {
         opts$dti[match(rv$highlight_dti, opts$dti_notes)], "seconds")
       
       newdat <- dat %>%
-        dplyr::filter(tau_v == out_tauv) %>%
-        dplyr::filter(dti == out_dti$value)
+        dplyr::filter(.data$tau_v == out_tauv) %>%
+        dplyr::filter(.data$dti == out_dti$value)
       
       rv$sd_coi_new <- data.frame(
         lci = mean(newdat$error_lci, na.rm = TRUE),
@@ -961,7 +961,7 @@ mod_tab_report_server <- function(id, rv) {
         }
         
         dti_options <- movedesign::sims_speed[[1]] %>%
-          dplyr::select(dti, dti_notes) %>%
+          dplyr::select(.data$dti, .data$dti_notes) %>%
           unique()
         
         index_dti <- which.min(
@@ -1256,8 +1256,8 @@ mod_tab_report_server <- function(id, rv) {
         }
         
       } else  {
-        hrmetaErr <- dplyr::filter(rv$metaErr, type == "hr")
-        sdmetaErr <- dplyr::filter(rv$metaErr, type == "ctsd")
+        hrmetaErr <- dplyr::filter(rv$metaErr, .data$type == "hr")
+        sdmetaErr <- dplyr::filter(rv$metaErr, .data$type == "ctsd")
         
         if (is.na(hrmetaErr$lci) || is.na(hrmetaErr$uci)) {
           out_hr_err <- span(
@@ -1354,6 +1354,16 @@ mod_tab_report_server <- function(id, rv) {
           rv$which_meta != "none")
       rv$report$meta <- out_meta <- span("")
       
+      set_target <- NULL
+      txt_target <- NULL
+      txt_title <- NULL
+      get_truth <- NULL
+      get_coi <- NULL
+      get_cri <- NULL
+      set_style_title <- NULL
+      txt_link_meta <- NULL
+      txt_ratio_order <- NULL
+  
       if (rv$which_meta == "none") {
         req(!rv$grouped)
       }
@@ -1891,7 +1901,7 @@ mod_tab_report_server <- function(id, rv) {
         req(rv$highlight_dti)
         
         opts <- movedesign::sims_speed[[1]] %>%
-          dplyr::select(dti, dti_notes) %>%
+          dplyr::select(.data$dti, .data$dti_notes) %>%
           unique()
         
         highlighted_dti <- opts$dti[
@@ -1975,8 +1985,8 @@ mod_tab_report_server <- function(id, rv) {
       input_dti <- rv$dti$value %#% rv$dti$unit
       
       dt_hr <- movedesign::sims_hrange[[1]] %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-        dplyr::mutate(duration = round("days" %#% duration, 1))
+        dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
       out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
       
@@ -1991,7 +2001,7 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       dt_sd <- movedesign::sims_speed[[1]] %>%
-        dplyr::mutate(dur = round("days" %#% dur, 1))
+        dplyr::mutate(dur = round("days" %#% .data$dur, 1))
       out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
       out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
       tauv_unit <- out_tauv$unit
@@ -2189,16 +2199,16 @@ mod_tab_report_server <- function(id, rv) {
       
       if (rv$which_meta == "none") {
         dt_hr <- movedesign::sims_hrange[[1]] %>%
-          dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-          dplyr::mutate(duration = round("days" %#% duration, 1))
+          dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+          dplyr::mutate(duration = round("days" %#% .data$duration, 1))
         
         out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
         dur_for_hr <- dt_hr$dur[which.min(abs(dt_hr$dur - input_dur))]
         
         # Create density data frames:
         ds1_hr <- dt_hr %>%
-          dplyr::filter(tau_p == out_taup) %>%
-          dplyr::filter(duration == dur_for_hr) %>%
+          dplyr::filter(.data$tau_p == out_taup) %>%
+          dplyr::filter(.data$duration == dur_for_hr) %>%
           stats::na.omit()
         
       } else {
@@ -2244,8 +2254,8 @@ mod_tab_report_server <- function(id, rv) {
             which.min()]
         
         ds2_hr <- dt_hr %>%
-          dplyr::filter(tau_p == out_taup) %>%
-          dplyr::filter(duration == out_dur_new) %>%
+          dplyr::filter(.data$tau_p == out_taup) %>%
+          dplyr::filter(.data$duration == out_dur_new) %>%
           stats::na.omit()
         med <- stats::median(ds2_hr$error)
         
@@ -2264,12 +2274,13 @@ mod_tab_report_server <- function(id, rv) {
           ds2_hr, x >= rv$hr_cri_new$lci & x <= rv$hr_cri_new$uci)
         
         hr_p1 <- ggplot2::geom_line(
-          data = ds2_hr, mapping = ggplot2::aes(x = x, y = y),
+          data = ds2_hr, mapping = ggplot2::aes(
+            x = .data$x, y = .data$y),
           col = pal$mdn, linetype = "dotted")
         
         hr_p2 <- ggplot2::geom_area(
           data = ci2_hr,
-          mapping = ggplot2::aes(x = x, y = y),
+          mapping = ggplot2::aes(x = .data$x, y = .data$y),
           alpha = 0.2, fill = pal$mdn)
         
         hr_p3 <- ggplot2::geom_segment(
@@ -2321,7 +2332,7 @@ mod_tab_report_server <- function(id, rv) {
                       "Probability density", "Density")
       
       p <- ds1_hr %>%
-        ggplot2::ggplot(ggplot2::aes(x = x, y = y)) +
+        ggplot2::ggplot(ggplot2::aes(x = .data$x, y = .data$y)) +
         ggplot2::geom_vline(xintercept = 0, alpha = 1) +
         
         { if (is_dur) hr_p1 } +
@@ -2334,7 +2345,7 @@ mod_tab_report_server <- function(id, rv) {
         { if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci))
           ggplot2::geom_area(
             data = ci1_hr,
-            mapping = ggplot2::aes(x = x, y = y, fill = "est"),
+            mapping = ggplot2::aes(x = .data$x, y = .data$y, fill = "est"),
             alpha = 0.4) } +
         
         { if (is_dur) hr_p3 } +
@@ -2471,10 +2482,10 @@ mod_tab_report_server <- function(id, rv) {
       # Prepare datasets:
       
       dt_sd <- movedesign::sims_speed[[1]] %>%
-        dplyr::mutate(dur = round("days" %#% dur, 0)) %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 0))
+        dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
+        dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 0))
       sd_opts <- movedesign::sims_speed[[1]] %>%
-        dplyr::mutate(dur = round("days" %#% dur, 0)) %>%
+        dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       
@@ -2488,9 +2499,9 @@ mod_tab_report_server <- function(id, rv) {
       # Create density data frames:
       
       ds1_sd <- dt_sd %>%
-        dplyr::filter(tau_v == out_tauv) %>%
-        dplyr::filter(dur == dur_for_sd) %>%
-        dplyr::filter(dti == out_dti) %>% 
+        dplyr::filter(.data$tau_v == out_tauv) %>%
+        dplyr::filter(.data$dur == dur_for_sd) %>%
+        dplyr::filter(.data$dti == out_dti) %>% 
         stats::na.omit()
       med <- stats::median(ds1_sd$error)
       
@@ -2518,9 +2529,9 @@ mod_tab_report_server <- function(id, rv) {
         rv$report$txt_dti_new <- txt_dti_new
         
         ds2_sd <- dt_sd %>%
-          dplyr::filter(tau_v == out_tauv) %>%
-          dplyr::filter(dur == dur_for_sd) %>%
-          dplyr::filter(dti == out_dti_new) %>%
+          dplyr::filter(.data$tau_v == out_tauv) %>%
+          dplyr::filter(.data$dur == dur_for_sd) %>%
+          dplyr::filter(.data$dti == out_dti_new) %>%
           stats::na.omit()
         med <- stats::median(ds2_sd$error)
         
@@ -2559,12 +2570,12 @@ mod_tab_report_server <- function(id, rv) {
           ds2_sd, x >= rv$sd_cri_new$lci & x <= rv$sd_cri_new$uci)
         
         sd_p1 <- ggplot2::geom_line(
-          data = ds2_sd, mapping = ggplot2::aes(x = x, y = y),
+          data = ds2_sd, mapping = ggplot2::aes(x = .data$x, y = .data$y),
           col = pal$mdn, linetype = "dotted")
         
         sd_p2 <- ggplot2::geom_area(
           data = ci2_sd,
-          mapping = ggplot2::aes(x = x, y = y),
+          mapping = ggplot2::aes(x = .data$x, y = .data$y),
           alpha = 0.2, fill = pal$mdn)
         
         sd_p3 <- ggplot2::geom_segment(
@@ -2620,7 +2631,7 @@ mod_tab_report_server <- function(id, rv) {
       output$repPlot_sd <- ggiraph::renderGirafe({
         
         p <- ds1_sd %>%
-          ggplot2::ggplot(ggplot2::aes(x = x, y = y)) +
+          ggplot2::ggplot(ggplot2::aes(x = .data$x, y = .data$y)) +
           ggplot2::geom_vline(xintercept = 0, alpha = 1) +
           
           {if (is_dti) sd_p1 } +
@@ -2633,7 +2644,9 @@ mod_tab_report_server <- function(id, rv) {
           { if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci))
             ggplot2::geom_area(
               data = ci1_sd,
-              mapping = ggplot2::aes(x = x, y = y, fill = "est"),
+              mapping = ggplot2::aes(x = .data$x,
+                                     y = .data$y,
+                                     fill = "est"),
               alpha = 0.4) } +
           
           { if (is_dti) sd_p3 } +
@@ -2738,8 +2751,8 @@ mod_tab_report_server <- function(id, rv) {
       input_dti <- rv$dti$value %#% rv$dti$unit
       
       dt_hr <- movedesign::sims_hrange[[1]] %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-        dplyr::mutate(duration = round("days" %#% duration, 1))
+        dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
       out_taup <- dt_hr$tau_p[which.min(abs(dt_hr$tau_p - input_taup))]
       
@@ -2757,13 +2770,13 @@ mod_tab_report_server <- function(id, rv) {
         input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
         
         dt_sd <- movedesign::sims_speed[[1]] %>%
-          dplyr::mutate(dur = round("days" %#% dur, 1))
+          dplyr::mutate(dur = round("days" %#% .data$dur, 1))
         out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
         out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
       }
       
       dt_sd <- movedesign::sims_speed[[1]] %>%
-        dplyr::mutate(dur = round(input_dur, 0)) %>%
+        dplyr::mutate(dur = round(.data$input_dur, 0)) %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       
@@ -3069,7 +3082,7 @@ mod_tab_report_server <- function(id, rv) {
 
       details <- details %>%
         dplyr::filter(!is.na(.data$value)) %>%
-        dplyr::mutate(group = factor(group,
+        dplyr::mutate(group = factor(.data$group,
                                      levels = c("est_new",
                                                 "est",
                                                 "now"))) %>%
@@ -3184,8 +3197,8 @@ mod_tab_report_server <- function(id, rv) {
       input_dti <- rv$dti$value %#% rv$dti$unit
       
       dat <- movedesign::sims_hrange[[1]] %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-        dplyr::mutate(duration = round("days" %#% duration, 1))
+        dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
       out_taup <- dat$tau_p[which.min(abs(dat$tau_p - input_taup))]
       
@@ -3220,7 +3233,7 @@ mod_tab_report_server <- function(id, rv) {
         "Speed & distance" = {
           
           dt_sd <- movedesign::sims_speed[[1]] %>%
-            dplyr::mutate(duration = round("days" %#% dur, 1)) %>%
+            dplyr::mutate(duration = round("days" %#% .data$dur, 1)) %>%
             dplyr::select(.data$duration) %>%
             unique()
           max_dur <- max(dt_sd$duration)
@@ -3270,8 +3283,8 @@ mod_tab_report_server <- function(id, rv) {
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       
       dat <- movedesign::sims_hrange[[2]] %>%
-        dplyr::mutate(tau_p = round("days" %#% tau_p, 1)) %>%
-        dplyr::mutate(duration = round("days" %#% duration, 1))
+        dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+        dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
       index_taup <- which.min(abs(dat$tau_p - input_taup))
       filtering <- dat$tau_p[index_taup]
@@ -3304,15 +3317,15 @@ mod_tab_report_server <- function(id, rv) {
       if (rv$highlight_dur > 0) {
         
         newdat <- dat_filtered %>%
-          dplyr::filter(duration == dur_NEW)
+          dplyr::filter(.data$duration == dur_NEW)
         y_start <- dplyr::pull(newdat, .data$error_lci)
         y_end <- dplyr::pull(newdat, .data$error_uci)
         
         p1 <- ggplot2::geom_segment(
-          ggplot2::aes(x = dur_NEW,
-                       xend = dur_NEW,
-                       y = y_start,
-                       yend = y_end),
+          ggplot2::aes(x = .data$dur_NEW,
+                       xend = .data$dur_NEW,
+                       y = .data$y_start,
+                       yend = .data$y_end),
           col = pal$mdn,
           linetype = "solid",
           size = 1.5, alpha = .8)
@@ -3423,11 +3436,11 @@ mod_tab_report_server <- function(id, rv) {
       
       sims <- movedesign::sims_speed[[2]]
       dat <- sims %>%
-        dplyr::mutate(dur = round("days" %#% dur, 0))
+        dplyr::mutate(dur = round("days" %#% .data$dur, 0))
       dat$id <- 1:nrow(dat)
       
       opts <- sims %>%
-        dplyr::select(dti, dti_notes) %>%
+        dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       
       if (reveal_if) {
@@ -3448,16 +3461,16 @@ mod_tab_report_server <- function(id, rv) {
       filtering_dti <- dat$dti[index_dti]
       
       dat_filtered <- dat %>%
-        dplyr::filter(tau_v == filtering_tauv) %>%
-        dplyr::filter(dti == filtering_dti) %>%
+        dplyr::filter(.data$tau_v == filtering_tauv) %>%
+        dplyr::filter(.data$dti == filtering_dti) %>%
         stats::na.omit()
       
       pd <- ggplot2::position_dodge(width = 0.6)
       
       if (reveal_if) {
         newdat <- dat %>%
-          dplyr::filter(tau_v == filtering_tauv) %>%
-          dplyr::filter(dti == dti_new) %>%
+          dplyr::filter(.data$tau_v == filtering_tauv) %>%
+          dplyr::filter(.data$dti == dti_new) %>%
           stats::na.omit()
       }
       

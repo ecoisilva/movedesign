@@ -735,8 +735,8 @@ plot_meta_permutations <- function(rv,
     
     out <- out %>% 
       dplyr::mutate(m = as.integer(.data$m)) %>% 
-      dplyr::filter(type == set_target)
-    if (subpop) out <- dplyr::filter(out, group != "All")
+      dplyr::filter(.data$type == set_target)
+    if (subpop) out <- dplyr::filter(out, .data$group != "All")
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
     
@@ -849,11 +849,11 @@ plot_meta_permutations <- function(rv,
     
     out <- out_all <- dplyr::distinct(rv$meta_tbl) %>% 
       dplyr::select(-c(.data$est, .data$lci, .data$uci)) %>%
-      dplyr::filter(type == set_target)
+      dplyr::filter(.data$type == set_target)
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
     
-    if (subpop) out <- dplyr::filter(out, group != "All")
+    if (subpop) out <- dplyr::filter(out, .data$group != "All")
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
     
@@ -888,8 +888,8 @@ plot_meta_permutations <- function(rv,
         set_target]]$logs$subpop_detected
       
       is_final_subpop <- out_all %>%
-        dplyr::filter(group == "All") %>%
-        dplyr::pull(subpop_detected)
+        dplyr::filter(.data$group == "All") %>%
+        dplyr::pull(.data$subpop_detected)
       is_final_subpop <- rep(is_final_subpop, each = 2)
       is_final_subpop <- out$is_final_subpop <- ifelse(
         is_final_subpop == "FALSE", "No", "Yes")

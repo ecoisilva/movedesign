@@ -1973,7 +1973,7 @@ mod_tab_design_server <- function(id, rv) {
         
         tmp <- gps_sim %>%
           dplyr::filter(.data$cutoff == "Y") %>%
-          dplyr::pull(id)
+          dplyr::pull(.data$id)
         
         if (length(tmp) > 3)
           gps_sim <- gps_sim %>% 
@@ -2478,10 +2478,10 @@ mod_tab_design_server <- function(id, rv) {
       x_scale <- data.frame(
         brks = device$gps %>%
           dplyr::filter(dti_yn == "Y") %>%
-          dplyr::pull(x),
+          dplyr::pull(.data$x),
         lbls = device$gps %>%
           dplyr::filter(dti_yn == "Y") %>%
-          dplyr::pull(dti_scale))
+          dplyr::pull(.data$dti_scale))
       
       p_x_scale <- ggplot2::scale_x_continuous(
         breaks = x_scale$brks,
@@ -2650,32 +2650,37 @@ mod_tab_design_server <- function(id, rv) {
         p <- ggplot2::ggplot() +
           ggplot2::geom_point(
             dat, mapping = ggplot2::aes(
-              x = x, y = y, fill = id), 
+              x = .data$x,
+              y = .data$y,
+              fill = .data$id), 
             color = "grey90", shape = 21, size = 1.4) +
           ggplot2::scale_fill_grey(start = .4) +
           
           ggplot2::geom_path(
             sim, mapping = ggplot2::aes(
-              x = x, y = y),
+              x = .data$x, 
+              y = .data$y),
             color = pal$grn,
             linewidth = .6, alpha = .8) +
           
           ggplot2::geom_path(
             sim_new, mapping = ggplot2::aes(
-              x = x, y = y),
+              x = .data$x, y = .data$y),
             color = pal$sea,
             linewidth = .6, alpha = .8) +
           
           ggiraph::geom_point_interactive(
             sim, mapping = ggplot2::aes(
-              x = x, y = y,
-              tooltip = timestamp),
+              x = .data$x, 
+              y = .data$y,
+              tooltip = .data$timestamp),
             color = pal$grn,
             size = 2.5) +
           ggiraph::geom_point_interactive(
             sim_new, mapping = ggplot2::aes(
-              x = x, y = y,
-              tooltip = timestamp),
+              x = .data$x,
+              y = .data$y,
+              tooltip = .data$timestamp),
             color = pal$sea,
             size = 2.5)
         
@@ -2684,21 +2689,25 @@ mod_tab_design_server <- function(id, rv) {
         p <- ggplot2::ggplot() +
           ggplot2::geom_point(
             dat, mapping = ggplot2::aes(
-              x = x, y = y, fill = id), 
+              x = .data$x,
+              y = .data$y,
+              fill = .data$id), 
             color = "grey90", shape = 21, size = 1.4) +
           ggplot2::scale_fill_grey(start = .4) +
           
             ggplot2::geom_path(
               sim, mapping = ggplot2::aes(
-                x = x, y = y,
-                color = timestamp),
+                x = .data$x,
+                y = .data$y,
+                color = .data$timestamp),
               linewidth = .6, alpha = .8) +
           
             ggiraph::geom_point_interactive(
               sim, mapping = ggplot2::aes(
-                x = x, y = y,
-                color = timestamp,
-                tooltip = timestamp),
+                x = .data$x,
+                y = .data$y,
+                color = .data$timestamp,
+                tooltip = .data$timestamp),
               size = 2.5)
         
       }
@@ -2897,7 +2906,7 @@ mod_tab_design_server <- function(id, rv) {
     output$devTable <- reactable::renderReactable({
       req(rv$which_question, rv$dev$tbl)
       
-      dt_dv <- dplyr::select(rv$dev$tbl, -c(seed, data))
+      dt_dv <- dplyr::select(rv$dev$tbl, -c(.data$seed, .data$data))
       if (!rv$grouped) {
         dt_dv <- dplyr::select(
           dt_dv, -c(group, .data$area:.data$dist_err))

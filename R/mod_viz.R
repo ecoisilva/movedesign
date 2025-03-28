@@ -612,8 +612,9 @@ mod_viz_server <- function(id, rv) {
       p <- ggplot2::ggplot(
         data = newdat, 
         ggplot2::aes(
-          x = x, y = y,
-          color = t, tooltip = t, data_id = t)) +
+          x = .data$x, y = .data$y,
+          color = .data$t, tooltip = .data$t,
+          data_id = .data$t)) +
 
         ggplot2::geom_path(alpha = .9) +
         ggiraph::geom_point_interactive(size = 1.2) +
