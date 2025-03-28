@@ -5,7 +5,7 @@
 #' @import shiny
 #' @noRd
 app_server <- function(input, output, session) {
-
+  
   ns <- session$ns
   
   species <- c(
@@ -92,9 +92,9 @@ app_server <- function(input, output, session) {
     restored = NULL)
   
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
-
+  
   keep_expanded <- function(x) {
-    x$children[[1]]$attribs$onclick = "event.stopPropagation()"
+    x$children[[1]]$attribs$onclick <- "event.stopPropagation()"
     x
   }
   
@@ -116,14 +116,14 @@ app_server <- function(input, output, session) {
     
     shinydashboard::sidebarMenu(
       id = "tabs",
-
+      
       # Tab 1: Home
       shinydashboard::menuItem(
         text = " Home",
         tabName = "about",
         icon = icon("house")
       ),
-
+      
       # Tab 2 and 3: Data
       keep_expanded(
         shinydashboard::menuItem(
@@ -132,29 +132,29 @@ app_server <- function(input, output, session) {
           text = "Species",
           icon = shiny::icon("paw"),
           startExpanded = TRUE,
-
+          
           if (is.null(rv$which_data) ||
-             rv$which_data == "Upload") {
+              rv$which_data == "Upload") {
             shinydashboard::menuSubItem(
               tabName = "data_upload",
               text = info$upload[["title"]],
               icon = shiny::icon(info$upload[["icon"]])) },
-
+          
           if (is.null(rv$which_data) ||
-             rv$which_data == "Select") {
+              rv$which_data == "Select") {
             shinydashboard::menuSubItem(
               tabName = "data_select",
               text = info$select[["title"]],
               icon = shiny::icon(info$select[["icon"]])) },
-
+          
           if (is.null(rv$which_data) ||
-             rv$which_data == "Simulate") {
+              rv$which_data == "Simulate") {
             shinydashboard::menuSubItem(
               tabName = "sims",
               text = info$sims[["title"]],
               icon = shiny::icon(info$sims[["icon"]])) }
         )),
-
+      
       # Tab 4: Device
       keep_expanded(
         shinydashboard::menuItem(
@@ -163,13 +163,13 @@ app_server <- function(input, output, session) {
           text = "Device",
           icon = shiny::icon("location-dot"),
           startExpanded = TRUE,
-
+          
           shinydashboard::menuSubItem(
             tabName = "device",
             text = info$design[["title"]],
             icon = shiny::icon(info$design[["icon"]]))
         )),
-
+      
       # Tab 5 and 6: Analyses
       keep_expanded(
         shinydashboard::menuItem(
@@ -178,14 +178,14 @@ app_server <- function(input, output, session) {
           text = "Analyses",
           icon = shiny::icon("compass-drafting"),
           startExpanded = TRUE,
-
+          
           if (is.null(rv$which_question) ||
               "Home range" %in% rv$which_question) {
             shinydashboard::menuSubItem(
               tabName = "hr",
               text = info$hr[["title"]],
               icon = shiny::icon(info$hr[["icon"]])) },
-
+          
           if (is.null(rv$which_question) ||
               "Speed & distance" %in% rv$which_question) {
             shinydashboard::menuSubItem(
@@ -207,30 +207,30 @@ app_server <- function(input, output, session) {
         tabName = "report",
         icon = icon("box-archive")
       ), tags$hr(),
-
+      
       # Source code:
       shinydashboard::menuItem(
         text = "Source code",
         icon = icon("code"),
         href = "https://github.com/ecoisilva/movedesign")
-
+      
     ) # end of sidebarMenu
   }) # end of renderMenu
-
+  
   observe({
     rv$active_tab <- input$tabs
   }) %>% bindEvent(input$tabs)
   
   # Tabs: -----------------------------------------------------------------
-
+  
   # About/workflow:
   mod_tab_about_server("tab_about_1", rv = rv)
-
+  
   # Data tabs:
   mod_tab_data_upload_server("tab_data_upload_1", rv = rv)
   mod_tab_data_select_server("tab_data_select_1", rv = rv)
   mod_tab_sims_server("tab_sims_1", rv = rv)
-
+  
   # Device tab:
   mod_tab_design_server("tab_design_1", rv = rv)
   
@@ -238,10 +238,10 @@ app_server <- function(input, output, session) {
   mod_tab_hrange_server("tab_hrange_1", rv = rv)
   mod_tab_ctsd_server("tab_ctsd_1", rv = rv)
   mod_tab_meta_server("tab_meta_1", rv = rv)
-
+  
   # Report tab:
   mod_tab_report_server("tab_report_1", rv = rv)
-
+  
   # Misc: -----------------------------------------------------------------
   
   # Number of tags to deploy:
@@ -262,15 +262,15 @@ app_server <- function(input, output, session) {
   
   # Header and control tabs:
   mod_comp_settings_server("comp_settings_1", rv = rv)
-
+  
   # Interactive tour:
   mod_comp_tour_server("tour_1", rv = rv)
   
   # Alerts:
   mod_comp_alerts_server("comp_alerts_1", rv = rv)
-
+  
   # -----------------------------------------------------------------------
-
+  
   # Table theme:
   options(reactable.theme = reactable::reactableTheme(
     rowSelectedStyle = list(
@@ -287,5 +287,5 @@ app_server <- function(input, output, session) {
   #   # # print(ls(envir = .GlobalEnv))
   # 
   # }) # end of onStop
-
+  
 }
