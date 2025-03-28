@@ -16,7 +16,7 @@ test_that("{abbrv_unit}, Unit abbreviation function", {
            "km/h", "m/s",
            "km/day" , "m/day")
   
-  for (i in 1:length(ini)) {
+  for (i in seq_along(ini)) {
     expect_equal(
       movedesign:::abbrv_unit(ini[i]),
       out[i])
