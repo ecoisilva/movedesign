@@ -217,11 +217,7 @@ mod_tab_ctsd_ui <- function(id) {
                     
                     ggiraph::girafeOutput(
                       outputId = ns("sdPlot_path"),
-                      width = "100%", height = "100%")) %>%
-                  shinycssloaders::withSpinner(
-                    type = getOption("spinner.type", default = 7),
-                    color = getOption("spinner.color",
-                                      default = "#f4f4f4")),
+                      width = "100%", height = "100%")),
                 
                 div(
                   class = "col-xs-12 col-sm-12 col-md-12 col-lg-4",
@@ -2456,14 +2452,23 @@ mod_tab_ctsd_server <- function(id, rv) {
     output$sdTable <- reactable::renderReactable({
       req(rv$sd$tbl, rv$ctsdList)
       
-      dt_sd <- dplyr::select(rv$sd$tbl, -seed)
+      dt_sd <- dplyr::select(rv$sd$tbl, -.data$seed)
       
       if (!rv$grouped) {
         dt_sd <- dplyr::select(
-          dt_sd, -c(device, group, taup, sigma, N1, area:area_err_max))
+          dt_sd, -c(.data$device,
+                    .data$group,
+                    .data$taup,
+                    .data$sigma,
+                    .data$N1,
+                    .data$area:.data$area_err_max))
       } else {
         dt_sd <- dplyr::select(
-          dt_sd, -c(device, taup, sigma, N1, area:area_err_max))
+          dt_sd, -c(.data$device,
+                    .data$taup,
+                    .data$sigma,
+                    .data$N1,
+                    .data$area:.data$area_err_max))
       }
       
       nms <- list(
@@ -2498,12 +2503,12 @@ mod_tab_ctsd_server <- function(id, rv) {
                         nms_dist)
       
       if (length(unique(dt_sd$data)) == 1) {
-        dt_sd <- dplyr::select(dt_sd, -data)
+        dt_sd <- dplyr::select(dt_sd, -.data$data)
         nms <- nms[-1]
         colgroups <- colgroups[-1]
       }
       
-      if (rv$grouped) dt_sd <- dplyr::rename(dt_sd,  Group = group)
+      if (rv$grouped) dt_sd <- dplyr::rename(dt_sd, Group = group)
       
       reactable::reactable(
         data = dt_sd,

@@ -305,13 +305,7 @@ mod_tab_sims_ui <- function(id) {
                     
                     ggiraph::girafeOutput(
                       outputId = ns("simPlot_id"),
-                      width = "100%", height = "100%") %>%
-                      shinycssloaders::withSpinner(
-                        type = getOption("spinner.type", default = 4),
-                        size = getOption("spinner.size", default = 1.5),
-                        color = getOption("spinner.color",
-                                          default = "#f4f4f4"),
-                        proxy.height = "300px"), p()
+                      width = "100%", height = "100%"), p()
                     
                   ), # end of panels (1 out of 3)
                   

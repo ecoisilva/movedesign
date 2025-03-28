@@ -727,7 +727,8 @@ mod_tab_data_upload_server <- function(id, rv) {
         rv$species <- species
       }
       
-      parsedate::parse_date("1111-11-11") # loading function
+      parsedate::parse_date("1111-11-11")
+      
       out_dataset <- tryCatch(
         ctmm::as.telemetry(out_dataset, timeformat = "auto"),
         error = function(e) e) %>%
@@ -1523,37 +1524,35 @@ mod_tab_data_upload_server <- function(id, rv) {
       req(length(rv$sigma) == 1)
       req(rv$datList, rv$fitList, rv$groups)
       
-      dat <- list(A = rv$datList[rv$groups[[1]]$A],
-                  B = rv$datList[rv$groups[[1]]$B])
       fit <- list(A = rv$fitList[rv$groups[[1]]$A],
                   B = rv$fitList[rv$groups[[1]]$B])
       
-      lapply(1:2, function(x) {
+      rv$sigma <- c(rv$sigma, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]],
           name = "sigma", meta = TRUE)[[1]]
-      }) %>% c(rv$sigma, .) -> rv$sigma
+      }))
       names(rv$sigma) <- c("All", "A", "B") 
       
-      lapply(1:2, function(x) {
+      rv$tau_p <- c(rv$tau_p, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]], 
           name = "position", meta = TRUE)[[1]]
-      }) %>% c(rv$tau_p, .) -> rv$tau_p
+      }))
       names(rv$tau_p) <- c("All", "A", "B") 
       
-      lapply(1:2, function(x) {
+      rv$tau_v <- c(rv$tau_v, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]], 
           name = "velocity", meta = TRUE)[[1]]
-      }) %>% c(rv$tau_v, .) -> rv$tau_v
+      }))
       names(rv$tau_v) <- c("All", "A", "B") 
       
-      lapply(1:2, function(x) {
+      rv$speed <- c(rv$speed, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]],
           name = "speed", meta = TRUE)[[1]]
-      }) %>% c(rv$speed, .) -> rv$speed
+      }))
       names(rv$speed) <- c("All", "A", "B") 
       
       rv$mu <- list(array(0, dim = 2, 
@@ -1562,7 +1561,7 @@ mod_tab_data_upload_server <- function(id, rv) {
                           dimnames = list(c("x", "y"))),
                     array(0, dim = 2, 
                           dimnames = list(c("x", "y"))))
-      names(rv$mu) <- c("All", "A", "B")
+      names(rv$mu) <- c("All", "A", "B") 
       
       rv$proceed <- NULL
       

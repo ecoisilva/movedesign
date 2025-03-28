@@ -275,7 +275,7 @@ mod_tab_data_select_server <- function(id, rv) {
                   "sizes",
                   "misc")
     
-    for (i in 1:length(boxnames)) {
+    for (i in seq_along(boxnames)) {
       shinyjs::hide(id = paste0("selectBox_", boxnames[i]))
     }
     
@@ -555,7 +555,7 @@ mod_tab_data_select_server <- function(id, rv) {
         "total" = c(0, 0))
       
       rv$data_type <- "selected"
-      index <- rownames(rv$ctmm) %>% match(x = input$sp_selected)
+      index <- match(rownames(rv$ctmm), x = input$sp_selected)
       rv$species_common <- rv$ctmm[index, 1]
       rv$species_binom <- rv$ctmm[index, 2]
       
@@ -1105,38 +1105,35 @@ mod_tab_data_select_server <- function(id, rv) {
       req(length(rv$sigma) == 1)
       req(rv$datList, rv$fitList, rv$groups)
       
-      dat <- list(A = rv$datList[rv$groups[[1]]$A],
-                  B = rv$datList[rv$groups[[1]]$B])
       fit <- list(A = rv$fitList[rv$groups[[1]]$A],
                   B = rv$fitList[rv$groups[[1]]$B])
       
-      
-      lapply(1:2, function(x) {
+      rv$sigma <- c(rv$sigma, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]],
           name = "sigma", meta = TRUE)[[1]]
-      }) %>% c(rv$sigma, .) -> rv$sigma
+      }))
       names(rv$sigma) <- c("All", "A", "B") 
       
-      lapply(1:2, function(x) {
+      rv$tau_p <- c(rv$tau_p, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]], 
           name = "position", meta = TRUE)[[1]]
-      }) %>% c(rv$tau_p, .) -> rv$tau_p
+      }))
       names(rv$tau_p) <- c("All", "A", "B") 
 
-      lapply(1:2, function(x) {
+      rv$tau_v <- c(rv$tau_v, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]], 
           name = "velocity", meta = TRUE)[[1]]
-      }) %>% c(rv$tau_v, .) -> rv$tau_v
+      }))
       names(rv$tau_v) <- c("All", "A", "B") 
       
-      lapply(1:2, function(x) {
+      rv$speed <- c(rv$speed, lapply(1:2, function(x) {
         extract_pars(
           obj = fit[[x]],
           name = "speed", meta = TRUE)[[1]]
-      }) %>% c(rv$speed, .) -> rv$speed
+      }))
       names(rv$speed) <- c("All", "A", "B") 
       
       rv$mu <- list(array(0, dim = 2, 

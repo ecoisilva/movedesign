@@ -70,11 +70,7 @@ mod_viz_ui <- function(id) {
             
             ggiraph::girafeOutput(
               outputId = ns("vizPlot_id"),
-              width = "100%", height = "100%") %>%
-              shinycssloaders::withSpinner(
-                type = getOption("spinner.type", default = 7),
-                color = getOption("spinner.color",
-                                  default = "#f4f4f4"))
+              width = "100%", height = "100%")
         ),
 
         div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-6",
@@ -684,7 +680,7 @@ mod_viz_server <- function(id, rv) {
         else dat <- dat[rv$id]
       }
       
-      out <- plotting_outlier(dat, rv$is_font)
+      out <- plotting_outliers(dat, rv$is_font)
       ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
       
       # shinyFeedback::showToast(
@@ -774,7 +770,8 @@ mod_viz_server <- function(id, rv) {
       sum_col2 <- grep("interval", names(out_sum))
       out_sum[, sum_col1] <- round(out_sum[sum_col1], 1)
       out_sum[, sum_col2] <- round(out_sum[sum_col2], 1)
-      out_sum <- dplyr::select(out_sum, -longitude, -latitude)
+      out_sum <- dplyr::select(out_sum,
+                               -c(.data$longitude, .data$latitude))
       
       if (!is.null(rv$fitList)) {
         

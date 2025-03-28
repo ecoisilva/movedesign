@@ -1642,27 +1642,34 @@ mod_tab_meta_server <- function(id, rv) {
         req(rv$meta_tbl_resample)
         
         out <- rv$meta_tbl_resample %>% 
-          dplyr::select(-c(truth, est, lci, uci,
-                           error, error_lci, error_uci, group)) %>%
+          dplyr::select(
+            -c(.data$truth,
+               .data$est, 
+               .data$lci, 
+               .data$uci,
+               .data$error, 
+               .data$error_lci, 
+               .data$error_uci,
+               .data$group)) %>%
           dplyr::filter(type == rv$set_analysis) %>% 
-          dplyr::mutate(m == as.integer(m)) %>% 
-          tidyr::drop_na(ratio_est) %>% 
+          dplyr::mutate(m == as.integer(.data$m)) %>% 
+          tidyr::drop_na(.data$ratio_est) %>% 
           dplyr::distinct()
         
         max_samples <- max(unique(out$sample))
         
         out_mean <- out %>% 
-          dplyr::group_by(type, m) %>% 
+          dplyr::group_by(.data$type, .data$m) %>% 
           dplyr::summarize(
             n = dplyr::n(),
-            ratio_est = mean(ratio_est, na.rm = TRUE),
-            ratio_lci = mean(ratio_lci, na.rm = TRUE),
-            ratio_uci = mean(ratio_uci, na.rm = TRUE)) %>%
+            ratio_est = mean(.data$ratio_est, na.rm = TRUE),
+            ratio_lci = mean(.data$ratio_lci, na.rm = TRUE),
+            ratio_uci = mean(.data$ratio_uci, na.rm = TRUE)) %>%
           dplyr::rowwise() %>%
           dplyr::mutate(
             color = dplyr::case_when(
-              (ratio_lci < truth[[rv$set_analysis]] &
-                 ratio_uci > truth[[rv$set_analysis]]) ~ "Yes",
+              (.data$ratio_lci < truth[[rv$set_analysis]] &
+                 .data$ratio_uci > truth[[rv$set_analysis]]) ~ "Yes",
               TRUE ~ "No")) %>% 
           quiet() %>% 
           suppressMessages() %>% 
@@ -1676,10 +1683,10 @@ mod_tab_meta_server <- function(id, rv) {
         
         p.ratio.optimal <- out_mean %>% 
           ggplot2::ggplot(
-            ggplot2::aes(x = as.factor(m),
-                         y = ratio_est,
-                         fill = m,
-                         color = color)) +
+            ggplot2::aes(x = as.factor(.data$m),
+                         y = .data$ratio_est,
+                         fill = .data$m,
+                         color = .data$color)) +
           
           ggplot2::geom_hline(
             yintercept = truth[[rv$set_analysis]],
@@ -1688,15 +1695,15 @@ mod_tab_meta_server <- function(id, rv) {
           
           ggplot2::geom_jitter(
             data = out,
-            mapping = ggplot2::aes(x = as.factor(m),
-                                   y = ratio_est,
-                                   color = color),
+            mapping = ggplot2::aes(x = as.factor(.data$m),
+                                   y = .data$ratio_est,
+                                   color = .data$color),
             position = ggplot2::position_jitterdodge(dodge.width = 0.4),
             size = 2, color = "grey80", alpha = 0.9) +
           
           ggplot2::geom_linerange(
-            ggplot2::aes(ymin = ratio_lci,
-                         ymax = ratio_uci),
+            ggplot2::aes(ymin = .data$ratio_lci,
+                         ymax = .data$ratio_uci),
             show.legend = TRUE,
             position = ggplot2::position_dodge(width = 0.4),
             linewidth = 2.2, alpha = 0.3) +
@@ -1728,8 +1735,15 @@ mod_tab_meta_server <- function(id, rv) {
       } else {
         
         out <- out_all %>% 
-          dplyr::select(-c(truth, est, lci, uci,
-                           error, error_lci, error_uci, group)) %>%
+          dplyr::select(
+            -c(.data$truth,
+               .data$est,
+               .data$lci,
+               .data$uci,
+               .data$error, 
+               .data$error_lci,
+               .data$error_uci,
+               .data$group)) %>%
           dplyr::filter(type == rv$set_analysis) %>% 
           dplyr::distinct()
         req(all(!is.na(out$est)))
@@ -1746,9 +1760,9 @@ mod_tab_meta_server <- function(id, rv) {
         
         p.ratio.optimal <- out %>%
           ggplot2::ggplot(
-            ggplot2::aes(x = as.factor(m),
-                         y = ratio_est,
-                         color = color)) +
+            ggplot2::aes(x = as.factor(.data$m),
+                         y = .data$ratio_est,
+                         color = .data$color)) +
           
           ggplot2::geom_hline(
             yintercept = truth[[rv$set_analysis]],
@@ -1758,8 +1772,8 @@ mod_tab_meta_server <- function(id, rv) {
             size = 4,
             position = ggplot2::position_dodge(width = dodge_width)) +
           ggplot2::geom_linerange(
-            ggplot2::aes(ymin = ratio_lci,
-                         ymax = ratio_uci),
+            ggplot2::aes(ymin = .data$ratio_lci,
+                         ymax = .data$ratio_uci),
             position = ggplot2::position_dodge(width = dodge_width)) +
           
           ggplot2::labs(
@@ -1770,13 +1784,11 @@ mod_tab_meta_server <- function(id, rv) {
           
           ggplot2::scale_y_continuous(breaks = scales::breaks_pretty()) +
           ggplot2::scale_color_manual(values = pal_values) +
-          # ggplot2::scale_shape_manual("Group:", values = c(16,17)) +
           theme_movedesign(font_available = rv$is_font) +
           ggplot2::theme(
             legend.position = "bottom",
             plot.title = ggtext::element_markdown(
               size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
-        
       }
       
       ggiraph::girafe(
@@ -1823,17 +1835,17 @@ mod_tab_meta_server <- function(id, rv) {
         
       out <- rv$meta_tbl_loocv %>% 
         dplyr::mutate(overlaps = dplyr::between(
-          error, -rv$error_threshold, rv$error_threshold)) %>% 
+          .data$error, -rv$error_threshold, rv$error_threshold)) %>% 
         dplyr::mutate(overlaps = factor(
-          overlaps, levels = c("TRUE", "FALSE"))) %>% 
+          .data$overlaps, levels = c("TRUE", "FALSE"))) %>% 
         dplyr::distinct()
       
       p.loocv <- out %>%
         ggplot2::ggplot(
-          ggplot2::aes(x = x,
-                       y = error,
-                       group = group,
-                       color = overlaps)) +
+          ggplot2::aes(x = .data$x,
+                       y = .data$error,
+                       group = .data$group,
+                       color = .data$overlaps)) +
         
         ggplot2::geom_hline(
           yintercept = rv$error_threshold,
@@ -1855,8 +1867,8 @@ mod_tab_meta_server <- function(id, rv) {
           size = 2) +
         
         ggplot2::geom_linerange(
-          ggplot2::aes(ymin = error_lci,
-                       ymax = error_uci),
+          ggplot2::aes(ymin = .data$error_lci,
+                       ymax = .data$error_uci),
           show.legend = TRUE,
           position = ggplot2::position_dodge(width = 0.4),
           linewidth = 2.2, alpha = 0.3) +
@@ -1871,8 +1883,6 @@ mod_tab_meta_server <- function(id, rv) {
         ggplot2::scale_x_continuous(breaks = scales::breaks_pretty()) +
         ggplot2::scale_y_continuous(labels = scales::percent,
                                     breaks = scales::breaks_pretty()) +
-        # ggplot2::scale_shape_manual("Group:", values = c(16,17)) +
-        
         theme_movedesign(font_available = rv$is_font) +
         ggplot2::theme(
           legend.position = "bottom",
@@ -2114,9 +2124,15 @@ mod_tab_meta_server <- function(id, rv) {
       n_digits <- 1
       dt_meta <- rv$meta_tbl %>%
         dplyr::filter(type == rv$set_analysis) %>% 
-        dplyr::select(-overlaps, -type) %>%
-        dplyr::mutate(subpop = as.logical(subpop_detected)) %>% 
-        dplyr::select(m, error_lci, error, error_uci, group, subpop)
+        dplyr::select(-c(.data$overlaps, .data$type)) %>%
+        dplyr::mutate(subpop = as.logical(.data$subpop_detected)) %>% 
+        dplyr::select(
+          .data$m,
+          .data$error_lci,
+          .data$error,
+          .data$error_uci,
+          .data$group,
+          .data$subpop)
       
       dt_meta$subpop <- ifelse(dt_meta$subpop, "Yes", "No")
       

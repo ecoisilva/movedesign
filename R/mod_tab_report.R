@@ -727,6 +727,8 @@ mod_tab_report_server <- function(id, rv) {
           rv$is_analyses,
           rv$simList)
       
+      N1 <- N2 <- NULL
+      
       if ("Home range" %in% rv$which_question) req(rv$hr_completed)
       if ("Speed & distance" %in% rv$which_question) req(rv$sd_completed)
       
@@ -1013,7 +1015,7 @@ mod_tab_report_server <- function(id, rv) {
           
           txt_nsim <- .get_txt_nsim(rv, set_target = "ctsd")
           
-          out_analyses <- out_ctsd <- p(
+          out_analyses <- p(
             txt_sd,
             txt_nsim,
             txt_sd_extra)
@@ -1024,7 +1026,7 @@ mod_tab_report_server <- function(id, rv) {
           if (is.na(hr_cri[1]) || 
               is.na(hr_cri[3])) txt_sd_extra <- txt_meta_no_ci
           
-          out_analyses <- out_ctsd <- p(
+          out_analyses <- p(
             txt_sd, 
             txt_sd_extra)
         }
@@ -1083,9 +1085,9 @@ mod_tab_report_server <- function(id, rv) {
         hrErr_uci <- .err_to_txt(rv[["hrErr"]]$uci)
       } else {
         tmp <- rv$meta_tbl %>%
-          dplyr::filter(group == "All") %>%
-          dplyr::filter(type == "hr") %>%
-          dplyr::slice(which.max(m))
+          dplyr::filter(.data$group == "All") %>%
+          dplyr::filter(.data$type == "hr") %>%
+          dplyr::slice(which.max(.data$m))
         hrErr_lci <- tmp[["error_lci"]]
         hrErr_est <- tmp[["error"]]
         hrErr_uci <- tmp[["error_uci"]]
@@ -1383,18 +1385,21 @@ mod_tab_report_server <- function(id, rv) {
         truth <- tmpunit %#% get_truth[[target]]
         
         meta_dt <- meta[1, ] %>% 
-          dplyr::mutate(error_est = (est - truth)/truth,
-                        error_lci = (lci - truth)/truth,
-                        error_uci = (uci - truth)/truth) %>% 
-          dplyr::select(error_est, error_lci, error_uci) %>% 
+          dplyr::mutate(
+            error_est = (.data$est - truth)/truth,
+            error_lci = (.data$lci - truth)/truth,
+            error_uci = (.data$uci - truth)/truth) %>% 
+          dplyr::select(.data$error_est,
+                        .data$error_lci,
+                        .data$error_uci) %>% 
           dplyr::rowwise() %>%
           dplyr::mutate(
             within_threshold = 
-              (error_est >= -rv$error_threshold &
-                 error_est <= rv$error_threshold),
+              (.data$error_est >= -rv$error_threshold &
+                 .data$error_est <= rv$error_threshold),
             overlaps_with_threshold = 
-              (error_lci <= rv$error_threshold & 
-                 error_uci >= -rv$error_threshold),
+              (.data$error_lci <= rv$error_threshold & 
+                 .data$error_uci >= -rv$error_threshold),
             status = dplyr::case_when(
               within_threshold ~ "Yes",
               !within_threshold & overlaps_with_threshold ~ "Near",
@@ -3300,8 +3305,8 @@ mod_tab_report_server <- function(id, rv) {
         
         newdat <- dat_filtered %>%
           dplyr::filter(duration == dur_NEW)
-        y_start <- newdat %>% dplyr::pull(error_lci)
-        y_end <- newdat %>% dplyr::pull(error_uci)
+        y_start <- dplyr::pull(newdat, .data$error_lci)
+        y_end <- dplyr::pull(newdat, .data$error_uci)
         
         p1 <- ggplot2::geom_segment(
           ggplot2::aes(x = dur_NEW,
@@ -3568,15 +3573,15 @@ mod_tab_report_server <- function(id, rv) {
       if ("Home range" %in% rv$which_question) {
         req(rv$hr$tbl)
         dt_hr <- rv$hr$tbl
-        dt_hr <- dt_hr %>% dplyr::filter(data == "Initial") 
-        dt_hr <- dt_hr %>% dplyr::slice_tail(n = n_sims)
+        dt_hr <- dplyr::filter(dt_hr, .data$data == "Initial") 
+        dt_hr <- dplyr::slice_tail(dt_hr, n = n_sims)
       }
       
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$sd$tbl)
         dt_sd <- rv$sd$tbl
-        dt_sd <- dt_sd %>% dplyr::filter(data == "Initial") 
-        dt_sd <- dt_sd %>% dplyr::slice_tail(n = n_sims)
+        dt_sd <- dplyr::filter(dt_sd, .data$data == "Initial") 
+        dt_sd <- dplyr::slice_tail(dt_sd, n = n_sims)
       }
       
       dat <- data.frame(
@@ -3594,7 +3599,7 @@ mod_tab_report_server <- function(id, rv) {
       tmpdat <- suppressMessages(dplyr::full_join(dat, dt_dv))
       
       if ("Home range" %in% rv$which_question) {
-        tmphr <- dt_hr %>% dplyr::select(-c(device))
+        tmphr <- dt_hr %>% dplyr::select(-c(.data$device))
         tmpdat <- suppressMessages(
           tmpdat %>%
             dplyr::group_by(seed) %>% 
@@ -3699,15 +3704,15 @@ mod_tab_report_server <- function(id, rv) {
         dist = "Distance",
         dist_err = "Error")
       
-      dat <- rv$report$tbl %>% 
-        dplyr::select(-c(device, seed))
+      dat <- dplyr::select(rv$report$tbl, 
+                           -c(.data$device, .data$seed))
       if (!rv$grouped) {
-        dat <- dplyr::select(dat, -group)
+        dat <- dplyr::select(dat, -.data$group)
         choices_subset <- choices_subset[-1]
       }
       
       if (!is.null(choices_subset)) {
-        dat <- dat %>% dplyr::select(choices_subset)
+        dat <- dplyr::select(dat, .data$choices_subset)
       }
       
       if ("Home range" %in% rv$which_question) {

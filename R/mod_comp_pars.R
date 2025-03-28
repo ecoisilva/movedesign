@@ -319,7 +319,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       pars <- pars %>% tidyr::pivot_wider(
         names_from = variable,
         values_from = value) %>% 
-        dplyr::mutate(m = as.factor(m))
+        dplyr::mutate(m = as.factor(.data$m))
       
       max_index <- which.max(
         sapply(seq_along(pars$est),
@@ -344,16 +344,18 @@ mod_comp_pars_server <- function(id, rv, set_type) {
           high = out_unit %#% out[1, 3])
       
       if (rv$grouped) {
-        pars <- pars %>%
-          dplyr::mutate(group = dplyr::case_when(
-            m %in% unlist(rv$groups[[1]]["A"]) ~ "Group A",
-            m %in% unlist(rv$groups[[1]]["B"]) ~ "Group B",
+        pars <- dplyr::mutate(
+          pars,
+          group = dplyr::case_when(
+            .data$m %in% unlist(rv$groups[[1]]["A"]) ~ "Group A",
+            .data$m %in% unlist(rv$groups[[1]]["B"]) ~ "Group B",
             TRUE ~ ""))
         x_color <- c(pal$sea, "black", "grey50")
         f <- .65
       } else {
-        pars <- pars %>% dplyr::mutate(group = ifelse(
-          m == "All", "All", "Individuals"))
+        pars <- dplyr::mutate(
+          pars, group = ifelse(.data$m == "All",
+                               "All", "Individuals"))
         x_color <- c(pal$sea, "black")
         x_axis_color <- c(pal$sea, rep("black", length(datList)))
         f <- .3
@@ -362,23 +364,24 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       pars$m <- factor(pars$m, levels = c("All", nms))
       
       p.all <- pars %>% 
-        ggplot2::ggplot(ggplot2::aes(x = est, y = m, color = group)) +
+        ggplot2::ggplot(ggplot2::aes(x = .data$est,
+                                     y = .data$m,
+                                     color = .data$group)) +
         ggplot2::geom_point(size = 3) +
-        ggplot2::geom_linerange(ggplot2::aes(xmin = low,
-                                             xmax = high)) +
+        ggplot2::geom_linerange(ggplot2::aes(xmin = .data$low,
+                                             xmax = .data$high)) +
         { if (rv$grouped)
-          ggplot2::facet_wrap(group ~ ., dir = "v",
+          ggplot2::facet_wrap(group ~ .,
+                              dir = "v",
                               scales = "free_y") } +
         
         ggplot2::labs(x = x_label, y = "") +
-        # ggplot2::scale_x_log10() +
         ggplot2::scale_color_manual(values = x_color) +
         
         theme_movedesign(font_available = rv$is_font) +
         { if (!rv$grouped)
-          ggplot2::theme(axis.text.y =
-                           ggplot2::element_text(
-                             color = x_axis_color)) %>%
+          ggplot2::theme(axis.text.y = ggplot2::element_text(
+            color = x_axis_color)) %>%
             suppressWarnings() } +
         ggplot2::theme(legend.position = "none")
       
@@ -423,7 +426,7 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       if (length(nms_all) > 1) {
         nms <- as.data.frame(nms) %>% 
           dplyr::count(nms) %>%
-          dplyr::slice(which.max(n)) %>%
+          dplyr::slice(which.max(.data$n)) %>%
           dplyr::pull(nms)
         subtitle <- toString(nms_all[!nms_all %in% nms])
         if (length(subtitle) == 0) {

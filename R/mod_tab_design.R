@@ -479,11 +479,7 @@ mod_tab_design_ui <- function(id) {
                     
                     ggiraph::girafeOutput(
                       outputId = ns("devPlot_id"),
-                      width = "95%", height = "100%") %>%
-                      shinycssloaders::withSpinner(
-                        type = getOption("spinner.type", default = 7),
-                        color = getOption("spinner.color",
-                                          default = "#f4f4f4")),
+                      width = "95%", height = "100%"),
                     
                     column(
                       width = 12, align = "center",
@@ -1396,12 +1392,7 @@ mod_tab_design_server <- function(id, rv) {
               
               ggiraph::girafeOutput(
                 outputId = ns("devPlot_gps"),
-                width = "100%", height = "50%") %>%
-                shinycssloaders::withSpinner(
-                  type = getOption("spinner.type", default = 4),
-                  color = getOption("spinner.color",
-                                    default = "#009da0"),
-                  hide.ui	= TRUE)
+                width = "100%", height = "50%")
             },
             
             uiOutput(ns("devPlotLegend")),
@@ -2909,10 +2900,10 @@ mod_tab_design_server <- function(id, rv) {
       dt_dv <- dplyr::select(rv$dev$tbl, -c(seed, data))
       if (!rv$grouped) {
         dt_dv <- dplyr::select(
-          dt_dv, -c(group, area:dist_err))
+          dt_dv, -c(group, .data$area:.data$dist_err))
       } else {
         dt_dv <- dplyr::select(
-          dt_dv, -c(area:dist_err))
+          dt_dv, -c(.data$area:.data$dist_err))
       }
       
       nms <- list(

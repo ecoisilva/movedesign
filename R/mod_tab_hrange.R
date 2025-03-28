@@ -1831,14 +1831,23 @@ mod_tab_hrange_server <- function(id, rv) {
     output$hrTable <- reactable::renderReactable({
       req(rv$hr$tbl, rv$akdeList)
       
-      dt_hr <- dplyr::select(rv$hr$tbl, -seed)
+      dt_hr <- dplyr::select(rv$hr$tbl, -.data$seed)
       
       if (!rv$grouped) {
         dt_hr <- dplyr::select(
-          dt_hr, -c(device, group, tauv, sigma, N2, ctsd:dist_err))
+          dt_hr, -c(.data$device,
+                    .data$group,
+                    .data$tauv,
+                    .data$sigma,
+                    .data$N2,
+                    .data$ctsd:.data$dist_err))
       } else {
         dt_hr <- dplyr::select(
-          dt_hr, -c(device, tauv, sigma, N2, ctsd:dist_err))
+          dt_hr, -c(.data$device,
+                    .data$tauv,
+                    .data$sigma,
+                    .data$N2,
+                    .data$ctsd:.data$dist_err))
       }
       
       nms <- list(

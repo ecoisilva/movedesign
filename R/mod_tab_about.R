@@ -91,8 +91,9 @@ mod_tab_about_ui <- function(id) {
                           "margin-bottom: 10px;"),
             "For more details, check the first manuscript",
             wrap_none(
-              a(href = paste0("https://besjournals.onlinelibrary.wiley.com/",
-                              "doi/10.1111/2041-210X.14153"), "here"), ".")),
+              a(href = paste0(
+                "https://besjournals.onlinelibrary.wiley.com/",
+                "doi/10.1111/2041-210X.14153"), "here"), ".")),
           p()
           
         ) # end of column (text)
