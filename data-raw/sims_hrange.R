@@ -3,9 +3,8 @@
 library(dplyr)
 library(ctmm)
 
-out <- read.csv(
-  system.file("extdata", "sims_hrange.csv",
-              package = "movedesign"))
+out <- read.csv(system.file("extdata", "sims_hrange.csv",
+                            package = "movedesign"))
 
 dat <- out %>%
   dplyr::select(tau_p, duration, error) %>%

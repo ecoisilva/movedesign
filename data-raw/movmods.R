@@ -36,7 +36,7 @@ movmods <- movmods %>%
     tau_p = "Yes",
     tau_v = "No",
     hrange = "Yes",
-    pars = paste("\u03C4", "=", paste0("\u03C4","\u209A"))
+    pars = paste("\u03C4", "=", paste0("\u03C4", "\u209A"))
   )
 
 movmods <- movmods %>%
@@ -47,9 +47,9 @@ movmods <- movmods %>%
     tau_v = "Yes",
     hrange = "No",
     pars = paste0("\u03C4", " = ",
-                 "{", 
-                 "\u221E, ", "\u03C4", "\u1D65",
-                 "}")
+                  "{",
+                  "\u221E, ", "\u03C4", "\u1D65",
+                  "}")
   )
 
 movmods <- movmods %>%
@@ -65,7 +65,5 @@ movmods <- movmods %>%
                   "\u03C4", "\u1D65",
                   "}")
   )
-
-# View(movmods)
 
 usethis::use_data(movmods, overwrite = TRUE)
