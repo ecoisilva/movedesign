@@ -70,7 +70,7 @@ fixrates <- fixrates %>%
   dplyr::add_row(dti_notes = "1 fix every minute",
                  dti = 1 %#% "minutes",
                  common = "N", dti_scale = "1 min", dti_yn = "Y") %>%
-  dplyr::add_row(dti_notes = "1 fix every 30 seconds", 
+  dplyr::add_row(dti_notes = "1 fix every 30 seconds",
                  dti = 30 %#% "seconds",
                  common = "N", dti_scale = NA, dti_yn = "N") %>%
   dplyr::add_row(dti_notes = "1 fix every 20 seconds",
@@ -91,7 +91,5 @@ fixrates <- fixrates %>%
 
 fixrates$frq <- 1 / fixrates$dti # sampling frequency
 fixrates$frq_hrs <- 1 / ("hour" %#% fixrates$dti)
-
-# View(format(fixrates, scientific = FALSE))
 
 usethis::use_data(fixrates, overwrite = TRUE)
