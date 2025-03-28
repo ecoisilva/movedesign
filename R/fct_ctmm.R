@@ -206,6 +206,7 @@ norm.ci <- function(MLE, VAR, level = 0.95, alpha = 1 - level) {
 
 
 chisq.hdr <- function (df, level = 0.95, alpha = 1 - level, pow = 1) {
+  
   if (df <= pow) {
     CI <- c(0, 0, stats::qchisq(level, df, lower.tail = TRUE))
   }
@@ -750,7 +751,7 @@ speedMLE <- function(data,
                      DT = NULL,
                      UERE = 0,
                      axes = c("x", "y"),
-                     CTMM = ctmm(error = UERE, axes = axes)) {
+                     CTMM = ctmm::ctmm(error = UERE, axes = axes)) {
   AXES <- length(axes)
   if (is.null(DT)) {
     DT <- diff(data$t)
@@ -758,7 +759,7 @@ speedMLE <- function(data,
   }
   f <- 1/DT
   if (length(UERE) == 1) {
-    error <- get.error(data, ctmm(error = UERE, axes = axes))
+    error <- get.error(data, ctmm::ctmm(error = UERE, axes = axes))
   }
   else {
     error <- UERE
@@ -816,7 +817,7 @@ abs_bivar <- function (mu, Sigma, return.VAR = FALSE) {
     B1 <- besselI(Barg, 1, expon.scaled = TRUE)
     sqrtpi2 <- sqrt(pi/2)
     Bv <- sqrtpi2 * sqrt(Barg) * (B0 + B1) * mu
-    Bs <- B0/sqrtpi2 * sqrt(sigma[1]) * pracma::ellipke(
+    Bs <- B0/sqrtpi2 * sqrt(sigma[1]) * ellipke(
       1 - sigma[2]/sigma[1])$e
     M1 <- Bv + Bs
   }

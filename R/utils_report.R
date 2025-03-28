@@ -57,8 +57,8 @@
       wrap_none(round(rv$meta_tbl %>%
                         dplyr::filter(group == "All") %>%
                         dplyr::filter(type == set_target) %>%
-                        dplyr::slice(which.max(m)) %>% 
-                        dplyr::pull(error) * 100, 1), "%."))
+                        dplyr::slice(which.max(.data$m)) %>% 
+                        dplyr::pull(.data$error) * 100, 1), "%."))
   }
   return(txt_nsim)
 }

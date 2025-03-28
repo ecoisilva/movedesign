@@ -347,16 +347,15 @@ run_meta_permutations <- function(rv,
                   c(arg[["A"]]$names, arg[["B"]]$names)))
             stop("Issue with groups..")
           
-          inputList[["groups"]] <- 
-            inputList[["groups"]][out_random == 1] %>% 
-            .get_groups(., groups = rv$groups[[2]])
+          inputList[["groups"]] <- .get_groups(
+            inputList[["groups"]][out_random == 1],
+            groups = rv$groups[[2]])
         }
         
         if (target == "hr") variable <- "area"
         if (target == "ctsd") variable <- "speed"
         
         out_meta <- setNames(lapply(inputList, function(x) {
-          # x[sapply(x, is.null)] <- NULL
           return(.capture_meta(x,
                               variable = variable,
                               sort = TRUE,
@@ -553,6 +552,7 @@ run_meta <- function(rv,
                      set_target = c("hr", "ctsd"),
                      subpop = FALSE, 
                      trace = FALSE,
+                     .iter_size = 2,
                      .only_max_m = FALSE,
                      .lists = NULL) {
   
@@ -562,6 +562,7 @@ run_meta <- function(rv,
                                random = FALSE,
                                max_samples = NULL,
                                trace = trace,
+                               .iter_step = .iter_step,
                                .only_max_m = .only_max_m,
                                .lists = .lists))
 }
@@ -729,11 +730,11 @@ plot_meta_permutations <- function(rv,
     
     if (!is.null(rv$meta_nresample))
       out <- dplyr::filter(rv$meta_tbl_resample,
-                           sample <= rv$meta_nresample)
+                           .data$sample <= rv$meta_nresample)
     else out <- rv$meta_tbl_resample
     
     out <- out %>% 
-      dplyr::mutate(m = as.integer(m)) %>% 
+      dplyr::mutate(m = as.integer(.data$m)) %>% 
       dplyr::filter(type == set_target)
     if (subpop) out <- dplyr::filter(out, group != "All")
     
@@ -743,20 +744,20 @@ plot_meta_permutations <- function(rv,
     max_samples
     
     out_mean <- out %>% 
-      dplyr::group_by(type, group, m) %>% 
+      dplyr::group_by(.data$type, .data$group, .data$m) %>% 
       dplyr::summarize(
         n = dplyr::n(),
-        error = mean(error, na.rm = TRUE),
-        error_lci = mean(error_lci, na.rm = TRUE),
-        error_uci = mean(error_uci, na.rm = TRUE)) %>%
+        error = mean(.data$error, na.rm = TRUE),
+        error_lci = mean(.data$error_lci, na.rm = TRUE),
+        error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
       dplyr::rowwise() %>%
       dplyr::mutate(
         within_threshold = 
-          (error >= -rv$error_threshold &
-             error <= rv$error_threshold),
+          (.data$error >= -rv$error_threshold &
+             .data$error <= rv$error_threshold),
         overlaps_with_threshold = 
-          (error_lci <= rv$error_threshold & 
-             error_uci >= -rv$error_threshold),
+          (.data$error_lci <= rv$error_threshold & 
+             .data$error_uci >= -rv$error_threshold),
         status = dplyr::case_when(
           within_threshold ~ "Yes",
           !within_threshold & overlaps_with_threshold ~ "Near",
@@ -774,11 +775,11 @@ plot_meta_permutations <- function(rv,
     
     p.optimal <- out_mean %>% 
       ggplot2::ggplot(
-        ggplot2::aes(x = as.factor(m),
-                     y = error,
-                     group = group,
-                     shape = group,
-                     color = status)) + 
+        ggplot2::aes(x = as.factor(.data$m),
+                     y = .data$error,
+                     group = .data$group,
+                     shape = .data$group,
+                     color = .data$status)) + 
       
       ggplot2::geom_hline(
         yintercept = 0,
@@ -796,17 +797,17 @@ plot_meta_permutations <- function(rv,
       
       ggplot2::geom_jitter(
         data = out,
-        mapping = ggplot2::aes(x = as.factor(m),
-                               y = error,
-                               group = group,
-                               shape = group,
-                               color = status),
+        mapping = ggplot2::aes(x = as.factor(.data$m),
+                               y = .data$error,
+                               group = .data$group,
+                               shape = .data$group,
+                               color = .data$status),
         position = ggplot2::position_jitterdodge(dodge.width = 0.4),
         size = 3.5, color = "grey80", alpha = 0.9) +
       
       ggplot2::geom_linerange(
-        ggplot2::aes(ymin = error_lci,
-                     ymax = error_uci),
+        ggplot2::aes(ymin = .data$error_lci,
+                     ymax = .data$error_uci),
         show.legend = TRUE,
         position = ggplot2::position_dodge(width = 0.4),
         linewidth = 2.2, alpha = 0.3) +
@@ -847,7 +848,7 @@ plot_meta_permutations <- function(rv,
   } else {
     
     out <- out_all <- dplyr::distinct(rv$meta_tbl) %>% 
-      dplyr::select(c(-est, -lci, -uci)) %>%
+      dplyr::select(-c(.data$est, .data$lci, .data$uci)) %>%
       dplyr::filter(type == set_target)
     
     stopifnot(all(!is.na(out$est)), nrow(out) > 0)
@@ -865,11 +866,11 @@ plot_meta_permutations <- function(rv,
       dplyr::rowwise() %>%
       dplyr::mutate(
         within_threshold = 
-          (error >= -rv$error_threshold & 
-             error <= rv$error_threshold),
+          (.data$error >= -rv$error_threshold & 
+             .data$error <= rv$error_threshold),
         overlaps_with_threshold = 
-          (error_lci <= rv$error_threshold & 
-             error_uci >= -rv$error_threshold),
+          (.data$error_lci <= rv$error_threshold & 
+             .data$error_uci >= -rv$error_threshold),
         color = dplyr::case_when(
           within_threshold ~ "Yes",
           !within_threshold & overlaps_with_threshold ~ "Near",
@@ -903,11 +904,11 @@ plot_meta_permutations <- function(rv,
     
     p.optimal <- out %>%
       ggplot2::ggplot(
-        ggplot2::aes(x = as.factor(m),
-                     y = error,
-                     group = group,
-                     shape = group,
-                     color = color)) +
+        ggplot2::aes(x = as.factor(.data$m),
+                     y = .data$error,
+                     group = .data$group,
+                     shape = .data$group,
+                     color = .data$color)) +
       
       ggplot2::geom_hline(
         yintercept = rv$error_threshold,
@@ -926,15 +927,15 @@ plot_meta_permutations <- function(rv,
         size = 4,
         position = ggplot2::position_dodge(width = dodge_width)) +
       ggplot2::geom_linerange(
-        ggplot2::aes(ymin = error_lci,
-                     ymax = error_uci),
+        ggplot2::aes(ymin = .data$error_lci,
+                     ymax = .data$error_uci),
         position = ggplot2::position_dodge(width = dodge_width)) +
       
       { if (rv$which_meta == "compare")
         ggplot2::geom_text(
           data = subset(out, subpop_detected == TRUE),
-          mapping = ggplot2::aes(x = as.factor(m),
-                                 y = error_uci + 0.05,
+          mapping = ggplot2::aes(x = as.factor(.data$m),
+                                 y = .data$error_uci + 0.05,
                                  label = "*"),
           color = "black", size = 5, 
           position = ggplot2::position_dodge(width = 0.4))

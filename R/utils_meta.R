@@ -293,7 +293,7 @@
   
   num_sets <- ceiling(length(input) / set_size)
   if (length(input) %% set_size != 0)
-    out <- rep(seq_len(num_sets), each = set_size)[1:length(input)]
+    out <- rep(seq_len(num_sets), each = set_size)[seq_along(input)]
   else 
     out <- rep(seq_len(num_sets), each = set_size,
                length.out = length(input))

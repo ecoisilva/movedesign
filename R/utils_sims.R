@@ -1,4 +1,22 @@
 
+#' @title Generate seed
+#' 
+#' @noRd
+generate_seed <- function(seed_list = NULL) {
+  
+  set.seed(NULL)
+  get_random <- function(n) {
+    round(stats::runif(n, min = 1, max = 999999), 0)
+  }
+  
+  out <- get_random(1)
+  if (!is.null(seed_list))
+    while ((out %in% seed_list) && ((out + 1) %in% seed_list)) 
+      out <- get_random(1)
+  return(out)
+}
+
+
 #' @title Trigger tag failure
 #' @description
 #' Simulates the failure of tagging devices within a dataset by introducing
@@ -13,8 +31,7 @@
     stop("The 'obj' argument must be of class 'movedesign'.")
   }
   
-  devices_failed <- logical(length(obj)) 
-  failure_occurred <- FALSE
+  devices_failed <- logical(length(obj))
   
   obj <- lapply(obj, function(x) {
     
@@ -57,7 +74,7 @@
   
   obj <- lapply(obj, function(x) {
     to_keep <- round(nrow(x) * (1 - prob), 0)
-    to_keep_vec <- sort(sample(1:nrow(x), to_keep, replace = FALSE))
+    to_keep_vec <- sort(sample(seq_len(nrow(x)), to_keep, replace = FALSE))
     return(x[to_keep_vec, ])
     
   }) # end of lapply

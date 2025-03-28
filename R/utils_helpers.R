@@ -21,6 +21,18 @@ txt.tau_v <- "\u03C4\u1D65"
 txt.sig_p <- "\u03C3\u209A"
 txt.sig_v <- "\u03C3\u1D65"
 
+#' Get confidence interval (uci)
+#' 
+#' @noRd
+CI.upper <- Vectorize(function(k, level) {
+  stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
+
+#' Get confidence interval (lci)
+#' 
+#' @noRd
+CI.lower <- Vectorize(function(k, level) {
+  stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
+
 #' Message types
 #' 
 #' @noRd
@@ -28,23 +40,6 @@ msg_main <- crayon::make_style("dimgray")
 msg_success <- crayon::make_style("#009da0")
 msg_danger <- crayon::make_style("#dd4b39")
 msg_warning <- crayon::make_style("#ffbf00")
-
-#' Generate seed
-#' 
-#' @noRd
-generate_seed <- function(seed_list = NULL) {
-  
-  set.seed(NULL)
-  get_random <- function(n) {
-    round(stats::runif(n, min = 1, max = 999999), 0)
-  }
-  
-  out <- get_random(1)
-  if (!is.null(seed_list))
-    while ((out %in% seed_list) && ((out + 1) %in% seed_list)) 
-      out <- get_random(1)
-  return(out)
-}
 
 #' Parameter blocks
 #'
@@ -705,13 +700,11 @@ plotting_hr <- function(input1,
 }
 
 
-
 #' Plot variogram
 #'
 #' @description Plot variogram from ctmm
 #' @keywords internal
 #'
-#' @importFrom dplyr %>%
 #' @noRd
 plotting_svf <- function(data, fill,
                          fraction = .5,
@@ -733,12 +726,12 @@ plotting_svf <- function(data, fill,
   
   out <- lapply(seq_along(data), function(x) {
     if (is.null(data[[x]]$fit)) {
-      svf <- data[[x]]$data %>% 
-        dplyr::slice_min(lag, prop = fraction)
+      svf <- dplyr::slice_min(data[[x]]$data,
+                              .data$lag, prop = fraction)
       add_fit <- FALSE
     } else {
-      fit <- data[[x]]$fit %>% 
-        dplyr::slice_min(lag, prop = fraction)
+      fit <- dplyr::slice_min(data[[x]]$fit,
+                              .data$lag, prop = fraction)
       svf <- data[[x]]$data[data[[x]]$data$lag <= max(fit$lag), ]
     }
     
@@ -747,38 +740,38 @@ plotting_svf <- function(data, fill,
     p <- ggplot2::ggplot() +
       ggplot2::geom_ribbon(
         data = svf,
-        mapping = ggplot2::aes(x = lag,
-                               ymin = svf_lower,
-                               ymax = svf_upper),
+        mapping = ggplot2::aes(x = .data$lag,
+                               ymin = .data$svf_lower,
+                               ymax = .data$svf_upper),
         fill = "grey50",
         alpha = 0.25) +
       ggplot2::geom_ribbon(
         data = svf,
-        mapping = ggplot2::aes(x = lag,
-                               ymin = svf_low50,
-                               ymax = svf_upp50),
+        mapping = ggplot2::aes(x = .data$lag,
+                               ymin = .data$svf_low50,
+                               ymax = .data$svf_upp50),
         fill = "grey40",
         alpha = 0.25) +
       ggplot2::geom_line(
         data = svf,
-        mapping = ggplot2::aes(x = lag,
-                               y = svf),
+        mapping = ggplot2::aes(x = .data$lag,
+                               y = .data$svf),
         linewidth = 0.5) +
       
       { if (add_fit) 
         ggplot2::geom_line(
           data = fit,
-          mapping = ggplot2::aes(x = lag,
-                                 y = svf),
+          mapping = ggplot2::aes(x = .data$lag,
+                                 y = .data$svf),
           color = fill[[x]], linetype = "dashed") 
       } +
       
       { if (add_fit) 
         ggplot2::geom_ribbon(
           data = fit, 
-          mapping = ggplot2::aes(x = lag,
-                                 ymin = svf_lower,
-                                 ymax = svf_upper),
+          mapping = ggplot2::aes(x = .data$lag,
+                                 ymin = .data$svf_lower,
+                                 ymax = .data$svf_upper),
           fill = fill[[x]], alpha = 0.2)
       } +
       
@@ -802,15 +795,19 @@ plotting_svf <- function(data, fill,
 #' @description Plot outliers
 #' @keywords internal
 #'
-#' @importFrom dplyr %>%
 #' @noRd
-plotting_outlier <- function(data,
-                             font_available = TRUE) {
+plotting_outliers <- function(data,
+                              font_available = TRUE) {
   
   m <- length(data)
-  out_data <- quiet(ctmm::outlie(data, plot = FALSE)) %>% 
-    suppressMessages() %>%
-    suppressWarnings()
+  
+  out_data <- tryCatch(
+    suppressMessages(ctmm::outlie(data, plot = FALSE)),
+    error = function(e) {
+      message("Error in ctmm::outlie: ", e$message)
+      return(NULL)
+    }
+  )
   
   out_plot <- lapply(seq_along(data), function(x) {
     
@@ -878,7 +875,6 @@ plotting_outlier <- function(data,
     if (diff(range(lwd))) lwd <- lwd / max(lwd) else lwd <- 0
     if (diff(range(d))) cex <- d/max(d) * 4 else cex <- 0
     
-    # col <- grDevices::rgb(cex, 0, 0, cex)
     palette <- grDevices::colorRampPalette(
       c("white", "#dd4b39"))(length(cex))
     
@@ -892,16 +888,18 @@ plotting_outlier <- function(data,
           x1 = data[[x]]$x[-1],
           y1 = data[[x]]$y[-1],
           lwd = lwd),
-        ggplot2::aes(x = x0, y = y0, 
-                     xend = x1, yend = y1, 
-                     color = lwd),
+        ggplot2::aes(x = .data$x0,
+                     y = .data$y0, 
+                     xend = .data$x1,
+                     yend = .data$y1, 
+                     color = .data$lwd),
         linewidth = lwd) +
       
-      viridis::scale_color_viridis(option = "mako",
-                                   direction = -1) +
+      viridis::scale_color_viridis(
+        option = "mako", direction = -1) +
       
       ggplot2::geom_point(
-        ggplot2::aes(x = x, y = y),
+        ggplot2::aes(x = .data$x, y = .data$y),
         color = palette, size = cex, shape = 20) +
       
       ggplot2::scale_size_identity() +
@@ -947,24 +945,6 @@ sigdigits <- function(x, digits) {
 #'
 subset_timeframe <- function(var, value) {
   as.data.frame(var) %>% dplyr::top_frac(value)
-}
-
-#' Show loading spinner
-#'
-#' @description WIP
-#' @keywords internal
-#'
-#' @importFrom ctmm %#%
-#' @importFrom dplyr %>%
-#' @noRd
-#'
-add_spinner <- function(ui, type = 4, height = "300px") {
-  shinycssloaders::withSpinner(
-    ui, proxy.height = height,
-    type = getOption("spinner.type", default = type),
-    size = getOption("spinner.size", default = 1.5),
-    color = getOption("spinner.color",
-                      default = "#f4f4f4"))
 }
 
 #' Show loading modal
@@ -1582,17 +1562,9 @@ as_tele_list <- function(object) {
 #' @description Convert as.telemetry to data.table
 #' @keywords internal
 #'
-#' @importFrom data.table data.table
-#' @importFrom data.table rbindlist
-#' @importFrom data.table setkey
-#' @importFrom rlang :=
-#' @importFrom plyr .
-#'
 #' @noRd
 #'
 tele_to_dt <- function(object) {
-  
-  .I <- id <- row_name <- row_no <- NULL
   
   if (!inherits(object, "list")) {
     stop("Requires list")
@@ -1602,20 +1574,22 @@ tele_to_dt <- function(object) {
   animal_data_list <- vector(mode = "list", length = animal_count)
   
   for (i in 1:animal_count) {
-    animal_data_list[[i]] <- data.table::data.table(data.frame(object[[i]]))
-    animal_data_list[[i]][, `:=`(id, object[[i]]@info$identity)]
-    animal_data_list[[i]][, `:=`(row_name, row.names(object[[i]]))]
+    animal_data_list[[i]] <- data.frame(object[[i]])
+    animal_data_list[[i]]$id <- object[[i]]@info$identity
+    animal_data_list[[i]]$row_name <- row.names(object[[i]])
   }
-  data_dt <- data.table::rbindlist(animal_data_list, fill = TRUE)
-  data_dt[, `:=`(id, factor(id))]
-  data_dt[, `:=`(row_no, .I)]
-  data.table::setkey(data_dt, row_no)
-  any_dup <- anyDuplicated(data_dt, by = c("id", "row_name"))
-  if (any_dup != 0) {
+  
+  data_dt <- do.call(rbind, animal_data_list)
+  data_dt$id <- factor(data_dt$id)
+  data_dt$row_no <- seq_along(data_dt$id)
+  
+  duplicated_rows <- duplicated(data_dt[, c("id", "row_name")])
+  if (any(duplicated_rows)) {
     message("Duplicated row name found within same individual:")
-    print(data_dt[any_dup, .(id, row_name)])
+    print(data_dt[duplicated_rows, c("id", "row_name")])
     return(NULL)
   }
+  
   return(data_dt)
 }
 
@@ -2175,8 +2149,94 @@ align_lists <- function(...) {
   return(out_lists)
 }
 
-CI.upper <- Vectorize(function(k, level) {
-  stats::qchisq((1 - level)/2, k, lower.tail = FALSE) / k} )
 
-CI.lower <- Vectorize(function(k, level) {
-  stats::qchisq((1 - level)/2, k, lower.tail = TRUE) / k} )
+#' This function is a direct copy of the \code{ellipse} function from
+#' the \code{ellipse} package (version 0.5.0). See
+#' \url{https://cran.r-project.org/package=ellipse} for more details.
+#' 
+#' @noRd
+ellipse <- function(x, scale = c(1, 1),
+                     centre = c(0, 0),
+                     level = 0.95,
+                     t = sqrt(qchisq(level, 2)),
+                     which = c(1, 2), npoints = 100,
+                     center = centre, ...) {
+  
+  if(!missing(centre) && !missing(center)) {
+    warning("Specify centre or center, not both. The value from center will be used.")
+  }
+  
+  names <- c("x", "y")
+  if (is.matrix(x)) {
+    xind <- which[1]
+    yind <- which[2]
+    r <- x[xind, yind]
+    if (missing(scale)) {
+      scale <- sqrt(c(x[xind, xind], x[yind, yind]))
+      if (scale[1] > 0) r <- r/scale[1]
+      if (scale[2] > 0) r <- r/scale[2]
+    }
+    if (!is.null(dimnames(x)[[1]])) 
+      names <- dimnames(x)[[1]][c(xind, yind)]
+  }
+  else r <- x
+  r <- min(max(r,-1),1)
+  d <- acos(r)
+  a <- seq(0, 2 * pi, len = npoints)
+  matrix(c(t * scale[1] * cos(a + d/2) + center[1],
+           t * scale[2] * cos(a - d/2) + center[2]), 
+         npoints, 2, 
+         dimnames = list(NULL, names))
+}
+
+
+#' This function is a direct copy of the \code{ellipke} function from
+#' the \code{pracma} package (version 2.4.4). See
+#' \url{https://cran.r-project.org/package=pracma} for more details.
+#' 
+#' @noRd
+ellipke <- function(m, tol = .Machine$double.eps) {
+  
+  isempty <- function (x) length(x) == 0
+  
+  finds <- function (v) which(if (is.logical(v)) v else v != 0)
+  
+  ones <- function (n, m = n) {
+    stopifnot(is.numeric(n), length(n) == 1, is.numeric(m), 
+              length(m) == 1)
+    n <- floor(n)
+    m <- floor(m)
+    if (n <= 0 || m <= 0) 
+      return(matrix(1, 0, 0))
+    else return(matrix(1, n, m))
+  }
+  
+  stopifnot(is.numeric(m))
+  m <- c(m)
+  if (any(m < 0) || any(m > 1)) 
+    stop("Some elements of argument 'm' are out of range.")
+  a0 <- 1
+  b0 <- sqrt(1 - m)
+  s0 <- m
+  i1 <- 0
+  mm <- 1
+  while (mm > tol) {
+    a1 <- (a0 + b0)/2
+    b1 <- sqrt(a0 * b0)
+    c1 <- (a0 - b0)/2
+    i1 <- i1 + 1
+    w1 <- 2^i1 * c1^2
+    mm <- max(w1)
+    s0 <- s0 + w1
+    a0 <- a1
+    b0 <- b1
+  }
+  k <- pi/(2 * a1)
+  e <- k * (1 - s0/2)
+  im <- finds(m == 1)
+  if (!isempty(im)) {
+    e[im] <- ones(length(im), 1)
+    k[im] <- Inf
+  }
+  return(list(k = k, e = e))
+}

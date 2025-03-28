@@ -409,7 +409,7 @@ get_true_hr <- function(data = NULL,
           radius_x <- sqrt(-2 * log(0.05) * sig1)
           radius_y <- sqrt(-2 * log(0.05) * sig2)
           
-          fit_ellipse <- ellipse::ellipse(fit$sigma, level = 0.95)
+          fit_ellipse <- ellipse(fit$sigma, level = 0.95)
           semi_axis_1 <- max(fit_ellipse[,1])/2 - min(fit_ellipse[,1])/2
           semi_axis_2 <- max(fit_ellipse[,2])/2 - min(fit_ellipse[,2])/2
           area <- pi * semi_axis_1 * semi_axis_2
@@ -501,7 +501,7 @@ get_true_speed <- function(data,
             truth <- sqrt(sigma[1] * pi/2)
           } else {
             truth <- sqrt(2/pi) * sqrt(sigma[1]) *
-              pracma::ellipke(1 - clamp(sigma[2]/sigma[1]))$e 
+              ellipke(1 - clamp(sigma[2]/sigma[1]))$e 
           }
           
         } else {
@@ -555,7 +555,7 @@ get_true_speed <- function(data,
             truth <- sqrt(sigma[1] * pi/2)
           } else {
             truth <- sqrt(2/pi) * sqrt(sigma[1]) *
-              pracma::ellipke(1 - clamp(sigma[2]/sigma[1]))$e 
+              ellipke(1 - clamp(sigma[2]/sigma[1]))$e 
           }
           
         } else {
@@ -998,10 +998,10 @@ extract_outputs <- function(obj,
                       "est" = out_meta$meta[1, 2],
                       "uci" = out_meta$meta[1, 3],
                       "unit" = unit)
-    out_meta <- cbind(data.frame(id = "All",
-                                 subject = "All",
-                                 group = "All"),
-                      tmp)
+    out_meta <- cbind(
+      data.frame(id = "All",
+                 subject = "All",
+                 group = "All"), tmp)
   }
   
   out <- lapply(seq_along(obj), function(x) {
@@ -1036,7 +1036,7 @@ extract_outputs <- function(obj,
                group = if (is.null(groups)) NA else obj_groups,
                do.call(rbind, out)))
   
-  out <- dplyr::arrange(out, as.numeric(id))
+  out <- dplyr::arrange(out, as.numeric(.data$id))
   out <- out %>% 
     dplyr::mutate(lci = as.numeric(lci),
                   est = as.numeric(est),
@@ -1474,10 +1474,11 @@ estimate_trajectory <- function(data,
 #' @keywords internal
 #'
 #' @importFrom ctmm %#%
-#' @importFrom dplyr %>%
 #' @noRd
 #'
-convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
+convert_to <- function(x, unit, 
+                       new_unit = NULL,
+                       to_text = FALSE) {
   if (is.data.frame(x) &&
       "value" %in% names(x) && "unit" %in% names(x)) {
     unit <- x$unit
@@ -1486,9 +1487,7 @@ convert_to <- function(x, unit, new_unit = NULL, to_text = FALSE) {
     stop("'unit' must be specified when passing a single value.")
   }
   
-  out <- (new_unit %#% (x %#% unit)) %>% 
-    fix_unit(., new_unit)
-  
+  out <- fix_unit((new_unit %#% (x %#% unit)), new_unit)
   if (to_text) out <- paste0(out[1], " ", out[2])
   
   return(out)
