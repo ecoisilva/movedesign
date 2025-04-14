@@ -78,7 +78,7 @@ Proceed by clicking the `'Extract'` button. Upon successful extraction, the `Dis
 
 Next, we navigate to the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab, where we input our sampling parameters. For this tutorial, we will consider the following sampling schedule: a ***sampling duration*** of `3 months`, with 12 new locations collected per day (***sampling interval*** of `2 hours`). To set this particular schedule, we ensure that `GPS/Satellite logger` is selected in the first dropdown menu, and untick the `Select from plot` checkbox in the `Device settings` box before proceeding, which will prompt us to manually input the sampling interval. Then, we set `GPS battery life` (equivalent to the maximum sampling duration) to `3 months` and `What sampling interval will you evaluate?` to `2 hours`. 
 
-We incorporate three additional components: **fix success rate** (here expected to be, on average, `85%`), reflecting the reliability of the GPS signal; **tag failure** (`5%` chance of a tag failing during data collection); and **location error** (averaging `15 meters`). At this point, we click the `Validate` button (verifying once again that it switches to `Validated!`) and, afterwards, the `Run` button.
+We incorporate three additional components: **fix success rate** (here expected to be, on average, `85%`), reflecting the reliability of the GPS signal; **tag failure** (`5%` chance of a tag failing during data collection); and **location error** (averaging `15 meters`). Please Enable all three settings. At this point, we click the `Validate` button (verifying once again that it switches to `Validated!`) and, afterwards, the `Run` button.
 
 ![](images/tutorial2_img4.png){fig-align="center"}
 
@@ -103,11 +103,11 @@ The first plot illustrates the relative error in **individual-level home range a
 
 The second plot illustrates how an increasing number of individuals (from a **population sample size** of `2` to a maximum of `20`) affects our population-level mean estimates. Each point represents the mean relative error (%) of this metric and its associated 95% confidence intervals, plotted against the number of tracked individuals. The dashed horizontal lines indicate a predefined error threshold of ±5%. An accompanying table provides detailed numerical values, as well as whether a sub-population was detected at each population sample size.
 
-To verify these outputs, we can resample through **permutation testing** to assess the spread of estimates, randomly reassigning individuals into new sets and rerunning the estimation of population-level mean estimates multiple times.
+To verify these outputs, we can resample through **combination testing** to assess the spread of estimates, randomly reassigning individuals into new sets and rerunning the estimation of population-level mean estimates multiple times.
 
 ![](images/tutorial2_img7.png){fig-align="center"}
 
-This allows us to evaluate whether the observed mean estimates fall within the error threshold due to random chance, and assess the contribution of individual estimates. We set the resamples to `15` here, but higher values are recommended if simulating higher population sample sizes. Then, we click the `Resample` button. The new plot illustrates how different sets of individuals shape the observed mean estimate across population sample sizes. The influence of individual variation remains noticeable, suggesting that additional simulations could help stabilize the mean estimate of home range areas. 
+This step helps evaluate how individual estimates contribute to the variation of the observed mean estimate. We set the number of resamples to `15` here, though higher values are recommended for larger population samples. After clicking the `Resample` button, the new plot illustrates how different sets of individuals shape the observed mean estimate across increasing population sample sizes. Variation remains high, indicating that additional simulations may be needed to stabilize the mean home range estimate.
 
 ### Report
 
