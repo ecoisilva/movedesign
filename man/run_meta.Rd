@@ -30,8 +30,8 @@ run_meta(
 \item{.lists}{A list containing already created meta inputs. Default is NULL.}
 }
 \value{
-The outputs of the `run_meta_permutations` function for a single permutation.
+The outputs of the `run_meta_combinations` function for a single combination.
 }
 \description{
-This function wraps around the `run_meta_permutations` function to run meta-analyses once (no permutations) for a quick evaluation.
+This function wraps around the `run_meta_combinations` function to run meta-analyses once (no combinations) for a quick evaluation.
 }
