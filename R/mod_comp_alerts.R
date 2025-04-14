@@ -24,7 +24,7 @@ mod_comp_alerts_server <- function(id, rv) {
     
     # ALERTS --------------------------------------------------------------
     
-    ## If no groups available after sims tab:
+    ## If no groups available after 'simulate' tab:
     
     observe({
       req(rv$datList,
@@ -96,6 +96,31 @@ mod_comp_alerts_server <- function(id, rv) {
  
     
     # If deployment type not set:
+    
+    observe({
+      req(rv$active_tab == 'data_upload' ||
+            rv$active_tab == 'data_select' ||
+            rv$active_tab == 'simulate',
+          rv$which_question, rv$which_meta)
+      
+      if (is.null(rv$which_m) && rv$which_meta != "none") {
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Deployment type unavailable",
+          text = tagList(span(
+            "You have not specified the deployment type",
+            "in the", icon("house", class = "cl-blk"),
+            span("Home", class = "cl-blk"), "tab.",
+            " Please set either a fixed or",
+            "minimum number of tags before clicking the", 
+            icon("bolt", class = "cl-sea"),
+            span("'Simulate'", class = "cl-sea"), "button."
+          )),
+          html = TRUE,
+          size = "s")
+      }
+      
+    }) # end of observer
     
     observe({
       req(rv$active_tab == 'hr' || rv$active_tab == 'ctsd',
