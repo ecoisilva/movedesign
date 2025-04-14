@@ -150,7 +150,7 @@ app_server <- function(input, output, session) {
           if (is.null(rv$which_data) ||
               rv$which_data == "Simulate") {
             shinydashboard::menuSubItem(
-              tabName = "sims",
+              tabName = "simulate",
               text = info$sims[["title"]],
               icon = shiny::icon(info$sims[["icon"]])) }
         )),

@@ -3753,7 +3753,7 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       if (!is.null(choices_subset)) {
-        dat <- dplyr::select(dat, .data$choices_subset)
+        dat <- dplyr::select(dat, choices_subset)
       }
       
       if ("Home range" %in% rv$which_question) {

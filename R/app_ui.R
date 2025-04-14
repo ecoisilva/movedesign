@@ -129,7 +129,7 @@ app_ui <- function(request) {
           
           # Tab 3 'Simulate data'
           newTabItem(
-            tabName = "sims",
+            tabName = "simulate",
             mod_tab_sims_ui("tab_sims_1")),
           
           # Tab 4 'Device'
@@ -215,9 +215,10 @@ golem_add_external_resources <- function() {
       "Fira+Sans:italic", "|",
       "Barlow", "|",
       "Barlow:ital", "|",
-      "Barlow+Condensed", "|",
-      "Barlow+Condensed:ital", "|",
-      "Plus+Jakarta+Sans", "|",
+      "Barlow:ital,wght@0,400;0,500;0,600;0,700;", "|",
+      # "Barlow+Condensed", "|",
+      # "Barlow+Condensed:ital", "|",
+      # "Plus+Jakarta+Sans", "|",
       "Roboto+Condensed", "|",
       "Roboto+Condensed:wght@700",
       "&display=fallback"),

@@ -1175,6 +1175,7 @@ mod_tab_data_select_server <- function(id, rv) {
       req(rv$active_tab == 'data_select', rv$datList, rv$id)
       req(rv$id %in% names(rv$datList))
       
+      datList <- NULL
       datList <- rv$datList[rv$id]
       
       mod_blocks_server(

@@ -56,6 +56,7 @@ mod_tab_design_ui <- function(id) {
                   placeholder = "Select an option here",
                   onInitialize = I('function() { this.setValue(""); }')))),
           
+          div(id = "content_device-limitations",
           shinyWidgets::checkboxGroupButtons(
             inputId = ns("which_limitations"),
             label = p("What limitations do you want to consider?") %>%
@@ -67,7 +68,7 @@ mod_tab_design_ui <- function(id) {
                         "Storage limits" = "max"),
             selected = character(0),
             checkIcon = list(yes = icon("ok", lib = "glyphicon"),
-                             no = icon("remove", lib = "glyphicon"))),
+                             no = icon("remove", lib = "glyphicon")))),
           br()
           
         ) # end of column (text)
@@ -213,110 +214,114 @@ mod_tab_design_ui <- function(id) {
           
           ### Limitations: ------------------------------------------------
           
-          shinydashboardPlus::box(
-            id = ns("devBox_loss"),
-            width = NULL,
-            headerBorder = FALSE,
-            
-            splitLayout(
-              cellWidths = c("92%", "15px"),
+          div(id = "content_limitations",
+              shinydashboardPlus::box(
+                id = ns("devBox_loss"),
+                width = NULL,
+                headerBorder = FALSE,
+                
+                splitLayout(
+                  cellWidths = c("92%", "15px"),
+                  
+                  p(HTML("&nbsp;"),
+                    "Fix success rate (%):") %>%
+                    tagAppendAttributes(class = 'label_split'),
+                  
+                  actionButton(
+                    inputId = ns("devHelp_loss"),
+                    icon = icon("circle-question"),
+                    label = NULL,
+                    style = paste("background-color: #fff;",
+                                  "color: black;",
+                                  "padding: 0;",
+                                  "float: right;")) %>%
+                    bsplus::bs_attach_modal(id_modal = "modal_loss_device")
+                ),
+                
+                shinyWidgets::sliderTextInput(
+                  inputId = ns("device_fixsuccess"),
+                  label = NULL,
+                  choices = seq(0, 100, by = 1),
+                  from_min = 5, from_max = 100, selected = 100,
+                  grid = FALSE,
+                  post = "%",
+                  width = "100%"),
+                br(),
+                uiOutput(ns("devBlock_loss"))
+                
+              ), # end of box // devBox_loss
               
-              p(HTML("&nbsp;"),
-                "Fix success rate (%):") %>%
-                tagAppendAttributes(class = 'label_split'),
+              shinydashboardPlus::box(
+                id = ns("devBox_failure"),
+                width = NULL,
+                headerBorder = FALSE,
+                
+                splitLayout(
+                  cellWidths = c("92%", "15px"),
+                  
+                  p(HTML("&nbsp;"),
+                    "Tag failure (%):") %>%
+                    tagAppendAttributes(class = 'label_split'),
+                  
+                  actionButton(
+                    inputId = ns("devHelp_failure"),
+                    icon = icon("circle-question"),
+                    label = NULL,
+                    style = paste("background-color: #fff;",
+                                  "color: black;",
+                                  "padding: 0;",
+                                  "float: right;")) %>%
+                    bsplus::bs_attach_modal(
+                      id_modal = "modal_failure_device")
+                ),
+                
+                shinyWidgets::sliderTextInput(
+                  inputId = ns("device_failure"),
+                  label = NULL,
+                  choices = seq(0, 100, by = 1),
+                  from_min = 0, from_max = 90, selected = 0,
+                  grid = FALSE,
+                  post = "%",
+                  width = "100%")
+                
+              ), # end of box // devBox_failure
               
-              actionButton(
-                inputId = ns("devHelp_loss"),
-                icon = icon("circle-question"),
-                label = NULL,
-                style = paste("background-color: #fff;",
-                              "color: black;",
-                              "padding: 0;",
-                              "float: right;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_loss_device")
-            ),
-            
-            shinyWidgets::sliderTextInput(
-              inputId = ns("device_fixsuccess"),
-              label = NULL,
-              choices = seq(0, 100, by = 1),
-              from_min = 5, from_max = 100, selected = 100,
-              grid = FALSE,
-              post = "%",
-              width = "100%"),
-            br(),
-            uiOutput(ns("devBlock_loss"))
-            
-          ), # end of box // devBox_loss
-          
-          shinydashboardPlus::box(
-            id = ns("devBox_failure"),
-            width = NULL,
-            headerBorder = FALSE,
-            
-            splitLayout(
-              cellWidths = c("92%", "15px"),
-              
-              p(HTML("&nbsp;"),
-                "Tag failure (%):") %>%
-                tagAppendAttributes(class = 'label_split'),
-              
-              actionButton(
-                inputId = ns("devHelp_failure"),
-                icon = icon("circle-question"),
-                label = NULL,
-                style = paste("background-color: #fff;",
-                              "color: black;",
-                              "padding: 0;",
-                              "float: right;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_failure_device")
-            ),
-            
-            shinyWidgets::sliderTextInput(
-              inputId = ns("device_failure"),
-              label = NULL,
-              choices = seq(0, 100, by = 1),
-              from_min = 0, from_max = 90, selected = 0,
-              grid = FALSE,
-              post = "%",
-              width = "100%")
-            
-          ), # end of box // devBox_failure
-          
-          shinydashboardPlus::box(
-            id = ns("devBox_error"),
-            width = NULL,
-            headerBorder = FALSE,
-            
-            splitLayout(
-              cellWidths = c("92%", "15px"),
-              
-              p(HTML("&nbsp;"),
-                "Location error:") %>%
-                tagAppendAttributes(class = 'label_split'),
-              
-              actionButton(
-                inputId = ns("devHelp_error"),
-                icon = icon("circle-question"),
-                label = NULL,
-                style = paste("background-color: #fff;",
-                              "color: black;",
-                              "padding: 0;",
-                              "float: right;")) %>%
-                bsplus::bs_attach_modal(id_modal = "modal_error_device")
-            ),
-            
-            shinyWidgets::autonumericInput(
-              inputId = ns("device_error"),
-              label = NULL,
-              currencySymbol = " meter(s)",
-              currencySymbolPlacement = "s",
-              decimalPlaces = 0,
-              minimumValue = 0,
-              value = 0,
-              wheelStep = 1)
-            
-          ), # end of box // devBox_error
+              shinydashboardPlus::box(
+                id = ns("devBox_error"),
+                width = NULL,
+                headerBorder = FALSE,
+                
+                splitLayout(
+                  cellWidths = c("92%", "15px"),
+                  
+                  p(HTML("&nbsp;"),
+                    "Location error:") %>%
+                    tagAppendAttributes(class = 'label_split'),
+                  
+                  actionButton(
+                    inputId = ns("devHelp_error"),
+                    icon = icon("circle-question"),
+                    label = NULL,
+                    style = paste("background-color: #fff;",
+                                  "color: black;",
+                                  "padding: 0;",
+                                  "float: right;")) %>%
+                    bsplus::bs_attach_modal(
+                      id_modal = "modal_error_device")
+                ),
+                
+                shinyWidgets::autonumericInput(
+                  inputId = ns("device_error"),
+                  label = NULL,
+                  currencySymbol = " meter(s)",
+                  currencySymbolPlacement = "s",
+                  decimalPlaces = 0,
+                  minimumValue = 0,
+                  value = 0,
+                  wheelStep = 1)
+                
+              ) # end of box // devBox_error
+          ), # end of div
           
           ### Other settings: ---------------------------------------------
           
@@ -2203,7 +2208,7 @@ mod_tab_design_server <- function(id, rv) {
           simList <- lapply(simList, function(x) {
             
             to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
-            to_keep_vec <- sort(sample(1:nrow(x),
+            to_keep_vec <- sort(sample(seq_len(nrow(x)),
                                        to_keep, replace = FALSE))
             x[to_keep_vec, ] })
           
@@ -2286,6 +2291,25 @@ mod_tab_design_server <- function(id, rv) {
     observe({
       req(rv$dev$confirm_time)
       fitList <- NULL
+      
+      if (is.null(rv$which_m) && rv$which_meta != "none") {
+        proceed <- FALSE
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Deployment type unavailable",
+          text = tagList(span(
+            "You have not specified the deployment type",
+            "in the", icon("house", class = "cl-blk"),
+            span("Home", class = "cl-blk"), "tab.",
+            " Please set either a fixed or",
+            "minimum number of tags before clicking the", 
+            icon("bolt", class = "cl-sea"),
+            span("'Simulate'", class = "cl-sea"), "button."
+          )),
+          html = TRUE,
+          size = "s")
+        req(proceed)
+      }
       
       msg_log(
         style = "warning",

@@ -547,7 +547,7 @@ mod_tab_sims_server <- function(id, rv) {
     
     observe({
       req(rv$datList,
-          rv$active_tab == 'sims',
+          rv$active_tab == 'simulate',
           rv$which_meta == "mean",
           rv$data_type == "simulated")
       
@@ -557,7 +557,7 @@ mod_tab_sims_server <- function(id, rv) {
     observe({
       req(rv$datList,
           rv$sims$grouped,
-          rv$active_tab == 'sims',
+          rv$active_tab == 'simulate',
           rv$which_meta == "compare",
           rv$data_type == "simulated")
       
@@ -932,7 +932,7 @@ mod_tab_sims_server <- function(id, rv) {
                 rv$seed0, cache = "app")
     
     observe({
-      req(rv$active_tab == 'sims')
+      req(rv$active_tab == 'simulate')
       
       if (!is.null(rv$seed0)) {
         
@@ -1674,7 +1674,7 @@ mod_tab_sims_server <- function(id, rv) {
     # BLOCKS --------------------------------------------------------------
     
     observe({
-      req(rv$active_tab == 'sims')
+      req(rv$active_tab == 'simulate')
       req(length(rv$tau_p) == 3, length(rv$tau_v) == 3)
       
       mod_blocks_server(
@@ -1704,7 +1704,7 @@ mod_tab_sims_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      req(rv$active_tab == 'sims')
+      req(rv$active_tab == 'simulate')
       req(length(rv$tau_p) == 3, length(rv$tau_v) == 3)
       
       mod_blocks_server(
@@ -1806,7 +1806,7 @@ mod_tab_sims_server <- function(id, rv) {
     # Save information for report if table is not requested:
     
     observe({
-      req(rv$active_tab == 'sims', 
+      req(rv$active_tab == 'simulate', 
           rv$data_type == "simulated",
           rv$modList)
       
