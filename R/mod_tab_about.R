@@ -76,7 +76,7 @@ mod_tab_about_ui <- function(id) {
             "Click below for a", 
             span("guided tutorial", class = "cl-sea"), "for:"),
           
-          mod_comp_tour_ui("tour_1"), # TODO WIP
+          mod_comp_tour_ui("tour_1"),
           shinyWidgets::awesomeCheckbox(
             inputId = ns("overwrite_active"),
             label = span(
@@ -123,9 +123,11 @@ mod_tab_about_ui <- function(id) {
 
                 ### Data source -------------------------------------------
                 
+                div(id = "content_workflow-first",
                 shinyWidgets::radioGroupButtons(
                   inputId = ns("which_data"),
-                  label = span("Data source:", style = "font-size: 16px;"),
+                  label = span("Data source:",
+                               style = "font-size: 16px;"),
                   choices = c("Upload" = "Upload",
                               "Select" = "Select",
                               "Simulate" = "Simulate"),
@@ -177,8 +179,10 @@ mod_tab_about_ui <- function(id) {
                                      style = "color: var(--sea);"),
                         no = tags$i(class = "fa fa-square-o",
                                     style = "color: var(--danger);")),
-                      direction = "vertical")),
+                      direction = "vertical"))
+                ), # end of div
 
+                div(id = "content_workflow-second",
                 div(class = "btn-nobg",
                     shinyWidgets::radioGroupButtons(
                       inputId = ns("which_m"),
@@ -214,8 +218,8 @@ mod_tab_about_ui <- function(id) {
                              style = "font-size: 15px;"),
                            value = FALSE))),
                 
-                uiOutput(ns("aboutUI_pop_var")),
-                p()
+                uiOutput(ns("aboutUI_pop_var")), p()
+                ) # end of div
 
             ) # end of div
           ) # end of fluidRow
@@ -316,8 +320,12 @@ mod_tab_about_server <- function(id, rv) {
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     shinyjs::hide(id = "which_m")
-    shinyjs::hide(id = "num_tags")
-    shinyjs::hide(id = "num_tags_max")
+    
+    # shinyjs::disable(id = "which_m")
+    # shinyjs::disable(id = "is_emulate")
+    
+    # shinyjs::hide(id = "num_tags")
+    # shinyjs::hide(id = "num_tags_max")
     
     observe({
       if (rv$which_meta == "none") {
@@ -419,9 +427,9 @@ mod_tab_about_server <- function(id, rv) {
               
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"),
-              "Requires careful selection of which individuals",
-              "to inform subsequent simulations. All selected",
-              "individuals must fit the assumptions for ", ui_txt)))
+              "Requires careful selection of individuals",
+              "to inform subsequent simulations. Ensure all selected",
+              "individuals meet the assumptions for ", ui_txt)))
       }
       return(ui)
       
