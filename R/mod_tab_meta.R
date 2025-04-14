@@ -1003,12 +1003,12 @@ mod_tab_meta_server <- function(id, rv) {
           style = "font-size: 18px;",
           span("Running", style = "color: #797979;"),
           wrap_none(
-            span("meta-analyses (permutations)", class = "cl-sea"),
+            span("meta-analyses (combinations)", class = "cl-sea"),
             span("...", style = "color: #797979;")))))
       
       msg_log(
         style = "warning",
-        message = paste0("Meta-analyses (permutations) ",
+        message = paste0("Meta-analyses (combinations) ",
                          msg_warning("in progress"), "..."))
       
       get_analysis <- c()
@@ -1036,7 +1036,7 @@ mod_tab_meta_server <- function(id, rv) {
         get_analysis <- c(get_analysis, "ctsd")
       }
       
-      tmp <- run_meta_permutations(
+      tmp <- run_meta_combinations(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
         random = FALSE, 
@@ -1044,7 +1044,7 @@ mod_tab_meta_server <- function(id, rv) {
       
       msg_log(
         style = "success",
-        message = paste0("Meta-analyses (permutations) ",
+        message = paste0("Meta-analyses (combinations) ",
                          msg_success("completed"), "."),
         run_time = difftime(Sys.time(), start, units = "sec"))
       
@@ -1118,7 +1118,7 @@ mod_tab_meta_server <- function(id, rv) {
       #   trace = TRUE,
       #   .only_max_m = TRUE)
       
-      tmp <- run_meta_permutations(
+      tmp <- run_meta_combinations(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
         random = TRUE, max_samples = rv$n_resamples,
@@ -2122,7 +2122,7 @@ mod_tab_meta_server <- function(id, rv) {
     #   
     # }) # end of renderReactable, "metaTable_m"
     
-    ## Rendering meta-analyses outputs (permutations): --------------------
+    ## Rendering meta-analyses outputs (combinations): --------------------
     
     output$metaTable_m_optimal <- reactable::renderReactable({
       req(rv$which_question, rv$meta_tbl, rv$set_analysis)

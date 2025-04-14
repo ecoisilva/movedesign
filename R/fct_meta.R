@@ -140,9 +140,9 @@
   
 }
 
-#' @title Running \eqn{\chi^2}-IG hierarchical model meta-analyses (with permutations)
+#' @title Running \eqn{\chi^2}-IG hierarchical model meta-analyses (with combinations)
 #'
-#' @description This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under permutation testing.
+#' @description This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under combination testing.
 #'
 #' @param rv A list containing outputs, settings and data objects. Must not be NULL.
 #' @param set_target Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.
@@ -157,7 +157,7 @@
 #' @examples
 #'\dontrun{
 #' # Running:
-#' run_meta_permutations(rv, set_target = "hr")
+#' run_meta_combinations(rv, set_target = "hr")
 #'}
 #'
 #' @encoding UTF-8
@@ -165,7 +165,7 @@
 #' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
 #' 
 #' @export
-run_meta_permutations <- function(rv,
+run_meta_combinations <- function(rv,
                                   set_target = c("hr", "ctsd"),
                                   subpop = FALSE,
                                   random = FALSE,
@@ -276,7 +276,7 @@ run_meta_permutations <- function(rv,
       if (m == 1) next
       
       if (trace) {
-        message("---- Permutations of ", m, " individuals:")
+        message("---- Combinations of ", m, " individuals:")
         start_t <- Sys.time()
       }
       
@@ -314,7 +314,7 @@ run_meta_permutations <- function(rv,
         } else { if (arg[["All"]]$sets == 1) n_samples <- 1 }
       }
       
-      msg_error <- "Error during permutation testing."
+      msg_error <- "Error during combination testing."
       if (length(n_samples) == 0) stop(msg_error)
       
       for (sample in seq_len(n_samples)) {
@@ -544,11 +544,11 @@ run_meta_permutations <- function(rv,
 
 #' @title Running \eqn{\chi^2}-IG hierarchical model meta-analyses
 #'
-#' @description This function wraps around the `run_meta_permutations` function to run meta-analyses once (no permutations) for a quick evaluation.
+#' @description This function wraps around the `run_meta_combinations` function to run meta-analyses once (no combinations) for a quick evaluation.
 #' 
-#' @inheritParams run_meta_permutations
+#' @inheritParams run_meta_combinations
 #' 
-#' @return The outputs of the `run_meta_permutations` function for a single permutation.
+#' @return The outputs of the `run_meta_combinations` function for a single combination.
 #' @export
 run_meta <- function(rv,
                      set_target = c("hr", "ctsd"),
@@ -558,7 +558,7 @@ run_meta <- function(rv,
                      .only_max_m = FALSE,
                      .lists = NULL) {
   
-  return(run_meta_permutations(rv,
+  return(run_meta_combinations(rv,
                                set_target = set_target,
                                subpop = subpop,
                                random = FALSE,
@@ -691,11 +691,11 @@ run_meta_loocv <- function(rv,
 }
 
 
-#' @title Plot meta (permutations)
+#' @title Plot meta (combinations)
 #'
 #' @noRd 
 #' 
-plot_meta_permutations <- function(rv,
+plot_meta_combinations <- function(rv,
                                    set_target = c("hr", "ctsd"),
                                    random = FALSE, 
                                    subpop = FALSE, 

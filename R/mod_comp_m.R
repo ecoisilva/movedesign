@@ -1714,7 +1714,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         shiny::icon("layer-group", class = "cl-sea"),
         span("Meta-analyses", class = "cl-sea"), "tab,",
         "and through", wrap_none(
-          span("permutation testing",
+          span("combination testing",
                style = "font-weight: bold;"), ".")
       )
       
@@ -1793,7 +1793,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                   "in the", shiny::icon("layer-group", class = "cl-sea"),
                   span("Meta-analyses", class = "cl-sea"), "tab,",
                   "and through", wrap_none(
-                    span("permutation testing",
+                    span("combination testing",
                          style = "font-weight: bold;"), ".")
                 ) #,
                 
