@@ -65,8 +65,18 @@
 .cl-wht { color: #fff !important; }
 .cl-grey { color: var(--grey-300) !important; }
 
-.txt_bold { font-weight: bold; }
-.txt_mono { font-family: var(--monosans); }
+.txt_bold { font-weight: 500 !important; }
+.txt_italic { font-style: italic !important; }
+.txt_mono { font-family: var(--monosans) !important; }
+
+.txt_code {
+  font-family: var(--monosans) !important;
+  background-color: #00000061;
+  padding: 0 5px 0 5px !important;
+  border-radius: 5px;
+  margin-right: 1px;
+}
+
 
 /* GENERAL ------------------------------------------------------------- */
 
@@ -1614,11 +1624,6 @@ footer {
   color: var(--sea);
 }
 
-/*
-.fas {
-  margin-right: 0.2em;
-} */
-
 /* EQUATIONS ----------------------------------------------------------- */
 
 .MathJax_Display {
@@ -1633,6 +1638,17 @@ footer {
 }
 
 .tour_action {
+  display: inline-block;
   color: white;
-  background: #136265;
+  background-color: #136265;
+  padding: 0 5px 0 5px !important;
+  border-radius: 5px;
+}
+
+.inline {
+  display: inline;
+}
+
+.block {
+  display: inline-block;
 }
