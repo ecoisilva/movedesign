@@ -3271,12 +3271,8 @@ mod_tab_report_server <- function(id, rv) {
             span("Note:", class = "help-block-note"), 
             "This plot shows only the mean expected errors and",
             "(confidence intervals) simulated",
-            
-            # TODO add out_tauv
-            
-            "for different sampling",
-            "durations (from 1 day to", wrap_none(max_dur, " days)"),
-            "in grey.",
+            "for different sampling durations",
+            "(from 1 day to", wrap_none(max_dur, " days)"), "in grey.",
             "As sampling duration increases, we will expect lower",
             "estimate errors (points) and",
             "lower uncertainty (shaded area).", br(),

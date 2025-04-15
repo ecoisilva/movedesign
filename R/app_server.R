@@ -37,12 +37,10 @@ app_server <- function(input, output, session) {
     which_m = "none",
     which_meta = "none",
     
+    grouped = FALSE,
     groups = list(intro = list(A = c(), B = c()),
                   final = list(A = c(), B = c())),
-    grouped = FALSE,
-    
-    truth = list(hr = list(area = list(),
-                           data = list()),
+    truth = list(hr = list(area = list(), data = list()),
                  ctsd = list()),
     
     dev = NULL,
