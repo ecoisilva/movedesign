@@ -61,8 +61,7 @@ Suggests:
     knitr,
     rmarkdown,
     shinytest2
-VignetteBuilder: 
-    knitr,
+VignetteBuilder:
     quarto
 Config/testthat/edition: 3
 Encoding: UTF-8

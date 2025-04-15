@@ -11,8 +11,9 @@ run_meta_combinations(
   subpop = FALSE,
   random = FALSE,
   max_samples = 100,
+  iter_step = 2,
   trace = FALSE,
-  .iter_step = 2,
+  .overwrite_seq = FALSE,
   .only_max_m = FALSE,
   .lists = NULL
 )
@@ -28,9 +29,11 @@ run_meta_combinations(
 
 \item{max_samples}{Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.}
 
+\item{iter_step}{Numeric. The size of each iteration step. Default is 2.}
+
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
 
-\item{.iter_step}{Numeric. The size of each iteration step. Default is 2.}
+\item{.overwrite_seq}{Logical. If TRUE, overwrites sequence automatically to improve plot readability. Default is FALSE.}
 
 \item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
 
