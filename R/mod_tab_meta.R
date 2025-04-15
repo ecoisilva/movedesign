@@ -1040,7 +1040,8 @@ mod_tab_meta_server <- function(id, rv) {
         rv, set_target = get_analysis,
         subpop = rv$grouped,
         random = FALSE, 
-        trace = FALSE)
+        trace = FALSE,
+        .overwrite_seq = TRUE)
       
       msg_log(
         style = "success",
@@ -1121,8 +1122,10 @@ mod_tab_meta_server <- function(id, rv) {
       tmp <- run_meta_combinations(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
-        random = TRUE, max_samples = rv$n_resamples,
-        trace = TRUE)
+        random = TRUE, 
+        max_samples = rv$n_resamples,
+        trace = TRUE,
+        .overwrite_seq = TRUE)
       
       msg_log(
         style = "success",
