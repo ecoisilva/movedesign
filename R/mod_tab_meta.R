@@ -1041,7 +1041,7 @@ mod_tab_meta_server <- function(id, rv) {
         subpop = rv$grouped,
         random = FALSE, 
         trace = FALSE,
-        .overwrite_seq = TRUE)
+        .automate_seq = TRUE)
       
       msg_log(
         style = "success",
@@ -1125,7 +1125,7 @@ mod_tab_meta_server <- function(id, rv) {
         random = TRUE, 
         max_samples = rv$n_resamples,
         trace = TRUE,
-        .overwrite_seq = TRUE)
+        .automate_seq = TRUE)
       
       msg_log(
         style = "success",

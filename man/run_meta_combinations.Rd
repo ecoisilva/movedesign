@@ -13,7 +13,7 @@ run_meta_combinations(
   max_samples = 100,
   iter_step = 2,
   trace = FALSE,
-  .overwrite_seq = FALSE,
+  .automate_seq = FALSE,
   .only_max_m = FALSE,
   .lists = NULL
 )
@@ -33,7 +33,7 @@ run_meta_combinations(
 
 \item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
 
-\item{.overwrite_seq}{Logical. If TRUE, overwrites sequence automatically to improve plot readability. Default is FALSE.}
+\item{.automate_seq}{Logical. If TRUE, overwrites sequence automatically to improve plot readability. Default is FALSE.}
 
 \item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
 
