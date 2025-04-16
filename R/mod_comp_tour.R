@@ -736,17 +736,19 @@ mod_comp_tour_server <- function(id, rv) {
       #     span("Report", class = "cl-sea-l"), "tab."
       #   )))
       
-      element <- c(element, "#Tour_middle")
-      intro <- c(
-        intro,
-        HTML(paste(
-          "Now we are ready to move on to the",
-          span("Report", class = "cl-sea-l"), "tab."
-        )))
-      
       ## Report tab: ------------------------------------------------------
       
       tab7 <- paste0("#tab_report_1", "-")
+      element <- c(element, paste0(tab7, "repBox_details"))
+      intro <- c(
+        intro,
+        HTML(paste(
+            "Here, you can generates a comprehensive summary",
+            "of all study design outputs. This report consolidates",
+            "key findings, highlighting how our current sampling",
+            "effort affects estimation accuracy."
+        )))
+      
       element <- c(element, paste0(tab7, "repBox_details"))
       intro <- c(
         intro,

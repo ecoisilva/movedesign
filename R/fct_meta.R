@@ -151,7 +151,7 @@
 #' @param max_samples Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.
 #' @param iter_step Numeric. The size of each iteration step. Default is 2.
 #' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
-#' @param .overwrite_seq Logical. If TRUE, overwrites sequence automatically to improve plot readability. Default is FALSE.
+#' @param .automate_seq Logical. If TRUE, overwrites sequence automatically to improve plot readability. Default is FALSE.
 #' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
 #' @param .lists A list containing already created meta inputs. Default is NULL.
 #' 
@@ -173,7 +173,7 @@ run_meta_combinations <- function(rv,
                                   max_samples = 100,
                                   iter_step = 2,
                                   trace = FALSE,
-                                  .overwrite_seq = FALSE,
+                                  .automate_seq = FALSE,
                                   .only_max_m = FALSE,
                                   .lists = NULL) {
   
@@ -269,7 +269,7 @@ run_meta_combinations <- function(rv,
     }
     
     m_iter <- NULL
-    if (.overwrite_seq) m_iter <- .get_sequence(input[["All"]],
+    if (.automate_seq) m_iter <- .get_sequence(input[["All"]],
                                                 .iter_step = iter_step,
                                                 grouped = subpop)
     else m_iter <- seq(
@@ -560,7 +560,7 @@ run_meta <- function(rv,
                      subpop = FALSE, 
                      trace = FALSE,
                      iter_step = 2,
-                     .overwrite_seq = FALSE,
+                     .automate_seq = FALSE,
                      .only_max_m = FALSE,
                      .lists = NULL) {
   
@@ -571,7 +571,7 @@ run_meta <- function(rv,
                                max_samples = NULL,
                                trace = trace,
                                iter_step = iter_step,
-                               .overwrite_seq = .overwrite_seq,
+                               .automate_seq = .automate_seq,
                                .only_max_m = .only_max_m,
                                .lists = .lists))
 }
@@ -672,7 +672,7 @@ run_meta_loocv <- function(rv,
         tmp_dt <- run_meta(tmp_file, 
                            set_target = target,
                            .only_max_m = TRUE,
-                           .overwrite_seq = TRUE)
+                           .automate_seq = TRUE)
         
         if (nrow(tmp_dt) > 0) {
           tmp_dt$x <- x
