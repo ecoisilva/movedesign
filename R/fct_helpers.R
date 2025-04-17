@@ -1262,9 +1262,12 @@ guess_time <- function(type = "fit",
                        fit = NULL,
                        dti = NULL,
                        dur = NULL,
+                       error = NULL,
                        seed = NULL,
                        trace = FALSE,
                        parallel = TRUE) {
+  
+  error <- ifelse(!is.null(error), TRUE, FALSE)
   
   set_id <- 1
   
@@ -1284,6 +1287,7 @@ guess_time <- function(type = "fit",
     n <- 2500
     if (nrow(data) < n) {
       outputs$mean <- ifelse(nrow(data) < 1000, 1, 2)
+      if (error) outputs$mean <- outputs$mean * 6
       outputs$range <- paste(
         "\u2264", outputs$mean,
         ifelse(nrow(data) < 1000, expt_unit, "minutes"))
@@ -1299,6 +1303,7 @@ guess_time <- function(type = "fit",
                            parallel = parallel)
     total_time <- difftime(Sys.time(), start, units = "sec")[[1]]
     expt <- expt_unit %#% (total_time * nrow(data) / 200)
+    if (error) expt <- expt * 6
     
     expt <- round_any(expt, 1, f = floor)
     expt_min <- max(round_any(expt, 1, f = floor) - 2, 0)

@@ -152,6 +152,7 @@ simulating_data <- function(rv) {
 #' @param .dti Numeric, sampling interval of simulated data (required if \code{.check_sampling = TRUE}).
 #' @param .tau_p List, position autocorrelation timescale (optional).
 #' @param .tau_v List, velocity autocorrelation timescale (optional).
+#' @param .error_m Numeric, if simulating a dataset with location error (in meters).
 #' @param .check_sampling Logical; if \code{TRUE}, checks if the sampling schedule is optimal for ctmm.fit().
 #' @param .rerun Logical; if \code{TRUE}, re-runs model selection if effective sample sizes fall below threshold.
 #' @param .parallel Logical; if \code{TRUE}, enables parallel computation for efficiency. Default is \code{TRUE}.
@@ -173,10 +174,13 @@ fitting_model <- function(obj,
                           .dti = NULL,
                           .tau_p = NULL,
                           .tau_v = NULL,
+                          .error_m = NULL,
                           .check_sampling = FALSE,
                           .rerun = FALSE,
                           .parallel = TRUE,
                           .trace = FALSE) {
+  
+  .error <- any(grepl("error", names(obj[[1]])))
   
   to_fit <- FALSE
   if (.check_sampling) {
@@ -205,8 +209,18 @@ fitting_model <- function(obj,
   
   n_obj <- length(obj)
   
-  guessList <- lapply(seq_along(obj), function (x)
-    ctmm::ctmm.guess(obj[[x]], interactive = FALSE))
+  if (!.error) {
+    guessList <- lapply(seq_along(obj), function (x)
+      ctmm::ctmm.guess(obj[[x]], interactive = FALSE))
+    
+  } else {
+    if (is.null(.error_m)) stop("No location error provided!")
+    
+    guessList <- lapply(seq_along(obj), function(x)
+      ctmm::ctmm.guess(obj[[x]],
+                       CTMM = ctmm::ctmm(error = TRUE),
+                       interactive = FALSE))
+  }
   
   out <- tryCatch(
     if (all(to_fit)) par.ctmm.fit(obj, guessList, parallel = .parallel)
