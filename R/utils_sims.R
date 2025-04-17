@@ -97,10 +97,21 @@ generate_seed <- function(seed_list = NULL) {
   }
   
   obj <- lapply(obj, function(x) {
-    error_x <- stats::rnorm(nrow(x), mean = 0, sd = error)
-    error_y <- stats::rnorm(nrow(x), mean = 0, sd = error)
-    x[c("x", "y")] <- x[c("x", "y")] + c(error_x, error_y)
-    return(x) })
+    
+    x$error_x <- x$error_y <- stats::rnorm(
+      nrow(x), mean = 0, sd = error)
+    
+    x$HDOP <- sqrt(2) * sqrt(x$error_x^2 + x$error_y^2) /
+      sqrt(-2 * log(0.05))
+    
+    x$original_x <- x$x
+    x$original_y <- x$y
+    x[c("x", "y")] <- x[c("x", "y")] + c(x$error_x, x$error_y)
+    
+    ctmm::uere(x) <- 1
+    return(x)
+    
+  }) # end of lapply
   
   return(obj)
   
