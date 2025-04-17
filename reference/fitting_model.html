@@ -59,6 +59,7 @@ simulated trajectory, optionally running in parallel for efficiency.</p>
 <span>  .dti <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .tau_p <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .tau_v <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  .error_m <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .check_sampling <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  .rerun <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  .parallel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -94,6 +95,10 @@ simulated trajectory, optionally running in parallel for efficiency.</p>
 
 <dt id="arg--tau-v">.tau_v<a class="anchor" aria-label="anchor" href="#arg--tau-v"></a></dt>
 <dd><p>List, velocity autocorrelation timescale (optional).</p></dd>
+
+
+<dt id="arg--error-m">.error_m<a class="anchor" aria-label="anchor" href="#arg--error-m"></a></dt>
+<dd><p>Numeric, if simulating a dataset with location error (in meters).</p></dd>
 
 
 <dt id="arg--check-sampling">.check_sampling<a class="anchor" aria-label="anchor" href="#arg--check-sampling"></a></dt>
