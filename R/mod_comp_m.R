@@ -126,7 +126,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
     
     estimating_time <- reactive({
       
-      out_time <- guess_time(data = rv$simList, parallel = rv$parallel)
+      out_time <- guess_time(data = rv$simList,
+                             error = rv$error,
+                             parallel = rv$parallel)
       return(out_time)
       
     }) %>% # end of reactive, estimating_time()
@@ -486,10 +488,22 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         if (!is.null(rv$error))
           if (req(rv$error) > 0) {
+            
             simList <- lapply(simList, function(x) {
-              error_x <- stats::rnorm(nrow(x), mean = 0, sd =  rv$error)
-              error_y <- stats::rnorm(nrow(x), mean = 0, sd =  rv$error)
-              x[c("x", "y")] <- x[c("x", "y")] + c(error_x, error_y)
+              
+              x$error_x <- x$error_y <- stats::rnorm(
+                nrow(x), mean = 0, sd = rv$error)
+              
+              x$HDOP <- sqrt(2) * sqrt(x$error_x^2 + x$error_y^2) /
+                sqrt(-2 * log(0.05))
+              
+              x$original_x <- x$x
+              x$original_y <- x$y
+              x[c("x", "y")] <- x[c("x", "y")] + c(x$error_x,
+                                                   x$error_y)
+              
+              ctmm::uere(x) <- 1
+              
               return(x) })
             
           } # end of location error
@@ -606,9 +620,16 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                     parallel = rv$parallel)
       
       simList <- rv$tmpList
-      guessList <- lapply(seq_along(simList), function (x)
-        ctmm::ctmm.guess(simList[[x]],
-                         interactive = FALSE))
+      
+      if (is.null(rv$error)) {
+        guessList <- lapply(seq_along(simList), function (x)
+          ctmm::ctmm.guess(simList[[x]], interactive = FALSE))
+      } else {
+        guessList <- lapply(seq_along(simList), function (x)
+          ctmm::ctmm.guess(simList[[x]],
+                           CTMM = ctmm::ctmm(error = TRUE),
+                           interactive = FALSE))
+      }
         
       if (rv$parallel) {
         
@@ -625,6 +646,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                                     .dti = rv$dti,
                                     .tau_p = rv$tau_p,
                                     .tau_v = rv$tau_v,
+                                    .error_m = rv$error,
                                     .check_sampling = TRUE,
                                     .rerun = TRUE)
         
@@ -1028,9 +1050,19 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (req(rv$error) > 0) {
             
             simList <- lapply(simList, function(x) {
-              error_x <- stats::rnorm(nrow(x), mean = 0, sd =  rv$error)
-              error_y <- stats::rnorm(nrow(x), mean = 0, sd =  rv$error)
-              x[c("x", "y")] <- x[c("x", "y")] + c(error_x, error_y)
+              
+              x$error_x <- x$error_y <- stats::rnorm(
+                nrow(x), mean = 0, sd = rv$error)
+              
+              x$HDOP <- sqrt(2) * sqrt(x$error_x^2 + x$error_y^2) /
+                sqrt(-2 * log(0.05))
+              
+              x$original_x <- x$x
+              x$original_y <- x$y
+              x[c("x", "y")] <- x[c("x", "y")] + c(x$error_x,
+                                                   x$error_y)
+              ctmm::uere(x) <- 1
+              
               return(x) })
             
           } # end of input$device_error

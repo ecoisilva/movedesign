@@ -2097,13 +2097,15 @@ mod_tab_design_server <- function(id, rv) {
     estimating_time <- reactive({
       
       loading_modal("Calculating run time")
-      out_time <- guess_time(data = rv$simList, parallel = rv$parallel)
+      out_time <- guess_time(data = rv$simList,
+                             error = rv$error,
+                             parallel = rv$parallel)
       
       shinybusy::remove_modal_spinner()
       return(out_time)
       
     }) %>% # end of reactive, estimating_time()
-      bindCache(c(rv$tau_p[[1]], 
+      bindCache(c(rv$tau_p[[1]],
                   rv$tau_v[[1]],
                   rv$dur, 
                   rv$dti))
@@ -2116,6 +2118,7 @@ mod_tab_design_server <- function(id, rv) {
                                   .dti = rv$dti,
                                   .tau_p = rv$tau_p,
                                   .tau_v = rv$tau_v,
+                                  .error_m = rv$error,
                                   .check_sampling = TRUE,
                                   .rerun = TRUE)
       
@@ -2231,11 +2234,29 @@ mod_tab_design_server <- function(id, rv) {
         if (req(input$device_error) > 0) {
           rv$error <- input$device_error
           simList <- lapply(simList, function(x) {
-            error_x <- stats::rnorm(nrow(x), mean = 0,
-                                    sd = input$device_error)
-            error_y <- stats::rnorm(nrow(x), mean = 0,
-                                    sd = input$device_error)
-            x[c("x", "y")] <- x[c("x", "y")] + c(error_x, error_y)
+            
+            x$error_x <- x$error_y <- stats::rnorm(
+              nrow(x), mean = 0, sd = input$device_error)
+            
+            x$HDOP <- sqrt(2) * sqrt(x$error_x^2 + x$error_y^2) /
+              sqrt(-2 * log(0.05))
+            
+            x$original_x <- x$x
+            x$original_y <- x$y
+            x[c("x", "y")] <- x[c("x", "y")] + c(x$error_x, x$error_y)
+            
+            ctmm::uere(x) <- 1
+            
+            # ext <- extent(x[1:15,])
+            # ctmm::plot(x[1:15,], error = 1, ext = ext)
+            # ctmm::plot(x[1:15,], error = 0,
+            #            cex = 1, pch = 20, add = TRUE)
+            # new_x <- x
+            # new_x$x <- new_x$original_x
+            # new_x$y <- new_x$original_y
+            # ctmm::plot(new_x[1:15,], error = 0,
+            #            cex = 1, pch = 20, col = "blue", add = TRUE)
+            
             return(x) })
           
         } # end of input$device_error
