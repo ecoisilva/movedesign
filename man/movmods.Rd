@@ -21,13 +21,13 @@ Calabrese et al. (2016). Methods in Ecology and Evolution, 7(9), 1124-1132.
 DOI: 10.1111/2041-210X.12559
 
 \describe{
-  \item{name}{Movement process names (e.g., "Ind. Ident. Distr. (IID)")}
-  \item{name_short}{Abbreviated movement process names}
-  \item{tau_p}{A Boolean denoting whether or not the movement process includes position autocorrelation}
-  \item{tau_v}{A Boolean denoting whether or not the movement process includes velocity autocorrelation}
-  \item{hrange}{A Boolean denoting whether or not the movement process includes range residency}
-  \item{pars}{Character variable, to display autocorrelation parameters in HTML}
-  ...
+\item{name}{Movement process names (e.g., "Ind. Ident. Distr. (IID)")}
+\item{name_short}{Abbreviated movement process names}
+\item{tau_p}{A Boolean denoting whether or not the movement process includes position autocorrelation}
+\item{tau_v}{A Boolean denoting whether or not the movement process includes velocity autocorrelation}
+\item{hrange}{A Boolean denoting whether or not the movement process includes range residency}
+\item{pars}{Character variable, to display autocorrelation parameters in HTML}
+...
 }
 }
 \keyword{datasets}

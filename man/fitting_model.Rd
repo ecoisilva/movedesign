@@ -11,6 +11,7 @@ fitting_model(
   .dti = NULL,
   .tau_p = NULL,
   .tau_v = NULL,
+  .error_m = NULL,
   .check_sampling = FALSE,
   .rerun = FALSE,
   .parallel = TRUE,
@@ -22,8 +23,8 @@ fitting_model(
 
 \item{set_target}{A character vector indicating the research target(s). Options:
 \itemize{
-  \item \code{"hr"} - Home range estimation.
-  \item \code{"ctsd"} - Speed and distance estimation.
+\item \code{"hr"} - Home range estimation.
+\item \code{"ctsd"} - Speed and distance estimation.
 }}
 
 \item{.dur}{Numeric, sampling duration of the simulated data (required if \code{.check_sampling = TRUE}).}
@@ -33,6 +34,8 @@ fitting_model(
 \item{.tau_p}{List, position autocorrelation timescale (optional).}
 
 \item{.tau_v}{List, velocity autocorrelation timescale (optional).}
+
+\item{.error_m}{Numeric, if simulating a dataset with location error (in meters).}
 
 \item{.check_sampling}{Logical; if \code{TRUE}, checks if the sampling schedule is optimal for ctmm.fit().}
 

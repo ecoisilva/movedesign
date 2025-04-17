@@ -21,13 +21,13 @@ run_meta_combinations(
 \arguments{
 \item{rv}{A list containing outputs, settings and data objects. Must not be NULL.}
 
-\item{set_target}{Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.}
+\item{set_target}{Character. Research target: \code{"hr"} for home range or \code{"ctsd"} for speed & distance.}
 
 \item{subpop}{Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.}
 
 \item{random}{Logical. If TRUE, samples random subsets of individuals. Default is FALSE.}
 
-\item{max_samples}{Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.}
+\item{max_samples}{Integer. Maximum number of resamples when \code{random = TRUE}. Must be positive. Default is 100.}
 
 \item{iter_step}{Numeric. The size of each iteration step. Default is 2.}
 
@@ -43,7 +43,7 @@ run_meta_combinations(
 A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
 }
 \description{
-This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under combination testing.
+This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the \code{ctmm} R package, specifically the \code{meta()} function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under combination testing.
 }
 \examples{
 \dontrun{

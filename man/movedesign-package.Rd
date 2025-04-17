@@ -6,7 +6,7 @@
 \alias{movedesign-package}
 \title{movedesign: Study design of movement ecology studies}
 \description{
-The `movedesign` package contains an R shiny application that
+The \code{movedesign} package contains an R shiny application that
 assists researchers in designing movement ecology studies.
 }
 \seealso{

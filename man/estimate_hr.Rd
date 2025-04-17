@@ -9,8 +9,8 @@ estimate_hr(rv)
 \arguments{
 \item{rv}{A reactive values list containing:
 \itemize{
-  \item \code{simList} - A list of simulated movement datasets.
-  \item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
+\item \code{simList} - A list of simulated movement datasets.
+\item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
 }}
 }
 \value{
@@ -18,9 +18,9 @@ A named list of \code{ctmm} objects, one per simulation.
 }
 \description{
 Estimates home range areas with the Autocorrelated Kernel Density Estimator (AKDE)
-# for each simulated movement dataset using the fitted movement models.
+for each simulated movement dataset using the fitted movement models.
 }
 \details{
-The function applies \code{ctmm::akde()} to estimate home range areas while handling 
+The function applies \code{ctmm::akde()} to estimate home range areas while handling
 potential warnings and errors gracefully. Any failed computations return \code{NULL}.
 }

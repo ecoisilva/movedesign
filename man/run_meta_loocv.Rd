@@ -18,7 +18,7 @@ run_meta_loocv(
 \arguments{
 \item{rv}{A list containing outputs, settings and data objects. Must not be NULL.}
 
-\item{set_target}{Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.}
+\item{set_target}{Character. Research target: \code{"hr"} for home range or \code{"ctsd"} for speed & distance.}
 
 \item{subpop}{Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.}
 
@@ -36,8 +36,8 @@ A data frame containing meta-analysis outputs, including estimates, errors, conf
 \description{
 This function performs a meta-analysis on movement tracking data,
 for mean home range area (AKDE) or continuous-time speed and distance (CTSD)
-estimates for a sampled population. It leverages the `ctmm` R package,
-specifically the `meta()` function, to obtain population-level mean parameters.
+estimates for a sampled population. It leverages the \code{ctmm} R package,
+specifically the \code{meta()} function, to obtain population-level mean parameters.
 This function helps to assess outputs via leave-one-out cross-validation (LOOCV).
 }
 \examples{

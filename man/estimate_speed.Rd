@@ -9,8 +9,8 @@ estimate_speed(rv)
 \arguments{
 \item{rv}{A reactive values list containing:
 \itemize{
-  \item \code{simList} - A list of simulated movement datasets.
-  \item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
+\item \code{simList} - A list of simulated movement datasets.
+\item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
 }}
 }
 \value{
@@ -18,9 +18,9 @@ A named list of \code{ctmm} objects, one per simulation.
 }
 \description{
 Estimates movement speed using continuous-time speed and distance (CTSD)
- for each simulated movement dataset using the corresponding fitted movement model.
+for each simulated movement dataset using the corresponding fitted movement model.
 }
 \details{
-The function applies \code{ctmm::speed()} to estimate movement speed while handling 
+The function applies \code{ctmm::speed()} to estimate movement speed while handling
 potential warnings and errors gracefully.
 }

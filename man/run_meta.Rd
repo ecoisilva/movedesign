@@ -18,7 +18,7 @@ run_meta(
 \arguments{
 \item{rv}{A list containing outputs, settings and data objects. Must not be NULL.}
 
-\item{set_target}{Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.}
+\item{set_target}{Character. Research target: \code{"hr"} for home range or \code{"ctsd"} for speed & distance.}
 
 \item{subpop}{Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.}
 
@@ -33,8 +33,8 @@ run_meta(
 \item{.lists}{A list containing already created meta inputs. Default is NULL.}
 }
 \value{
-The outputs of the `run_meta_combinations` function for a single combination.
+The outputs of the \code{run_meta_combinations} function for a single combination.
 }
 \description{
-This function wraps around the `run_meta_combinations` function to run meta-analyses once (no combinations) for a quick evaluation.
+This function wraps around the \code{run_meta_combinations} function to run meta-analyses once (no combinations) for a quick evaluation.
 }

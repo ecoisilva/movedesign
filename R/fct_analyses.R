@@ -1,7 +1,7 @@
 #' Estimate home range
 #'
 #' @description Estimates home range areas with the Autocorrelated Kernel Density Estimator (AKDE)
-#' # for each simulated movement dataset using the fitted movement models.
+#' for each simulated movement dataset using the fitted movement models.
 #'
 #' @param rv A reactive values list containing:
 #'   \itemize{

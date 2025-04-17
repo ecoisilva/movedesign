@@ -10,12 +10,12 @@ with 40 rows and seven variables: \code{dti_notes}, \code{dti},
 \code{highlight}, \code{frq}, and \code{frq_hrs}.
 
 \describe{
-  \item{dti_notes}{Sampling interval as text (e.g., "1 fix every month")}
-  \item{dti}{Sampling interval in seconds}
-  \item{frq}{Sampling frequency in seconds}
-  \item{frq_hrs}{Sampling frequency in hours}
-  \item{highlighted}{Highlight a group of commonly-used GPS fix rates}
-  ...
+\item{dti_notes}{Sampling interval as text (e.g., "1 fix every month")}
+\item{dti}{Sampling interval in seconds}
+\item{frq}{Sampling frequency in seconds}
+\item{frq_hrs}{Sampling frequency in hours}
+\item{highlighted}{Highlight a group of commonly-used GPS fix rates}
+...
 }
 }
 \usage{
