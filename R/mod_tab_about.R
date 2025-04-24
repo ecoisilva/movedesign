@@ -37,18 +37,18 @@ mod_tab_about_ui <- function(id) {
             span("home ranges", class = "cl-sea-d"), "and of",
             wrap_none(span("speed and distance traveled",
                              class = "cl-sea-d"), ".")),
-          br(),
-          p(style = "max-width: 685px;",
-            span(class = "help-block",
-                 style = "text-align: center !important;",
-
-                 fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
-                 span("Note:", class = "help-block-note"),
-                 "This is the", span( "development", class = "cl-dgr"),
-                 "version of the application, currently undergoing",
-                 "testing. Use with caution, as it may crash",
-                 "or behave unexpectedly.")),
-          p(style = "margin-bottom: 35px;")
+          br() # ,
+          # p(style = "max-width: 685px;",
+          #   span(class = "help-block",
+          #        style = "text-align: center !important;",
+          # 
+          #        fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
+          #        span("Note:", class = "help-block-note"),
+          #        "This is the", span( "development", class = "cl-dgr"),
+          #        "version of the application, currently undergoing",
+          #        "testing. Use with caution, as it may crash",
+          #        "or behave unexpectedly.")),
+          # p(style = "margin-bottom: 35px;")
 
           ) # end of column (text)
       ), # end of box // intro

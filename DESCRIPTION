@@ -2,7 +2,7 @@ Package: movedesign
 Title: Study Design Toolbox for Movement Ecology Studies
 Version: 0.3.0
 Authors@R: 
-    person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut"),
+    person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut", "cph"),
            comment = c(ORCID = "0000-0003-4850-6193"))
 Maintainer: Inês Silva <i.simoes-silva@hzdr.de>
 Description: An R package and Shiny application that helps researchers
