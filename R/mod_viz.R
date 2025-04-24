@@ -866,15 +866,15 @@ mod_viz_server <- function(id, rv) {
             reactable::colDef(
               minWidth = 90, name = "N (area)",
               style = format_num,
-              format = reactable::colFormat(separators = TRUE,
-                                            digits = 1)) },
+              format = reactable::colFormat(
+                separators = TRUE, locale = "en-US", digits = 1)) },
           N_speed = if ("N_speed" %in% names(out_sum)) {
             reactable::colDef(
               name = "N (speed)",
               minWidth = 90,
               style = format_num,
-              format = reactable::colFormat(separators = TRUE,
-                                            digits = 1)) }
+              format = reactable::colFormat(
+                separators = TRUE, locale = "en-US", digits = 1)) }
         ))
       
     }) # end of renderReactable

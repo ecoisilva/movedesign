@@ -312,6 +312,7 @@ mod_tab_report_server <- function(id, rv) {
     shinyjs::hide(id = "repBox_dist_err")
     shinyjs::hide(id = "repBox_analyses")
     shinyjs::hide(id = "repBox_tables")
+    shinyjs::hide(id = "repBox_meta")
     
     observe({
       req(rv$active_tab == 'report')
@@ -1851,11 +1852,11 @@ mod_tab_report_server <- function(id, rv) {
       if (rv$which_meta == "none") {
         shinyjs::show(id = "section-highlight_dur")
         shinyjs::show(id = "section-highlight_dti")
-        shinyjs::hide(id = "section-repBox_meta")
+        shinyjs::hide(id = "repBox_meta")
       } else {
         shinyjs::hide(id = "section-highlight_dur")
         shinyjs::hide(id = "section-highlight_dti")
-        shinyjs::show(id = "section-repBox_meta")
+        shinyjs::show(id = "repBox_meta")
       }
       
     }) %>% bindEvent(input$build_report)
