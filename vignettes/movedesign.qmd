@@ -88,7 +88,7 @@ Users can decide on their analytical target for the estimates:
 
 -   [ ] `Individual estimate`: Obtain metrics for a single individual.
 -   [ ] `Mean estimate of sampled population`: Obtain a mean estimate across a sampled group.
--   [ ] `Compare estimates of two sampled populations`: Perform a comparative analysis between two groups (for the detection of sub-populations).
+-   [ ] `Compare estimates of two sampled groups`: Perform a comparative analysis between two groups within a tracked population (for the detection of sub-groups).
 
 Additionally, users have the option to:
 

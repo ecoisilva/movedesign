@@ -171,7 +171,7 @@ mod_tab_about_ui <- function(id) {
                         tagList(span(
                           "Compare estimates of",
                           span("two", class = "cl-sea"),
-                          "sampled populations"))),
+                          "sampled groups"))),
                       choiceValues = list("none", "mean", "compare"),
                       selected = character(0),
                       checkIcon = list(

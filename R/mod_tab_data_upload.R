@@ -767,6 +767,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       }
       
       if (inherits(out_dataset, "error")) {
+        
         msg_log(
           style = "danger",
           message = paste0("File is ",
