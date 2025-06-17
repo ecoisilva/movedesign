@@ -14,12 +14,13 @@ Useful links:
 \itemize{
   \item \url{https://github.com/ecoisilva/movedesign}
   \item \url{https://ecoisilva.github.io/movedesign/}
+  \item \url{https://ecoisilva.r-universe.dev/movedesign}
   \item Report bugs at \url{https://github.com/ecoisilva/movedesign/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Inês Silva \email{i.simoes-silva@hzdr.de} (\href{https://orcid.org/0000-0003-4850-6193}{ORCID}) [copyright holder]
+\strong{Maintainer}: Ines Silva \email{i.simoes-silva@hzdr.de} (\href{https://orcid.org/0000-0003-4850-6193}{ORCID}) [copyright holder]
 
 }
 \keyword{internal}
