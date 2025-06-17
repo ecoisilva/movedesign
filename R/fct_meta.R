@@ -1,5 +1,5 @@
 
-#' @title Build objects for \eqn{\chi^2}-IG hierarchical model meta-analyses
+#' @title Build objects for hierarchical modeling
 #'
 #' @description This function constructs objects based on the provided inputs, either for home range (hr) or speed & distance continuous-time (ctsd).
 #'
@@ -83,7 +83,7 @@
   if (subpop) {
     datList[[2]] <- lapply(
       set_target, function(x)
-      .get_groups(datList[[1]][[x]], groups = rv$groups[[2]]))
+        .get_groups(datList[[1]][[x]], groups = rv$groups[[2]]))
     names(datList[[2]]) <- set_target
     
     if ("hr" %in% set_target) {
@@ -140,7 +140,7 @@
   
 }
 
-#' @title Running \eqn{\chi^2}-IG hierarchical model meta-analyses (with combinations)
+#' @title Running hierarchical model meta-analyses (with resamples)
 #'
 #' @description This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under combination testing.
 #'
@@ -158,7 +158,7 @@
 #' @examples
 #'\dontrun{
 #' # Running:
-#' run_meta_combinations(rv, set_target = "hr")
+#' run_meta_resampled(rv, set_target = "hr")
 #'}
 #'
 #' @encoding UTF-8
@@ -166,16 +166,16 @@
 #' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
 #' 
 #' @export
-run_meta_combinations <- function(rv,
-                                  set_target = c("hr", "ctsd"),
-                                  subpop = FALSE,
-                                  random = FALSE,
-                                  max_samples = 100,
-                                  iter_step = 2,
-                                  trace = FALSE,
-                                  .automate_seq = FALSE,
-                                  .only_max_m = FALSE,
-                                  .lists = NULL) {
+run_meta_resampled <- function(rv,
+                               set_target = c("hr", "ctsd"),
+                               subpop = FALSE,
+                               random = FALSE,
+                               max_samples = 100,
+                               iter_step = 2,
+                               trace = FALSE,
+                               .automate_seq = FALSE,
+                               .only_max_m = FALSE,
+                               .lists = NULL) {
   
   if (!is.logical(random) || length(random) != 1) {
     stop("'random' must be a single logical value (TRUE or FALSE)")
@@ -270,8 +270,8 @@ run_meta_combinations <- function(rv,
     
     m_iter <- NULL
     if (.automate_seq) m_iter <- .get_sequence(input[["All"]],
-                                                .iter_step = iter_step,
-                                                grouped = subpop)
+                                               .iter_step = iter_step,
+                                               grouped = subpop)
     else m_iter <- seq(
       2, length(input[["All"]]), by = iter_step)
     
@@ -364,11 +364,11 @@ run_meta_combinations <- function(rv,
         
         out_meta <- setNames(lapply(inputList, function(x) {
           return(.capture_meta(x,
-                              variable = variable,
-                              sort = TRUE,
-                              units = FALSE,
-                              verbose = TRUE,
-                              plot = FALSE) %>%
+                               variable = variable,
+                               sort = TRUE,
+                               units = FALSE,
+                               verbose = TRUE,
+                               plot = FALSE) %>%
                    suppressMessages())
         }), names(inputList))
         
@@ -385,24 +385,24 @@ run_meta_combinations <- function(rv,
           dt_meta <- rbind(
             dt_meta,
             data.frame(
-            type = target,
-            m = m,
-            sample = sample,
-            truth = NA,
-            est = NA,
-            lci = NA,
-            uci = NA,
-            error = NA,
-            error_lci = NA,
-            error_uci = NA,
-            ratio_truth = NA,
-            ratio_est = NA,
-            ratio_lci = NA,
-            ratio_uci = NA,
-            overlaps = NA,
-            is_grouped = subpop,
-            group = "All",
-            subpop_detected = NA))
+              type = target,
+              m = m,
+              sample = sample,
+              truth = NA,
+              est = NA,
+              lci = NA,
+              uci = NA,
+              error = NA,
+              error_lci = NA,
+              error_uci = NA,
+              ratio_truth = NA,
+              ratio_est = NA,
+              ratio_lci = NA,
+              ratio_uci = NA,
+              overlaps = NA,
+              is_grouped = subpop,
+              group = "All",
+              subpop_detected = NA))
           
         } else {
           
@@ -446,28 +446,28 @@ run_meta_combinations <- function(rv,
           
           if (is.null(out_meta[["groups"]])) {
             for (group in seq_len(n_groups)) {
-             
+              
               dt_meta <- rbind(
                 dt_meta,
                 data.frame(
-                type = target,
-                m = m,
-                sample = sample,
-                truth = NA,
-                est = NA,
-                lci = NA,
-                uci = NA,
-                error = NA,
-                error_lci = NA,
-                error_uci = NA,
-                ratio_truth = NA,
-                ratio_est = NA,
-                ratio_lci = NA,
-                ratio_uci = NA,
-                overlaps = NA,
-                is_grouped = subpop,
-                group = nm_groups[group],
-                subpop_detected = NA))
+                  type = target,
+                  m = m,
+                  sample = sample,
+                  truth = NA,
+                  est = NA,
+                  lci = NA,
+                  uci = NA,
+                  error = NA,
+                  error_lci = NA,
+                  error_uci = NA,
+                  ratio_truth = NA,
+                  ratio_est = NA,
+                  ratio_lci = NA,
+                  ratio_uci = NA,
+                  overlaps = NA,
+                  is_grouped = subpop,
+                  group = nm_groups[group],
+                  subpop_detected = NA))
               
             } # end of [group] loop
             
@@ -547,13 +547,13 @@ run_meta_combinations <- function(rv,
   
 }
 
-#' @title Running \eqn{\chi^2}-IG hierarchical model meta-analyses
+#' @title Running hierarchical models
 #'
-#' @description This function wraps around the `run_meta_combinations` function to run meta-analyses once (no combinations) for a quick evaluation.
+#' @description This function wraps around the `run_meta_resampled` function to run hierarchical models (with no resamples) for a quick evaluation.
 #' 
-#' @inheritParams run_meta_combinations
+#' @inheritParams run_meta_resampled
 #' 
-#' @return The outputs of the `run_meta_combinations` function for a single combination.
+#' @return The outputs of the `run_meta_resampled` function for a single combination.
 #' @export
 run_meta <- function(rv,
                      set_target = c("hr", "ctsd"),
@@ -564,22 +564,22 @@ run_meta <- function(rv,
                      .only_max_m = FALSE,
                      .lists = NULL) {
   
-  return(run_meta_combinations(rv,
-                               set_target = set_target,
-                               subpop = subpop,
-                               random = FALSE,
-                               max_samples = NULL,
-                               trace = trace,
-                               iter_step = iter_step,
-                               .automate_seq = .automate_seq,
-                               .only_max_m = .only_max_m,
-                               .lists = .lists))
+  return(run_meta_resampled(rv,
+                            set_target = set_target,
+                            subpop = subpop,
+                            random = FALSE,
+                            max_samples = NULL,
+                            trace = trace,
+                            iter_step = iter_step,
+                            .automate_seq = .automate_seq,
+                            .only_max_m = .only_max_m,
+                            .lists = .lists))
 }
 
 
-#' @title Running \eqn{\chi^2}-IG hierarchical model meta-analyses (LOOCV)
+#' @title Running LOOCV on hierarchical model outputs
 #'
-#' @description This function performs a meta-analysis on movement tracking data,
+#' @description This function runs hierarchical models on movement tracking data,
 #' for mean home range area (AKDE) or continuous-time speed and distance (CTSD)
 #' estimates for a sampled population. It leverages the `ctmm` R package,
 #' specifically the `meta()` function, to obtain population-level mean parameters.

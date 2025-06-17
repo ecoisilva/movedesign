@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_meta.R
 \name{run_meta}
 \alias{run_meta}
-\title{Running \eqn{\chi^2}-IG hierarchical model meta-analyses}
+\title{Running hierarchical models}
 \usage{
 run_meta(
   rv,
@@ -33,8 +33,8 @@ run_meta(
 \item{.lists}{A list containing already created meta inputs. Default is NULL.}
 }
 \value{
-The outputs of the \code{run_meta_combinations} function for a single combination.
+The outputs of the \code{run_meta_resampled} function for a single combination.
 }
 \description{
-This function wraps around the \code{run_meta_combinations} function to run meta-analyses once (no combinations) for a quick evaluation.
+This function wraps around the \code{run_meta_resampled} function to run hierarchical models (with no resamples) for a quick evaluation.
 }

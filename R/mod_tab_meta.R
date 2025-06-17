@@ -1036,7 +1036,7 @@ mod_tab_meta_server <- function(id, rv) {
         get_analysis <- c(get_analysis, "ctsd")
       }
       
-      tmp <- run_meta_combinations(
+      tmp <- run_meta_resampled(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
         random = FALSE, 
@@ -1119,7 +1119,7 @@ mod_tab_meta_server <- function(id, rv) {
       #   trace = TRUE,
       #   .only_max_m = TRUE)
       
-      tmp <- run_meta_combinations(
+      tmp <- run_meta_resampled(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
         random = TRUE, 

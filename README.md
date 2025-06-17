@@ -8,8 +8,6 @@
 ![Static Badge](https://img.shields.io/badge/version-0.3.0-blue)
 [![DOI](https://zenodo.org/badge/474098792.svg)](https://zenodo.org/badge/latestdoi/474098792)<br>
 [![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)
-[![R build
-status](https://github.com/ecoisilva/movedesign/workflows/R-hub/badge.svg)](https://github.com/ecoisilva/movedesign/actions)<br>
 [![Project Status: Active – The project has reached a stable, usable
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
@@ -53,15 +51,14 @@ This app was built using the `golem` framework.
 To install the stable version of `movedesign`, run the following:
 
 ``` r
-install.packages("remotes")
-remotes::install_github("ecoisilva/movedesign")
+install.packages("movedesign", repos = c("https://ecoisilva.r-universe.dev", "https://cloud.r-project.org"))
 ```
 
 If you encounter any issues, consult the installation troubleshooting
 [vignette](https://ecoisilva.github.io/movedesign/articles/installation.html)
 for potential solutions.
 
-## Running the `movedesign` application:
+## Running the application:
 
 To launch `movedesign`, load the library and run the following command
 in your `R` console:
@@ -71,7 +68,7 @@ library(movedesign)
 movedesign::run_app()
 ```
 
-## Using the `movedesign` application:
+## Using the application:
 
 Start with the guided tutorial in the `'Home'` tab. For a more detailed
 introduction, refer to the

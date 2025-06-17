@@ -3,7 +3,7 @@
 \encoding{UTF-8}
 \name{run_meta_loocv}
 \alias{run_meta_loocv}
-\title{Running \eqn{\chi^2}-IG hierarchical model meta-analyses (LOOCV)}
+\title{Running LOOCV on hierarchical model outputs}
 \usage{
 run_meta_loocv(
   rv,
@@ -34,7 +34,7 @@ run_meta_loocv(
 A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
 }
 \description{
-This function performs a meta-analysis on movement tracking data,
+This function runs hierarchical models on movement tracking data,
 for mean home range area (AKDE) or continuous-time speed and distance (CTSD)
 estimates for a sampled population. It leverages the \code{ctmm} R package,
 specifically the \code{meta()} function, to obtain population-level mean parameters.

@@ -79,8 +79,8 @@ Users can specify what is their data source:
 
 Users can define their research targets:
 
--   [ ] `Home range`: Analyze long-term space-use requirements.
--   [ ] `Speed & distance`: Investigate movement metrics such as speed and distance traveled.
+-   [ ] `Home range`: Estimate long-term space-use requirements.
+-   [ ] `Speed & distance`: Estimate fine-scale movement metrics, such as speed and distance traveled.
 
 **Step 3.** *Analytical target:*
 
