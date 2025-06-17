@@ -40,6 +40,7 @@ Imports:
     lubridate,
     parallel,
     parsedate,
+    quarto,
     reactable,
     rintrojs,
     rlang,
@@ -59,7 +60,6 @@ Imports:
     utils,
     viridis
 Suggests:
-    quarto,
     knitr,
     rmarkdown,
     shinytest2
