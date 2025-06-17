@@ -1,6 +1,5 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://ecoisilva.github.io/movedesign/404.html</loc></url>
-<url><loc>https://ecoisilva.github.io/movedesign/CODE_OF_CONDUCT.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/LICENSE.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/articles/index.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/articles/issues.html</loc></url>
@@ -19,8 +18,8 @@
 <url><loc>https://ecoisilva.github.io/movedesign/reference/movmods.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/run_app.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/run_meta.html</loc></url>
-<url><loc>https://ecoisilva.github.io/movedesign/reference/run_meta_combinations.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/run_meta_loocv.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/run_meta_resampled.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/sims_hrange.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/sims_speed.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/simulating_data.html</loc></url>
