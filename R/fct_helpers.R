@@ -24,9 +24,7 @@ get_hrange_file <- function() {
       error_lci = mean(error_lci, na.rm = TRUE),
       error_uci = mean(error_uci, na.rm = TRUE),
       .groups = "drop") %>%
-    dplyr::select(duration, tau_p, error, error_lci, error_uci) %>%
-    dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
-    dplyr::mutate(duration = round("days" %#% .data$duration, 1))
+    dplyr::select(duration, tau_p, error, error_lci, error_uci)
   
   sims_hrange <- list(data = out, summary = out_sum)
   return(sims_hrange)

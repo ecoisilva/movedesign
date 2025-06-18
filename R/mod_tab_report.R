@@ -429,7 +429,7 @@ mod_tab_report_server <- function(id, rv) {
           inputId = ns("highlight_dti"),
           label = span("Sampling interval:",
                        class = "txt-label"),
-          choices = dat$dti_notes %>% unique,
+          choices = unique(dat$dti_notes),
           options = list(title = "(select here)"),
           width = "200px")
       }
