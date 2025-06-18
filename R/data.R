@@ -20,8 +20,7 @@
 
 #' Table of movement processes.
 #'
-#' Table listing all current movement processes used
-#' within the ctmm R package.
+#' Table listing all current continuous-time movement processes used within 'ctmm'.
 #'
 #' @docType data
 #'
@@ -29,8 +28,7 @@
 #' with five rows and six variables: \code{name}, \code{name_short},
 #' \code{tau_p}, \code{tau_v}, \code{hrange}, and \code{pars}.
 #'
-#' @references Calabrese et al. (2016). Methods in Ecology and Evolution, 7(9), 1124-1132.
-#' DOI: 10.1111/2041-210X.12559
+#' @references Calabrese et al. (2016) <doi:10.1111/2041-210X.12559>
 #'
 #' \describe{
 #'   \item{name}{Movement process names (e.g., "Ind. Ident. Distr. (IID)")}
@@ -42,31 +40,3 @@
 #'   ...
 #' }
 "movmods"
-
-
-#' Home range error simulations.
-#'
-#' Expanded simulations from Silva et al. (2021).
-#' 
-#' @docType data
-#'
-#' @format An object of class \code{"data.frame"}.
-#'
-#' @references Silva et al. (2021). Methods in Ecology and Evolution, 13(3), 534-544.
-#' DOI: 10.1111/2041-210X.12559
-#'
-"sims_hrange"
-
-
-#' Speed & distance error simulations.
-#' 
-#' Expanded simulations from Noonan et al. (2019) and Silva et al. (in prep).
-#' 
-#' @docType data
-#'
-#' @format An object of class \code{"data.frame"}.
-#'
-#' @references Noonan et al. (2019).  Movement Ecology, 7(1), 1-15.
-#' DOI: 10.1186/s40462-019-0177-1
-#'
-"sims_speed"
