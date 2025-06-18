@@ -284,6 +284,8 @@ mod_tab_report_server <- function(id, rv) {
     # MAIN REACTIVE VALUES ------------------------------------------------
     
     rv$report <- reactiveValues()
+    sims_hrange <- get_hrange_file()
+    sims_speed <- get_speed_file()
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
@@ -422,7 +424,7 @@ mod_tab_report_server <- function(id, rv) {
       
       if ("Speed & distance" %in% rv$which_question) {
         
-        dat <- movedesign::sims_speed[[2]]
+        dat <- sims_speed[[2]]
         out <- out_sd <- shinyWidgets::pickerInput(
           inputId = ns("highlight_dti"),
           label = span("Sampling interval:",
@@ -473,7 +475,7 @@ mod_tab_report_server <- function(id, rv) {
       input_dur <- taup_unit %#% rv$dur$value %#% rv$dur$unit
       
       if (rv$which_meta == "none") {
-        dat <- movedesign::sims_hrange[[1]] %>%
+        dat <- sims_hrange[[1]] %>%
           dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
           dplyr::mutate(duration = round("days" %#% .data$duration, 1))
         
@@ -518,7 +520,7 @@ mod_tab_report_server <- function(id, rv) {
       input_taup <- "days" %#% rv$tau_p[[1]]$value[2] %#%
         rv$tau_p[[1]]$unit[2]
       
-      dat <- movedesign::sims_hrange[[1]] %>%
+      dat <- sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
@@ -554,7 +556,7 @@ mod_tab_report_server <- function(id, rv) {
       input_dti <- rv$dti$value %#% rv$dti$unit
       
       if (rv$which_meta == "none") {
-        dat <- movedesign::sims_speed[[1]] %>%
+        dat <- sims_speed[[1]] %>%
           dplyr::mutate(dur = round("days" %#% .data$dur, 0))
         
         out_tauv <- dat$tau_v[which.min(abs(dat$tau_v - input_tauv))]
@@ -597,10 +599,10 @@ mod_tab_report_server <- function(id, rv) {
       
       input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
       
-      dat <- movedesign::sims_speed[[1]]
+      dat <- sims_speed[[1]]
       
       out_tauv <- dat$tau_v[which.min(abs(dat$tau_v - input_tauv))]
-      opts <- movedesign::sims_speed[[1]] %>%
+      opts <- sims_speed[[1]] %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       out_dti <- fix_unit(
@@ -979,7 +981,7 @@ mod_tab_report_server <- function(id, rv) {
               "estimation, but with high uncertainty.")
         }
         
-        dti_options <- movedesign::sims_speed[[1]] %>%
+        dti_options <- sims_speed[[1]] %>%
           dplyr::select(.data$dti, .data$dti_notes) %>%
           unique()
         
@@ -1919,7 +1921,7 @@ mod_tab_report_server <- function(id, rv) {
           "Speed & distance" %in% rv$which_question) {
         req(rv$highlight_dti)
         
-        opts <- movedesign::sims_speed[[1]] %>%
+        opts <- sims_speed[[1]] %>%
           dplyr::select(.data$dti, .data$dti_notes) %>%
           unique()
         
@@ -2003,7 +2005,7 @@ mod_tab_report_server <- function(id, rv) {
       input_dur <- taup_unit %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
-      dt_hr <- movedesign::sims_hrange[[1]] %>%
+      dt_hr <- sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
@@ -2019,14 +2021,14 @@ mod_tab_report_server <- function(id, rv) {
           " ", taup_unit, ",")
       }
       
-      dt_sd <- movedesign::sims_speed[[1]] %>%
+      dt_sd <- sims_speed[[1]] %>%
         dplyr::mutate(dur = round("days" %#% .data$dur, 1))
       out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
       out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
       tauv_unit <- out_tauv$unit
       dur_for_sd <- dt_sd$dur[which.min(abs(dt_sd$dur - input_dur))]
       
-      dt_sd <- movedesign::sims_speed[[1]] %>%
+      dt_sd <- sims_speed[[1]] %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       out_dti <- dt_sd$dti[which.min(abs(dt_sd$dti - input_dti))]
@@ -2218,7 +2220,7 @@ mod_tab_report_server <- function(id, rv) {
       # Prepare datasets:
       
       if (rv$which_meta == "none") {
-        dt_hr <- movedesign::sims_hrange[[1]] %>%
+        dt_hr <- sims_hrange[[1]] %>%
           dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
           dplyr::mutate(duration = round("days" %#% .data$duration, 1))
         
@@ -2507,10 +2509,10 @@ mod_tab_report_server <- function(id, rv) {
       
       # Prepare datasets:
       
-      dt_sd <- movedesign::sims_speed[[1]] %>%
+      dt_sd <- sims_speed[[1]] %>%
         dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
         dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 0))
-      sd_opts <- movedesign::sims_speed[[1]] %>%
+      sd_opts <- sims_speed[[1]] %>%
         dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
@@ -2779,7 +2781,7 @@ mod_tab_report_server <- function(id, rv) {
       input_dur <- taup_unit %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
-      dt_hr <- movedesign::sims_hrange[[1]] %>%
+      dt_hr <- sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
@@ -2798,13 +2800,13 @@ mod_tab_report_server <- function(id, rv) {
       if (!is.null(rv$tau_v)) {
         input_tauv <- rv$tau_v[[1]]$value[2] %#% rv$tau_v[[1]]$unit[2]
         
-        dt_sd <- movedesign::sims_speed[[1]] %>%
+        dt_sd <- sims_speed[[1]] %>%
           dplyr::mutate(dur = round("days" %#% .data$dur, 1))
         out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
         out_tauv <- fix_unit(out_tauv, "seconds", convert = TRUE)
       }
       
-      dt_sd <- movedesign::sims_speed[[1]] %>%
+      dt_sd <- sims_speed[[1]] %>%
         dplyr::mutate(dur = round(.data$input_dur, 0)) %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
@@ -3225,7 +3227,7 @@ mod_tab_report_server <- function(id, rv) {
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       input_dti <- rv$dti$value %#% rv$dti$unit
       
-      dat <- movedesign::sims_hrange[[1]] %>%
+      dat <- sims_hrange[[1]] %>%
         dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
@@ -3261,7 +3263,7 @@ mod_tab_report_server <- function(id, rv) {
         },
         "Speed & distance" = {
           
-          dt_sd <- movedesign::sims_speed[[1]] %>%
+          dt_sd <- sims_speed[[1]] %>%
             dplyr::mutate(duration = round("days" %#% .data$dur, 1)) %>%
             dplyr::select(.data$duration) %>%
             unique()
@@ -3307,7 +3309,7 @@ mod_tab_report_server <- function(id, rv) {
         rv$tau_p[[1]]$value[2] %#% rv$tau_p[[1]]$unit[2]
       input_dur <- "days" %#% rv$dur$value %#% rv$dur$unit
       
-      dat <- movedesign::sims_hrange[[2]] %>%
+      dat <- sims_hrange[[2]] %>%
         dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
         dplyr::mutate(duration = round("days" %#% .data$duration, 1))
       
@@ -3459,7 +3461,7 @@ mod_tab_report_server <- function(id, rv) {
         if (rv$highlight_dti != "") reveal_if <- TRUE
       }
       
-      sims <- movedesign::sims_speed[[2]]
+      sims <- sims_speed[[2]]
       dat <- sims %>%
         dplyr::mutate(dur = round("days" %#% .data$dur, 0))
       dat$id <- 1:nrow(dat)
