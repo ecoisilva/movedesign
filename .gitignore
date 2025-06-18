@@ -9,6 +9,7 @@ inst/doc
 /doc/
 docs
 /dev/
+/data-raw/
 movedesign.git
 *_.new.png
 /inst/golem-config.yml
