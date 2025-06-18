@@ -135,9 +135,7 @@ generate_seed <- function(seed_list = NULL) {
 #' @return A sorted vector of POSIXct timestamps.
 #' 
 #' @examples
-#'  \dontrun{
 #' .generate_day_night_t("06:00:00", "18:00:00", 3600, 4 * 3600)
-#' }
 #' 
 #' @noRd
 .generate_day_night_t <- function(start_day, 
@@ -209,14 +207,12 @@ generate_seed <- function(seed_list = NULL) {
 #' @return A sorted vector of POSIXct timestamps.
 #' 
 #' @examples
-#'  \dontrun{
 #' intervals <- data.frame(
 #'   start = hms("00:00:00"),
 #'   end = hms("06:00:00"),
 #'   step = 14400)
-#'  
+#' 
 #' .generate_irregular_t(intervals)
-#' }
 #' 
 #' @noRd
 .generate_irregular_t <- function(intervals, 

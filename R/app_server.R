@@ -27,6 +27,8 @@ app_server <- function(input, output, session) {
     "turtle" = "Glyptemys insculpta"
   )
   
+  quiet(quarto::is_using_quarto())
+  
   rv <- reactiveValues(
     ctmm = data.frame(cbind(species, species_binom)),
     data_type = NULL,

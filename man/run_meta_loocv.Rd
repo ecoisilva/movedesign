@@ -41,8 +41,7 @@ specifically the \code{meta()} function, to obtain population-level mean paramet
 This function helps to assess outputs via leave-one-out cross-validation (LOOCV).
 }
 \examples{
-\dontrun{
-# Running:
+if(interactive()) {
 run_meta_loocv(rv, set_target = "hr")
 }
 

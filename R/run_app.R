@@ -8,6 +8,8 @@
 #' @importFrom shiny shinyApp
 #' @importFrom golem with_golem_options
 #' 
+#' @return No return value, called for side effects.
+#' 
 run_app <- function(
     onStart = NULL,
     options = list(),
@@ -25,9 +27,7 @@ run_app <- function(
       uiPattern = uiPattern
     ),
     golem_opts = list(
-      fixrates = movedesign::fixrates,
-      sims_hrange = movedesign::sims_hrange,
-      sims_speed = movedesign::sims_speed
+      fixrates = movedesign::fixrates
     )
   )
 }

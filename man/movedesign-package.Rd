@@ -12,7 +12,6 @@ assists researchers in designing movement ecology studies.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/ecoisilva/movedesign}
   \item \url{https://ecoisilva.github.io/movedesign/}
   \item \url{https://ecoisilva.r-universe.dev/movedesign}
   \item Report bugs at \url{https://github.com/ecoisilva/movedesign/issues}

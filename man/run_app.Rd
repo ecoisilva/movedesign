@@ -36,6 +36,9 @@ expression in order for the match to be considered successful.}
 \item{...}{arguments to pass to golem_opts.
 See \code{?golem::get_golem_options} for more details.}
 }
+\value{
+No return value, called for side effects.
+}
 \description{
 Run movedesign' R Shiny Application
 }

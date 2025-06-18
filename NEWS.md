@@ -1,3 +1,11 @@
+# movedesign 0.3.1
+
+## Minor improvements
+
+-   Reduced file size for CRAN submission.
+-   Updated documentation of functions and missing tags to fit CRAN guidelines.
+-   Added properly-formatted reference DOIs.
+
 # movedesign 0.3.0
 
 -   Third release of movedesign.

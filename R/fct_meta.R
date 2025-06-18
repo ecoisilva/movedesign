@@ -156,10 +156,9 @@
 #' @param .lists A list containing already created meta inputs. Default is NULL.
 #' 
 #' @examples
-#'\dontrun{
-#' # Running:
+#' if(interactive()) {
 #' run_meta_resampled(rv, set_target = "hr")
-#'}
+#' }
 #'
 #' @encoding UTF-8
 #' @return A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
@@ -595,10 +594,9 @@ run_meta <- function(rv,
 #' @param .lists A list containing already created meta inputs. Default is NULL.
 #' 
 #' @examples
-#'\dontrun{
-#' # Running:
+#' if(interactive()) {
 #' run_meta_loocv(rv, set_target = "hr")
-#'}
+#' }
 #'
 #' @encoding UTF-8
 #' @return A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.

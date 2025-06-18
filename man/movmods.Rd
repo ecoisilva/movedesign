@@ -13,12 +13,10 @@ with five rows and six variables: \code{name}, \code{name_short},
 movmods
 }
 \description{
-Table listing all current movement processes used
-within the ctmm R package.
+Table listing all current continuous-time movement processes used within 'ctmm'.
 }
 \references{
-Calabrese et al. (2016). Methods in Ecology and Evolution, 7(9), 1124-1132.
-DOI: 10.1111/2041-210X.12559
+Calabrese et al. (2016) \url{doi:10.1111/2041-210X.12559}
 
 \describe{
 \item{name}{Movement process names (e.g., "Ind. Ident. Distr. (IID)")}

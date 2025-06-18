@@ -46,8 +46,7 @@ A data frame containing meta-analysis outputs, including estimates, errors, conf
 This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the \code{ctmm} R package, specifically the \code{meta()} function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under combination testing.
 }
 \examples{
-\dontrun{
-# Running:
+if(interactive()) {
 run_meta_resampled(rv, set_target = "hr")
 }
 

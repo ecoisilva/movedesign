@@ -1,3 +1,93 @@
+#' Download home range simulations file
+#'
+#' Downloads and reads a dataset hosted externally.
+#' @return Returns a data.frame with the dataset.
+#' 
+#' @keywords internal
+#'
+#' @importFrom ctmm %#%
+#' @importFrom dplyr group_by summarize select mutate
+#' @noRd
+get_hrange_file <- function() {
+  
+  url <- paste0(
+    "https://github.com/ecoisilva/ecoisilva.github.io/",
+    "raw/refs/heads/main/static/data/sims_hrange.csv"
+  )
+  
+  out <- read.csv(url)
+  
+  out_sum <- out %>%
+    dplyr::group_by(duration, tau_p) %>%
+    dplyr::summarise(
+      error = mean(error, na.rm = TRUE),
+      error_lci = mean(error_lci, na.rm = TRUE),
+      error_uci = mean(error_uci, na.rm = TRUE),
+      .groups = "drop") %>%
+    dplyr::select(duration, tau_p, error, error_lci, error_uci) %>%
+    dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 1)) %>%
+    dplyr::mutate(duration = round("days" %#% .data$duration, 1))
+  
+  sims_hrange <- list(data = out, summary = out_sum)
+  return(sims_hrange)
+}
+
+#' Download speed simulations file
+#'
+#' Downloads and reads a dataset hosted externally.
+#' @return Returns a data.frame with the dataset.
+#' 
+#' @keywords internal
+#'
+#' @importFrom ctmm %#%
+#' @importFrom dplyr group_by summarize select mutate left_join
+#' @noRd
+get_speed_file <- function() {
+  
+  url <- paste0(
+    "https://github.com/ecoisilva/ecoisilva.github.io/",
+    "raw/refs/heads/main/static/data/sims_speed.csv"
+  )
+  
+  out <- read.csv(url)
+  
+  out_summary <- out %>%
+    dplyr::group_by(tau_v, dur, dti) %>%
+    dplyr::summarise(
+      error = mean(error, na.rm = TRUE),
+      error_lci = mean(error_lci, na.rm = TRUE),
+      error_uci = mean(error_uci, na.rm = TRUE),
+      .groups = "drop")
+  
+  fixes_per_day <- c(1, 2^seq(1, 11, by = 1))  # Number of fixes per day
+  dti_values <- round((1 %#% "day") / fixes_per_day, 0)
+  
+  dti_notes <- data.frame(
+    dti = dti_values,
+    dti_notes = c(
+      paste(dti_values[1], "fix every 24 hours"),
+      paste(dti_values[2], "fix every 12 hours"),
+      paste(dti_values[3], "fix every 6 hours"),
+      paste(dti_values[4], "fix every 3 hours"),
+      paste(dti_values[5], "fix every 1.5 hours"),
+      paste(dti_values[6], "fix every 45 minutes"),
+      paste(dti_values[7], "fix every 22.5 minutes"),
+      paste(dti_values[8], "fix every 11.3 minutes"),
+      paste(dti_values[9], "fix every 5.6 minutes"),
+      paste(dti_values[10], "fix every 2.8 minutes"),
+      paste(dti_values[11], "fix every 1.4 minutes"),
+      paste(20, "fix every 20 seconds")
+    )
+  )
+  
+  dti_notes <- dplyr::mutate(dti_notes, dti = as.numeric(.data$dti))
+  
+  out <- dplyr::left_join(out, dti_notes, by = "dti")
+  out_summary <- dplyr::left_join(out_summary, dti_notes, by = "dti")
+  
+  sims_speed <- list(data = out, summary = out_summary)
+  return(sims_speed)
+}
 
 #' Abbreviate units
 #'
@@ -7,9 +97,7 @@
 #' @return Returns a character vector with one element.
 #'
 #' @examples
-#' \dontrun{
 #' movedesign::abbrv_unit("square kilometers")
-#' }
 #'
 #' @noRd
 abbrv_unit <- function(unit, ui_only = TRUE) {
