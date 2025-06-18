@@ -1587,8 +1587,7 @@ tele_to_dt <- function(object) {
   
   duplicated_rows <- duplicated(data_dt[, c("id", "row_name")])
   if (any(duplicated_rows)) {
-    message("Duplicated row name found within same individual:")
-    print(data_dt[duplicated_rows, c("id", "row_name")])
+    message("Duplicated row name found within same individual.")
     return(NULL)
   }
   
@@ -1849,7 +1848,7 @@ par.lapply <- function(obj,
     }, error = function(e) {
       cat(crayon::bgRed$white(
         "Parallel error, try restarting R session.\n"))
-      print(e)
+      cat(e, "\n")
       
     }) # end of tryCatch
     

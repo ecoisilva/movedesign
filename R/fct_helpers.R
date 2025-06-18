@@ -1132,7 +1132,7 @@ simulate_gps <- function(data,
     # Check error against threshold:
     
     err <- 100 - (max(y) * 100) / params[["b_max"]]
-    if (trace) print(paste0(i, ", Error: ", round(err, 2), "%"))
+    if (trace) cat(paste0(i, ", Error: ", round(err, 2), "%\n"))
     if (abs(err) < threshold) break
     
     # prev_val <- ifelse(i == 1, 0, curr_val)
@@ -1160,8 +1160,7 @@ simulate_gps <- function(data,
     y <- f$y
     
     err <- 100 - (max(y) * 100) / params[["b_max"]]
-    if (trace) print(paste0(i, ", Error: ", round(err, 2), "%"))
-    
+    if (trace) cat(paste0(i, ", Error: ", round(err, 2), "%\n"))
     if (abs(err) < threshold) break
     
     if (!params[["id"]]) {
@@ -1190,7 +1189,8 @@ simulate_gps <- function(data,
     cat(", error:", round(abs(err), 2), "%", "\n")
     
     message("Elapsed time since start:")
-    print(Sys.time() - start_time)
+    elapsed <- Sys.time() - start_time
+    cat("Elapsed time since start:", format(elapsed), "\n")
   }
   
   if (abs(err) > threshold) {

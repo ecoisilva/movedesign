@@ -533,8 +533,9 @@ run_meta_resampled <- function(rv,
       } # end of [sample] loop [based on the number of samples]
       
       if (trace) {
-        print("-- Elapsed time:")
-        print(difftime(Sys.time(), start_t))
+        message("Elapsed time:")
+        elapsed <- Sys.time() - start_t
+        cat("Elapsed time since start:", format(elapsed), "\n")
       }
       
     } # end of [m] loop [based on the number of individuals]
