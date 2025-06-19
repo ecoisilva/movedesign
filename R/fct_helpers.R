@@ -62,29 +62,26 @@ get_speed_file <- function() {
       error_uci = mean(.data$error_uci, na.rm = TRUE),
       .groups = "drop")
   
-  fixes_per_day <- c(1, 2^seq(1, 11, by = 1))  # Number of fixes per day
-  dti_values <- round((1 %#% "day") / fixes_per_day, 0)
-  
+  fixes_per_day <- c(1, 2^seq(1, 11, by = 1)) # Number of fixes per day
   dti_notes <- data.frame(
-    dti = dti_values,
+    dti = as.numeric(c((round((1 %#% "day") /
+                                fixes_per_day, 0)), 20)),
     dti_notes = c(
-      paste(dti_values[1], "fix every 24 hours"),
-      paste(dti_values[2], "fix every 12 hours"),
-      paste(dti_values[3], "fix every 6 hours"),
-      paste(dti_values[4], "fix every 3 hours"),
-      paste(dti_values[5], "fix every 1.5 hours"),
-      paste(dti_values[6], "fix every 45 minutes"),
-      paste(dti_values[7], "fix every 22.5 minutes"),
-      paste(dti_values[8], "fix every 11.3 minutes"),
-      paste(dti_values[9], "fix every 5.6 minutes"),
-      paste(dti_values[10], "fix every 2.8 minutes"),
-      paste(dti_values[11], "fix every 1.4 minutes"),
-      paste(20, "fix every 20 seconds")
+      "1 fix every 24 hours",
+      "1 fix every 12 hours",
+      "1 fix every 6 hours",
+      "1 fix every 3 hours",
+      "1 fix every 1.5 hours",
+      "1 fix every 45 minutes",
+      "1 fix every 22.5 minutes",
+      "1 fix every 11.3 minutes",
+      "1 fix every 5.6 minutes",
+      "1 fix every 2.8 minutes",
+      "1 fix every 1.4 minutes",
+      "1 fix every 42 seconds",
+      "1 fix every 20 seconds"
     )
   )
-  
-  dti_notes <- dplyr::mutate(
-    dti_notes, dti = as.numeric(.data$dti))
   
   out <- dplyr::left_join(out, dti_notes, by = "dti")
   out_summary <- dplyr::left_join(out_summary, dti_notes, by = "dti")

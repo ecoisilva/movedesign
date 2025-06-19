@@ -159,11 +159,11 @@ mod_blocks_server <- function(id,
                    scales::label_comma(accuracy = 1)(max(value)))
                }
                
+               req(value)
                value <- round(mean(value), 1)
                if (type == "N") perc <- paste0(
                  "-", round((100 - ((mean(value) * 100) /
                                       mean(n))), 1), "%")
-               
                
              }, # end of type == "metrics"
              
