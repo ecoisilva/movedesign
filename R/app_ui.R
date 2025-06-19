@@ -213,12 +213,11 @@ golem_add_external_resources <- function() {
       "JetBrains+Mono:ital,wght@0,100..800;1,100..800", "|",
       "Fira+Sans", "|",
       "Fira+Sans:italic", "|",
-      
       "Fira+Sans+Condensed:ital,wght@",
       "0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900", "|",
       "Barlow", "|",
       "Barlow:ital", "|",
-      "Barlow:ital,wght@0,100;0,200;0,400;0,500;0,600;0,700", "|",
+      "Barlow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700", "|",
       # "Barlow+Condensed", "|",
       # "Barlow+Condensed:ital", "|",
       # "Plus+Jakarta+Sans", "|",
