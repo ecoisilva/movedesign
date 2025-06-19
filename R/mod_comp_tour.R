@@ -63,8 +63,11 @@ mod_comp_tour_server <- function(id, rv) {
     text_device <- reactive({
       
       span(
-        "Set the 'GPS battery life' to 2 years and the",
-        "'maximum GPS fix rate' to 1 fix every 6 hours.")
+        "Set the",
+        span("GPS battery life", class = "txt_code inline"),
+        "to 2 years and the",
+        span("maximum GPS fix rate", class = "txt_code inline"),
+        "1 fix every 6 hours.")
       
     }) # end of reactive, text_device()
     
@@ -136,12 +139,11 @@ mod_comp_tour_server <- function(id, rv) {
           "Follow these instructions carefully,",
           "as later parts of the tutorial require that all",
           "previous steps were performed.",
-          p(), "If no action is requested, simply proceed",
-          "to the next step by",
-          
+          p(),
           span(class = "tour_action", action_bell,
-               "clicking on the 'Next' button or using the right",
-               "arrow of your keyboard.")
+               "If no action is requested, simply proceed",
+               "to the next step by clicking on the 'Next' button",
+               "or using the right arrow of your keyboard.")
         )))
       
       element <- c(element, "#Tour_start")
@@ -164,9 +166,12 @@ mod_comp_tour_server <- function(id, rv) {
         HTML(paste(
           "You will be guided through a real",
           "animal tracking project available through the",
-          span("ctmm R", class = "cl-grn"), "package.",
+          span(
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
+            class = "txt_code inline"), "package.",
           "For assistance with a simulation from scratch, exit",
-          "this tour (click the ", span("x", class = "cl-grey"),
+          "this tour (click the ", 
+          span("x", class = "txt_bold cl-grey"),
           " button above) and go to the",
           fontawesome::fa("file-pen", fill = pal$sea),
           span("Simulate data", class = "cl-sea-l"),
@@ -176,16 +181,20 @@ mod_comp_tour_server <- function(id, rv) {
           span(class = "tour_action", action_bell,
                "Please choose",
                fontawesome::fa("square-check", fill = "white"),
-               "'Select' as your Data source, to choose",
-               "from a list of available species, ",
-               "and both ",
+               span("Select", class = "txt_code inline"),
+               "as your Data source, to choose",
+               "from a list of available species,",
+               "and both",
                fontawesome::fa("square-check", fill = "white"),
-               "'Home range' and ",
+               span("Home range", class = "txt_code inline"),
+               "and",
                fontawesome::fa("square-check", fill = "white"),
-               "'Speed & distance' as your research targets.",
+               span("Speed & distance", class = "txt_code inline"),
+               "as your research targets.",
                br(), 
-               "For analytical targets,",
-               "select 'Individual estimate'.")
+               "For analytical targets, select",
+               wrap_none("Individual estimate",
+                         css = "txt_code inline", "."))
         )))
       
       element <- c(element, ".sidebar")
@@ -197,7 +206,9 @@ mod_comp_tour_server <- function(id, rv) {
           fontawesome::fa("file-circle-plus", fill = pal$sea),
           span("Select data", class = "cl-sea-l"),
           "tab (to load a dataset from the",
-          span("ctmm", class = "cl-grn"), "package),",
+          span(
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
+            class = "txt_code inline"), "package),",
           "then the (2)",
           fontawesome::fa("stopwatch", fill = pal$sea),
           span("Sampling design", class = "cl-sea-l"), "tab",
@@ -216,7 +227,8 @@ mod_comp_tour_server <- function(id, rv) {
                "Proceed to the next step",
                "as it will move you to the",
                fontawesome::fa("file-circle-plus", fill = "white"),
-               "'Select data' tab automatically.")
+               span("Select data", class = "txt_code inline"),
+               "tab automatically.")
         )))
       
       ## Data tabs: -------------------------------------------------------
@@ -227,8 +239,10 @@ mod_comp_tour_server <- function(id, rv) {
         intro,
         HTML(paste(
           "In this tab, you will be able to select one of the seven",
-          "species available in the", span("ctmm", class = "cl-grn"),
-          "package.",
+          "species available in the",
+          span(
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
+            class = "txt_code inline"), "package.",
           "Parameters extracted from one of the species provided",
           "can help inform tracking studies of",
           "species with similar", 
@@ -290,7 +304,8 @@ mod_comp_tour_server <- function(id, rv) {
             
             "Now, pick individual 'Cilla' from the dropdown menu",
             "and click the", fontawesome::fa("wand-magic-sparkles"),
-            "'Validate' button before proceeding."),
+            span("Validate", class = "txt_code inline"),
+            "button before proceeding."),
           p(),
           "Outside of this tour, you can also select an",
           "individual from the table or",
@@ -317,8 +332,10 @@ mod_comp_tour_server <- function(id, rv) {
             class = "tour_action", action_bell,
             "The button should now read",
             fontawesome::fa("circle-check"),
-            "'Validated!'. Now click the",
-            fontawesome::fa("paper-plane"), "'Extract' button.")
+            wrap_none(
+              span("Validated!", class = "txt_code inline"), "."),
+            "Now click the", fontawesome::fa("paper-plane"), 
+            span("Extract", class = "txt_code inline"), "button.")
         )))
       
       element <- c(element, paste0(tab3, "selectBox_schedule"))
@@ -442,7 +459,7 @@ mod_comp_tour_server <- function(id, rv) {
             class = "tour_action", action_bell,
             "Select the point in the figure corresponding to",
             "the sampling interval to",
-            span("2 hours", class = "cl-sea-l"),
+            span("2 hours", class = "txt_code inline"),
             "(equal to a frequency of",
             wrap_none(
               span("12 fixes per day", class = "cl-sea-l"), ")."))
@@ -456,9 +473,13 @@ mod_comp_tour_server <- function(id, rv) {
             class = "tour_action", action_bell,
             
             "Click the", fontawesome::fa("wand-magic-sparkles"),
-            "'Validate' button until it reads 'Validated!',",
+            span("Validate", class = "txt_code inline"),
+            "button until it reads",
+            wrap_none(
+              span("Validate", class = "txt_code inline"), ","),
             "then click the", fontawesome::fa("bolt"), 
-            "'Run' button."),
+            span("Run", class = "txt_code inline"),
+            "button."),
           p(),
           "You will see two notifications: the first during",
           "the calculation of the expected run time,",
@@ -504,7 +525,7 @@ mod_comp_tour_server <- function(id, rv) {
       #     span(
       #       class = "tour_action", action_bell,
       #       "Throughout this walkthrough, you can click on the", 
-      #       fontawesome::fa("bookmark"), "'Show table'", 
+      #       fontawesome::fa("bookmark"), "Show table", 
       #       "button to show relevant inputs and outputs",
       #       "in a table for a quick overview."),
       #     p(),
@@ -543,14 +564,17 @@ mod_comp_tour_server <- function(id, rv) {
           "For this step, we are using the",
           span("Autocorrelated Kernel Density Estimator (AKDE)",
                class = "cl-sea-l"), "method available in the",
-          span("ctmm", class = "cl-grn"),
-          "R package.",
+          span(
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
+            class = "txt_code inline"),
+          "package.", br(),
           
           span(
             class = "tour_action", action_bell,
             
-            "Click on the", fontawesome::fa("paper-plane"), 
-            "'Run estimation' button to estimate home range area.")
+            "Click on the", fontawesome::fa("paper-plane"),
+            span("Run estimation", class = "txt_code inline"),
+            "button to estimate home range area.")
         )))
       
       # element <- c(element, paste0(tab5, "hrBox_viz"))
@@ -588,9 +612,9 @@ mod_comp_tour_server <- function(id, rv) {
             " (low", HTML("&#x2014"), "high), ",
             "as the point estimate is subject to uncertainty."), 
           p(),
-          fontawesome::fa(name = "radiation", fill = "#bdbdbd"),
+          fontawesome::fa(name = "radiation", fill = "#DB4545"),
           wrap_none(
-            span("Relative error", class = "cl-dgr-l"),
+            span("Relative error", class = "cl-dgr"),
             ", which, for a single simulation", 
             " is the ", span("error (in %)", class = "cl-dgr-l"),
             " of the point estimate (and of the 95% CIs;",
@@ -625,7 +649,7 @@ mod_comp_tour_server <- function(id, rv) {
       #       class = "tour_action", action_bell,
       #       "You can once again see all outputs to a table",
       #       "by clicking on the", fontawesome::fa("bookmark")
-      #       , "'Show table'", "button located at the bottom",
+      #       , "Show table", "button located at the bottom",
       #       "of the box."
       #     )
       #   )))
@@ -659,12 +683,14 @@ mod_comp_tour_server <- function(id, rv) {
           "For this step, we are using the",
           span("Continuous Time Speed & Distance (CTSD)",
                class = "cl-sea-l"), "estimator available in the",
-          span("ctmm", class = "cl-grn"),
-          "R package.", p(),
+          span(
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
+            class = "txt_code inline"), "R package.", p(),
+          
           span(class = "tour_action", action_bell,
-               
                "Click on the", fontawesome::fa("paper-plane"),
-               "'Run estimation' button to estimate speed & distance.")
+               span("Run estimation", class = "txt_code inline"),
+               "button to estimate speed & distance.")
         )))
       
       # element <- c(element, paste0(tab6, "sdPlot_path"))
@@ -720,7 +746,7 @@ mod_comp_tour_server <- function(id, rv) {
       #     span(class = "tour_action", action_bell,
       #          "You can once again see all outputs to a table",
       #          "by clicking on the", fontawesome::fa("bookmark")
-      #          , "'Show table'", "button located at the bottom",
+      #          , "Show table", "button located at the bottom",
       #          "of the box."
       #     )
       #   )))
@@ -757,7 +783,8 @@ mod_comp_tour_server <- function(id, rv) {
             class = "tour_action", action_bell,
             
             "Click the", fontawesome::fa("bookmark"),
-            "'Build report' button to see a detailed",
+            span("Build report", class = "txt_code inline"),
+            "button to see a detailed",
             "assessment of how well your current sampling design",
             "addresses your research targets.")
         )))
@@ -921,22 +948,22 @@ mod_comp_tour_server <- function(id, rv) {
           span(class = "tour_action", action_bell,
                "Please choose",
                fontawesome::fa("square-check", fill = "white"),
-               span("'Select'", class = "txt_code"), "as your",
+               span("Select", class = "txt_code"), "as your",
                wrap_none(
                  span("data source", class = "txt_bold"), ", and"),
                fontawesome::fa("square-check", fill = "white"),
-               span("'Home range'", class = "txt_code"), "as the",
+               span("Home range", class = "txt_code"), "as the",
                wrap_none(
                  span("research target", class = "txt_bold"), "."),
                "For the",
                wrap_none(
                  span("analytical target", class = "txt_bold"), ","),
                "choose",
-               span("'Mean estimate of",
+               span("Mean estimate of",
                     wrap_none(
                       span("sampled population",
-                           class = "txt_mono cl-sea-l"),
-                    "'"), class = "txt_code"),
+                           class = "txt_mono cl-sea-l")
+                    ), class = "txt_code"),
                "to display deployment options.")
         )))
       
@@ -949,18 +976,18 @@ mod_comp_tour_server <- function(id, rv) {
                wrap_none(
                  span("deployment", class = "txt_bold"), ","),
                "select",
-               span("'I plan to deploy a",
+               span("I plan to deploy a",
                     wrap_none(
                       span("set",
                            class = "txt_mono cl-grn"),
-                      " number of VHF/GPS tags'."),
+                      " number of VHF/GPS tags."),
                     class = "txt_code"),
                "Then check the",
-               span("'Add",
+               span("Add",
                     wrap_none(
                       span("individual",
                            class = "txt_mono cl-grn"),
-                      " variation'"),
+                      " variation"),
                     class = "txt_code"),
                "checkbox, as we wish to account for",
                "individual differences.")
@@ -976,7 +1003,7 @@ mod_comp_tour_server <- function(id, rv) {
           span("Select data", class = "cl-sea-l"), "tab",
           "(to load a dataset from the",
           span(
-            wrap_none(span("ctmm", class = "txt_mono cl-sea-l")),
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
             class = "txt_code inline"),
           "package), then the",
           fontawesome::fa("stopwatch", fill = pal$sea),
@@ -1014,7 +1041,7 @@ mod_comp_tour_server <- function(id, rv) {
           "In this tab, you will be able to select one of the seven",
           "species available in the",
           span(
-            wrap_none(span("ctmm", class = "txt_mono cl-sea-l")),
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
             class = "txt_code inline"), 
           span("R", class = "txt_code inline"), "package.",
           "Parameters extracted from one of the species provided",
@@ -1082,9 +1109,8 @@ mod_comp_tour_server <- function(id, rv) {
             class = "tour_action", action_bell,
             "The button should now read",
             fontawesome::fa("circle-check"),
-            span("Validated!", class = "txt_code inline"),
             wrap_none(span("Validated!", class = "txt_code inline"),
-                      end = "."), "Now click the",
+                      "."), "Now click the",
             fontawesome::fa("paper-plane"), 
             span("Extract", class = "txt_code inline"), "button.")
         )))
@@ -1266,7 +1292,7 @@ mod_comp_tour_server <- function(id, rv) {
           span("Autocorrelated Kernel Density Estimator (AKDE)",
                class = "cl-sea-l"), "method available in the",
           span(
-            wrap_none(span("ctmm", class = "txt_mono cl-sea-l")),
+            wrap_none(span("ctmm", class = "txt_mono cl-grn")),
             class = "txt_code inline"), 
           span("R", class = "txt_code inline"), "package.", p(),
           

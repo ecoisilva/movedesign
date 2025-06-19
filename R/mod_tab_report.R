@@ -632,16 +632,62 @@ mod_tab_report_server <- function(id, rv) {
           rv$is_analyses,
           rv$simList)
       
+      proceed <- TRUE
       questions <- NULL
+      
       if ("Home range" %in% rv$which_question) {
         req(rv$hr_completed)
         questions <- "Home range"
+        
+        if (is.null(rv$hr_cri) || is.null(rv$hrErr)) {
+          
+          shinyalert::shinyalert(
+            type = "error",
+            title = "Warning",
+            text = tagList(span(
+              "No", span("home range estimation", class = "cl-dgr"), 
+              "outputs were generated for the final report."
+            )),
+            html = TRUE,
+            size = "xs")
+          
+          msg_log(
+            style = "error",
+            message = paste(
+              "No",
+              msg_danger("home range estimation"),
+              "outputs available."),
+            detail = "Return to the 'Sampling design' tab.")
+          proceed <- FALSE
+        }
       }
       
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$sd_completed)
         add_to <- ifelse(length(rv$which_question) > 1, ", ", "")
         questions <- paste0(questions, add_to, "Speed & distance")
+        
+        if (is.null(rv$is_ctsd)) {
+          
+          # shinyalert::shinyalert(
+          #   type = "error",
+          #   title = "Warning",
+          #   text = tagList(span(
+          #     "No", span("speed estimation", class = "cl-dgr"), 
+          #     "outputs were generated for the final report."
+          #   )),
+          #   html = TRUE,
+          #   size = "xs")
+          
+          msg_log(
+            style = "error",
+            message = paste(
+              "No",
+              msg_danger("speed estimation"),
+              "outputs available."),
+            detail = "Return to the 'Sampling design' tab.")
+          proceed <- FALSE
+        }
       }
       
       msg_log(
@@ -864,8 +910,13 @@ mod_tab_report_server <- function(id, rv) {
         req(rv$hr_cri, rv$hrErr)
       }
       if ("Speed & distance" %in% rv$which_question) {
-        req(!is.null(rv$is_ctsd))
-        if (rv$is_ctsd) req(rv$sd_cri, rv$speedErr)
+        is_ctsd <- FALSE
+        if (!is.null(rv$is_ctsd)) {
+          if (rv$is_ctsd) {
+            req(rv$sd_cri, rv$speedErr)
+            is_ctsd <- TRUE
+          }
+        }
       }
       
       css_bold <- "font-weight: bold;"
@@ -879,7 +930,7 @@ mod_tab_report_server <- function(id, rv) {
       if ("Home range" %in% rv$which_question) 
         req(rv$hrEst, rv$hr_completed)
       if ("Speed & distance" %in% rv$which_question)
-        req(rv$speedEst, rv$distEst, rv$sd_completed)
+        req(rv$sd_completed)
       
       pars <- .build_parameters(rv)
       list2env(pars, envir = environment())
@@ -967,7 +1018,8 @@ mod_tab_report_server <- function(id, rv) {
       
       if ("Speed & distance" %in% rv$which_question) {
         
-        if (rv$is_ctsd) {
+        if (is_ctsd) {
+          req(rv$speedEst, rv$distEst)
           
           sd_cri <- c(round(rv$sd_cri$lci * 100, 1),
                       round(rv$sd_cri$est * 100, 0),
@@ -1020,7 +1072,7 @@ mod_tab_report_server <- function(id, rv) {
             "for speed & distance estimation.")
         }
         
-        if (rv$is_ctsd) {
+        if (is_ctsd) {
           txt_sd_extra <- NULL
           
           if (rv$which_meta == "none") txt_sd_extra <- txt_single
@@ -1079,7 +1131,7 @@ mod_tab_report_server <- function(id, rv) {
       txt_sd_uncertainty <- NULL
       is_hr_ci <- FALSE
       is_sd_ci <- FALSE
-
+      
       #### Styles:
 
       css_bold <- "font-weight: bold;"
@@ -1099,7 +1151,8 @@ mod_tab_report_server <- function(id, rv) {
       }
 
       #### For home range estimation:
-
+      
+      hrErr_est <- hrErr_lci <- hrErr_uci <- NA
       if (rv$which_meta == "none") {
         hrErr_lci <- .err_to_txt(rv[["hrErr"]]$lci)
         hrErr_est <- .err_to_txt(rv[["hrErr"]]$est)
@@ -1131,7 +1184,8 @@ mod_tab_report_server <- function(id, rv) {
       }
 
       # Speed and distance errors:
-
+      
+      sdErr_est <- sdErr_lci <- sdErr_uci <- NA
       if (any(rv$dev$N2 > 0)) {
         sdErr_lci <- .err_to_txt(rv[["speedErr"]]$lci)
         sdErr_est <- .err_to_txt(rv[["speedErr"]]$est)
@@ -1659,23 +1713,25 @@ mod_tab_report_server <- function(id, rv) {
         m <- length(rv$simList)
         m <- ifelse(m == 1, "one simulation", "two simulations")
         
-        shinyalert::shinyalert(
-          type = "warning",
-          title = "Warning",
-          text = tagList(span(
-            "Only", m, "currently available.",
-            "Run more", span("simulations", class = "cl-grn"), 
-            "in one of the previous analyses tabs."
-          )),
-          html = TRUE,
-          size = "xs")
-        
-        msg_log(
-          style = "error",
-          message = paste(
-            msg_danger("Insufficient simulations"),
-            "to generate a report."),
-          detail = "Return to the analyses tab(s).")
+        if (rv$which_meta != "none") {
+          shinyalert::shinyalert(
+            type = "warning",
+            title = "Warning",
+            text = tagList(span(
+              "Only", m, "currently available.",
+              "Run more", span("simulations", class = "cl-grn"), 
+              "in one of the previous analyses tabs."
+            )),
+            html = TRUE,
+            size = "xs")
+          
+          msg_log(
+            style = "error",
+            message = paste(
+              msg_danger("Insufficient simulations"),
+              "to generate a report."),
+            detail = "Return to the analyses tab(s).")
+        }
       }
       
       req(rv$report$analyses)
@@ -2251,7 +2307,7 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       rv$report$dur_for_hr <- paste0(round(dur_for_hr, 1),
-                                     " ", taup_unit, ",")
+                                     " ", taup_unit)
       
       # Calculate median/ci:
       med <- stats::median(ds1_hr$error)
@@ -2827,7 +2883,7 @@ mod_tab_report_server <- function(id, rv) {
             " and ", fontawesome::fa("diamond"), " in darker colors)"),
           "do not show lines, then the credible intervals (CIs) were",
           "too large or the number of simulations",
-          wrap_none("insufficient", class = "cl-dgr", end = "."),
+          wrap_none("insufficient", color = pal$dgr, end = "."),
           "Run more simulations to obtain valid CIs.")
         
       } else {
@@ -3006,7 +3062,7 @@ mod_tab_report_server <- function(id, rv) {
 
       if ("Home range" %in% rv$which_question) {
         req(rv$report$ds1_hr[["done"]])
-
+        
         details <- details %>%
           dplyr::add_row(
             question = "Home range",
