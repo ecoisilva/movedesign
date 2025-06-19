@@ -18,13 +18,18 @@ get_hrange_file <- function() {
   out <- read.csv(url)
   
   out_sum <- out %>%
-    dplyr::group_by(duration, tau_p) %>%
+    dplyr::group_by(.data$duration, .data$tau_p) %>%
     dplyr::summarise(
-      error = mean(error, na.rm = TRUE),
-      error_lci = mean(error_lci, na.rm = TRUE),
-      error_uci = mean(error_uci, na.rm = TRUE),
-      .groups = "drop") %>%
-    dplyr::select(duration, tau_p, error, error_lci, error_uci)
+      error = mean(.data$error, na.rm = TRUE),
+      error_lci = mean(.data$error_lci, na.rm = TRUE),
+      error_uci = mean(.data$error_uci, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    dplyr::select(dplyr::all_of(c("duration", 
+                                  "tau_p",
+                                  "error",
+                                  "error_lci", 
+                                  "error_uci")))
   
   sims_hrange <- list(data = out, summary = out_sum)
   return(sims_hrange)
@@ -50,11 +55,11 @@ get_speed_file <- function() {
   out <- read.csv(url)
   
   out_summary <- out %>%
-    dplyr::group_by(tau_v, dur, dti) %>%
+    dplyr::group_by(.data$tau_v, .data$dur, .data$dti) %>%
     dplyr::summarise(
-      error = mean(error, na.rm = TRUE),
-      error_lci = mean(error_lci, na.rm = TRUE),
-      error_uci = mean(error_uci, na.rm = TRUE),
+      error = mean(.data$error, na.rm = TRUE),
+      error_lci = mean(.data$error_lci, na.rm = TRUE),
+      error_uci = mean(.data$error_uci, na.rm = TRUE),
       .groups = "drop")
   
   fixes_per_day <- c(1, 2^seq(1, 11, by = 1))  # Number of fixes per day
@@ -78,7 +83,8 @@ get_speed_file <- function() {
     )
   )
   
-  dti_notes <- dplyr::mutate(dti_notes, dti = as.numeric(.data$dti))
+  dti_notes <- dplyr::mutate(
+    dti_notes, dti = as.numeric(.data$dti))
   
   out <- dplyr::left_join(out, dti_notes, by = "dti")
   out_summary <- dplyr::left_join(out_summary, dti_notes, by = "dti")
