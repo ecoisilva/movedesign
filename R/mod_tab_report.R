@@ -2807,7 +2807,7 @@ mod_tab_report_server <- function(id, rv) {
       }
       
       dt_sd <- sims_speed[[1]] %>%
-        dplyr::mutate(dur = round(.data$input_dur, 0)) %>%
+        dplyr::mutate(dur = round(input_dur, 0)) %>%
         dplyr::select(.data$dti, .data$dti_notes) %>%
         unique()
       
