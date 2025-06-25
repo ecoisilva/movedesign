@@ -534,7 +534,7 @@ run_meta_resampled <- function(rv,
       if (trace) {
         message("Elapsed time:")
         elapsed <- Sys.time() - start_t
-        cat("Elapsed time since start:", format(elapsed), "\n")
+        cat(format(elapsed), "\n")
       }
       
     } # end of [m] loop [based on the number of individuals]

@@ -24,3 +24,4 @@ $run_dev.*
 movedesign.git
 _\.new\.png$
 ^cran-comments\.md$
+^CRAN-SUBMISSION$
