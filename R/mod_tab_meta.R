@@ -1080,7 +1080,7 @@ mod_tab_meta_server <- function(id, rv) {
       bindEvent(input$run_meta)
     
     
-    get_meta_permutation_outputs <- reactive({
+    get_meta_resampled_outputs <- reactive({
       
       start <- Sys.time()
       shinybusy::show_modal_spinner(
@@ -1119,6 +1119,8 @@ mod_tab_meta_server <- function(id, rv) {
       #   trace = TRUE,
       #   .only_max_m = TRUE)
       
+      req(rv$n_resamples > 0)
+      
       tmp <- run_meta_resampled(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
@@ -1148,7 +1150,7 @@ mod_tab_meta_server <- function(id, rv) {
       shinybusy::remove_modal_spinner()
       return(tmp)
       
-    }) %>% # end of reactive, "get_meta_permutation_outputs",
+    }) %>% # end of reactive, "get_meta_resampled_outputs",
       bindCache(c(
         rv$which_question, 
         rv$simList, 
@@ -1171,7 +1173,7 @@ mod_tab_meta_server <- function(id, rv) {
         rv$n_resamples <- input$n_resamples - max_n_resamples
       }
       
-      tmp <- get_meta_permutation_outputs()
+      tmp <- get_meta_resampled_outputs()
       if (!is.null(rv$meta_tbl_resample)) {
         tmp <- dplyr::mutate(tmp, sample = sample + max_n_resamples) 
       }
@@ -1179,7 +1181,7 @@ mod_tab_meta_server <- function(id, rv) {
       rv$meta_tbl_resample <<- dplyr::bind_rows(rv$meta_tbl_resample, tmp)
       
       # rv$meta_tbl_resample <- NULL
-      # tmp <- get_meta_permutation_outputs()
+      # tmp <- get_meta_resampled_outputs()
       # rv$meta_tbl_resample <- dplyr::distinct(tmp)
       
     }) %>% # end of observe,
@@ -1391,8 +1393,8 @@ mod_tab_meta_server <- function(id, rv) {
             shape = 4) } +
         
         { if (rv$is_emulate)
-        ggplot2::scale_fill_manual(
-          "Truth:", values = c("True area" = "black")) } +
+          ggplot2::scale_fill_manual(
+            "Truth:", values = c("True area" = "black")) } +
         
         ggplot2::scale_color_manual("Group:", values = x_color) +
         ggplot2::scale_shape_manual("Group:", values = x_shape) +

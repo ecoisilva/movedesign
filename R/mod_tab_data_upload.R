@@ -727,6 +727,12 @@ mod_tab_data_upload_server <- function(id, rv) {
         rv$species <- species
       }
       
+      if (any(grepl("UTMzone", names(out_dataset)))) {
+        out_dataset <- out_dataset |>
+          dplyr::mutate(
+            UTMzone = as.numeric(gsub("\\D", "", UTMzone)))
+      }
+      
       parsedate::parse_date("1111-11-11")
       
       out_dataset <- tryCatch(

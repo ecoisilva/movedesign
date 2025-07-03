@@ -868,6 +868,7 @@ mod_tab_sims_server <- function(id, rv) {
       out <- ctmm::simulate(mod, t = t0, seed = rv$seed0)
       out <- pseudonymize(out)
       out$index <- 1:nrow(out)
+      out$id <- as.character(rv$seed0)
       out <- list(out)
       
       rv$sims$grouped <- FALSE
@@ -1154,7 +1155,7 @@ mod_tab_sims_server <- function(id, rv) {
         )
       
       ggiraph::girafe(
-        ggobj = p,
+        ggobj = suppressWarnings(p),
         width_svg = 5.5, height_svg = 5,
         options = list(
           ggiraph::opts_sizing(rescale = TRUE, width = .1),

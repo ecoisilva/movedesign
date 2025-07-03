@@ -3241,7 +3241,6 @@ mod_tab_report_server <- function(id, rv) {
         
         out_dti <- sd_opts$dti[which.min(abs(sd_opts$dti - input_dti))]
         input_dti <- sd_opts$dti_notes[match(out_dti, sd_opts$dti)]
-        input_dti
         
         details <- details %>%
           dplyr::add_row(

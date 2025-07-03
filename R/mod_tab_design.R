@@ -63,7 +63,7 @@ mod_tab_design_ui <- function(id) {
               tagAppendAttributes(
                 class = 'label_center no-bottom'),
             choices = c("Fix success rate" = "loss",
-                        "Tag failure" = "failure",
+                        "Deployment disruption" = "failure",
                         "Location error" = "error",
                         "Storage limits" = "max"),
             selected = character(0),
@@ -260,7 +260,7 @@ mod_tab_design_ui <- function(id) {
                   cellWidths = c("92%", "15px"),
                   
                   p(HTML("&nbsp;"),
-                    "Tag failure (%):") %>%
+                    "Deployment disruption (%):") %>%
                     tagAppendAttributes(class = 'label_split'),
                   
                   actionButton(
@@ -944,7 +944,7 @@ mod_tab_design_server <- function(id, rv) {
                             "Storage limits" = "max")
           else
             opt_limits <- c("Fix success rate" = "loss",
-                            "Tag failure" = "failure",
+                            "Deployment disruption" = "failure",
                             "Location error" = "error",
                             "Storage limits" = "max")
         },
@@ -954,7 +954,7 @@ mod_tab_design_server <- function(id, rv) {
                             "Location error" = "error")
           else
             opt_limits <- c("Fix success rate" = "loss",
-                            "Transmitter failure" = "failure",
+                            "Deployment disruption" = "failure",
                             "Location error" = "error")
         },
         stop(paste0("No handler for ", input$device_type, "."))
@@ -2674,6 +2674,7 @@ mod_tab_design_server <- function(id, rv) {
       if (rv$data_type == "simulated") {
         dat <- rv$datList[[1]]
         dat <- dat[which(dat$t <= max(sim$t)), ]
+        dat$id <- as.factor(dat$id)
       } else {
         dat <- tele_to_dt(rv$datList[rv$id])
       }

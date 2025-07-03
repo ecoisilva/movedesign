@@ -698,15 +698,15 @@ run_meta_loocv <- function(rv,
 }
 
 
-#' @title Plot meta (combinations)
+#' @title Plot meta (resamples)
 #'
 #' @noRd 
 #' 
-plot_meta_combinations <- function(rv,
-                                   set_target = c("hr", "ctsd"),
-                                   random = FALSE, 
-                                   subpop = FALSE, 
-                                   colors = NULL) {
+plot_meta_resampled <- function(rv,
+                                set_target = c("hr", "ctsd"),
+                                random = FALSE, 
+                                subpop = FALSE, 
+                                colors = NULL) {
   
   stopifnot(!is.null(rv$meta_tbl),
             !is.null(rv$which_m),
