@@ -51,15 +51,22 @@
       wrap_none(.err_to_txt(rv[[name]]$est), "%."))
     
   } else {
-    txt_nsim <- span(
-      "Your mean error estimate based on",
+    err <- rv$meta_tbl %>%
+      dplyr::filter(.data$group == "All") %>%
+      dplyr::filter(.data$type == set_target) %>%
+      dplyr::slice(which.max(.data$m)) %>% 
+      dplyr::pull(.data$error)
+    
+    if (set_target == "hr") txt_nsim <- span(
+      "Your estimated mean home range area based on",
       span(nsims, style = "font-weight: bold;"), "was",
-      wrap_none(round(
-        rv$meta_tbl %>%
-          dplyr::filter(.data$group == "All") %>%
-          dplyr::filter(.data$type == set_target) %>%
-          dplyr::slice(which.max(.data$m)) %>% 
-          dplyr::pull(.data$error) * 100, 1), "%."))
+      ifelse(err > 0, "overestimated", "underestimated"),
+      "by", wrap_none(.err_to_txt(err), "%."))
+    if (set_target == "ctsd") txt_nsim <- span(
+      "Your estimated mean speed based on",
+      span(nsims, style = "font-weight: bold;"), "was",
+      ifelse(err > 0, "overestimated", "underestimated"),
+      "by", wrap_none(.err_to_txt(err), "%."))
   }
   return(txt_nsim)
 }

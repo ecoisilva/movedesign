@@ -43,7 +43,7 @@
   
   num_groups <- ifelse(is_grouped, length(x), 1)
   num_out <- ifelse(is_grouped, length(x) + 1, 1)
-
+  
   if (is_grouped) {
     
     x[[1]][sapply(x[[1]], is.null)] <- NULL
@@ -61,9 +61,9 @@
       suppressMessages() %>% 
       suppressWarnings() %>% 
       quiet()
-  # }, warning = function(w) {
-  #   message("A warning occurred:", conditionMessage(w), "\n")
-  #   return(NULL)
+    # }, warning = function(w) {
+    #   message("A warning occurred:", conditionMessage(w), "\n")
+    #   return(NULL)
   }, error = function(e) {
     message(paste(
       "Population-level mean", variable, "could not be extracted."))

@@ -1352,29 +1352,53 @@ create_modal <- function(var, id) {
   
   if (var == "failure") {
     out_title <- shiny::h4(
-      span("Transmitter or tag failure", class = "cl-sea"), ":")
+      wrap_none(
+        span("Deployment disruption", class = "cl-sea"), " bias:"))
     
     out_body <- fluidRow(
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
       
-      p("Some devices stop collecting information in the field.",
-        "This could be due to a myriad of factors:",
-        wrap_none(span("signal loss", class = "cl-dgr"), ","),
-        "animal mortality or premature detachment, exhaustion",
-        "of batteries, antenna breakage, among others.", br(),
-        "Setting this input to 5%, for example, means that there",
-        "is a 5% chance that the simulated tags stop recording",
-        span("locations", class = "cl-dgr"),
+      p("Some tracking devices stop recording data before the end",
+        "of the study due to",
+        wrap_none(
+          span("deployment disruptions", class = "cl-sea"), "."),
+        "These disruptions can result from technical malfunctions",
+        "(such as battery failure,",
+        "antenna damage, or software errors)", 
+        "or from biological events like animal mortality or premature",
+        "tag detachment.",
+        "Setting this input to ",
+        wrap_none(
+          span("5%", class = "txt_code_light inline"), ","),
+        "for example, means that each",
+        "simulated device has a 5% chance of experiencing a",
+        span("permanent recording failure", class = "cl-dgr"),
         "at some point during the simulation.",
+        br(),
         "For illustrative purposes, the initial tags/simulations",
         "created in the", 
         fontawesome::fa("stopwatch", fill = "#009da0"),
-        span("Sampling design", class = "cl-sea-l"), "tab",
+        span("Sampling design", class = "cl-sea"), "tab",
         "will never fail, this will only be applicable to any",
         "subsequent simulation in the",
         fontawesome::fa("compass-drafting", fill = "#009da0"),
-        span("Analyses", class = "cl-sea-l"), "tabs."
+        span("Analyses", class = "cl-sea"), "tabs.",
+        p(),
+        
+        span(
+          class = "help-block",
+          style = paste0(
+            "text-align: justify !important;",
+            "font-size: 14px;"),
+          
+          fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
+          span("Note:", class = "help-block-note"), 
+          "When the risk of device failure or animal",
+          "mortality during deployment is high, we",
+          "recommend proportionally increasing the",
+          span("number of deployed tags", class = "cl-sea"),
+          "to compensate for these losses.")
       )
       
     ) # end of fluidRow
@@ -1388,7 +1412,24 @@ create_modal <- function(var, id) {
       style = paste("margin-right: 20px;",
                     "margin-left: 20px;"),
       
-      p("TBA")
+      p("Tracking devices do not provide perfectly",
+        "accurate location estimates. Each recorded position",
+        "is subject to some level of",
+        wrap_none(
+          span("location error", class = "cl-sea"), ","),
+        "typically caused by factors such as satellite geometry,",
+        "atmospheric interference, terrain obstruction, or",
+        "hardware limitations.",
+        br(),
+        "This input controls the magnitude of simulated",
+        "location error by specifying the standard deviation",
+        "of random noise added to each position.",
+        "For example, setting this value to",
+        span("20 meters", class = "txt_code_light inline"),
+        "means that each recorded location is offset",
+        "from the true position by a random error drawn from",
+        "a distribution with a 20-meter standard deviation."
+      )
       
     ) # end of fluidRow
     
