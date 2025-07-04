@@ -1000,19 +1000,20 @@ mod_tab_report_server <- function(id, rv) {
           
           if (!is.na(hr_cri[1]) && !is.na(hr_cri[3])) {
             txt_hr_extra <- span(
-              "There is a", wrap_none(ci, "%", css = "cl-blk"),
+              "For each individual home range estimate,",
+              "there is a", wrap_none(ci * 100, "%", css = "cl-blk"),
               "probability the relative error will lie between",
               wrap_none(hr_cri[1], "%", css = "cl-blk"),
               "and", wrap_none(hr_cri[3], "%", end = ".", css = "cl-blk"))
           } else txt_hr_extra <- txt_meta_no_ci
         }
         
-        txt_nsim <- .get_txt_nsim(rv, set_target = "hr")
+        # txt_nsim <- .get_txt_nsim(rv, set_target = "hr")
         # TODO txt_nsim move to Meta-analyses?
         
         out_analyses <- out_hr <- p(
           txt_hr,
-          txt_nsim,
+          # txt_nsim,
           txt_hr_extra)
         
       } # end of 'Home range'
@@ -1082,7 +1083,7 @@ mod_tab_report_server <- function(id, rv) {
           else {
             if (!is.na(sd_cri[1]) && !is.na(sd_cri[3]))
               txt_sd_extra <- span(
-                "There is a", wrap_none(ci, "%", css = "cl-blk"),
+                "There is a", wrap_none(ci * 100, "%", css = "cl-blk"),
                 "probability that the relative error will lie within",
                 wrap_none(sd_cri[1], "%", css = "cl-blk"), "and",
                 wrap_none(sd_cri[3], "%", end = ".", css = "cl-blk"))
@@ -1601,6 +1602,8 @@ mod_tab_report_server <- function(id, rv) {
           "for a single simulation",
           paste("for", length(rv$simList), "simulations"))
         
+        txt_meta_nsims <- .get_txt_nsim(rv, set_target = target)
+        
         switch(meta_dt$status,
                "Yes" = {
                  txt_mean <- span(
@@ -1646,8 +1649,8 @@ mod_tab_report_server <- function(id, rv) {
               "The number of simulations appears",
               wrap_none("sufficient", color = pal$sea),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], end = ","),
-              txt_uncertainty)
+              wrap_none(txt_target[[target]], end = ".")) #,
+              # txt_uncertainty)
           },
           "Near" = {
             txt_final <- span(
@@ -1655,8 +1658,8 @@ mod_tab_report_server <- function(id, rv) {
               "The number of simulations appears",
               wrap_none("insufficient", color = pal$grn),
               "to accurately estimate man", 
-              wrap_none(txt_target[[target]], end = ","),
-              txt_uncertainty)
+              wrap_none(txt_target[[target]], end = ".")) #,
+              # txt_uncertainty)
           },
           "No" = {
             txt_final <- span(
@@ -1664,8 +1667,8 @@ mod_tab_report_server <- function(id, rv) {
               "The number of simulations appears",
               wrap_none("insufficient", color = pal$dgr),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], end = ","),
-              txt_uncertainty)
+              wrap_none(txt_target[[target]], end = ".")) #,
+              # txt_uncertainty)
           })
         
         if (length(get_cri) > 0) {
@@ -1690,7 +1693,8 @@ mod_tab_report_server <- function(id, rv) {
             span(txt_title[[target]],
                  style = set_style_title),
             br(),
-            p(txt_mean,
+            p(txt_meta_nsims,
+              # txt_mean,
               txt_final,
               txt_meta_groups))
           
@@ -1702,7 +1706,9 @@ mod_tab_report_server <- function(id, rv) {
               span(txt_title[[target]],
                    style = set_style_title),
               br(),
-              p(txt_mean,
+              p(
+                txt_meta_nsims,
+                # txt_mean,
                 txt_final,
                 txt_meta_groups)))
         }
@@ -1968,7 +1974,7 @@ mod_tab_report_server <- function(id, rv) {
             "estimation,", txt_level, "uncertainty:",
             "for a duration of",
             highlighted_dur, "days, there is a",
-            wrap_none(ci, "%", css = "cl-blk"),
+            wrap_none(ci * 100, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
             wrap_none(lci, "%", css = "cl-blk"),
             "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
@@ -1980,7 +1986,7 @@ mod_tab_report_server <- function(id, rv) {
             "estimation.", br(),
             "For a duration of", highlighted_dur,
             "days, there is high uncertainty",
-            wrap_none("(", ci, "%", css = "cl-blk"),
+            wrap_none("(", ci * 100, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
             wrap_none(lci, "%", css = "cl-blk"),
             "and", wrap_none(uci, "%", end = ").", css = "cl-blk"))
@@ -2020,7 +2026,7 @@ mod_tab_report_server <- function(id, rv) {
             "estimation,", txt_level, "uncertainty:",
             "for a sampling interval of",
             wrap_none(out_dti$value, " ", out_dti$unit, ", there"),
-            "is a", wrap_none(ci, "%", css = "cl-blk"),
+            "is a", wrap_none(ci * 100, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
             wrap_none(lci, "%", css = "cl-blk"),
             "and", wrap_none(uci, "%", end = ".", css = "cl-blk"))
@@ -2032,7 +2038,7 @@ mod_tab_report_server <- function(id, rv) {
             "estimation. For a sampling interval of",
             wrap_none(out_dti$value, " ", out_dti$unit, ", there is"),
             "high uncertainty",
-            wrap_none("(", ci, "%", css = "cl-blk"),
+            wrap_none("(", ci * 100, "%", css = "cl-blk"),
             "probability that the relative error will lie within",
             wrap_none(lci, "%", css = "cl-blk"),
             "and", wrap_none(uci, "%", end = ").", css = "cl-blk"))
@@ -2510,11 +2516,12 @@ mod_tab_report_server <- function(id, rv) {
         
         { if (is_dur) hr_p4 } +
         
-        ggplot2::geom_point(
+        ggiraph::geom_point_interactive(
           data = ~ head(.x, 1),
           mapping = ggplot2::aes(
             x = rv$report$ds1_hr[["mean"]], y = 0,
             col = "est", shape = "est"),
+          # tooltip = paste0("Mean error"),
           size = 6) +
         
         { if (!is.null(rv$hrErr) && rv$which_meta == "none")
@@ -2562,7 +2569,8 @@ mod_tab_report_server <- function(id, rv) {
         ggobj = suppressMessages(suppressWarnings(p)),
         width_svg = 6, height_svg = 4,
         options = list(
-          ggiraph::opts_zoom(max = 5),
+          ggiraph::opts_tooltip(css = tooltip_css),
+          # ggiraph::opts_hover_inv(css = "opacity: 0.1;"),
           ggiraph::opts_hover(
             css = paste("r: 4pt;",
                         "fill: #006263;",
@@ -2572,7 +2580,7 @@ mod_tab_report_server <- function(id, rv) {
             css = paste("r: 4pt;",
                         "fill: #004647;",
                         "stroke: #004647;")),
-          ggiraph::opts_toolbar(saveaspng = FALSE)))
+          ggiraph::opts_toolbar(saveaspng = TRUE)))
       
     }) %>% # end of renderGirafe // repPlot_hr
       bindEvent(list(input$build_report,
@@ -3401,7 +3409,8 @@ mod_tab_report_server <- function(id, rv) {
             span(out_taup, unit, class = "cl-dgr"),
             
             "and for different sampling",
-            "durations (from 1 day to", wrap_none(max_dur, " days)"),
+            "durations (from 1 day to", wrap_none(
+              scales::comma(max_dur), " days)"),
             "in grey.",
             "As sampling duration increases, we will expect lower",
             "estimate errors (points) and",
@@ -3451,7 +3460,7 @@ mod_tab_report_server <- function(id, rv) {
       
       tooltip_css <- paste(
         "font-family: 'Roboto Condensed', sans-serif;",
-        "background-color: #222d32;",
+        "background-color: #22394a;",
         "font-size: 14px;",
         "padding: 5px;",
         "color: #fff;")
@@ -3516,6 +3525,14 @@ mod_tab_report_server <- function(id, rv) {
           size = 3, col = pal$mdn)
       }
       
+      dat_filtered$tooltip_label <- paste0(
+        scales::comma(dat_filtered$duration), " days")
+      newdat_filtered$tooltip_label <- paste0(
+        scales::comma(newdat_filtered$duration), " days")
+      
+      dat_filtered$tooltip_class <- "tooltip-dark"
+      newdat_filtered$tooltip_class <- "tooltip-blue"
+      
       p <- ggplot2::ggplot() +
         
         ggplot2::geom_ribbon(
@@ -3536,11 +3553,13 @@ mod_tab_report_server <- function(id, rv) {
           col = "grey20", linetype = "dotted",
           size = 0.5) +
         
-        ggplot2::geom_point(
+        ggiraph::geom_point_interactive(
           data = dat_filtered,
           mapping = ggplot2::aes_string(x = "duration",
                                         y = "error",
-                                        group = "tau_p"),
+                                        group = "tau_p",
+                                        tooltip = "tooltip_label",
+                                        data_id = "tooltip_class"),
           size = 2.5, shape = 18, col = "grey40") +
         
         ggplot2::geom_segment(
@@ -3553,17 +3572,19 @@ mod_tab_report_server <- function(id, rv) {
           linetype = "solid",
           size = 1.5, alpha = .8) +
         
-        ggplot2::geom_point(
+        ggiraph::geom_point_interactive(
           data = newdat_filtered[index_dur,],
           mapping = ggplot2::aes_string(x = "duration",
                                         y = "error",
-                                        group = "tau_p"),
-          col = pal$sea,
-          position = pd, size = 5) +
+                                        group = "tau_p",
+                                        tooltip = "tooltip_label",
+                                        data_id = "tooltip_class"),
+          col = pal$sea, fill = pal$sea, position = pd, shape = 23, size = 5) +
         
         ggplot2::geom_hline(yintercept = 0,
                             linetype = "solid", size = .5) +
         
+        ggplot2::scale_x_continuous(label = scales::comma) +
         ggplot2::scale_y_continuous(labels = scales::percent) +
         ggplot2::labs(x = "Sampling duration (in days)",
                       y = "Estimate error (%)") +
@@ -3579,8 +3600,25 @@ mod_tab_report_server <- function(id, rv) {
         ggobj = p,
         width_svg = 6, height_svg = 4.5,
         options = list(
-          ggiraph::opts_tooltip(css = tooltip_css),
-          ggiraph::opts_zoom(max = 5),
+          ggiraph::opts_tooltip(
+            use_fill = TRUE,
+            css = paste(tooltip_css,
+            ".tooltip-dark {
+              font-family: 'Roboto Condensed', sans-serif;
+              background-color: #22394a;
+              font-size: 14px;
+              padding: 5px;
+              color: #fff;
+            }
+            .tooltip-blue {
+              font-family: 'Roboto Condensed', sans-serif;
+              background-color: #004647;
+              font-size: 14px;
+              padding: 5px;
+              color: #fff;
+            }")),
+          # ggiraph::opts_tooltip(css = tooltip_css),
+          # ggiraph::opts_zoom(max = 5),
           ggiraph::opts_hover(
             css = paste("r: 4pt;",
                         "fill: #006263;",
