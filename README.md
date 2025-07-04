@@ -5,16 +5,18 @@
 
 <!-- badges: start -->
 
-![Static Badge](https://img.shields.io/badge/version-0.3.0-blue)
-[![DOI](https://zenodo.org/badge/474098792.svg)](https://zenodo.org/badge/latestdoi/474098792)<br>
-[![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)
-[![Project Status: Active – The project has reached a stable, usable
-state and is being actively
+[![CRAN
+version](https://img.shields.io/cran/v/movedesign?color=%23009da0&label=CRAN%20version)](https://CRAN.R-project.org/package=movedesign)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.7963190-green?color=%23009da0)](https://doi.org/10.5281/zenodo.7963190)
+<br> [![Project Status: Active – The project has reached a stable,
+usable state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)
 [![Hits](https://hits.sh/github.com/ecoisilva/hits.svg)](https://hits.sh/github.com/ecoisilva/movedesign/)
 <br>
 <!-- [![Github last commit date](https://img.shields.io/github/last-commit/ecoisilva/movedesign.svg?label=Updated&logo=github&cacheSeconds=600)](https://github.com/ecoisilva/movedesign/commits) -->
 <!-- [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/movedesign)](https://cran.r-project.org/package=movedesign) -->
+
 <!-- badges: end -->
 
 <br>
@@ -86,7 +88,7 @@ issue](https://github.com/ecoisilva/movedesign/issues). For more general
 questions and suggestions, contact [Inês
 Silva](mailto:i.simoes-silva@hzdr.de?subject=%5Bmovedesign%5D).
 
-## Citation
+## Citation:
 
 To cite `movedesign`, use the following:
 
