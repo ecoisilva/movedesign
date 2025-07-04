@@ -1706,9 +1706,8 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       if (rv$is_emulate) {
         req(rv$meanfitList)
-        fit <- emulate_seeded(rv$meanfitList[["All"]], seed)
-        if (length(fit$isotropic) > 1)
-          fit$isotropic <- fit$isotropic[["sigma"]]
+        
+        fit <- simulate_seeded(rv$meanfitList[["All"]], seed)
         
         # Recenter to 0,0:
         fit$mu[["x"]] <- 0
@@ -1735,9 +1734,7 @@ mod_tab_ctsd_server <- function(id, rv) {
         rv$sd$groups <- stats::setNames(list(seed), group)
         
         if (rv$is_emulate) {
-          fit <- emulate_seeded(rv$meanfitList[[group]], seed)
-          if (length(fit$isotropic) > 1)
-            fit$isotropic <- fit$isotropic[["sigma"]]
+          fit <- simulate_seeded(rv$meanfitList[[group]], seed)
           
           # Recenter to 0,0:
           fit$mu[["x"]] <- 0

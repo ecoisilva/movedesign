@@ -2439,8 +2439,8 @@ mod_tab_design_server <- function(id, rv) {
         rv$hr$tbl <- NULL
         rv$sd$tbl <- NULL
         
-        rv$err_prev <- list("hr" = rep(1, 5),
-                            "ctsd" = rep(1, 5))
+        rv$err_prev <- list("hr" = rep(1, 10),
+                            "ctsd" = rep(1, 10))
         
         shinyjs::disable("devButton_run")
         shinyjs::enable("devButton_save")

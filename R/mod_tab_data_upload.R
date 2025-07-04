@@ -1363,19 +1363,13 @@ mod_tab_data_upload_server <- function(id, rv) {
         ### Validate groups: ----------------------------------------------
         
         fitA <- tryCatch({
-          out_fit <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
-          if (length(out_fit$isotropic) > 1)
-            out_fit$isotropic <- out_fit$isotropic[["sigma"]]
-          out_fit
+          simulate_seeded(rv$meanfitList[["A"]], rv$seed0)
         }, error = function(e) {
           message("A warning occurred:", conditionMessage(e), "\n")
         })
         
         fitB <- tryCatch({
-          out_fit <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0)
-          if (length(out_fit$isotropic) > 1)
-            out_fit$isotropic <- out_fit$isotropic[["sigma"]]
-          out_fit
+          simulate_seeded(rv$meanfitList[["B"]], rv$seed0)
         }, error = function(e) {
           message("A warning occurred:", conditionMessage(e), "\n")
         })

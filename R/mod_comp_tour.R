@@ -1482,11 +1482,8 @@ mod_comp_tour_server <- function(id, rv) {
         intro,
         HTML(paste(
           "To assess the spread of estimates, we can resample",
-          "from the total population through",
-          wrap_none(span("combination testing",
-                         class = "cl-grn txt_bold"), "."),
-          "This involves randomly reassigning individuals into new",
-          "sets and rerunning the estimation of",
+          "individuals at each population sample size, ",
+          "and rerunning the estimation of",
           span("mean", class = "cl-sea-l txt_italic"),
           span("home range areas", class = "cl-sea-l"),
           "for each new set.",

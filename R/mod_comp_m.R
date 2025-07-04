@@ -908,7 +908,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       # Initialize values:
       
       err <- 1
-      threshold <- input$error_threshold/100 # default is currently 5%
+      threshold <- input$error_threshold/100
       hex <- rep("grey50", 5)
       trace <- TRUE
       
@@ -956,7 +956,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           message = paste0("Simulation set no. ", i,
                            " out of ", length(m_sets), " ",
                            msg_warning("in progress"), ","),
-          detail = paste("or until error threshold is reached."))
+          detail = paste("or until mean outputs are stable."))
         
         # Simulate data:
         
@@ -1381,7 +1381,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
           rv$err_prev[[target]] <- c(rv$err_prev[[target]], abs(err))
           last_values[[target]] <- 
-            (length(rv$err_prev[[target]])-3):length(rv$err_prev[[target]])
+            (length(rv$err_prev[[target]])-5):length(rv$err_prev[[target]])
           
         } # end of [target] loop
         
@@ -1746,8 +1746,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         shiny::icon("layer-group", class = "cl-sea"),
         span("Meta-analyses", class = "cl-sea"), "tab,",
         "and through", wrap_none(
-          span("combination testing",
-               style = "font-weight: bold;"), ".")
+          span("resampling", style = "font-weight: bold;"), ".")
       )
       
       # txt_reference <- tagList(
@@ -1825,7 +1824,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                   "in the", shiny::icon("layer-group", class = "cl-sea"),
                   span("Meta-analyses", class = "cl-sea"), "tab,",
                   "and through", wrap_none(
-                    span("combination testing",
+                    span("resampling",
                          style = "font-weight: bold;"), ".")
                 ) #,
                 
