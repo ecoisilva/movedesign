@@ -36,6 +36,9 @@
 #' @noRd
 .get_txt_nsim <- function(rv, set_target = c("hr", "ctsd")) {
   
+  css_bold <- "font-weight: bold;"
+  css_mono <- "font-family: var(--monosans);"
+  
   set_target <- match.arg(set_target, choices = c("hr", "ctsd"))  
   name <- paste0(set_target, "Err")
   
@@ -47,26 +50,31 @@
   if (rv$which_meta == "none") {
     txt_nsim <- span(
       "Your mean error estimate based on",
-      span(nsims, style = "font-weight: bold;"), "was",
+      span(nsims, style = paste(css_bold, css_mono)), "was",
       wrap_none(.err_to_txt(rv[[name]]$est), "%."))
     
   } else {
     err <- rv$meta_tbl %>%
       dplyr::filter(.data$group == "All") %>%
       dplyr::filter(.data$type == set_target) %>%
-      dplyr::slice(which.max(.data$m)) %>% 
-      dplyr::pull(.data$error)
+      dplyr::slice(which.max(.data$m))
     
     if (set_target == "hr") txt_nsim <- span(
-      "Your estimated mean home range area based on",
-      span(nsims, style = "font-weight: bold;"), "was",
+      "The mean home range area based on",
+      span(nsims, style = paste(css_bold, css_mono)), "was",
       ifelse(err > 0, "overestimated", "underestimated"),
-      "by", wrap_none(.err_to_txt(err), "%."))
+      "by", wrap_none(
+        .err_to_txt(dplyr::pull(err, .data$error)), "% [",
+        .err_to_txt(dplyr::pull(err, .data$error_lci)), ", ",
+        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."))
     if (set_target == "ctsd") txt_nsim <- span(
-      "Your estimated mean speed based on",
-      span(nsims, style = "font-weight: bold;"), "was",
+      "The mean speed based on",
+      span(nsims, style = paste(css_bold, css_mono)), "was",
       ifelse(err > 0, "overestimated", "underestimated"),
-      "by", wrap_none(.err_to_txt(err), "%."))
+      "by", wrap_none(
+        .err_to_txt(dplyr::pull(err, .data$error)), "% [",
+        .err_to_txt(dplyr::pull(err, .data$error_lci)), ", ",
+        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."))
   }
   return(txt_nsim)
 }
