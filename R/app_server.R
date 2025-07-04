@@ -67,7 +67,7 @@ app_server <- function(input, output, session) {
     is_meta = FALSE,
     is_font = FALSE,
     add_note = FALSE,
-    err_prev = list("hr" = rep(1, 5), "ctsd" = rep(1, 5)),
+    err_prev = list("hr" = rep(1, 10), "ctsd" = rep(1, 10)),
     dev_failed = c(),
     tour_active = FALSE,
     alert_active = TRUE,
