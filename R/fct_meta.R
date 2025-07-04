@@ -142,7 +142,7 @@
 
 #' @title Running hierarchical model meta-analyses (with resamples)
 #'
-#' @description This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or continuous-time speed and distance (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate the significance of results under combination testing.
+#' @description This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or mean movement speed (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate outputs through the resampling of individuals.
 #'
 #' @param rv A list containing outputs, settings and data objects. Must not be NULL.
 #' @param set_target Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.
@@ -318,7 +318,7 @@ run_meta_resampled <- function(rv,
         } else { if (arg[["All"]]$sets == 1) n_samples <- 1 }
       }
       
-      msg_error <- "Error during combination testing."
+      msg_error <- "Error during resampling."
       if (length(n_samples) == 0) stop(msg_error)
       
       for (sample in seq_len(n_samples)) {

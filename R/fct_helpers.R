@@ -392,6 +392,7 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
   return(mod) 
 } 
 
+
 #' ctmm::emulate() but seeded 
 #'  
 #' @noRd 
@@ -399,6 +400,15 @@ emulate_seeded <- function(obj, seed) {
   set.seed(seed) 
   return(ctmm::emulate(obj, fast = TRUE)) 
 } 
+
+#' ctmm::simulate() but seeded 
+#'  
+#' @noRd 
+simulate_seeded <- function(obj, seed) { 
+  set.seed(seed) 
+  return(ctmm::simulate(obj)) 
+} 
+
 
 #' Get true home ranges 
 #'  

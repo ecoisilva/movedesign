@@ -52,10 +52,8 @@ simulating_data <- function(rv) {
 
     if (rv$is_emulate) {
       
-      fit <- emulate_seeded(rv$meanfitList[[1]], rv$seed0)
-      if (length(fit$isotropic) > 1)
-        fit$isotropic <- fit$isotropic[["sigma"]]
-
+      fit <- simulate_seeded(rv$meanfitList[[1]], rv$seed0)
+      
       # Recenter to 0,0:
       fit$mu[["x"]] <- 0
       fit$mu[["y"]] <- 0
@@ -71,13 +69,9 @@ simulating_data <- function(rv) {
     if ("compare" %in% rv$which_meta) {
       
       if (rv$is_emulate) {
-        fitA <- emulate_seeded(rv$meanfitList[["A"]], rv$seed0)
-        fitB <- emulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
-        if (length(fitA$isotropic) > 1)
-          fitA$isotropic <- fitA$isotropic[["sigma"]]
-        if (length(fitB$isotropic) > 1)
-          fitB$isotropic <- fitB$isotropic[["sigma"]]
-
+        fitA <- simulate_seeded(rv$meanfitList[["A"]], rv$seed0)
+        fitB <- simulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
+        
         # Recenter to 0,0:
         fitA$mu[["x"]] <- 0
         fitA$mu[["y"]] <- 0
@@ -188,7 +182,7 @@ fitting_model <- function(obj,
               !is.null(.tau_p), !is.null(.tau_v))
     
     dur <- .dur$value %#% .dur$unit
-    optimal_dur <- (.tau_p[[1]]$value[2] %#% .tau_p[[1]]$unit[2]) * 10
+    optimal_dur <- (.tau_p[[1]]$value[2] %#% .tau_p[[1]]$unit[2]) * 30
     
     dti <- .dti$value %#% .dti$unit
     optimal_dti <- (.tau_v[[1]]$value[2] %#% .tau_v[[1]]$unit[2]) / 3
@@ -222,10 +216,15 @@ fitting_model <- function(obj,
                        interactive = FALSE))
   }
   
+  # out <- tryCatch(
+  #   if (all(to_fit)) par.ctmm.fit(obj, guessList, parallel = .parallel)
+  #   else par.ctmm.select(obj, guessList, parallel = .parallel)
+  #   , error = function(e) e)
+  
   out <- tryCatch(
-    if (all(to_fit)) par.ctmm.fit(obj, guessList, parallel = .parallel)
-    else par.ctmm.select(obj, guessList, parallel = .parallel)
-    , error = function(e) e)
+    par.ctmm.select(obj, guessList, parallel = .parallel),
+    error = function(e) e)
+  
   if (inherits(out, "error")) return(NULL)
   
   if (n_obj == 1) out <- list(out)
