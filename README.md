@@ -50,10 +50,17 @@ This app was built using the `golem` framework.
 
 ## Installation:
 
-To install the stable version of `movedesign`, run the following:
+To install the stable version of `movedesign` from CRAN:
 
 ``` r
-install.packages("movedesign", repos = c("https://ecoisilva.r-universe.dev", "https://cloud.r-project.org"))
+install.packages("movedesign")
+```
+
+To install the most recent development version directly from GitHub:
+
+``` r
+install.packages("remotes")
+remotes::install_github("ecoisilva/movedesign")
 ```
 
 If you encounter any issues, consult the installation troubleshooting
