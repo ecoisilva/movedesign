@@ -1070,8 +1070,9 @@ mod_tab_meta_server <- function(id, rv) {
       rv$random <- FALSE
       
       tmp <- get_meta_outputs()
-      rv$meta_tbl <<- dplyr::bind_rows(rv$meta_tbl, tmp)
-      rv$meta_tbl <- dplyr::distinct(rv$meta_tbl)
+      # rv$meta_tbl <<- dplyr::bind_rows(rv$meta_tbl, tmp)
+      # rv$meta_tbl <- dplyr::distinct(rv$meta_tbl)
+      rv$meta_tbl <- tmp
       rv$meta_tbl_resample <- NULL
       
       shinyjs::show(id = "metaBox_summary")

@@ -183,6 +183,7 @@ mod_blocks_server <- function(id,
                
                if (grepl("Est", name)) {
                  
+                 req(get_id)
                  req(!is.na(out[get_id, 5]))
                  
                  out <- fix_unit(
@@ -214,7 +215,7 @@ mod_blocks_server <- function(id,
                               out[get_id, "uci"])
                  } else {
                    
-                   if (is_multiple) {
+                   if (is.null(get_id) && is_multiple) {
                      ci <- bayestestR::ci(
                        out$est, ci = .95, method = "HDI") %>% 
                        suppressWarnings() %>% 
@@ -225,6 +226,7 @@ mod_blocks_server <- function(id,
                                 mean(out$est, na.rm = TRUE),
                                 ci$CI_high)
                    } else {
+                     req(get_id)
                      value <- c(out[get_id, "lci"],
                                 out[get_id, "est"],
                                 out[get_id, "uci"])

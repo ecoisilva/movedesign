@@ -909,7 +909,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       err <- 1
       threshold <- input$error_threshold/100
-      hex <- rep("grey50", 5)
+      hex <- rep("grey50", 10)
       trace <- TRUE
       
       subpop <- rv$grouped
@@ -1381,7 +1381,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
           rv$err_prev[[target]] <- c(rv$err_prev[[target]], abs(err))
           last_values[[target]] <- 
-            (length(rv$err_prev[[target]])-5):length(rv$err_prev[[target]])
+            (length(rv$err_prev[[target]])-4):length(rv$err_prev[[target]])
           
         } # end of [target] loop
         
@@ -1712,42 +1712,23 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       shinybusy::remove_modal_spinner()
       
-      txt_full <- p(
-        "You set a maximum of", rv$nsims, "tags.",
-        
-        # "The error threshold of", 
-        # wrap_none(rv$error_threshold, "%"), "was achieved by",
-        # ..., "tags but only stabilized at",
-        # length(rv$simList), "tags.",
-        
-        "To achieve a",
-        "stable error threshold of", 
-        wrap_none(rv$error_threshold * 100, "%,"),
-        "the simulation determined that you only need",
-        length(rv$simList), "tags.",
-        "This ensures a cost-effective balance between accuracy",
-        "and the number of units.", br(),
-        "If the", span("minimum number of tabs",
-                       style = "font-weight: bold;"),
-        # wrap_none("(",length(rv$simList),")"), 
-        "is close to the",
-        # rv$nsims,
-        span("maximum number of tabs",
-             style = "font-weight: bold;"),
-        "consider increasing the number of tabs",
-        "to improve stability.",
-        "If the", span("minimum number of tabs",
-                       style = "font-weight: bold;"), "is much",
-        "lower, you may be able to refine this value further",
-        "by reducing your error threshold.",
-        br(), 
-        
-        "For a more detailed analysis, explore the outputs in the",
-        shiny::icon("layer-group", class = "cl-sea"),
-        span("Meta-analyses", class = "cl-sea"), "tab,",
-        "and through", wrap_none(
-          span("resampling", style = "font-weight: bold;"), ".")
-      )
+      txt_full <- tagList(
+        p("You specified a maximum of", rv$nsims, "tags.",
+          "Under the current assumptions and an error threshold",
+          "of", wrap_none(rv$error_threshold * 100, "%,"),
+          "a stable estimate of the population mean",
+          "may be achieved by deploying",
+          length(rv$simList), "tags."),
+        p("If the", span("minimum number of tags",
+                         style = "font-weight: bold;"),
+          "is close to (or equal to) the",
+          wrap_none(span("maximum number of tags",
+                         style = "font-weight: bold;"), ","),
+          "consider increasing the number of tags to reduce",
+          "uncertainty. For a more detailed evaluation,",
+          "explore the outputs in the",
+          shiny::icon("layer-group", class = "cl-sea"),
+          span("Meta-analyses", class = "cl-sea"), "tab."))
       
       # txt_reference <- tagList(
       #   h4(style = "margin-top: 30px;", "For more information:"),

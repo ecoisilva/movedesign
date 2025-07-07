@@ -979,7 +979,8 @@ mod_tab_report_server <- function(id, rv) {
         plot_dur <- opts_dur[which.min(abs(
           opts_dur - ("days" %#% dur$value %#% dur$unit)))]
         
-        if (dur$value >= ideal_dur$value) {
+        if (abs(rv$hr_cri$est) < rv$error_threshold &&
+            (dur$value >= ideal_dur$value)) {
           rv$report$is_hr <- TRUE
           txt_hr <- span(
             # style = paste(css_bold), # css_mono, 
@@ -1008,12 +1009,8 @@ mod_tab_report_server <- function(id, rv) {
           } else txt_hr_extra <- txt_meta_no_ci
         }
         
-        # txt_nsim <- .get_txt_nsim(rv, set_target = "hr")
-        # TODO txt_nsim move to Meta-analyses?
-        
         out_analyses <- out_hr <- p(
           txt_hr,
-          # txt_nsim,
           txt_hr_extra)
         
       } # end of 'Home range'
@@ -1437,7 +1434,7 @@ mod_tab_report_server <- function(id, rv) {
       div(id = "report_meta",
           style = paste("padding-left: 14px;",
                         "padding-right: 14px;"),
-          rv$report$meta)
+          tagList(rv$report$meta))
       
     }) # end of renderUI, "end_meta"
     
@@ -1602,7 +1599,8 @@ mod_tab_report_server <- function(id, rv) {
           "for a single simulation",
           paste("for", length(rv$simList), "simulations"))
         
-        txt_meta_nsims <- .get_txt_nsim(rv, set_target = target)
+        txt_meta_nsims <- tagList(
+          .get_txt_nsim(rv, set_target = target))
         
         switch(meta_dt$status,
                "Yes" = {
@@ -1646,28 +1644,28 @@ mod_tab_report_server <- function(id, rv) {
           "Yes" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations appears",
+              "Current study design is",
               wrap_none("sufficient", color = pal$sea),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], end = ".")) #,
+              wrap_none(txt_target[[target]], ".")) #,
               # txt_uncertainty)
           },
           "Near" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations appears",
+              "Current study design may be",
               wrap_none("insufficient", color = pal$grn),
-              "to accurately estimate man", 
-              wrap_none(txt_target[[target]], end = ".")) #,
+              "to accurately estimate mean", 
+              wrap_none(txt_target[[target]], ".")) #,
               # txt_uncertainty)
           },
           "No" = {
             txt_final <- span(
               style = paste(css_mono, css_bold),
-              "The number of simulations appears",
+              "Current study design is",
               wrap_none("insufficient", color = pal$dgr),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], end = ".")) #,
+              wrap_none(txt_target[[target]], ".")) #,
               # txt_uncertainty)
           })
         
@@ -1717,7 +1715,7 @@ mod_tab_report_server <- function(id, rv) {
       
       rv$report$meta <- tagList(
         out_meta,
-        br(), txt_link_meta)
+        br(), tagList(txt_link_meta))
       
     }) # end of observe
     

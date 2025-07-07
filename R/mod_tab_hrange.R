@@ -663,20 +663,24 @@ mod_tab_hrange_server <- function(id, rv) {
       req(rv$hrErr,
           rv$simList,
           rv$which_meta)
+      req(rv$which_meta == "none")
       
       ci <- suppressWarnings(bayestestR::ci(
         rv$hrErr$est, ci = .95, method = "HDI"))
       lci <- ci$CI_low
       uci <- ci$CI_high
       
-      if (rv$which_meta != "none") extra_ui <- tagList(
-        "To obtain valid credible intervals, run more simulations",
-        "through the", span("Simulations", class = "cl-grn"), "box.")
-      else extra_ui <- tagList(
-        "To obtain valid credible intervals, select a different",
-        span("analytical target", class = "cl-sea"), "in the",
-        icon("house", class = "cl-mdn"),
-        span("Home", class = "cl-mdn"), "tab.")
+      if (rv$which_meta != "none") {
+        extra_ui <- tagList(
+          "To obtain valid credible intervals, run more simulations",
+          "through the", span("Simulations", class = "cl-grn"), "box.")
+      } else {
+        extra_ui <- tagList(
+          "To obtain valid credible intervals, select a different",
+          span("analytical target", class = "cl-sea"), "in the",
+          icon("house", class = "cl-mdn"),
+          span("Home", class = "cl-mdn"), "tab.")
+      }
       
       ui <- ""
       if (length(rv$simList) > 1) {
