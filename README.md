@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# movedesign <img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/logo.png" style="padding: 15px 0px 0px 0px;" align="right" height="140"/>
+# movedesign <a href="https://ecoisilva.github.io/movedesign/"><img src="https://raw.githubusercontent.com/ecoisilva/movedesign/main/inst/app/www/logo.png" style="padding: 15px 0px 0px 0px;" align="right" height="140"/></a>
 
 <!-- badges: start -->
 
