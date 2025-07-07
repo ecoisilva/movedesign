@@ -944,6 +944,7 @@ extract_dof <- function(
   out <- list() 
   out <- lapply(seq_along(obj), function(x) { 
     
+    if (is.null(obj[[x]])) return(NULL)
     if (inherits(obj[[x]], "speed")) { 
       sum.obj <- obj[[x]] 
     } else { 
@@ -961,7 +962,7 @@ extract_dof <- function(
   }) 
   
   return(out) 
-} 
+}
 
 
 #' Extract semi-variance data for ggplot2 

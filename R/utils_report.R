@@ -35,49 +35,50 @@
 #' @title Get text for mean error estimate
 #' @noRd
 .get_txt_nsim <- function(rv, set_target = c("hr", "ctsd")) {
-  
-  css_bold <- "font-weight: bold;"
-  css_mono <- "font-family: var(--monosans);"
-  
-  set_target <- match.arg(set_target, choices = c("hr", "ctsd"))  
+  set_target <- match.arg(set_target)
   name <- paste0(set_target, "Err")
   
   nsims <- ifelse(
     length(rv$simList) == 1,
     "a single simulation",
-    paste(length(rv$simList), "simulations"))
+    paste(length(rv$simList), "simulations")
+  )
   
   if (rv$which_meta == "none") {
-    txt_nsim <- span(
-      "Your mean error estimate based on",
-      span(nsims, style = paste(css_bold, css_mono)), "was",
-      wrap_none(.err_to_txt(rv[[name]]$est), "%."))
-    
+    txt_nsim <- paste0(
+      "Your mean error estimate based on ", nsims, " was ",
+      .err_to_txt(rv[[name]]$est), "%."
+    )
   } else {
     err <- rv$meta_tbl %>%
-      dplyr::filter(.data$group == "All") %>%
-      dplyr::filter(.data$type == set_target) %>%
+      dplyr::filter(.data$group == "All", 
+                    .data$type == set_target) %>%
       dplyr::slice(which.max(.data$m))
     
-    if (set_target == "hr") txt_nsim <- span(
-      "The mean home range area based on",
-      span(nsims, style = paste(css_bold, css_mono)), "was",
-      ifelse(err > 0, "overestimated", "underestimated"),
-      "by", wrap_none(
+    direction <- ifelse(dplyr::pull(err, .data$error) > 0,
+                        "overestimated", "underestimated")
+    
+    if (set_target == "hr") {
+      txt_nsim <- paste0(
+        "The mean home range area based on ", nsims, " was ",
+        direction, " by ", 
         .err_to_txt(dplyr::pull(err, .data$error)), "% [",
         .err_to_txt(dplyr::pull(err, .data$error_lci)), ", ",
-        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."))
-    if (set_target == "ctsd") txt_nsim <- span(
-      "The mean speed based on",
-      span(nsims, style = paste(css_bold, css_mono)), "was",
-      ifelse(err > 0, "overestimated", "underestimated"),
-      "by", wrap_none(
+        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."
+      )
+    } else if (set_target == "ctsd") {
+      txt_nsim <- paste0(
+        "The mean speed based on ", nsims, " was ",
+        direction, " by ", 
         .err_to_txt(dplyr::pull(err, .data$error)), "% [",
         .err_to_txt(dplyr::pull(err, .data$error_lci)), ", ",
-        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."))
+        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."
+      )
+    }
   }
   return(txt_nsim)
 }
+
 
 #' @title Prepare species and sampling parameters for the report
 #' @noRd
@@ -215,7 +216,7 @@
                            "margin-bottom: 8px;")
   
   txt_link_meta <- p(
-    style = paste("font-size: 16px;",
+    style = paste(# "font-size: 16px;",
                   "text-align: center;",
                   "font-weight: bold;",
                   "font-family: var(--monosans);"),
