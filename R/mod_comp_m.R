@@ -1797,7 +1797,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                   "error below the threshold of", 
                   wrap_none(rv$error_threshold * 100, "%."),
                   "Please increase the",
-                  span("maximum number of tabs",
+                  span("maximum number of tags",
                        style = "font-weight: bold;"),
                   "if you wish to continue testing.",
                   
