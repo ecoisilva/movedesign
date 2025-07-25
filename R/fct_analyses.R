@@ -1,22 +1,40 @@
-#' Estimate home range
+
+#' @title Estimate home range from simulated movement data
 #'
-#' @description Estimates home range areas with the Autocorrelated Kernel Density Estimator (AKDE)
-#' for each simulated movement dataset using the fitted movement models.
+#' @description
+#' Estimates home range areas for each simulated movement dataset using
+#' the Autocorrelated Kernel Density Estimator (AKDE) via
+#' [`ctmm::akde()`]. This function is intended for use within simulation
+#' workflows where home range calculations are needed for each simulated
+#' individual.
 #'
-#' @param rv A reactive values list containing:
+#' @param rv A `reactiveValues` list containing, at a minimum:
 #'   \itemize{
-#'     \item \code{simList} - A list of simulated movement datasets.
-#'     \item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
+#'     \item `simList`: A list of simulated movement datasets
+#'       (e.g., telemetry tracks).
+#'     \item `simfitList`: A list of fitted movement models, each
+#'       corresponding to an entry in `simList`.
 #'   }
+#'   Each movement dataset in `simList` should be compatible with
+#'   [`ctmm::akde()`], and each fitted model in `simfitList` should
+#'   correspond to its respective simulated dataset.
 #'
-#' @return A named list of \code{ctmm} objects, one per simulation.
+#' @return
+#' A named list of `ctmm` objects, each representing an AKDE home range
+#' estimate for the corresponding simulation. If AKDE estimation fails
+#' for a simulation (e.g., due to poor model fit or data issues), the
+#' result for that simulation will be `NULL`.
 #'
-#' @details
-#' The function applies \code{ctmm::akde()} to estimate home range areas while handling 
-#' potential warnings and errors gracefully. Any failed computations return \code{NULL}.
+#' @seealso
+#' [`ctmm::akde()`] for details on home range estimation.
 #'
+#' @note
+#' This function is intended for internal use and may assume inputs
+#' follow specific structure and constraints not referenced explicitly.
+#' 
 #' @importFrom ctmm akde
-#' @export
+#' 
+#' @keywords internal
 estimate_hr <- function(rv) {
   
   hrList <- lapply(seq_along(rv$simList), function(x) {
@@ -38,25 +56,42 @@ estimate_hr <- function(rv) {
   
 } # end of function, estimate_hr()
 
-#' Estimate movement speed
+
+#' @title Estimate movement speed for simulated movement data
 #'
-#' @description Estimates movement speed using continuous-time speed and distance (CTSD)
-#'  for each simulated movement dataset using the corresponding fitted movement model.
+#' @description
+#' Calculates continuous-time speed and distance (CTSD) for each simulated
+#' movement dataset using its corresponding fitted movement model with
+#' [`ctmm::speed()`]. This function is designed for simulation workflows
+#' where speed metrics are required for each simulated individual.
 #'
-#' @param rv A reactive values list containing:
+#' @param rv A `reactiveValues` list containing, at a minimum:
 #'   \itemize{
-#'     \item \code{simList} - A list of simulated movement datasets.
-#'     \item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
+#'     \item `simList`: A list of simulated movement datasets
+#'       (e.g., telemetry tracks).
+#'     \item `simfitList`: A list of fitted movement models, each
+#'       corresponding to an entry in `simList`.
 #'   }
+#'   Each element in `simList` should be compatible with
+#'   [`ctmm::speed()`], and each model in `simfitList` should
+#'   correspond to its respective simulated dataset.
 #'
-#' @return A named list of \code{ctmm} objects, one per simulation.
+#' @return
+#' A named list of speed estimates (`ctmm` objects), with one entry per
+#' simulation.For any simulation where speed estimation fails (e.g., 
+#' due to model fitting issues or incompatible data), `NULL` is returned
+#' for that entry and omitted from the final output.
 #'
-#' @details
-#' The function applies \code{ctmm::speed()} to estimate movement speed while handling 
-#' potential warnings and errors gracefully.
+#' @seealso
+#' [`ctmm::speed()`] for details on speed estimation.
 #'
+#' @note
+#' This function is intended for internal use and may assume inputs
+#' follow specific structure and constraints not referenced explicitly.
+#' 
 #' @importFrom ctmm speed
-#' @export
+#' 
+#' @keywords internal
 estimate_speed <- function(rv) {
   
   ctsdList <- lapply(seq_along(rv$simList), function(x) {

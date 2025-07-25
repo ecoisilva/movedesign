@@ -1,18 +1,36 @@
 
-#' @title Build objects for hierarchical modeling
+#' @title Build input objects for hierarchical modeling
 #'
-#' @description This function constructs objects based on the provided inputs, either for home range (hr) or speed & distance continuous-time (ctsd).
+#' @description
+#' Constructs and organizes the required inputs for hierarchical models
+#' based on the provided simulation outputs and user specifications.
 #'
-#' @param rv A list containing outputs, settings and data objects. Must not be NULL.
-#' @param set_target Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.
-#' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
-#' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
+#' @param rv A named list containing simulation inputs, settings, and
+#'   group assignments. Must not be NULL.
+#' @param set_target Character vector specifying the target metrics.
+#'   Options are "hr" (for home range area) and/or "ctsd" (for movement
+#'   speed). Defaults to c("hr", "ctsd").
+#' @param subpop Logical; if TRUE, analyzes population-level inferences
+#'   by subpopulations/groups (e.g., males vs. females). Requires group
+#'   assigments in `rv`.
+#' @param trace Logical; if TRUE, prints progress messages.
+#'   Default is FALSE.
 #'
 #' @return A list containing:
-#' \item{datList}{A list containing the inputs (and optionally, grouped inputs).}
-#' \item{outList}{A list of additional computed meta outputs.}
-#' \item{truthList}{A list of expected values derived from the target set.}
+#'   \describe{
+#'     \item{datList}{A named list containing the inputs
+#'       (and optionally, grouped inputs).}
+#'     \item{outList}{A named list of additional computed meta outputs.}
+#'     \item{truthList}{A named list of expected (true) values.}
+#' }
 #' 
+#' @details
+#' This function streamlines the preparation of inputs for hierarchical
+#' model workflows. It extracts, formats, and organizes the relevant data
+#' according to the chosen target, and optionally by group. The resulting
+#' lists facilitate downstream procedures and reporting.
+#' 
+#' @keywords internal
 #' @noRd
 .build_meta_objects <- function(rv,
                                 set_target = c("hr", "ctsd"),
@@ -140,30 +158,110 @@
   
 }
 
-#' @title Running hierarchical model meta-analyses (with resamples)
+
+#' @title Running hierarchical models (with resampling)
 #'
-#' @description This function performs a meta-analysis on movement tracking data, for mean home range area (AKDE) or mean movement speed (CTSD) estimates for a sampled population. It leverages the `ctmm` R package, specifically the `meta()` function, to obtain population-level mean parameters. This function helps to evaluate outputs through the resampling of individuals.
-#'
-#' @param rv A list containing outputs, settings and data objects. Must not be NULL.
-#' @param set_target Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.
-#' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
-#' @param random Logical. If TRUE, samples random subsets of individuals. Default is FALSE.
-#' @param max_samples Integer. Maximum number of resamples when `random = TRUE`. Must be positive. Default is 100.
-#' @param iter_step Numeric. The size of each iteration step. Default is 2.
-#' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
-#' @param .automate_seq Logical. If TRUE, overwrites sequence automatically to improve plot readability. Default is FALSE.
-#' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
-#' @param .lists A list containing already created meta inputs. Default is NULL.
+#' @description
+#' This function performs meta-analyses on simulated animal tracking data,
+#' to estimate key movement metrics, such as mean home range area and/or
+#' mean movement speed for a sampled population. The function can also
+#' compare these metrics between two groups if specified.
 #' 
+#' When resampling is enabled, the function repeatedly draws random
+#' subsets of individuals from the available population to simulate how
+#' parameter estimates behave across varying population sample sizes.
+#' This resampling allows users to assess estimate variability as sample
+#' size increases or as individuals are resampled. For example, it can
+#' reveal if the mean home range area converges as more individuals are
+#' added to the sampled population.
+#' 
+#' This approach helps quantify the robustness and precision of estimated
+#' parameters under different sampling scenarios.
+#' 
+#' The function leverages core methods from the `ctmm` package:
+#'
+#' - `ctmm::akde()`: Computes home range areas using the Autocorrelated
+#'   Kernel Density Estimator (AKDE), which explicitly accounts for the
+#'   autocorrelation in animal movement data to produce statistically
+#'   robust space-use estimates.
+#' - `ctmm::speed()`: Computes Continuous-Time Speed and Distance (CTSD) 
+#'   estimates, providing biologically meaningful summaries of movement 
+#'   speed, which is proportional to distance traveled.
+#' These methods allow for robust comparisons across individuals, 
+#' groups, and resampling scenarios.
+#' 
+#' @param rv A named list containing simulation inputs, settings, and
+#'   group assignments. Must not be NULL.
+#' @param set_target Character vector specifying the target metrics.
+#'   Options are "hr" (for home range area) and/or "ctsd" (for movement
+#'   speed). Defaults to c("hr", "ctsd").
+#' @param subpop Logical; if TRUE, analyzes population-level inferences
+#'   by subpopulations/groups (e.g., males vs. females). Requires group
+#'   assigments in `rv`.
+#' @param random Logical; if TRUE, performs random sampling of individuals
+#'   using different combinations (up to max_draws).
+#' @param max_draws Integer; maximum number of random draws per
+#'   combination size when \code{random=TRUE}.
+#'   Ignored if \code{random=FALSE}.
+#' @param iter_step Integer. Step size used to increment the number of
+#'   individuals sampled in each iteration. For example, if 
+#'   `iter_step = 2`, the function will evaluate sample sizes of 2, 4,
+#'   6, etc., up to the maximum population sample size. Defaults to 2.
+#' @param trace Logical; if TRUE, prints progress messages.
+#'   Default is FALSE.
+#' @param ... Additional arguments for advanced control:
+#'   \describe{
+#'     \item{.only_max_m}{Logical. If `TRUE`, runs the meta-analysis
+#'       only at the maximum population sample size. Skips all
+#'       intermediate sample sizes.}
+#'     \item{.max_m}{Integer. Sets a user-defined maximum sample size
+#'       to use in the resampling sequence. Overrides the default,
+#'       which uses all available individuals.}
+#'     \item{.m}{Integer. Specifies exact sample size to use. Overrides
+#'       automatic sequence generation. Accepts a single value.}
+#'     \item{.automate_seq}{Logical. If `TRUE`, automatically generates
+#'       an informative and non-redundant sequence of sample sizes
+#'       for better plot readability and runtime efficiency.}
+#'     \item{.lists}{List (Optional). Supplies precomputed input
+#'       objects, generated via \code{.build_meta_objects()}.}
+#'   }
+#'
+#' @return A data frame summarizing all outputs for each target,
+#'   population sample size, sample, and group (if specified). Columns
+#'   include:
+#'   \describe{
+#'     \item{type}{Research target, e.g., "hr" or "ctsd".}
+#'     \item{m}{Number of individuals in the sample.}
+#'     \item{sample}{Sample index (for repeated draws).}
+#'     \item{truth}{True value.}
+#'     \item{est}{Point estimate.}
+#'     \item{lci}{Lower confidence interval.}
+#'     \item{uci}{Upper confidence interval.}
+#'     \item{error}{Relative error.}
+#'     \item{error_lci}{Lower CI for relative error.}
+#'     \item{error_uci}{Upper CI for relative error.}
+#'     \item{ratio_truth}{True group ratio (A/B), if subpop=TRUE.}
+#'     \item{ratio_est}{Estimated group ratio.}
+#'     \item{ratio_lci}{Lower CI for estimated group ratio.}
+#'     \item{ratio_uci}{Upper CI for estimated group ratio.}
+#'     \item{overlaps}{Logical; whether estimate overlaps with the truth.}
+#'     \item{is_grouped}{Logical; TRUE if grouped.}
+#'     \item{group}{Group label ("All", "A", "B").}
+#'     \item{subpop_detected}{Logical; was a subpopulation detected?}
+#'   }
+#'
 #' @examples
 #' if(interactive()) {
-#' run_meta_resampled(rv, set_target = "hr")
+#'    run_meta_resamples(rv, set_target = "hr")
 #' }
 #'
+#' @seealso
+#'   \code{\link[ctmm]{akde}}, \code{\link[ctmm]{speed}},
+#' 
 #' @encoding UTF-8
-#' @return A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
 #' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
 #' 
+#' @keywords internal
 #' @export
 run_meta_resamples <- function(rv,
                                set_target = c("hr", "ctsd"),
@@ -564,13 +662,72 @@ run_meta_resamples <- function(rv,
   
 }
 
+
 #' @title Running hierarchical models
 #'
-#' @description This function wraps around the `run_meta_resampled` function to run hierarchical models (with no resamples) for a quick evaluation.
+#' @description
+#' Performs hierarchical meta-analyses on animal movement simulation
+#' outputs to estimate key movement metrics, such as mean home range area
+#' and/or mean movement speed for a sampled population. The function can
+#' also compare these metrics between two groups (via ratios) if specified.
 #' 
-#' @inheritParams run_meta_resampled
+#' The function leverages core methods from the `ctmm` package:
+#'
+#' - `ctmm::akde()`: Computes home range areas using the Autocorrelated
+#'   Kernel Density Estimator (AKDE), which explicitly accounts for the
+#'   autocorrelation in animal movement data to produce statistically
+#'   robust space-use estimates.
+#' - `ctmm::speed()`: Computes Continuous-Time Speed and Distance (CTSD) 
+#'   estimates, providing biologically meaningful summaries of movement 
+#'   speed, which is proportional to distance traveled.
+#' These methods allow for robust comparisons across individuals, 
+#' groups, and resampling scenarios.
 #' 
-#' @return The outputs of the `run_meta_resampled` function for a single combination.
+#' Optionally, the function performs resampling by randomly drawing
+#' multiple sets of individuals from the population, allowing assessment
+#' of estimate variability as sample size increases or as individuals are
+#' resampled. This approach helps quantify the precision and reliability
+#' of estimates under different sampling scenarios.
+#' 
+#' Internally, this function wraps [`run_meta_resamples()`] to fit
+#' hierarchical models without resampling for initial evaluation.
+#' 
+#' @inheritParams run_meta_resamples
+#' 
+#' @return A data frame summarizing all outputs for each target,
+#'   population sample size, and group (if specified) for a single
+#'   draw (sample). Columns include:
+#'   \describe{
+#'     \item{type}{Research target, e.g., `hr` and/or `ctsd`.}
+#'     \item{m}{Number of individuals in the sample.}
+#'     \item{sample}{Sample index (for repeated draws).}
+#'     \item{truth}{True, expected value.}
+#'     \item{est}{Point estimate.}
+#'     \item{lci}{Lower confidence interval.}
+#'     \item{uci}{Upper confidence interval.}
+#'     \item{error}{Relative error.}
+#'     \item{error_lci}{Lower CI for relative error.}
+#'     \item{error_uci}{Upper CI for relative error.}
+#'     \item{ratio_truth}{True group ratio (A/B), if subpop=TRUE.}
+#'     \item{ratio_est}{Estimated group ratio.}
+#'     \item{ratio_lci}{Lower CI for estimated group ratio.}
+#'     \item{ratio_uci}{Upper CI for estimated group ratio.}
+#'     \item{overlaps}{Logical; whether estimate overlaps with the truth.}
+#'     \item{is_grouped}{Logical; `TRUE` if grouped.}
+#'     \item{group}{Group label (`All`, `A`, `B`).}
+#'     \item{subpop_detected}{Logical; was a subpopulation detected?}
+#'   }
+#' 
+#' @note
+#' This function is intended for internal use and may assume inputs
+#' follow specific structure and constraints not referenced explicitly.
+#' 
+#' @seealso 
+#' [`run_meta_resamples()`],
+#' [`ctmm::akde()`],
+#' [`ctmm::speed()`]
+#' 
+#' @keywords internal
 #' @export
 run_meta <- function(rv,
                      set_target = c("hr", "ctsd"),
@@ -598,29 +755,53 @@ run_meta <- function(rv,
 
 #' @title Running LOOCV on hierarchical model outputs
 #'
-#' @description This function runs hierarchical models on movement tracking data,
-#' for mean home range area (AKDE) or continuous-time speed and distance (CTSD)
-#' estimates for a sampled population. It leverages the `ctmm` R package,
-#' specifically the `meta()` function, to obtain population-level mean parameters.
-#' This function helps to assess outputs via leave-one-out cross-validation (LOOCV).
+#' @description
+#' Performs Leave-One-Out Cross-Validation (LOOCV) on hierarchical model
+#' outputs to assess the influence of individual simulated animals on
+#' population-level estimates. Supports analyses with or without
+#' groups.
 #'
-#' @param rv A list containing outputs, settings and data objects. Must not be NULL.
-#' @param set_target Character. Research target: `"hr"` for home range or `"ctsd"` for speed & distance.
-#' @param subpop Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.
-#' @param trace Logical. If TRUE, prints progress messages. Default is FALSE.
-#' @param .only_max_m Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.
-#' @param .progress Logical. If TRUE, will display a progress bar. Default is FALSE.
-#' @param .lists A list containing already created meta inputs. Default is NULL.
+#' In each iteration, the function removes one individual, refits
+#' the hierarchical model to the remaining dataset, and recalculates
+#' the target population-level estimates. This process is repeated until
+#' every individual has been excluded once.
+#'
+#' This approach provides insight into how sensitive overall conclusions 
+#' are to specific individuals. This helps identify influential
+#' individuals and assess robustness.
+#' 
+#' @param rv A `reactiveValues` object or list containing simulation
+#'   inputs, fitted models, and (optionally) group assignments.
+#' @param set_target Character vector specifying the target metrics.
+#'   Options are `"hr"` for home range area and/or `"ctsd"` for movement
+#'   speed. Defaults to `c("hr", "ctsd")`.
+#' @param subpop Logical; if `TRUE`, analyzes population-level inferences
+#'   by groups (e.g., males vs. females). Requires valid group
+#'   assigments in `rv`.
+#' @param trace Logical; if `TRUE`, prints progress and diagnostic
+#'   messages. Default is `FALSE`.
+#' @param ... Additional arguments for advanced control:
+#'   \describe{
+#'     \item{.only_max_m}{Logical. If `TRUE`, runs the meta-analysis
+#'       only at the maximum population sample size, skipping all
+#'       intermediate sample sizes.}
+#'     \item{.progress}{Integer. Displays a progress bar.}
+#'     \item{.m}{Integer. Specifies exact sample size to use. Overrides
+#'       automatic sequence generation. Accepts a single value.}
+#'     \item{.lists}{List (optional); supplies precomputed input objects,
+#'       typically created via `.build_meta_objects()`.}
+#'   }
 #' 
 #' @examples
 #' if(interactive()) {
-#' run_meta_loocv(rv, set_target = "hr")
+#'    run_meta_loocv(rv, set_target = "hr")
 #' }
 #'
+#' @return A data frame containing summarized simulation outputs.
 #' @encoding UTF-8
-#' @return A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
 #' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
 #' 
+#' @keywords internal
 #' @export
 run_meta_loocv <- function(rv,
                            set_target = c("hr", "ctsd"),

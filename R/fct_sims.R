@@ -1,44 +1,64 @@
-#' Simulate Movement Data from Fitted Models
+
+#' Simulate movement data from continuous-time movement models
 #'
-#' @description This function generates simulated location data using movement
-#' models. The function supports both single and grouped simulations based on 
-#' whether the data is simulated or derived from an emulated or fitted model.
+#' @description
+#' Generates simulated animal movement tracks based on continuous-time
+#' movement models using [`ctmm::simulate()`]. Supports both single-group
+#' and grouped simulations, as determined by study design and data
+#' parameters. Used within the `movedesign` application workflows to
+#' create synthetic data for simulation studies and to evaluate study
+#' design.
 #'
-#' @param rv A reactive values list containing:
+#' @param rv A `reactiveValues` object with all simulation inputs:
 #'   \itemize{
-#'     \item \code{dur} - A list specifying the sampling duration (\code{value} and \code{unit}).
-#'     \item \code{dti} - A list specifying the time interval between locations (\code{value} and \code{unit}).
-#'     \item \code{data_type} - A character string indicating data type.
-#'     \item \code{is_emulate} - Logical; if \code{TRUE}, the function generates an emulated model.
-#'     \item \code{modList} - A list of fitted movement models for simulation.
-#'     \item \code{meanfitList} - A list of a mean model for emulation.
-#'     \item \code{grouped} - Logical; if \code{TRUE}, the simulation considers grouped movement models.
-#'     \item \code{which_meta} - A character vector indicating whether to compare models.
-#'     \item \code{tau_p}, \code{tau_v}, \code{sigma}, \code{mu} - Lists of movement model parameters.
-#'     \item \code{seed0} - An integer used for random seed initialization.
+#'     \item dur A list with elements `value` and `unit` (e.g.,
+#'        `list(value = 2, unit = "months")`), for the study's maximum
+#'        duration. `unit` must be either `"second"`, `"minute"`,
+#'        `"hour"`, `"day"`, `"month"`, or `"year"`.
+#'     \item dti A list with elements `value` and `unit` (e.g.,
+#'        `list(value = 1, unit = "day")`), specifying the intended
+#'        sampling interval between relocations. `unit` must be either
+#'        `"second"`, `"minute"`, `"hour"`, `"day"`, `"month"`, 
+#'        or `"year"`.
+#'     \item `data_type`: Character, data source that informs the 
+#'       simulations.
+#'     \item `add_ind_var`: Logical; if `TRUE`, draws parameters from
+#'       population distribution for each new individual.
+#'     \item `modList`: List of fitted models.
+#'     \item `meanfitList`: List of mean models for individual variation.
+#'     \item `grouped`: Logical; if `TRUE`, simulates from two groups.
+#'     \item `which_meta`: Character vector; analytical target.
+#'     \item `tau_p`, `tau_v`, `sigma`, `mu`: Lists of
+#'       movement parameters.
 #'   }
+#' @param seed Integer for random number generator,
+#'  ensuring reproducibility.
 #'
-#' @return A list containing one or two simulated movement datasets (depending on grouping):
+#' @return
+#' A list of simulated movement datasets:
 #'   \itemize{
-#'     \item If \code{grouped = FALSE}, returns a list with a single simulated dataset.
-#'     \item If \code{grouped = TRUE}, returns a list with two simulated datasets (for groups \code{A} and \code{B}).
+#'     \item If `grouped = FALSE`, a list with a single simulated track.
+#'     \item If `grouped = TRUE`, 
+#'        a list with two tracks (from groups A and B).
 #'   }
 #'
 #' @details
-#' The function first constructs a time sequence based on the provided duration and interval.
-#' If the data is fully simulated from scratch (not conditioned on existing data), it retrieves
-#' movement model(s) from \code{rv$modList}. 
-#' Otherwise, it either emulates a model using \code{rv$meanfitList} and a random seed 
-#' or constructs a model from movement parameters.
-#'
-#' If estimate comparisons are enabled (via \code{which_meta}), two models are prepared. 
-#' The function then runs \code{ctmm::simulate()} to generate simulated movement data.
-#' The resulting trajectories are pseudonymized before returning.
-#'
-#' @importFrom ctmm simulate
-#' @export
-simulating_data <- function(rv) {
-
+#' This function simulates animal movement tracks based on the selected
+#' mode and design settings. It first constructs a time sequence using
+#' the specified duration and interval. Depending on the simulation mode
+#' (`data_type`), it either retrieves movement models from `modList`
+#' (for simulated data) or uses `meanfitList` or raw movement parameters
+#' to build models (for uploaded or selected data). If a group
+#' comparison is requested, models are prepared for both groups.
+#' Tracks are then simulated using `ctmm::simulate()` and subsequently
+#' pseudonymized.
+#' 
+#' @note
+#' This function is intended for internal use and may assume inputs
+#' follow specific structure and constraints not referenced explicitly.
+#' 
+#' @keywords internal
+#' @importFrom ctmm simulate %#%
 simulating_data <- function(rv, seed) {
   
   # Helper for recentering mean location:
@@ -95,7 +115,6 @@ simulating_data <- function(rv, seed) {
           mu = rv$mu[[3]])
       }
     }
-    # rv$modList <- list(fit)
   }
   
   if (rv$grouped) {
@@ -132,36 +151,84 @@ simulating_data <- function(rv, seed) {
 
 #' Fit continuous-time movement models
 #'
-#' @description This function fits continuous-time movement models to simulated location
-#' data using the \code{ctmm} package. It estimates movement parameters for each
-#' simulated trajectory, optionally running in parallel for efficiency.
+#' @description
+#' This function fits continuous-time movement models to simulated location
+#' data using the `ctmm` package. It estimates movement parameters for each
+#' simulated trajectory, optionally running in parallel for efficiency. It
+#' supports both home range and speed estimation workflows.
 #'
-#' @param obj A list of simulated movement datasets.
-#' @param set_target A character vector indicating the research target(s). Options:
+#' @param obj A list of simulated movement datasets, each formatted as a 
+#'   `telemetry` object compatible with `ctmm`.
+#' @param set_target A character vector specifying the research goals.
+#'   Options include:
 #'   \itemize{
-#'     \item \code{"hr"} - Home range estimation.
-#'     \item \code{"ctsd"} - Speed and distance estimation.
+#'     \item `"hr"` — Home range estimation.
+#'     \item `"ctsd"` — Speed and distance estimation.
 #'   }
-#' @param .dur Numeric, sampling duration of the simulated data (required if \code{.check_sampling = TRUE}).
-#' @param .dti Numeric, sampling interval of simulated data (required if \code{.check_sampling = TRUE}).
-#' @param .tau_p List, position autocorrelation timescale (optional).
-#' @param .tau_v List, velocity autocorrelation timescale (optional).
-#' @param .error_m Numeric, if simulating a dataset with location error (in meters).
-#' @param .check_sampling Logical; if \code{TRUE}, checks if the sampling schedule is optimal for ctmm.fit().
-#' @param .rerun Logical; if \code{TRUE}, re-runs model selection if effective sample sizes fall below threshold.
-#' @param .parallel Logical; if \code{TRUE}, enables parallel computation for efficiency. Default is \code{TRUE}.
-#' @param .trace Logical; if \code{TRUE}, prints additional information.
-#'
-#' @return A list of fitted movement models, one per simulation.
-#'
-#' @details
-#' The function first generates initial parameter estimates using \code{ctmm::ctmm.guess()}.
-#' It then selects the best movement model for each simulation using \code{par.ctmm.select()}.
-#' The function ensures that each fitted model is centered at the origin (\code{x = 0, y = 0}) before returning.
-#'
-#' @importFrom ctmm ctmm.guess
-#' @export
+#' @param ... Optional control parameters passed via `...`. These include
+#'   `.dur`, `.dti`, `.tau_p`, `.tau_v`, `.error_m`, `.check_sampling`, 
+#'   `.rerun`, `.parallel`, and `.trace`. See **Details** for their
+#'   descriptions.
 #' 
+#' @return
+#' A list of fitted movement models (class `ctmm`), one per simulation. 
+#' Each model is recentered to the origin (`x = 0`, `y = 0`).
+#' 
+#' @details
+#' The function generates initial parameter estimates for each dataset
+#' using [`ctmm::ctmm.guess()`]. If the data includes simulated location
+#' error, it uses an error model accordingly. When `.check_sampling` is
+#' `TRUE`, it compares the sampling duration and interval against optimal
+#' thresholds derived from the provided autocorrelation timescales.
+#' Models are fitted using [`ctmm::ctmm.select()`], which performs model
+#' selection to find the best-fit movement process. If `.rerun` is
+#' enabled, the function identifies simulations with effective 
+#' sample sizes below 0.1 and attempts to reselect models for those.
+#' Finally, all fitted models are recentered to (`0, 0`) for downstream
+#' consistency.
+#' 
+#' The following arguments can be supplied via `...`:
+#'
+#' - `.dur`: A list with elements `value` (numeric) and `unit` (string),
+#'   specifying the maximum study duration. Example:
+#'   `list(value = 2, unit = "months")`.
+#'
+#' - `.dti`: A list with elements `value` (numeric) and `unit` (string),
+#'   specifying the intended sampling interval. Example:
+#'   `list(value = 1, unit = "day")`.
+#'
+#' - `.tau_p`: A list of position autocorrelation timescales. Optional,
+#'   but required if `.check_sampling = TRUE`.
+#'
+#' - `.tau_v`: A list of velocity autocorrelation timescales. Optional,
+#'   but required if `.check_sampling = TRUE`.
+#'
+#' - `.error_m`: A numeric value specifying location error in meters
+#'   (used for simulation).
+#'
+#' - `.check_sampling`: Logical; if `TRUE`, checks whether the sampling
+#'   schedule meets minimum requirements for reliable model fitting via
+#'   [`ctmm::ctmm.fit()`]. This feature is experimental and may change
+#'    in future versions.
+#'
+#' - `.rerun`: Logical; if `TRUE`, re-runs model selection when
+#'   simulations result in very low effective sample sizes, to
+#'   avoid convergence issues.
+#'
+#' - `.parallel`: Logical; if `TRUE`, enables parallel computation.
+#'
+#' - `.trace`: Logical; if `TRUE`, print progress and timing
+#'   messages to the console.
+#'
+#' @note
+#' This function is intended for internal use and may assume inputs
+#' follow specific structure and constraints not referenced explicitly.
+#' 
+#' @seealso
+#' [`ctmm::ctmm.guess()`], [`ctmm::ctmm.select()`]
+#' 
+#' @keywords internal
+#' @importFrom ctmm ctmm.guess
 fitting_model <- function(obj,
                           set_target = c("hr", "ctsd"),
                           ...) {
