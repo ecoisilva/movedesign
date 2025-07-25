@@ -1,17 +1,16 @@
 Package: movedesign
 Title: Study Design Toolbox for Movement Ecology Studies
-Version: 0.3.1
+Version: 0.3.2
 Authors@R: 
-    person("Ines", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut", "cph"),
+    person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut", "cph"),
            comment = c(ORCID = "0000-0003-4850-6193"))
-Maintainer: Ines Silva <i.simoes-silva@hzdr.de>
+Maintainer: Inês Silva <i.simoes-silva@hzdr.de>
 Description: Toolbox and 'shiny' application to help researchers design
-    movement ecology studies, focusing on two key objectives:
-    estimating home range areas, and estimating fine-scale
-    movement behavior, specifically speed and distance traveled.
-    It provides interactive simulations and methodological
-    guidance to support study planning and decision-making.
-    The application is described in Silva et al. (2023)
+    movement ecology studies, focusing on two key objectives: estimating
+    home range areas, and estimating fine-scale movement behavior,
+    specifically speed and distance traveled.  It provides interactive
+    simulations and methodological guidance to support study planning and
+    decision-making.  The application is described in Silva et al. (2023)
     <doi:10.1111/2041-210X.14153>.
 License: GPL (>= 3)
 URL: https://ecoisilva.github.io/movedesign/,
