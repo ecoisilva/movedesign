@@ -1,5 +1,5 @@
 
-#' @title Percentage(%) and rounded text
+#' @title Format error as rounded percentage string
 #' @noRd
 .err_to_txt <- function(x) { 
   if (length(x) > 1) return(round(mean(x, na.rm = TRUE) * 100, 1))
@@ -170,17 +170,17 @@
     
     truth_summarized <- get_true_hr(
       sigma = rv$sigma,
-      emulated = rv$is_emulate,
-      fit = if (rv$is_emulate) rv$meanfitList else NULL,
+      ind_var = rv$add_ind_var,
+      fit = if (rv$add_ind_var) rv$meanfitList else NULL,
       grouped = FALSE,
       summarized = TRUE)
     
     truth[["hr"]] <- truth_summarized[["All"]]$area
     
     coi[["hr"]] <- .extract_ci(rv$metaErr, "hr")
-    cri[["hr"]] <- c("lci" = rv$sd_cri$lci,
-                     "est" = rv$sd_cri$est,
-                     "uci" = rv$sd_cri$uci)
+    cri[["hr"]] <- c("lci" = rv$hr_cri$lci,
+                     "est" = rv$hr_cri$est,
+                     "uci" = rv$hr_cri$uci)
   }
   
   if ("Speed & distance" %in% rv$which_question) {
@@ -194,8 +194,8 @@
       tau_p = rv$tau_p,
       tau_v = rv$tau_v,
       sigma = rv$sigma,
-      emulated = rv$is_emulate,
-      fit = if (rv$is_emulate) rv$meanfitList else NULL,
+      ind_var = rv$add_ind_var,
+      fit = if (rv$add_ind_var) rv$meanfitList else NULL,
       grouped = FALSE,
       summarized = TRUE)
     
@@ -215,14 +215,13 @@
                            "color: var(--sea-dark);",
                            "margin-bottom: 8px;")
   
-  txt_link_meta <- p(
-    style = paste(# "font-size: 16px;",
-                  "text-align: center;",
+  txt_link_meta <- span(
+    style = paste("text-align: center;",
                   "font-weight: bold;",
                   "font-family: var(--monosans);"),
-    "Check the", shiny::icon("layer-group", class = "cl-sea"),
-    span("Meta-analyses", class = "cl-sea"), "tab",
-    "for more information.")
+    "For more information, check the",
+    shiny::icon("layer-group", class = "cl-sea"),
+    span("Meta-analyses", class = "cl-sea"), "tab.")
 
   return(list(set_target = set_target,
               txt_target = txt_target,

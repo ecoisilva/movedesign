@@ -165,30 +165,44 @@
 #' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
 #' 
 #' @export
-run_meta_resampled <- function(rv,
+run_meta_resamples <- function(rv,
                                set_target = c("hr", "ctsd"),
                                subpop = FALSE,
                                random = FALSE,
-                               max_samples = 100,
+                               max_draws = 100,
                                iter_step = 2,
                                trace = FALSE,
-                               .automate_seq = FALSE,
-                               .only_max_m = FALSE,
-                               .lists = NULL) {
+                               ...) {
+  
+  `%||%` <- function(x, y) if (!is.null(x)) x else y
+  
+  dots <- list(...)
+  .only_max_m <- dots[[".only_max_m"]] %||% FALSE
+  .max_m <- dots[[".max_m"]] %||% NULL
+  .m <- dots[[".m"]] %||% NULL
+  .lists <- dots[[".lists"]] %||% NULL
+  .automate_seq <- dots[[".automate_seq"]] %||% FALSE
   
   if (!is.logical(random) || length(random) != 1) {
     stop("'random' must be a single logical value (TRUE or FALSE)")
   }
   
-  if (random) {
-    if (!is.numeric(max_samples) ||
-        length(max_samples) != 1 ||
-        max_samples <= 0) {
-      stop("'max_samples' must be a single positive numeric value",
-           " when 'random' is TRUE")
+  if (random && (!is.numeric(max_draws) ||
+                 length(max_draws) != 1 ||
+                 max_draws <= 0))
+    stop("'max_draws' must be a single positive numeric",
+         " value when 'random' is TRUE")
+  if (!random) max_draws <- 1
+  
+  if (!is.null(.m)) {
+    if (!is.numeric(.m) || .m %% 1 != 0 || .m < 1) {
+      stop("'.m' must be a positive integer.")
     }
-  } else {
-    max_samples <- 1
+    if (.m > length(rv$simList)) {
+      stop(sprintf(
+        "Argument `.m` (%d) exceeds number of simulations (%d)!",
+        .m, length(rv$simList)))
+    }
   }
   
   dt_meta <- data.frame(
@@ -214,23 +228,22 @@ run_meta_resampled <- function(rv,
   datList <- truthList <- NULL
   
   if (is.null(.lists)) {
-    lists <- .build_meta_objects(rv, 
-                                 set_target = set_target,
-                                 subpop = subpop,
-                                 trace = trace)
+    .lists <- .build_meta_objects(rv, 
+                                  set_target = set_target,
+                                  subpop = subpop,
+                                  trace = trace)
   }
   
-  list2env(lists, envir = environment())
+  list2env(.lists, envir = environment())
   
   true_estimate <- c()
   true_ratio <- c()
   
   out <- lapply(set_target, function(target) {
     
-    if (trace) {
-      if (target == "hr") message("-- Running for home range:")
-      if (target == "ctsd") message("-- Running for speed:")
-    }
+    if (trace) message(
+      sprintf("-- Running for %s:",
+              ifelse(target == "hr", "home range", "speed")))
     
     if (target == "hr") {
       true_estimate[[target]] <- truthList[["hr"]][["All"]]$area
@@ -267,16 +280,19 @@ run_meta_resampled <- function(rv,
       input <- c(input, input_groups)
     }
     
-    m_iter <- NULL
-    if (.automate_seq) m_iter <- .get_sequence(input[["All"]],
-                                               .iter_step = iter_step,
-                                               grouped = subpop)
-    else m_iter <- seq(
-      2, length(input[["All"]]), by = iter_step)
+    m_seq <- NULL
+    if (is.null(.m)) {
+      m_seq <- .get_sequence(input[["All"]],
+                             .step = iter_step,
+                             .max_m = .max_m,
+                             .automate_seq = .automate_seq,
+                             grouped = subpop)
+      if (.only_max_m) m_seq <- max(m_seq)
+    } else {
+      m_seq <- .m
+    }
     
-    if (.only_max_m) m_iter <- max(m_iter)
-    
-    for (m in m_iter) {
+    for (m in m_seq) {
       if (m == 1) next
       
       if (trace) {
@@ -285,6 +301,7 @@ run_meta_resampled <- function(rv,
       }
       
       arg <- setNames(lapply(input, function(x) {
+        
         sets <- .get_sets(x, set_size = m)
         if (sets$sets == 1) return(sets)
         
@@ -297,9 +314,9 @@ run_meta_resampled <- function(rv,
           }
           
           out_random <- dplyr::distinct(as.data.frame(out_random))
-          if (nrow(out_random) > max_samples) {
+          if (nrow(out_random) > max_draws) {
             out_random <- out_random[
-              sample(nrow(out_random), max_samples), , drop = FALSE]
+              sample(nrow(out_random), max_draws), , drop = FALSE]
           }
           
           sets$out_random <- out_random
@@ -310,7 +327,7 @@ run_meta_resampled <- function(rv,
       }), names(input))
       
       n_samples <- 1
-      if (random && max_samples > 1) {
+      if (random && max_draws > 1) {
         n_samples <- if(subpop) nrow(arg[["A"]]$out_random) else 
           nrow(arg[["All"]]$out_random)
         
@@ -560,15 +577,17 @@ run_meta <- function(rv,
                      subpop = FALSE, 
                      trace = FALSE,
                      iter_step = 2,
-                     .automate_seq = FALSE,
-                     .only_max_m = FALSE,
-                     .lists = NULL) {
+                     ...) {
+  dots <- list(...)
+  .automate_seq <- dots[[".automate_seq"]] %||% FALSE
+  .only_max_m <- dots[[".only_max_m"]] %||% FALSE
+  .lists <- dots[[".lists"]] %||% NULL
   
-  return(run_meta_resampled(rv,
+  return(run_meta_resamples(rv,
                             set_target = set_target,
                             subpop = subpop,
                             random = FALSE,
-                            max_samples = NULL,
+                            max_draws = NULL,
                             trace = trace,
                             iter_step = iter_step,
                             .automate_seq = .automate_seq,
@@ -607,371 +626,104 @@ run_meta_loocv <- function(rv,
                            set_target = c("hr", "ctsd"),
                            subpop = FALSE,
                            trace = FALSE,
-                           .progress = FALSE,
-                           .only_max_m = TRUE,
-                           .lists = NULL) {
+                           ...) {
   
+  dots <- list(...)
+  .only_max_m <- dots[[".only_max_m"]] %||% TRUE
+  .max_m <- dots[[".max_m"]] %||% NULL
+  .progress <- dots[[".progress"]] %||% FALSE
+  .lists <- dots[[".lists"]] %||% NULL
+  
+  pb <- NULL
   dt_meta <- NULL
   
-  if (inherits(rv, "reactivevalues"))
-    rv_list <- reactiveValuesToList(rv) else rv_list <- rv
+  if (inherits(rv, "reactivevalues")) {
+    rv_list <- reactiveValuesToList(rv)
+  } else { rv_list <- rv }
+  
+  out <- lapply(set_target, function(target) {
     
-    out <- lapply(set_target, function(target) {
+    if (target == "ctsd") {
+      is_ctsd <- !.check_for_inf_speed(rv_list$ctsdList)
+      simList <- rv_list$simList[is_ctsd]
+      ctsdList <- rv_list$ctsdList[is_ctsd]
+    } else {
+      simList <- rv_list$simList
+    }
+    
+    if (length(simList) == 0) return(NULL)
+    
+    n_total <- length(simList)
+    if (n_total == 0) return(NULL)
+    max_m <- if (is.null(.max_m)) n_total else min(.max_m, n_total)
+    
+    if (.progress) {
+      pb <- txtProgressBar(min = 1, max = max_m, style = 3)
+    }
+    
+    x <- 1
+    for (x in seq_len(max_m)) {
       
-      if (target == "ctsd") {
-        is_ctsd <- !.check_for_inf_speed(rv_list$ctsdList)
-        simList <- rv_list$simList[is_ctsd]
-        ctsdList <- rv_list$ctsdList[is_ctsd]
-      } else {
-        simList <- rv_list$simList
+      if (trace) message(sprintf("--- %d out of %d", x, max_m))
+      
+      sim_idx <- seq_len(max_m)
+      tmp_file <- rlang::duplicate(rv_list, shallow = FALSE)
+      
+      tmp_file$seedList <- rv_list$seedList[sim_idx][-x]
+      tmp_file$simList <- simList[sim_idx][-x]
+      tmp_file$simfitList <- rv_list$simfitList[sim_idx][-x]
+      if (target == "hr") 
+        tmp_file$akdeList <- rv_list$akdeList[sim_idx][-x]
+      if (target == "ctsd") 
+        tmp_file$ctsdList <- ctsdList[sim_idx][-x]
+      tmp_file$seedList <- rv_list$seedList[sim_idx][-x]
+      
+      if (target == "ctsd" && length(tmp_file$ctsdList) > 0) {
+        tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
+        
+        new_i <- 0
+        new_list <- list()
+        for (i in seq_along(tmp_file$ctsdList)) {
+          if (tmp_file$ctsdList[[i]]$CI[, "est"] != "Inf") {
+            new_i <- new_i + 1
+            new_list[[new_i]] <- tmp_file$ctsdList[[i]]
+          }
+        }
+        
+        if (length(new_list) == 0) new_list <- NULL
+        
+        tmp_file$ctsdList <- new_list
+        tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
+        
+      } # end of if (target == "ctsd" &&
+      #              length(tmp_file$ctsdList) > 0)
+      
+      tmp_dt <- NULL
+      tmp_dt <- run_meta(tmp_file,
+                         set_target = target,
+                         .only_max_m = TRUE,
+                         .automate_seq = TRUE)
+      
+      if (nrow(tmp_dt) > 0) {
+        tmp_dt$x <- x
+        if (is.null(dt_meta)) {
+          dt_meta <- tmp_dt
+        } else {
+          dt_meta <- rbind(dt_meta, tmp_dt)
+        }
       }
-      
-      if (length(simList) == 0) return(NULL)
-      
       if (.progress) {
-        total_steps <- length(simList)
-        pb <- txtProgressBar(min = 0, max = total_steps, style = 3)
+        setTxtProgressBar(pb, x)
       }
       
-      x <- 1
-      for (x in seq_along(simList)) {
-        
-        if (trace)
-          message(paste("---", x, "out of", length(rv_list$simList)))
-        
-        tmp_file <- rlang::duplicate(rv_list, shallow = FALSE)
-        tmp_file$seedList <- rv_list$seedList[-x]
-        tmp_file$simList <- simList[-x]
-        tmp_file$simfitList <- rv_list$simfitList[-x]
-        if (target == "hr") tmp_file$akdeList <- rv_list$akdeList[-x]
-        if (target == "ctsd") tmp_file$ctsdList <- ctsdList[-x]
-        tmp_file$seedList <- rv_list$seedList[-x]
-        
-        if (target == "ctsd" && length(tmp_file$ctsdList) > 0) {
-          tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
-          
-          new_i <- 0
-          new_list <- list()
-          for (i in seq_along(tmp_file$ctsdList)) {
-            if (tmp_file$ctsdList[[i]]$CI[, "est"] != "Inf") {
-              new_i <- new_i + 1
-              new_list[[new_i]] <- tmp_file$ctsdList[[i]]
-            }
-          }
-          
-          if (length(new_list) == 0) new_list <- NULL
-          
-          tmp_file$ctsdList <- new_list
-          tmp_file$ctsdList[sapply(tmp_file$ctsdList, is.null)] <- NULL
-          
-        } # end of if (target == "ctsd" &&
-        #              length(tmp_file$ctsdList) > 0)
-        
-        tmp_dt <- NULL
-        tmp_dt <- run_meta(tmp_file, 
-                           set_target = target,
-                           .only_max_m = TRUE,
-                           .automate_seq = TRUE)
-        
-        if (nrow(tmp_dt) > 0) {
-          tmp_dt$x <- x
-          if (is.null(dt_meta)) {
-            dt_meta <- tmp_dt
-          } else {
-            dt_meta <- rbind(dt_meta, tmp_dt)
-          }
-        }
-        if (.progress) {
-          setTxtProgressBar(pb, x)
-        }
-        
-      } # end of [x] loop (individuals)
-      
-      return(dt_meta)
-      
-    }) # end of [set_target] lapply
+    } # end of [x] loop (individuals)
     
-    # close(pb)
+    return(dt_meta)
     
-    return(dplyr::distinct(do.call(rbind, out)))
-    
-}
-
-
-#' @title Plot meta (resamples)
-#'
-#' @noRd 
-#' 
-plot_meta_resampled <- function(rv,
-                                set_target = c("hr", "ctsd"),
-                                random = FALSE, 
-                                subpop = FALSE, 
-                                colors = NULL) {
+  }) # end of [set_target] lapply
   
-  stopifnot(!is.null(rv$meta_tbl),
-            !is.null(rv$which_m),
-            !is.null(rv$which_meta),
-            !is.null(rv$which_question),
-            !is.null(set_target))
-  if (length(rv$simList) <= 1)
-    stop("simList must have more than one element.")
-  if (random) {
-    stopifnot(!is.null(rv$meta_tbl_resample),
-              !is.null(rv$error_threshold))
-  }
-  if (rv$which_meta == "compare") {
-    stopifnot(!is.null(rv$metaList_groups),
-              !is.null(rv$metaList[[set_target]]))
-  }
+  if (.progress) close(pb)
   
-  dodge_width <- 0.25
-  txt_title <- if (length(rv$which_question) > 1) {
-    ifelse(set_target == "hr", 
-           "For home range:", "For speed & distance:")
-  }
-  
-  if (is.null(colors)) { pal_values <- c(
-    "Yes" = "#009da0", "Near" = "#77b131", "No" = "#dd4b39")
-  } else pal_values <- c(
-    "Yes" = colors[[1]], "Near" = colors[[2]], "No" = colors[[3]])
-  
-  if (random) {
-    
-    if (!is.null(rv$meta_nresample))
-      out <- dplyr::filter(rv$meta_tbl_resample,
-                           .data$sample <= rv$meta_nresample)
-    else out <- rv$meta_tbl_resample
-    
-    out <- out %>% 
-      dplyr::mutate(m = as.integer(.data$m)) %>% 
-      dplyr::filter(.data$type == set_target)
-    if (subpop) out <- dplyr::filter(out, .data$group != "All")
-    
-    stopifnot(all(!is.na(out$est)), nrow(out) > 0)
-    
-    max_samples <- max(unique(out$sample))
-    max_samples
-    
-    out_mean <- out %>% 
-      dplyr::group_by(.data$type, .data$group, .data$m) %>% 
-      dplyr::summarize(
-        n = dplyr::n(),
-        error = mean(.data$error, na.rm = TRUE),
-        error_lci = mean(.data$error_lci, na.rm = TRUE),
-        error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
-      dplyr::rowwise() %>%
-      dplyr::mutate(
-        within_threshold = 
-          (.data$error >= -rv$error_threshold &
-             .data$error <= rv$error_threshold),
-        overlaps_with_threshold = 
-          (.data$error_lci <= rv$error_threshold & 
-             .data$error_uci >= -rv$error_threshold),
-        status = dplyr::case_when(
-          within_threshold ~ "Yes",
-          !within_threshold & overlaps_with_threshold ~ "Near",
-          TRUE ~ "No")) %>% 
-      quiet() %>% 
-      suppressMessages() %>% 
-      suppressWarnings()
-    
-    txt_color <- paste0(
-      "Within error threshold (\u00B1",
-      rv$error_threshold * 100, "%)?")
-    
-    plot_subtitle <- paste(
-      "<b>Maximum number of samples:</b>", max_samples)
-    
-    p.optimal <- out_mean %>% 
-      ggplot2::ggplot(
-        ggplot2::aes(x = as.factor(.data$m),
-                     y = .data$error,
-                     group = .data$group,
-                     shape = .data$group,
-                     color = .data$status)) + 
-      
-      ggplot2::geom_hline(
-        yintercept = 0,
-        linewidth = 0.3,
-        linetype = "solid") +
-      
-      ggplot2::geom_hline(
-        yintercept = rv$error_threshold,
-        color = "black",
-        linetype = "dotted") +
-      ggplot2::geom_hline(
-        yintercept = -rv$error_threshold,
-        color = "black",
-        linetype = "dotted") +
-      
-      ggplot2::geom_jitter(
-        data = out,
-        mapping = ggplot2::aes(x = as.factor(.data$m),
-                               y = .data$error,
-                               group = .data$group,
-                               shape = .data$group,
-                               color = .data$status),
-        position = ggplot2::position_jitterdodge(dodge.width = 0.4),
-        size = 3.5, color = "grey80", alpha = 0.9) +
-      
-      ggplot2::geom_linerange(
-        ggplot2::aes(ymin = .data$error_lci,
-                     ymax = .data$error_uci),
-        show.legend = TRUE,
-        position = ggplot2::position_dodge(width = 0.4),
-        linewidth = 2.2, alpha = 0.3) +
-      ggplot2::geom_point(
-        position = ggplot2::position_dodge(width = 0.4),
-        show.legend = TRUE,
-        size = 3.5) +
-      
-      ggplot2::labs(
-        title = txt_title,
-        subtitle = plot_subtitle,
-        x = "<i>Population</i> sample size, <i>m</i>",
-        y = "Relative error (%)",
-        color = txt_color) +
-      
-      ggplot2::scale_y_continuous(breaks = scales::breaks_pretty(),
-                                  labels = scales::percent) +
-      
-      ggplot2::scale_color_manual(values = pal_values,
-                                  na.translate = FALSE, drop = FALSE) +
-      ggplot2::scale_shape_manual("Group:", values = c(16, 18)) +
-      
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        legend.position = "bottom",
-        plot.title = ggtext::element_markdown(
-          size = 15, face = 2, hjust = 1,
-          margin = ggplot2::margin(b = 2)),
-        plot.subtitle = ggtext::element_markdown(
-          size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
-    p.optimal
-    
-    if (rv$which_meta == "mean") {
-      p.optimal <- p.optimal +
-        ggplot2::guides(shape = "none")
-    }
-    
-  } else {
-    
-    out <- out_all <- dplyr::distinct(rv$meta_tbl) %>% 
-      dplyr::select(-c(.data$est, .data$lci, .data$uci)) %>%
-      dplyr::filter(.data$type == set_target)
-    
-    stopifnot(all(!is.na(out$est)), nrow(out) > 0)
-    
-    if (subpop) out <- dplyr::filter(out, .data$group != "All")
-    
-    stopifnot(all(!is.na(out$est)), nrow(out) > 0)
-    
-    txt_color <- paste0(
-      "Within error threshold (\u00B1",
-      rv$error_threshold * 100, "%)?")
-    
-    out <- out %>%
-      dplyr::group_by(.data$type) %>% 
-      dplyr::rowwise() %>%
-      dplyr::mutate(
-        within_threshold = 
-          (.data$error >= -rv$error_threshold & 
-             .data$error <= rv$error_threshold),
-        overlaps_with_threshold = 
-          (.data$error_lci <= rv$error_threshold & 
-             .data$error_uci >= -rv$error_threshold),
-        color = dplyr::case_when(
-          within_threshold ~ "Yes",
-          !within_threshold & overlaps_with_threshold ~ "Near",
-          TRUE ~ "No"))
-    
-    txt_caption <- NULL
-    txt_color <- paste0(
-      "Within error threshold (\u00B1", rv$error_threshold * 100, "%)?")
-    
-    if (rv$which_meta == "compare") {
-      dodge_width <- .4
-      txt_color <- "Group:"
-      
-      is_subpop <- rv$metaList_groups[["intro"]][[
-        set_target]]$logs$subpop_detected
-      
-      is_final_subpop <- out_all %>%
-        dplyr::filter(.data$group == "All") %>%
-        dplyr::pull(.data$subpop_detected)
-      is_final_subpop <- rep(is_final_subpop, each = 2)
-      is_final_subpop <- out$is_final_subpop <- ifelse(
-        is_final_subpop == "FALSE", "No", "Yes")
-      out$color <- out$group
-      
-      pal_values <- c("A" = "#77b131", "B" = "#009da0")
-      
-      txt_color <- "Groups:"
-      txt_caption <- "(*) Asterisks indicate subpopulations were found."
-      
-    } # Note: refers to finding subpops within the population.
-    
-    p.optimal <- out %>%
-      ggplot2::ggplot(
-        ggplot2::aes(x = as.factor(.data$m),
-                     y = .data$error,
-                     group = .data$group,
-                     shape = .data$group,
-                     color = .data$color)) +
-      
-      ggplot2::geom_hline(
-        yintercept = rv$error_threshold,
-        color = "black",
-        linetype = "dotted") +
-      ggplot2::geom_hline(
-        yintercept = -rv$error_threshold,
-        color = "black",
-        linetype = "dotted") +
-      
-      ggplot2::geom_hline(
-        yintercept = 0,
-        linewidth = 0.3,
-        linetype = "solid") +
-      ggplot2::geom_point(
-        size = 4,
-        position = ggplot2::position_dodge(width = dodge_width)) +
-      ggplot2::geom_linerange(
-        ggplot2::aes(ymin = .data$error_lci,
-                     ymax = .data$error_uci),
-        position = ggplot2::position_dodge(width = dodge_width)) +
-      
-      { if (rv$which_meta == "compare")
-        ggplot2::geom_text(
-          data = subset(out, .data$subpop_detected == TRUE),
-          mapping = ggplot2::aes(x = as.factor(.data$m),
-                                 y = .data$error_uci + 0.05,
-                                 label = "*"),
-          color = "black", size = 5, 
-          position = ggplot2::position_dodge(width = 0.4))
-        
-      } +
-      
-      ggplot2::labs(
-        title = txt_title,
-        x = "<i>Population</i> sample size, <i>m</i>",
-        y = "Relative error (%)",
-        color = txt_color,
-        caption = txt_caption) +
-      
-      ggplot2::scale_y_continuous(labels = scales::percent,
-                                  breaks = scales::breaks_pretty()) +
-      ggplot2::scale_color_manual(txt_color, values = pal_values) +
-      ggplot2::scale_shape_manual("Group:", values = c(16, 18)) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(legend.position = "bottom")
-    
-    if (rv$which_meta == "mean") {
-      p.optimal <- p.optimal +
-        ggplot2::guides(shape = "none")
-    }
-    
-  } # end of (!random)
-  
-  return(p.optimal)
+  return(dplyr::distinct(do.call(rbind, out)))
   
 }

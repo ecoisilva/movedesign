@@ -6,7 +6,7 @@ generate_seed <- function(seed_list = NULL) {
   
   set.seed(NULL)
   get_random <- function(n) {
-    round(stats::runif(n, min = 1, max = 999999), 0)
+    round(stats::runif(n, min = 1, max = 9999999), 0)
   }
   
   out <- get_random(1)
@@ -27,9 +27,14 @@ generate_seed <- function(seed_list = NULL) {
 #' @noRd
 .trigger_tag_failure <- function(obj, fail_prob = 0) {
   
-  if (!inherits(obj, "movedesign")) {
-    stop("The 'obj' argument must be of class 'movedesign'.")
-  }
+  if (is.null(fail_prob)) return(list(obj = obj,
+                                      dev_failed = logical(length(obj))))
+  if (fail_prob == 0) return(list(obj = obj,
+                                  dev_failed = logical(length(obj))))
+  
+  # if (!inherits(obj, "movedesign")) {
+  #   stop("The 'obj' argument must be of class 'movedesign'.")
+  # }
   
   devices_failed <- logical(length(obj))
   
@@ -44,7 +49,7 @@ generate_seed <- function(seed_list = NULL) {
     if (failure_occurred) {
       # If failure occurred, simulate data truncation:
       to_keep_vec <- c(rep(1, 10), cumprod(
-        1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.005)))
+        1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
       if (!any(to_keep_vec == 0)) failure_occurred <- FALSE
       
       x <- x[to_keep_vec == 1, ]
@@ -55,7 +60,7 @@ generate_seed <- function(seed_list = NULL) {
     
   }) # end of lapply
   
-  return(list(obj, devices_failed))
+  return(list(obj = obj, dev_failed = devices_failed))
   
 } # end of function, .trigger_tag_failure()
 
@@ -68,9 +73,12 @@ generate_seed <- function(seed_list = NULL) {
 #' @noRd
 .trigger_fix_success <- function(obj, prob = 0) {
   
-  if (!inherits(obj, "movedesign")) {
-    stop("The 'obj' argument must be of class 'movedesign'.")
-  }
+  if (is.null(prob)) return(obj)
+  if (prob == 0) return(obj)
+  
+  # if (!inherits(obj, "movedesign")) {
+  #   stop("The 'obj' argument must be of class 'movedesign'.")
+  # }
   
   obj <- lapply(obj, function(x) {
     to_keep <- round(nrow(x) * (1 - prob), 0)
@@ -92,9 +100,12 @@ generate_seed <- function(seed_list = NULL) {
 #' @noRd
 .trigger_error <- function(obj, error = 0) {
   
-  if (!inherits(obj, "movedesign")) {
-    stop("The 'obj' argument must be of class 'movedesign'.")
-  }
+  if (is.null(error)) return(obj)
+  if (error == 0) return(obj)
+  
+  # if (!inherits(obj, "movedesign")) {
+  #   stop("The 'obj' argument must be of class 'movedesign'.")
+  # }
   
   obj <- lapply(obj, function(x) {
     

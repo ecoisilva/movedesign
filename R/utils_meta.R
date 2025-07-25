@@ -202,8 +202,8 @@
       out <- get_true_hr(
         data = if (!summarized) rv$simList else NULL,
         sigma = rv$sigma,
-        emulated = rv$is_emulate,
-        fit = if (rv$is_emulate) rv$meanfitList else NULL,
+        ind_var = rv$add_ind_var,
+        fit = if (rv$add_ind_var) rv$meanfitList else NULL,
         grouped = rv$grouped,
         groups = if (rv$grouped) rv$groups[[2]] else NULL,
         summarized = summarized) 
@@ -216,8 +216,8 @@
         tau_p = rv$tau_p,
         tau_v = rv$tau_v,
         sigma = rv$sigma,
-        emulated = rv$is_emulate,
-        fit = if (rv$is_emulate) rv$meanfitList else NULL,
+        ind_var = rv$add_ind_var,
+        fit = if (rv$add_ind_var) rv$meanfitList else NULL,
         grouped = rv$grouped,
         groups = if (rv$grouped) rv$groups[[2]] else NULL,
         summarized = summarized)
@@ -239,23 +239,34 @@
 #' @keywords internal
 #'
 #' @noRd
-.get_sequence <- function(input, .iter_step = 2, grouped = FALSE) {
+.get_sequence <- function(input,
+                          .step = 2, 
+                          .max_m = NULL,
+                          .automate_seq = TRUE,
+                          grouped = FALSE) {
   
   if (is.null(input)) stop("No input!")
   
   n <- length(input)
+  if (!is.null(.max_m)) {
+    if (.max_m > n) stop("'.max_m' argument is invalid.")
+    n <- .max_m
+  }
+  
   if (grouped) n <- n / 2
   
   if (n == 1) return(stop("Cannot run meta() on one individual."))
   
-  if (.iter_step == 2) {
+  if (.step == 2) {
     start_value <- ifelse(n %% 2 == 0, 2, 1)
   } else {
-    start_value <- n %% .iter_step
-    if (start_value == 0) start_value <- .iter_step
+    start_value <- n %% .step
+    if (start_value == 0) start_value <- .step
   }
   
-  out_seq <- seq(start_value, n, by = .iter_step)
+  if (!.automate_seq) return(seq(start_value, n, by = .step))
+  
+  out_seq <- seq(start_value, n, by = .step)
   if (grouped && 1 %in% out_seq) {
     out_seq <- out_seq[out_seq != 1]
   }
@@ -279,7 +290,9 @@
 #'
 #' @noRd
 #'
-.get_sets <- function(input, groups = NULL, set_size = 2) {
+.get_sets <- function(input,
+                      groups = NULL, 
+                      set_size = 2) {
   
   group_labels <- NULL
   if (!is.null(groups)) {

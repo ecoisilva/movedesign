@@ -66,11 +66,13 @@ estimate_speed <- function(rv) {
                   units = FALSE,
                   trace = 0),
       warning = function(w) {
-        w; return(NULL) 
+        msg <- "Movement model is fractal"
+        if (grepl(msg, w)) warning(msg)
+        return(NULL)
       },
       error = function(e) {
         warning(paste("ctmm::speed() failed for simulation no.", x))
-        NULL
+        return(NULL)
       }
     )
   }) # end of lapply

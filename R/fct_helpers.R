@@ -418,7 +418,7 @@ get_true_hr <- function(data = NULL,
                         seed = NULL, 
                         sigma, 
                         
-                        emulated = TRUE, 
+                        ind_var = TRUE, 
                         fit = NULL, 
                         
                         grouped = FALSE, 
@@ -445,7 +445,7 @@ get_true_hr <- function(data = NULL,
     
     out <- lapply(names(sigma), function(x) { 
       
-      if (emulated) { 
+      if (ind_var) { 
         
         if (fit[[x]]$isotropic[["sigma"]]) { 
           
@@ -467,7 +467,7 @@ get_true_hr <- function(data = NULL,
           radius_y <- sqrt(-2 * log(0.05) * sigma[["minor"]]) 
           area <- pi * radius_x * radius_y 
           
-        } # end of if (is_isotropic) 
+        } # end of if (is_isotropic)
         
       } else { 
         
@@ -475,12 +475,12 @@ get_true_hr <- function(data = NULL,
         radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig) 
         area <- -2 * log(0.05) * pi * sig 
         
-      } # end of if (is_emulate) 
+      } # end of if (ind_var)
       
       truth <- get_circle(radius_x, radius_y) 
       return(list(area = area, data = truth)) 
       
-    }) # end of lapply (x) 
+    }) # end of lapply (x)
     
     names(out) <- names(sigma) 
     return(out) 
@@ -494,7 +494,7 @@ get_true_hr <- function(data = NULL,
         group <- ifelse(nm %in% groups[["A"]], "A", "B") 
       } else group <- "All" 
       
-      if (emulated) { 
+      if (ind_var) { 
         fit <- emulate_seeded(fit[[group]], names(data)[[x]]) 
         
         if (fit$isotropic[["sigma"]]) { 
@@ -513,7 +513,7 @@ get_true_hr <- function(data = NULL,
           semi_axis_2 <- max(fit_ellipse[,2])/2 - min(fit_ellipse[,2])/2 
           area <- pi * semi_axis_1 * semi_axis_2 
           
-        } # end of if (is_isotropic) 
+        } # end of if (is_isotropic)
         
       } else { 
         
@@ -521,17 +521,17 @@ get_true_hr <- function(data = NULL,
         radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig) 
         area <- -2 * log(0.05) * pi * sig 
         
-      } # end of if (is_emulate) 
+      } # end of if (ind_var)
       
       truth <- get_circle(radius_x, radius_y) 
       return(list(area = area, data = truth)) 
       
-    }) # end of lapply (x) 
+    }) # end of lapply (x)
     
     names(out) <- names(data) 
     return(out) 
     
-  } # end of if (summarized) 
+  } # end of if (summarized)
   
 } 
 
@@ -569,7 +569,7 @@ get_true_speed <- function(data,
                            tau_v, 
                            sigma, 
                            
-                           emulated = TRUE, 
+                           ind_var = TRUE, 
                            fit = NULL, 
                            
                            grouped = FALSE, 
@@ -585,7 +585,7 @@ get_true_speed <- function(data,
     
     out <- lapply(names(tau_p), function(x) { 
       
-      if (emulated) { 
+      if (ind_var) { 
         fit <- fit[[x]] 
         sigma <- fit$sigma 
         tau <- fit$tau 
@@ -635,7 +635,7 @@ get_true_speed <- function(data,
         group <- ifelse(nm %in% groups[["A"]], "A", "B") 
       } else group <- "All" 
       
-      if (emulated) { 
+      if (ind_var) { 
         fit <- emulate_seeded(fit[[group]], nm) 
         sigma <- var.covm(fit$sigma, average = TRUE) 
         

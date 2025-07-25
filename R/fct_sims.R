@@ -39,25 +39,30 @@
 #' @export
 simulating_data <- function(rv) {
 
+simulating_data <- function(rv, seed) {
+  
+  # Helper for recentering mean location:
+  .recenter_mu <- function(fit) {
+    fit$mu[["x"]] <- 0
+    fit$mu[["y"]] <- 0
+    return(fit)
+  }
+  
   dur <- rv$dur$value %#% rv$dur$unit
   dti <- rv$dti$value %#% rv$dti$unit
   t_new <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
 
   if (rv$data_type == "simulated") {
+    
     fit <- fitA <- rv$modList[[1]]
     if (rv$grouped) fitB <- rv$modList[[2]]
-  }
-
-  if (rv$data_type != "simulated") {
-
-    if (rv$is_emulate) {
+    
+  } else {
+    
+    if (rv$add_ind_var) {
+      fit <- simulate_seeded(rv$meanfitList[[1]], seed)
+      fit <- .recenter_mu(fit)
       
-      fit <- simulate_seeded(rv$meanfitList[[1]], rv$seed0)
-      
-      # Recenter to 0,0:
-      fit$mu[["x"]] <- 0
-      fit$mu[["y"]] <- 0
-
     } else {
       fit <- prepare_mod(
         tau_p = rv$tau_p[[1]][2, ],
@@ -68,16 +73,14 @@ simulating_data <- function(rv) {
 
     if ("compare" %in% rv$which_meta) {
       
-      if (rv$is_emulate) {
-        fitA <- simulate_seeded(rv$meanfitList[["A"]], rv$seed0)
-        fitB <- simulate_seeded(rv$meanfitList[["B"]], rv$seed0 + 1)
+      if (rv$add_ind_var) {
         
-        # Recenter to 0,0:
-        fitA$mu[["x"]] <- 0
-        fitA$mu[["y"]] <- 0
-        fitB$mu[["x"]] <- 0
-        fitB$mu[["y"]] <- 0
-
+        fitA <- simulate_seeded(rv$meanfitList[["A"]], seed)
+        fitB <- simulate_seeded(rv$meanfitList[["B"]], seed + 1)
+        
+        fitA <- .recenter_mu(fitA)
+        fitB <- .recenter_mu(fitB)
+        
       } else {
         fitA <- prepare_mod(
           tau_p = rv$tau_p[[2]][2, ],
@@ -94,41 +97,38 @@ simulating_data <- function(rv) {
     }
     # rv$modList <- list(fit)
   }
-
+  
   if (rv$grouped) {
     
-    # rv$modList_groups <- list(A = fitA, B = fitB)
-    simA <- ctmm::simulate(fitA, t = t_new, seed = rv$seed0)
-    simB <- ctmm::simulate(fitB, t = t_new, seed = rv$seed0 + 1)
+    simA <- ctmm::simulate(fitA, t = t_new, seed = seed)
+    simB <- ctmm::simulate(fitB, t = t_new, seed = seed + 1)
     
-    if (is.null(simA) || is.null(simB)) {
-      bug_group <- c()
-      if (is.null(simA)) bug_group <- c(bug_group, "A")
-      if (is.null(simB)) bug_group <- c(bug_group, "B")
-      
+    failed_groups <- c()
+    if (is.null(simA)) failed_groups <- c(failed_groups, "A")
+    if (is.null(simB)) failed_groups <- c(failed_groups, "B")
+    
+    if (length(failed_groups)) {
       msg_log(
         style = "danger",
         message = paste0(
           "Simulation ", msg_danger("failed"),
-          " for group(s): ", msg_danger(bug_group)),
+          " for group(s): ", msg_danger(failed_groups)),
         detail = "Try again with different groupings.")
       shinybusy::remove_modal_spinner()
     }
     
     stopifnot(!is.null(simA), !is.null(simB))
-    
-    simA <- pseudonymize(simA)
-    simB <- pseudonymize(simB)
-    sim <- list(simA, simB)
+    sim <- list(pseudonymize(simA), pseudonymize(simB))
     return(sim)
 
   } else {
-    sim <- ctmm::simulate(fit, t = t_new, seed = rv$seed0)
-    sim <- pseudonymize(sim)
-    return(list(sim))
+    sim <- ctmm::simulate(fit, t = t_new, seed = seed)
+    sim <- list(pseudonymize(sim))
+    return(sim)
   }
-
+  
 } # end of function, simulating_data()
+
 
 #' Fit continuous-time movement models
 #'
@@ -164,19 +164,24 @@ simulating_data <- function(rv) {
 #' 
 fitting_model <- function(obj,
                           set_target = c("hr", "ctsd"),
-                          .dur = NULL,
-                          .dti = NULL,
-                          .tau_p = NULL,
-                          .tau_v = NULL,
-                          .error_m = NULL,
-                          .check_sampling = FALSE,
-                          .rerun = FALSE,
-                          .parallel = TRUE,
-                          .trace = FALSE) {
+                          ...) {
   
-  .error <- any(grepl("error", names(obj[[1]])))
+  dots <- list(...)
   
-  to_fit <- FALSE
+  .dur <- dots[[".dur"]] %||% NULL
+  .dti <- dots[[".dti"]] %||% NULL
+  .tau_p <- dots[[".tau_p"]] %||% NULL
+  .tau_v <- dots[[".tau_v"]] %||% NULL
+  .error_m <- dots[[".error_m"]] %||% NULL
+  
+  .check_sampling <- dots[[".check_sampling"]] %||% FALSE
+  .rerun <- dots[[".rerun"]] %||% FALSE
+  .parallel <- dots[[".parallel"]] %||% TRUE
+  .trace <- dots[[".trace"]] %||% FALSE
+  
+  n_obj <- length(obj)
+  error <- any(grepl("error", names(obj[[1]])))
+  
   if (.check_sampling) {
     stopifnot(!is.null(.dur), !is.null(.dti),
               !is.null(.tau_p), !is.null(.tau_v))
@@ -187,37 +192,36 @@ fitting_model <- function(obj,
     dti <- .dti$value %#% .dti$unit
     optimal_dti <- (.tau_v[[1]]$value[2] %#% .tau_v[[1]]$unit[2]) / 3
     
-    to_fit <- N <- c()
+    is_fit <- logical()
+    N <- character()
     if ("hr" %in% set_target) {
-      to_fit <- c(to_fit, optimal_dur <= dur)
+      is_fit <- c(is_fit, optimal_dur <= dur)
       N <- c(N, "area")
     }
     if ("ctsd" %in% set_target) {
-      to_fit <- c(to_fit, dti <= optimal_dti)
+      is_fit <- c(is_fit, dti <= optimal_dti)
       N <- c(N, "speed")
     }
-    
   } else {
     stopifnot(is.null(.dur), is.null(.dti))
+    is_fit <- rep(TRUE, length(set_target))
   }
   
-  n_obj <- length(obj)
+  if (error && is.null(.error_m)) 
+    stop("No location error provided!")
   
-  if (!.error) {
-    guessList <- lapply(seq_along(obj), function (x)
-      ctmm::ctmm.guess(obj[[x]], interactive = FALSE))
-    
-  } else {
-    if (is.null(.error_m)) stop("No location error provided!")
-    
-    guessList <- lapply(seq_along(obj), function(x)
-      ctmm::ctmm.guess(obj[[x]],
-                       CTMM = ctmm::ctmm(error = TRUE),
-                       interactive = FALSE))
-  }
+  guessList <- lapply(obj, function(x) {
+    if (error) {
+      ctmm::ctmm.guess(x, CTMM = ctmm::ctmm(error = TRUE),
+                       interactive = FALSE)
+    } else {
+      ctmm::ctmm.guess(x, interactive = FALSE)
+    }
+  })
   
   # out <- tryCatch(
-  #   if (all(to_fit)) par.ctmm.fit(obj, guessList, parallel = .parallel)
+  #   if (all(to_fit))
+  #     par.ctmm.fit(obj, guessList, parallel = .parallel)
   #   else par.ctmm.select(obj, guessList, parallel = .parallel)
   #   , error = function(e) e)
   
@@ -226,11 +230,11 @@ fitting_model <- function(obj,
     error = function(e) e)
   
   if (inherits(out, "error")) return(NULL)
-  
   if (n_obj == 1) out <- list(out)
   
   if (.rerun) {
-    N <- setNames(lapply(N, function(x) extract_dof(out, x)), set_target)
+    N <- setNames(lapply(N, function(x) 
+      extract_dof(out, x)), set_target)
     
     lapply(set_target, function(target) {
       to_rerun <- which(N[[target]] < 0.1)
