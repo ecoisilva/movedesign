@@ -352,19 +352,18 @@ mod_tab_meta_server <- function(id, rv) {
     ## Update number of resamples: ----------------------------------------
     
     # observe({
-    #   req(rv$meta$n_resample > 1)
-    #   
-    #   # if (!is.null(rv$meta_tbl_resample)) {
-    #   #   rv$meta$n_resample <- max(unique(rv$meta_tbl_resample$sample))
-    #   # }
+    #   req(rv$active_tab == 'meta')
+    #   req(rv$simList)
     #   
     #   shinyWidgets::updateAutonumericInput(
     #     session = session,
     #     inputId = "n_resamples",
-    #     value = rv$meta$n_resample)
-    #   
+    #     value = 0,
+    #     minimumValue = 1,
+    #     maximumValue = choose(length(rv$simList), 2))
+    # 
     # }) %>% # end of observe,
-    #   bindEvent(rv$meta$n_resample)
+    #   bindEvent(rv$simList)
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at the start: ----------------------------------------
@@ -820,8 +819,8 @@ mod_tab_meta_server <- function(id, rv) {
           truth_summarized <- get_true_hr(
             sigma = rv$sigma,
             
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
             
             grouped = rv$grouped,
             groups = if (rv$grouped) rv$groups[[2]] else NULL,
@@ -838,8 +837,8 @@ mod_tab_meta_server <- function(id, rv) {
             tau_v = rv$tau_v,
             sigma = rv$sigma,
             
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
             
             grouped = rv$grouped,
             groups = if (rv$grouped) rv$groups[[2]] else NULL,
@@ -882,8 +881,8 @@ mod_tab_meta_server <- function(id, rv) {
             
             truth_summarized <- get_true_hr(
               sigma = rv$sigma,
-              emulated = rv$is_emulate,
-              fit = if (rv$is_emulate) rv$meanfitList else NULL,
+              ind_var = rv$add_ind_var,
+              fit = if (rv$add_ind_var) rv$meanfitList else NULL,
               grouped = rv$grouped,
               groups = if (rv$grouped) rv$groups[[2]] else NULL,
               summarized = TRUE)
@@ -902,8 +901,8 @@ mod_tab_meta_server <- function(id, rv) {
               tau_v = rv$tau_v,
               sigma = rv$sigma,
               
-              emulated = rv$is_emulate,
-              fit = if (rv$is_emulate) rv$meanfitList else NULL,
+              ind_var = rv$add_ind_var,
+              fit = if (rv$add_ind_var) rv$meanfitList else NULL,
               
               grouped = rv$grouped,
               groups = if (rv$grouped) rv$groups[[2]] else NULL,
@@ -1036,7 +1035,7 @@ mod_tab_meta_server <- function(id, rv) {
         get_analysis <- c(get_analysis, "ctsd")
       }
       
-      tmp <- run_meta_resampled(
+      tmp <- run_meta_resamples(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
         random = FALSE, 
@@ -1122,11 +1121,11 @@ mod_tab_meta_server <- function(id, rv) {
       
       req(rv$n_resamples > 0)
       
-      tmp <- run_meta_resampled(
+      tmp <- run_meta_resamples(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
         random = TRUE, 
-        max_samples = rv$n_resamples,
+        max_draws = rv$n_resamples,
         trace = TRUE,
         .automate_seq = TRUE)
       
@@ -1179,7 +1178,8 @@ mod_tab_meta_server <- function(id, rv) {
         tmp <- dplyr::mutate(tmp, sample = sample + max_n_resamples) 
       }
       
-      rv$meta_tbl_resample <<- dplyr::bind_rows(rv$meta_tbl_resample, tmp)
+      rv$meta_tbl_resample <<- dplyr::bind_rows(
+        rv$meta_tbl_resample, dplyr::distinct(tmp))
       
       # rv$meta_tbl_resample <- NULL
       # tmp <- get_meta_resampled_outputs()
@@ -1200,7 +1200,7 @@ mod_tab_meta_server <- function(id, rv) {
     
     output$metaPlot_all <- ggiraph::renderGirafe({
       req(rv$which_question, rv$simList, rv$simfitList,
-          rv$truth, !is.null(rv$is_emulate))
+          rv$truth, !is.null(rv$add_ind_var))
       req(length(rv$simList) == length(rv$simfitList))
       req(length(rv$simfitList) > 1)
       
@@ -1233,8 +1233,8 @@ mod_tab_meta_server <- function(id, rv) {
         
         truth_summarized <- get_true_hr(
           sigma = rv$sigma,
-          emulated = rv$is_emulate,
-          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          ind_var = rv$add_ind_var,
+          fit = if (rv$add_ind_var) rv$meanfitList else NULL,
           grouped = rv$grouped,
           groups = if (rv$grouped) rv$groups[[2]] else NULL,
           summarized = TRUE)
@@ -1259,8 +1259,8 @@ mod_tab_meta_server <- function(id, rv) {
           tau_v = rv$tau_v,
           sigma = rv$sigma,
           
-          emulated = rv$is_emulate,
-          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          ind_var = rv$add_ind_var,
+          fit = if (rv$add_ind_var) rv$meanfitList else NULL,
           
           grouped = rv$grouped,
           groups = if (rv$grouped) rv$groups[[2]] else NULL,
@@ -1288,15 +1288,15 @@ mod_tab_meta_server <- function(id, rv) {
       
       truth <- out$unit[[1]] %#% truth
       
-      if (rv$is_emulate) {
+      if (rv$add_ind_var) {
         if (set_analysis == "hr") {
           truthList <- get_true_hr(
             data = rv$simList,
             seed = rv$seedList,
             sigma = rv$sigma,
             
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
             grouped = rv$grouped,
             groups = if (rv$grouped) rv$groups[[2]] else NULL)
           
@@ -1310,8 +1310,8 @@ mod_tab_meta_server <- function(id, rv) {
             seed = rv$seedList,
             sigma = rv$sigma,
             
-            emulated = rv$is_emulate,
-            fit = if (rv$is_emulate) rv$meanfitList else NULL,
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
             grouped = rv$grouped,
             groups = if (rv$grouped) rv$groups[[2]] else NULL)
           
@@ -1382,7 +1382,7 @@ mod_tab_meta_server <- function(id, rv) {
                             scales = "free_y",
                             space = "free_y") +
         
-        { if (rv$is_emulate)
+        { if (rv$add_ind_var)
           ggplot2::geom_point(
             data = out_truth,
             mapping = ggplot2::aes(
@@ -1393,7 +1393,7 @@ mod_tab_meta_server <- function(id, rv) {
             size = 3,
             shape = 4) } +
         
-        { if (rv$is_emulate)
+        { if (rv$add_ind_var)
           ggplot2::scale_fill_manual(
             "Truth:", values = c("True area" = "black")) } +
         
@@ -1457,8 +1457,8 @@ mod_tab_meta_server <- function(id, rv) {
         
         truth_summarized <- get_true_hr(
           sigma = rv$sigma,
-          emulated = rv$is_emulate,
-          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          ind_var = rv$add_ind_var,
+          fit = if (rv$add_ind_var) rv$meanfitList else NULL,
           grouped = rv$grouped,
           groups = rv$groups[[2]],
           summarized = TRUE)
@@ -1482,8 +1482,8 @@ mod_tab_meta_server <- function(id, rv) {
           tau_v = rv$tau_v,
           sigma = rv$sigma,
           
-          emulated = rv$is_emulate,
-          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          ind_var = rv$add_ind_var,
+          fit = if (rv$add_ind_var) rv$meanfitList else NULL,
           
           grouped = rv$grouped,
           groups = rv$groups[[2]],

@@ -59,7 +59,7 @@ app_server <- function(input, output, session) {
     akdeList = list(),
     pathList = list(),
     meanfit = NULL,
-    is_emulate = FALSE,
+    add_ind_var = FALSE,
     random = FALSE,
     is_isotropic = NULL,
     is_analyses = FALSE,

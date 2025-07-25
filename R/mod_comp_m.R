@@ -397,7 +397,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       req(length(num_sims) > 0)
       req(num_sims > 0)
       if (rv$which_meta == "compare") req(rv$groups)
-      if (rv$is_emulate) req(rv$meanfitList)
+      if (rv$add_ind_var) req(rv$meanfitList)
         
       rv$meta_tbl <- NULL
       
@@ -430,7 +430,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       for (i in seq_len(num_sims)) {
         
         rv$seed0 <- generate_seed(rv$seedList)
-        simList <- simulating_data(rv)
+        simList <- simulating_data(rv, rv$seed0)
         if (!rv$grouped) {
           names(simList) <- c(rv$seed0)
         } else {
@@ -665,7 +665,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
           }
           
-          if (rv$is_emulate) {
+          if (rv$add_ind_var) {
             tau_p <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
                              rv$seedList[[(rv$nsims - num_sims) + x]]),
@@ -723,7 +723,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
           }
           
-          if (rv$is_emulate) {
+          if (rv$add_ind_var) {
             tau_p <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
                              rv$seedList[[(rv$nsims - num_sims) + x]]),
@@ -964,7 +964,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
           # Running one extra simulation at the beginning:
           rv$seed0 <- generate_seed(rv$seedList)
-          simList <- simulating_data(rv)
+          simList <- simulating_data(rv, rv$seed0)
           
           names(simList) <- c(rv$seed0)
           seedList <- list(rv$seed0)
@@ -974,7 +974,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (subpop) {
             
             rv$seed0 <- generate_seed(rv$seedList)
-            simList <- simulating_data(rv)
+            simList <- simulating_data(rv, rv$seed0)
             
             rv$groups[[2]][["A"]] <- c(as.character(rv$groups[[2]]$A),
                                        as.character(rv$seed0))
@@ -989,14 +989,13 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             
             simList <- lapply(seq_len(m), function(x) {
               rv$seed0 <- generate_seed(rv$seedList)
-              out <- simulating_data(rv)[[1]]
+              out <- simulating_data(rv, rv$seed0)[[1]]
               rv$seedList <- c(rv$seedList, rv$seed0)
               return(out) 
             })
             seedList <- utils::tail(rv$seedList, m)
             names(simList) <- seedList
           }
-          
         }
         
         new_tmpnames <- names(simList)
@@ -1072,7 +1071,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         current_dur <- rv$dur$value %#% rv$dur$unit
         optimal_dur <- (rv$tau_p[[1]]$value[2] %#%
-                          rv$tau_p[[1]]$unit[2]) * 10
+                          rv$tau_p[[1]]$unit[2]) * 30
         
         current_dti <- rv$dti$value %#% rv$dti$unit
         optimal_dti <- (rv$tau_v[[1]]$value[2] %#%
@@ -1622,7 +1621,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           
         } # end of if (ctsd)
         
-        if (rv$is_emulate) {
+        if (rv$add_ind_var) {
           tau_p <- extract_pars(
             emulate_seeded(rv$meanfitList[[group]], rv$seedList[[i]]),
             "position")[[1]]
@@ -1643,19 +1642,21 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           rv$hrEst <<- rbind(rv$hrEst, out_est_df)
           rv$hrErr <<- rbind(rv$hrErr, out_err_df)
           
-          rv$hr$tbl <<- rbind(
-            rv$hr$tbl, 
-            .build_tbl(
-              target = "hr",
-              group = if (subpop) group else NA,
-              data = rv$simList[[i]], 
-              seed = names(rv$simList)[[i]],
-              obj = rv$akdeList[[i]],
-              tau_p = tau_p,
-              tau_v = tau_v,
-              sigma = sigma,
-              area = out_est_df,
-              area_error = out_err_df))
+          rv$hr$tbl <<- tryCatch(
+            rbind(
+              rv$hr$tbl, 
+              .build_tbl(
+                target = "hr",
+                group = if (subpop) group else NA,
+                data = rv$simList[[i]], 
+                seed = names(rv$simList)[[i]],
+                obj = rv$akdeList[[i]],
+                tau_p = tau_p,
+                tau_v = tau_v,
+                sigma = sigma,
+                area = out_est_df,
+                area_error = out_err_df)),
+            error = function(e) e)
         }
         
         if ("Speed & distance" %in% rv$which_question) {
@@ -1719,7 +1720,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           "a stable estimate of the population mean",
           "may be achieved by deploying",
           length(rv$simList), "tags."),
-        p("If the", span("minimum number of tags",
+        p("If the", span("recommended number of tags",
                          style = "font-weight: bold;"),
           "is close to (or equal to) the",
           wrap_none(span("maximum number of tags",
@@ -1791,30 +1792,28 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                 style = paste("margin-right: 20px;",
                               "margin-left: 20px;"),
                 
-                p(
-                  "You set a maximum of", rv$nsims, "tags,",
+                p("You specified a maximum of", rv$nsims, "tags,",
                   "which was not sufficient to achieve a stable",
-                  "error below the threshold of", 
+                  "estimate of the population mean",
+                  "within the threshold of", 
                   wrap_none(rv$error_threshold * 100, "%."),
-                  "Please increase the",
-                  span("maximum number of tags",
-                       style = "font-weight: bold;"),
-                  "if you wish to continue testing.",
-                  
-                  "For a more detailed analysis, explore the outputs",
-                  "in the", shiny::icon("layer-group", class = "cl-sea"),
-                  span("Meta-analyses", class = "cl-sea"), "tab,",
-                  "and through", wrap_none(
-                    span("resampling",
-                         style = "font-weight: bold;"), ".")
-                ) #,
-                
-                # txt_reference
+                  br(),
+                  "If you wish to continue testing, please increase",
+                  "the", wrap_none(
+                    span("maximum number of tags",
+                         style = "font-weight: bold;"), ","),
+                  "or change sampling parameters in the",
+                  fontawesome::fa("stopwatch", fill = pal$sea),
+                  span("Sampling design", class = "cl-sea"), "tab.",
+                  "For a more detailed evaluation,",
+                  "explore the outputs in the",
+                  shiny::icon("layer-group", class = "cl-sea"),
+                  span("Meta-analyses", class = "cl-sea"), "tab.")
                 
               ), # end of fluidRow
               
               footer = modalButton("Dismiss"),
-              size = "s")) # end of modal
+              size = "m")) # end of modal
           
         } # end of if (all(err_values < rv$error_threshold))
       } # end of if (length(rv$simList) < rv$nsims)

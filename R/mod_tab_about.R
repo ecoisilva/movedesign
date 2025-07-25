@@ -210,7 +210,7 @@ mod_tab_about_ui <- function(id) {
                 fluidRow(
                   column(width = 12, align = "center",
                          shinyWidgets::awesomeCheckbox(
-                           inputId = ns("is_emulate"),
+                           inputId = ns("add_ind_var"),
                            label = span(
                              "Add",
                              span("individual", class = "cl-sea"),
@@ -273,7 +273,7 @@ mod_tab_about_server <- function(id, rv) {
     
     # MAIN REACTIVE VALUES ------------------------------------------------
     
-    # shinyjs::hide(id = "is_emulate")
+    # shinyjs::hide(id = "add_ind_var")
     
     observe({
       font_available <- tryCatch({
@@ -304,8 +304,8 @@ mod_tab_about_server <- function(id, rv) {
     observe({
       rv$which_m <- input$which_m
       if (req(rv$which_meta) == "none") rv$which_m <- NULL
-      if (req(rv$which_meta) == "none") shinyjs::disable("is_emulate")
-      else shinyjs::enable("is_emulate")
+      if (req(rv$which_meta) == "none") shinyjs::disable("add_ind_var")
+      else shinyjs::enable("add_ind_var")
       
     }, label = "o-about_m")
     
@@ -314,7 +314,7 @@ mod_tab_about_server <- function(id, rv) {
     }, label = "o-about_overwrite")
     
     observe({
-      rv$is_emulate <- input$is_emulate
+      rv$add_ind_var <- input$add_ind_var
     }, label = "o-about_emulate")
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
@@ -322,7 +322,7 @@ mod_tab_about_server <- function(id, rv) {
     shinyjs::hide(id = "which_m")
     
     # shinyjs::disable(id = "which_m")
-    # shinyjs::disable(id = "is_emulate")
+    # shinyjs::disable(id = "add_ind_var")
     
     # shinyjs::hide(id = "num_tags")
     # shinyjs::hide(id = "num_tags_max")
@@ -332,7 +332,7 @@ mod_tab_about_server <- function(id, rv) {
         shinyjs::hide(id = "which_m")
         shinyWidgets::updateAwesomeCheckbox(
           session = session,
-          inputId = "is_emulate",
+          inputId = "add_ind_var",
           value = FALSE)
       } else shinyjs::show(id = "which_m")
       
@@ -389,21 +389,21 @@ mod_tab_about_server <- function(id, rv) {
       req(rv$which_data)
       
       if (rv$which_data == "Simulate") {
-        shinyjs::hide(id = "is_emulate")
+        shinyjs::hide(id = "add_ind_var")
         shinyWidgets::updateAwesomeCheckbox(
           session = session,
-          inputId = "is_emulate",
+          inputId = "add_ind_var",
           value = FALSE)
         
       } else {
-        shinyjs::show(id = "is_emulate")
+        shinyjs::show(id = "add_ind_var")
       }
       
 
     }) # end of observe
     
     output$aboutUI_pop_var <- renderUI({
-      req(rv$which_question, rv$which_meta, rv$is_emulate == TRUE)
+      req(rv$which_question, rv$which_meta, rv$add_ind_var == TRUE)
       
       ui <- ui_txt <- NULL
       
@@ -487,7 +487,7 @@ mod_tab_about_server <- function(id, rv) {
       
       if (rv$which_meta != "none") {
         rv$which_m <- rv$restored_rv$which_m
-        rv$is_emulate <- rv$restored_rv$is_emulate
+        rv$add_ind_var <- rv$restored_rv$add_ind_var
         
         shinyWidgets::updateRadioGroupButtons(
           session = session,
@@ -496,8 +496,8 @@ mod_tab_about_server <- function(id, rv) {
         
         shinyWidgets::updateAwesomeCheckbox(
           session = session,
-          inputId = "is_emulate",
-          value = rv$is_emulate)
+          inputId = "add_ind_var",
+          value = rv$add_ind_var)
       }
       
     }) %>% # end of observe,

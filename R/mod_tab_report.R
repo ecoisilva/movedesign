@@ -221,7 +221,8 @@ mod_tab_report_ui <- function(id) {
           ), # end of box, "repBox_analyses"
           
           shinydashboardPlus::box(
-            title = span("Meta-analyses report:", class = "ttl-tab"),
+            title = span("Population-level inferences report:",
+                         class = "ttl-tab"),
             icon = fontawesome::fa(name = "box-archive",
                                    height = "21px",
                                    margin_left = "14px",
@@ -396,7 +397,7 @@ mod_tab_report_server <- function(id, rv) {
       
       ui <- staticBlock("Without individual varation", active = FALSE)
       
-      if (req(rv$is_emulate)) {
+      if (req(rv$add_ind_var)) {
         ui <- staticBlock("With individual varation", active = TRUE)
       }
       
@@ -954,7 +955,7 @@ mod_tab_report_server <- function(id, rv) {
           "be calculated.",
           span(
             style = paste(css_mono, css_bold),
-            "Please run more simulations in the corresponding",
+            "Run more simulations in the corresponding",
             shiny::icon("compass-drafting", class = "cl-sea"),
             span("Analyses", class = "cl-sea"), "tab(s) to obtain",
             wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
@@ -1394,7 +1395,7 @@ mod_tab_report_server <- function(id, rv) {
             "be calculated.", 
             span(
               style = paste(css_bold),
-              "Please run more simulations in the corresponding",
+              "Run more simulations in the corresponding",
               shiny::icon("compass-drafting", class = "cl-sea"),
               span("Analyses", class = "cl-sea"), "tab to obtain",
               wrap_none(span("valid CIs", class = "cl-dgr"), ".")))
@@ -1403,11 +1404,11 @@ mod_tab_report_server <- function(id, rv) {
       
       out_analyses <- p(
         out,
-        "Your error estimate based on",
-        txt_nsim, "was", out_hr_err,
-        if (any(rv$dev$N2 > 0)) { out_sd_err
-        } else { span("but the sampling interval was",
-                      "too coarse to estimate speed.") },
+        # "Your error estimate based on",
+        # txt_nsim, "was", out_hr_err,
+        # if (any(rv$dev$N2 > 0)) { out_sd_err
+        # } else { span("but the sampling interval was",
+        #               "too coarse to estimate speed.") },
         out_extra
       )
       
@@ -1462,7 +1463,7 @@ mod_tab_report_server <- function(id, rv) {
         req(rv$metaErr, rv$metaList, rv$metaList_groups[["is_final"]])
       }
       
-      req(!is.null(rv$is_emulate),
+      req(!is.null(rv$add_ind_var),
           rv$metaList)
       
       css_bold <- "font-weight: bold;"
@@ -1483,7 +1484,7 @@ mod_tab_report_server <- function(id, rv) {
         
         truth <- tmpunit %#% get_truth[[target]]
         
-        meta_dt <- meta[1, ] %>% 
+        meta_dt <- meta[1, ] %>%
           dplyr::mutate(
             error_est = (.data$est - truth)/truth,
             error_lci = (.data$low - truth)/truth,
@@ -1503,6 +1504,25 @@ mod_tab_report_server <- function(id, rv) {
               within_threshold ~ "Yes",
               !within_threshold & overlaps_with_threshold ~ "Near",
               TRUE ~ "No"))
+        
+        is_stable <- all(abs(
+          tail(rv$err_prev[[target]], 5)) <= rv$error_threshold)
+        
+        txt_stable <- NULL
+        if (is_stable && rv$which_m == "get_m") {
+          txt_stable <- span(
+            "If the recommended number of tags",
+            "is close to (or equal to) the maximum number of",
+            "tags, consider increasing the number of tags to",
+            "reduce uncertainty."
+          )
+        } else {
+          txt_stable <- span(
+            "Please increase the", 
+            ifelse(rv$which_m == "set_m", "set", "maximum"),
+            "number of tags to reduce uncertainty."
+          )
+        }
         
         txt_meta_groups <- NULL
         if (rv$which_meta == "compare") {
@@ -1599,74 +1619,126 @@ mod_tab_report_server <- function(id, rv) {
           "for a single simulation",
           paste("for", length(rv$simList), "simulations"))
         
-        txt_meta_nsims <- tagList(
-          .get_txt_nsim(rv, set_target = target))
-        
-        switch(meta_dt$status,
-               "Yes" = {
-                 txt_mean <- span(
-                   style = css_mono,
-                   "The mean", txt_target[[target]], txt_nsims,
-                   "is", span("within", class = "cl-sea"), "the",
-                   paste0("\u00B1", rv$error_threshold * 100, "%"),
-                   "error threshold.")
-               },
-               "Near" = {
-                 txt_mean <- span(
-                   style = css_mono,
-                   "The mean", txt_target[[target]], txt_nsims,
-                   "is", span("near", class = "cl-grn"), "the",
-                   paste0("\u00B1", rv$error_threshold * 100, "%"),
-                   "error threshold.")
-               },
-               "No" = {
-                 txt_mean <- span(
-                   style = css_mono,
-                   "The mean", txt_target[[target]], txt_nsims,
-                   span("falls outside", class = "cl-dgr"), "the",
-                   paste0("\u00B1", rv$error_threshold * 100, "%"),
-                   "error threshold.")
-               })
-        
-        if (is.na(get_coi[[target]][["lci"]]) &&
-            is.na(get_coi[[target]][["uci"]])) {
-          txt_uncertainty <- "however, run more simulations to confirm."
-        } else {
-          txt_uncertainty <- ifelse(
-            get_coi[[target]][["uci"]] < .3 && 
-              get_coi[[target]][["lci"]] > -.3,
-            "with low uncertainty.",
-            "with high uncertainty.")
-        }
+        txt_meta_nsims <- .get_txt_nsim(rv, set_target = target)
         
         switch(
           meta_dt$status,
           "Yes" = {
-            txt_final <- span(
+            
+            if (is_stable) {
+              if (rv$which_m == "set_m") {
+                txt_meta <- tagList(p(
+                  "Under the current assumptions and an error",
+                  "threshold of", wrap_none(
+                    rv$error_threshold * 100, "%,"),
+                  "a stable estimate of the mean",
+                  txt_target[[target]], "may be achieved by",
+                  "deploying", length(rv$simList), "tags."))
+              } else if (rv$which_m == "get_m") {
+                txt_meta <- tagList(p(
+                  "You specified a maximum of", rv$nsims, "tags.",
+                  "Under the current assumptions and an error",
+                  "threshold of", wrap_none(
+                    rv$error_threshold * 100, "%,"),
+                  "a stable estimate of the mean",
+                  txt_target[[target]], "may be achieved by",
+                  "deploying", length(rv$simList), "tags."))
+              }
+              
+            } else {
+              if (rv$which_m == "set_m") {
+                txt_m_type <- "You specified"
+              } else {
+                txt_m_type <- "You specified a maximum of"
+              }
+              txt_meta <- tagList(p(
+                txt_m_type, rv$nsims, "tags,",
+                "which was", span("not", class = "cl-dgr"),
+                "sufficient to achieve a stable",
+                "estimate of the mean", txt_target[[target]],
+                "within the threshold of", 
+                wrap_none(rv$error_threshold * 100, "%.")))
+            }
+          },
+          
+          "Near" = {
+            if (rv$which_m == "set_m") {
+              txt_m_type <- "You specified"
+            } else {
+              txt_m_type <- "You specified a maximum of"
+            }
+            txt_meta <- tagList(p(
+              txt_m_type, rv$nsims, "tags,",
+              "which was", span("not", class = "cl-dgr"),
+              "sufficient to achieve a stable",
+              "estimate of the mean", txt_target[[target]],
+              "within the threshold of", 
+              wrap_none(rv$error_threshold * 100, "%.")))
+          },
+          
+          "No" = {
+            if (rv$which_m == "set_m") {
+              txt_m_type <- "You specified"
+            } else {
+              txt_m_type <- "You specified a maximum of"
+            }
+            txt_meta <- tagList(p(
+              txt_m_type, rv$nsims, "tags,",
+              "which was", span("not", class = "cl-dgr"),
+              "sufficient to achieve a stable",
+              "estimate of the mean", txt_target[[target]],
+              "within the threshold of", 
+              wrap_none(rv$error_threshold * 100, "%.")))
+          })
+        
+        # if (is.na(get_coi[[target]][["lci"]]) &&
+        #     is.na(get_coi[[target]][["uci"]])) {
+        #   txt_uncertainty <- span(
+        #     "Please increase the",
+        #     span("maximum number of tags",
+        #          style = css_bold), "to confirm.")
+        # } else {
+        #   txt_uncertainty <- ifelse(
+        #     get_coi[[target]][["uci"]] < .3 && 
+        #       get_coi[[target]][["lci"]] > -.3,
+        #     "with low uncertainty.",
+        #     "with high uncertainty.")
+        # }
+        
+        switch(
+          meta_dt$status,
+          "Yes" = {
+            txt_final <- p(
               style = paste(css_mono, css_bold),
+              txt_meta_nsims,
               "Current study design is",
               wrap_none("sufficient", color = pal$sea),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], ".")) #,
-              # txt_uncertainty)
+              wrap_none(txt_target[[target]], "."),
+              if (length(rv$which_question) == 1)
+                txt_stable else NULL) # txt_uncertainty
           },
           "Near" = {
-            txt_final <- span(
+            txt_final <- p(
               style = paste(css_mono, css_bold),
+              txt_meta_nsims,
               "Current study design may be",
               wrap_none("insufficient", color = pal$grn),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], ".")) #,
-              # txt_uncertainty)
+              wrap_none(txt_target[[target]], "."),
+              if (length(rv$which_question) == 1)
+                txt_stable else NULL) # txt_uncertainty
           },
           "No" = {
-            txt_final <- span(
+            txt_final <- p(
               style = paste(css_mono, css_bold),
+              txt_meta_nsims,
               "Current study design is",
               wrap_none("insufficient", color = pal$dgr),
               "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], ".")) #,
-              # txt_uncertainty)
+              wrap_none(txt_target[[target]], "."),
+              if (length(rv$which_question) == 1)
+                txt_stable else NULL) # txt_uncertainty
           })
         
         if (length(get_cri) > 0) {
@@ -1675,12 +1747,15 @@ mod_tab_report_server <- function(id, rv) {
             
             txt_final <- tagList(
               txt_final,
-              span(
-                style = paste("font-weight: 800;",
-                              "font-family: var(--monosans);"),
-                "Please run more simulations in the corresponding",
-                shiny::icon("compass-drafting", class = "cl-sea"),
-                span("Analyses", class = "cl-sea"), "tab to confirm."))
+              if (length(rv$which_question) == 1)
+                span(
+                  style = paste("font-weight: 800;",
+                                "font-family: var(--monosans);"),
+                  "Run more simulations in the corresponding",
+                  shiny::icon("compass-drafting", class = "cl-sea"),
+                  span("Analyses", class = "cl-sea"), "tab to confirm.")
+              else NULL
+            )
           }
         }
         
@@ -1691,8 +1766,7 @@ mod_tab_report_server <- function(id, rv) {
             span(txt_title[[target]],
                  style = set_style_title),
             br(),
-            p(txt_meta_nsims,
-              # txt_mean,
+            p(txt_meta,
               txt_final,
               txt_meta_groups))
           
@@ -1705,17 +1779,33 @@ mod_tab_report_server <- function(id, rv) {
                    style = set_style_title),
               br(),
               p(
-                txt_meta_nsims,
-                # txt_mean,
+                txt_meta,
                 txt_final,
                 txt_meta_groups)))
         }
         
       } # end of [target] loop
       
+      if (length(rv$which_question) > 1) {
+        txt_stable_final <- tagList(
+          txt_stable, span(
+            style = paste("font-weight: 800;",
+                          "font-family: var(--monosans);"),
+            "Run more simulations in the corresponding",
+            shiny::icon("compass-drafting", class = "cl-sea"),
+            span("Analyses", class = "cl-sea"), "tab to confirm."))
+      } else { 
+        txt_stable_final <- NULL
+      }
+      
       rv$report$meta <- tagList(
         out_meta,
-        br(), tagList(txt_link_meta))
+        # br(),
+        p(style = paste("font-weight: 800;",
+                        "font-family: var(--monosans);"),
+          txt_stable_final,
+          txt_link_meta)
+      )
       
     }) # end of observe
     
@@ -2631,32 +2721,55 @@ mod_tab_report_server <- function(id, rv) {
       
       # Prepare datasets:
       
-      dt_sd <- sims_speed[[1]] %>%
-        dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
-        dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 0))
-      sd_opts <- sims_speed[[1]] %>%
-        dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
-        dplyr::select(.data$dti, .data$dti_notes) %>%
-        unique()
+      if (rv$which_meta == "none") {
+        
+        dt_sd <- sims_speed[[1]] %>%
+          dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
+          dplyr::mutate(tau_p = round("days" %#% .data$tau_p, 0))
+        sd_opts <- sims_speed[[1]] %>%
+          dplyr::mutate(dur = round("days" %#% .data$dur, 0)) %>%
+          dplyr::select(.data$dti, .data$dti_notes) %>%
+          unique()
+        
+        out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
+        dur_for_sd <- dt_sd$dur[which.min(abs(dt_sd$dur - input_dur))]
+        out_dti <- dt_sd$dti[which.min(abs(dt_sd$dti - input_dti))]
+        txt_dti <- sd_opts$dti_notes[match(out_dti, sd_opts$dti)]
+        
+        # Prepare density data frames:
+        ds1_sd <- dt_sd %>%
+          dplyr::filter(.data$tau_v == out_tauv) %>%
+          dplyr::filter(.data$dur == dur_for_sd) %>%
+          dplyr::filter(.data$dti == out_dti) %>% 
+          stats::na.omit()
+        
+      } else {
+        req(rv$sd$tbl)
+        
+        dt_sd <- data.frame(
+          tau_v = input_tauv,
+          dur = input_dur,
+          dti = input_dti,
+          error = rv$sd$tbl$ctsd_err,
+          error_lci = rv$sd$tbl$ctsd_err_min, 
+          error_uci = rv$sd$tbl$ctsd_err_max)
+        
+        out_tauv <- input_tauv
+        dur_for_sd <- input_dur
+        out_dti <- input_dti
+        
+        # Prepare density data frames:
+        ds1_sd <- stats::na.omit(dt_sd)
+        
+        tmp_unit <- fix_unit(out_dti, "seconds", convert = TRUE)$unit
+        txt_dti <- paste("1 fix every", tmp_unit %#% out_dti, tmp_unit)
+      }
       
-      out_tauv <- dt_sd$tau_v[which.min(abs(dt_sd$tau_v - input_tauv))]
-      dur_for_sd <- dt_sd$dur[which.min(abs(dt_sd$dur - input_dur))]
-      
-      out_dti <- dt_sd$dti[which.min(abs(dt_sd$dti - input_dti))]
-      txt_dti <- sd_opts$dti_notes[match(out_dti, sd_opts$dti)]
       rv$report$txt_dti <- txt_dti
       
-      # Create density data frames:
-      
-      ds1_sd <- dt_sd %>%
-        dplyr::filter(.data$tau_v == out_tauv) %>%
-        dplyr::filter(.data$dur == dur_for_sd) %>%
-        dplyr::filter(.data$dti == out_dti) %>% 
-        stats::na.omit()
-      
+      # Calculate mean + median + CIs:
       mean <- mean(ds1_sd$error)
       median <- stats::median(ds1_sd$error)
-      
       ds1_sd <- stats::density(ds1_sd$error)
       ds1_sd <- data.frame(x = ds1_sd$x, y = ds1_sd$y)
       rv$report$ds1_sd <- data.frame(
@@ -2665,11 +2778,17 @@ mod_tab_report_server <- function(id, rv) {
         "max" = max(ds1_sd$x),
         "min" = min(ds1_sd$x),
         "done" = FALSE)
-      
       if (is_log) ds1_sd$y <- ds1_sd$y / max(ds1_sd$y)
       
-      ci1_sd <- subset(
-        ds1_sd, x >= rv$sd_cri$lci & x <= rv$sd_cri$uci)
+      if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci)) {
+        interval_type <- "credible intervals"
+        ci1_sd <- subset(
+          ds1_sd, x >= rv$sd_cri$lci & x <= rv$sd_cri$uci)
+      } else {
+        interval_type <- "confidence intervals"
+        ci1_sd <- subset(
+          ds1_sd, x >= rv$sd_coi$lci & x <= rv$sd_coi$uci)
+      }
       
       if (is_dti) {
         req(rv$sd_cri_new)
@@ -2789,8 +2908,9 @@ mod_tab_report_server <- function(id, rv) {
       output$repPlot_sd <- ggiraph::renderGirafe({
         
         p <- ds1_sd %>%
-          ggplot2::ggplot(ggplot2::aes(x = .data$x,
-                                       y = .data$y)) +
+          ggplot2::ggplot(
+            ggplot2::aes(x = .data$x,
+                         y = .data$y)) +
           ggplot2::geom_vline(xintercept = 0, alpha = 1) +
           
           {if (is_dti) sd_p1 } +
@@ -2799,17 +2919,6 @@ mod_tab_report_server <- function(id, rv) {
           ggplot2::geom_line(
             ggplot2::aes(col = "est"),
             linetype = "dotted") +
-          
-          # { if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci))
-          #   ggplot2::geom_area(
-          #     data = ci1_sd,
-          #     mapping = ggplot2::aes(x = .data$x,
-          #                            y = .data$y,
-          #                            fill = "est"),
-          #     alpha = 0.4) } +
-          # ggplot2::geom_line(
-          #   ggplot2::aes(col = "est"),
-          #   linetype = "dotted") +
           
           { if (!is.na(rv$sd_coi$lci) && !is.na(rv$sd_coi$lci))
             ggplot2::geom_area(
@@ -2834,35 +2943,18 @@ mod_tab_report_server <- function(id, rv) {
           
           { if (is_dti) sd_p4 } +
           
-          # ggplot2::geom_point(
-          #   data = ~ head(.x, 1),
-          #   mapping = ggplot2::aes(
-          #     x = mean(ds1_sd$x), y = 0,
-          #     col = "est", shape = "est"),
-          #   size = 6) +
-          
-          ggplot2::geom_point(
+          ggiraph::geom_point_interactive(
             data = ~ head(.x, 1),
             mapping = ggplot2::aes(
               x = rv$report$ds1_sd[["mean"]], y = 0,
               col = "est", shape = "est"),
             size = 6) +
           
-          # { if (!is.null(rv$speedErr) && rv$which_meta == "none")
-          #   ggplot2::geom_vline(
-          #     data = ~ head(.x, 1),
-          #     ggplot2::aes(
-          #       xintercept = mean(rv$speedErr$est, na.rm = TRUE),
-          #       col = "now", shape = "now"),
-          #     size = 1, linetype = "dotted") %>% 
-          #     suppressWarnings()
-          # } +
-          
           { if (!is.null(rv$speedErr) && rv$which_meta == "none")
             ggplot2::geom_point(
               data = ~ head(.x, 1),
               ggplot2::aes(
-                x = mean(rv$speedErr$est, na.rm = TRUE),
+                x = mean(rv$sdErr$est, na.rm = TRUE),
                 y = 0, col = "now", shape = "now"),
               size = 6, alpha = .7)
           } +
@@ -2896,13 +2988,14 @@ mod_tab_report_server <- function(id, rv) {
           ggplot2::theme(
             legend.position = "none",
             axis.title.x = ggplot2::element_blank())
+        
         rv$report$ds1_sd[["done"]] <- TRUE
         
         ggiraph::girafe(
-          ggobj = p,
+          ggobj = suppressMessages(suppressWarnings(p)),
           width_svg = 6, height_svg = 4,
           options = list(
-            ggiraph::opts_zoom(max = 5),
+            ggiraph::opts_tooltip(css = tooltip_css),
             ggiraph::opts_hover(
               css = paste("r: 4pt;",
                           "fill: #006263;",
@@ -2912,7 +3005,7 @@ mod_tab_report_server <- function(id, rv) {
               css = paste("r: 4pt;",
                           "fill: #004647;",
                           "stroke: #004647;")),
-            ggiraph::opts_toolbar(saveaspng = FALSE)))
+            ggiraph::opts_toolbar(saveaspng = TRUE)))
         
       }) # end of renderGirafe // repPlot_sd
       
@@ -3577,7 +3670,8 @@ mod_tab_report_server <- function(id, rv) {
                                         group = "tau_p",
                                         tooltip = "tooltip_label",
                                         data_id = "tooltip_class"),
-          col = pal$sea, fill = pal$sea, position = pd, shape = 23, size = 5) +
+          col = pal$sea, fill = pal$sea,
+          position = pd, shape = 23, size = 5) +
         
         ggplot2::geom_hline(yintercept = 0,
                             linetype = "solid", size = .5) +

@@ -1095,8 +1095,8 @@ mod_tab_hrange_server <- function(id, rv) {
         seed = rv$seedList,
         sigma = rv$sigma,
         
-        emulated = rv$is_emulate,
-        fit = if (rv$is_emulate) rv$meanfitList else NULL,
+        ind_var = rv$add_ind_var,
+        fit = if (rv$add_ind_var) rv$meanfitList else NULL,
         
         grouped = rv$grouped,
         groups = if (rv$grouped) rv$groups[[2]] else NULL)
@@ -1173,7 +1173,7 @@ mod_tab_hrange_server <- function(id, rv) {
           group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
         }
         
-        if (rv$is_emulate) {
+        if (rv$add_ind_var) {
           tau_p <- extract_pars(
             emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
             "position")[[1]]
@@ -1312,7 +1312,7 @@ mod_tab_hrange_server <- function(id, rv) {
         if (rv$grouped) fitB <- rv$modList[[2]]
       }
       
-      if (rv$is_emulate) {
+      if (rv$add_ind_var) {
         req(rv$meanfitList)
         
         fit <- simulate_seeded(rv$meanfitList[["All"]], seed)
@@ -1341,7 +1341,7 @@ mod_tab_hrange_server <- function(id, rv) {
         group <- get_group(seed, rv$groups[[2]])
         rv$hr$groups <- stats::setNames(list(seed), group)
         
-        if (rv$is_emulate) {
+        if (rv$add_ind_var) {
           fit <- simulate_seeded(rv$meanfitList[[group]], seed)
           
           # Recenter to 0,0:
@@ -1560,8 +1560,8 @@ mod_tab_hrange_server <- function(id, rv) {
           seed = rv$seedList[[set_id]],
           sigma = rv$sigma,
           
-          emulated = rv$is_emulate,
-          fit = if (rv$is_emulate) rv$meanfitList else NULL,
+          ind_var = rv$add_ind_var,
+          fit = if (rv$add_ind_var) rv$meanfitList else NULL,
           
           grouped = rv$grouped,
           groups = if (rv$grouped) rv$hr$groups else NULL)
@@ -1603,7 +1603,7 @@ mod_tab_hrange_server <- function(id, rv) {
           group <- get_group(rv$seedList[[set_id]], rv$groups[[2]])
         }
         
-        if (rv$is_emulate) {
+        if (rv$add_ind_var) {
           tau_p <- extract_pars(
             emulate_seeded(rv$meanfitList[[group]],
                            rv$seedList[[set_id]]),
@@ -1765,8 +1765,8 @@ mod_tab_hrange_server <- function(id, rv) {
         seed = rv$seedList[[rv$hr_nsim]],
         sigma = rv$sigma,
         
-        emulated = rv$is_emulate,
-        fit = if (rv$is_emulate) rv$meanfitList else NULL,
+        ind_var = rv$add_ind_var,
+        fit = if (rv$add_ind_var) rv$meanfitList else NULL,
         
         grouped = rv$grouped,
         groups = if (rv$grouped) rv$hr$groups else NULL)

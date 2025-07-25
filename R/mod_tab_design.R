@@ -2180,10 +2180,10 @@ mod_tab_design_server <- function(id, rv) {
       
       if (rv$which_meta == "compare")
         req(length(rv$tau_p) == 3, rv$groups)
-      if (rv$is_emulate) req(rv$meanfitList)
+      if (rv$add_ind_var) req(rv$meanfitList)
       
       start <- Sys.time()
-      simList <- simulating_data(rv)
+      simList <- simulating_data(rv, rv$seed0)
       
       if (!rv$grouped) {
         rv$seedList <- list(rv$seed0)
@@ -2393,7 +2393,7 @@ mod_tab_design_server <- function(id, rv) {
             group <- get_group(rv$seedList[[x]], rv$groups[[2]])
           }
           
-          if (rv$is_emulate) {
+          if (rv$add_ind_var) {
             tau_p <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
                              rv$seedList[[x]]),

@@ -357,7 +357,7 @@ mod_tab_data_select_server <- function(id, rv) {
       req(rv$which_question)
       req(rv$datList, rv$fitList, rv$id, rv$is_valid)
       req(rv$id %in% names(rv$datList))
-      req(rv$is_emulate)
+      req(rv$add_ind_var)
       
       add_ui <- FALSE
       ui_N_area <- NULL
@@ -862,7 +862,7 @@ mod_tab_data_select_server <- function(id, rv) {
         }
         
         rv$is_isotropic <- c("All" = TRUE)
-        if (rv$is_emulate) {
+        if (rv$add_ind_var) {
           
           fit0[sapply(fit0, is.null)] <- NULL
           meanfit0 <- tryCatch(
@@ -885,7 +885,7 @@ mod_tab_data_select_server <- function(id, rv) {
             rv$tau_p <- extract_pars(fit0, "position", meta = get_meta)
             rv$tau_v <- extract_pars(fit0, "velocity", meta = get_meta)
             rv$speed <- extract_pars(fit0, "speed", meta = get_meta)
-            rv$is_emulate <- FALSE
+            rv$add_ind_var <- FALSE
             
           } else {
             rv$sigma <- extract_pars(meanfit0, name = "sigma")
