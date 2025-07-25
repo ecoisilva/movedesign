@@ -1728,7 +1728,9 @@ tele_to_dt <- function(object) {
   }
   
   if (target == "hr") {
+    
     out$N1 <- extract_dof(obj, name = "area")[[1]]
+    if (is.null(out$N1)) out$N1 <- 0
     
     if (is.na(area$est)) out$area <- NA
     else out$area <- paste(
@@ -1742,6 +1744,7 @@ tele_to_dt <- function(object) {
   
   if (target == "ctsd") {
     out$N2 <- extract_dof(obj, name = "speed")[[1]]
+    if (is.null(out$N2)) out$N2 <- 0
     
     if (is.na(speed$est) || is.infinite(speed$est)) {
       out$ctsd <- NA
@@ -1910,8 +1913,9 @@ par.lapply <- function(obj,
     }, error = function(e) {
       cat(crayon::bgRed$white(
         "Parallel error, try restarting R session.\n"))
-      cat(e, "\n")
-      
+      # cat(e, "\n")
+      print(e)
+
     }) # end of tryCatch
     
   } else {
