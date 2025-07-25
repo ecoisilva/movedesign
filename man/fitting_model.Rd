@@ -4,57 +4,78 @@
 \alias{fitting_model}
 \title{Fit continuous-time movement models}
 \usage{
-fitting_model(
-  obj,
-  set_target = c("hr", "ctsd"),
-  .dur = NULL,
-  .dti = NULL,
-  .tau_p = NULL,
-  .tau_v = NULL,
-  .error_m = NULL,
-  .check_sampling = FALSE,
-  .rerun = FALSE,
-  .parallel = TRUE,
-  .trace = FALSE
-)
+fitting_model(obj, set_target = c("hr", "ctsd"), ...)
 }
 \arguments{
-\item{obj}{A list of simulated movement datasets.}
+\item{obj}{A list of simulated movement datasets, each formatted as a
+\code{telemetry} object compatible with \code{ctmm}.}
 
-\item{set_target}{A character vector indicating the research target(s). Options:
+\item{set_target}{A character vector specifying the research goals.
+Options include:
 \itemize{
-\item \code{"hr"} - Home range estimation.
-\item \code{"ctsd"} - Speed and distance estimation.
+\item \code{"hr"} — Home range estimation.
+\item \code{"ctsd"} — Speed and distance estimation.
 }}
 
-\item{.dur}{Numeric, sampling duration of the simulated data (required if \code{.check_sampling = TRUE}).}
-
-\item{.dti}{Numeric, sampling interval of simulated data (required if \code{.check_sampling = TRUE}).}
-
-\item{.tau_p}{List, position autocorrelation timescale (optional).}
-
-\item{.tau_v}{List, velocity autocorrelation timescale (optional).}
-
-\item{.error_m}{Numeric, if simulating a dataset with location error (in meters).}
-
-\item{.check_sampling}{Logical; if \code{TRUE}, checks if the sampling schedule is optimal for ctmm.fit().}
-
-\item{.rerun}{Logical; if \code{TRUE}, re-runs model selection if effective sample sizes fall below threshold.}
-
-\item{.parallel}{Logical; if \code{TRUE}, enables parallel computation for efficiency. Default is \code{TRUE}.}
-
-\item{.trace}{Logical; if \code{TRUE}, prints additional information.}
+\item{...}{Optional control parameters passed via \code{...}. These include
+\code{.dur}, \code{.dti}, \code{.tau_p}, \code{.tau_v}, \code{.error_m}, \code{.check_sampling},
+\code{.rerun}, \code{.parallel}, and \code{.trace}. See \strong{Details} for their
+descriptions.}
 }
 \value{
-A list of fitted movement models, one per simulation.
+A list of fitted movement models (class \code{ctmm}), one per simulation.
+Each model is recentered to the origin (\code{x = 0}, \code{y = 0}).
 }
 \description{
 This function fits continuous-time movement models to simulated location
 data using the \code{ctmm} package. It estimates movement parameters for each
-simulated trajectory, optionally running in parallel for efficiency.
+simulated trajectory, optionally running in parallel for efficiency. It
+supports both home range and speed estimation workflows.
 }
 \details{
-The function first generates initial parameter estimates using \code{ctmm::ctmm.guess()}.
-It then selects the best movement model for each simulation using \code{par.ctmm.select()}.
-The function ensures that each fitted model is centered at the origin (\code{x = 0, y = 0}) before returning.
+The function generates initial parameter estimates for each dataset
+using \code{\link[ctmm:variogram.fit]{ctmm::ctmm.guess()}}. If the data includes simulated location
+error, it uses an error model accordingly. When \code{.check_sampling} is
+\code{TRUE}, it compares the sampling duration and interval against optimal
+thresholds derived from the provided autocorrelation timescales.
+Models are fitted using \code{\link[ctmm:ctmm.fit]{ctmm::ctmm.select()}}, which performs model
+selection to find the best-fit movement process. If \code{.rerun} is
+enabled, the function identifies simulations with effective
+sample sizes below 0.1 and attempts to reselect models for those.
+Finally, all fitted models are recentered to (\verb{0, 0}) for downstream
+consistency.
+
+The following arguments can be supplied via \code{...}:
+\itemize{
+\item \code{.dur}: A list with elements \code{value} (numeric) and \code{unit} (string),
+specifying the maximum study duration. Example:
+\code{list(value = 2, unit = "months")}.
+\item \code{.dti}: A list with elements \code{value} (numeric) and \code{unit} (string),
+specifying the intended sampling interval. Example:
+\code{list(value = 1, unit = "day")}.
+\item \code{.tau_p}: A list of position autocorrelation timescales. Optional,
+but required if \code{.check_sampling = TRUE}.
+\item \code{.tau_v}: A list of velocity autocorrelation timescales. Optional,
+but required if \code{.check_sampling = TRUE}.
+\item \code{.error_m}: A numeric value specifying location error in meters
+(used for simulation).
+\item \code{.check_sampling}: Logical; if \code{TRUE}, checks whether the sampling
+schedule meets minimum requirements for reliable model fitting via
+\code{\link[ctmm:ctmm.fit]{ctmm::ctmm.fit()}}. This feature is experimental and may change
+in future versions.
+\item \code{.rerun}: Logical; if \code{TRUE}, re-runs model selection when
+simulations result in very low effective sample sizes, to
+avoid convergence issues.
+\item \code{.parallel}: Logical; if \code{TRUE}, enables parallel computation.
+\item \code{.trace}: Logical; if \code{TRUE}, print progress and timing
+messages to the console.
 }
+}
+\note{
+This function is intended for internal use and may assume inputs
+follow specific structure and constraints not referenced explicitly.
+}
+\seealso{
+\code{\link[ctmm:variogram.fit]{ctmm::ctmm.guess()}}, \code{\link[ctmm:ctmm.fit]{ctmm::ctmm.select()}}
+}
+\keyword{internal}

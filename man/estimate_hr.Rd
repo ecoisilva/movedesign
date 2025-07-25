@@ -2,25 +2,40 @@
 % Please edit documentation in R/fct_analyses.R
 \name{estimate_hr}
 \alias{estimate_hr}
-\title{Estimate home range}
+\title{Estimate home range from simulated movement data}
 \usage{
 estimate_hr(rv)
 }
 \arguments{
-\item{rv}{A reactive values list containing:
+\item{rv}{A \code{reactiveValues} list containing, at a minimum:
 \itemize{
-\item \code{simList} - A list of simulated movement datasets.
-\item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
-}}
+\item \code{simList}: A list of simulated movement datasets
+(e.g., telemetry tracks).
+\item \code{simfitList}: A list of fitted movement models, each
+corresponding to an entry in \code{simList}.
+}
+Each movement dataset in \code{simList} should be compatible with
+\code{\link[ctmm:akde]{ctmm::akde()}}, and each fitted model in \code{simfitList} should
+correspond to its respective simulated dataset.}
 }
 \value{
-A named list of \code{ctmm} objects, one per simulation.
+A named list of \code{ctmm} objects, each representing an AKDE home range
+estimate for the corresponding simulation. If AKDE estimation fails
+for a simulation (e.g., due to poor model fit or data issues), the
+result for that simulation will be \code{NULL}.
 }
 \description{
-Estimates home range areas with the Autocorrelated Kernel Density Estimator (AKDE)
-for each simulated movement dataset using the fitted movement models.
+Estimates home range areas for each simulated movement dataset using
+the Autocorrelated Kernel Density Estimator (AKDE) via
+\code{\link[ctmm:akde]{ctmm::akde()}}. This function is intended for use within simulation
+workflows where home range calculations are needed for each simulated
+individual.
 }
-\details{
-The function applies \code{ctmm::akde()} to estimate home range areas while handling
-potential warnings and errors gracefully. Any failed computations return \code{NULL}.
+\note{
+This function is intended for internal use and may assume inputs
+follow specific structure and constraints not referenced explicitly.
 }
+\seealso{
+\code{\link[ctmm:akde]{ctmm::akde()}} for details on home range estimation.
+}
+\keyword{internal}

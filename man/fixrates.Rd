@@ -5,16 +5,24 @@
 \alias{fixrates}
 \title{Fix rates of animal tracking devices.}
 \format{
-An object of class \code{"data.frame"},
-with 40 rows and seven variables: \code{dti_notes}, \code{dti},
-\code{highlight}, \code{frq}, and \code{frq_hrs}.
-
+A data.frame with 40 rows and 7 variables:
 \describe{
-\item{dti_notes}{Sampling interval as text (e.g., "1 fix every month")}
-\item{dti}{Sampling interval in seconds}
-\item{frq}{Sampling frequency in seconds}
-\item{frq_hrs}{Sampling frequency in hours}
-\item{highlighted}{Highlight a group of commonly-used GPS fix rates}
+\item{dti_notes}{
+Human-readable fix schedule, e.g., "1 fix every month".
+Helps interpret sampling intervals in practical terms.}
+\item{dti}{
+Sampling interval in seconds, i.e., time between consecutive
+location fixes.}
+\item{frq}{
+Sampling frequency in seconds, i.e., how often a fix occurs
+(inverse of dti).}
+\item{frq_hrs}{
+Sampling frequency in hours, offering a more intuitive
+unit for comparison.}
+\item{highlighted}{
+Logical. TRUE if the fix rate is commonly used in
+animal tracking studies. Useful for identifying standard
+settings.}
 ...
 }
 }
@@ -22,6 +30,8 @@ with 40 rows and seven variables: \code{dti_notes}, \code{dti},
 fixrates
 }
 \description{
-Dataset with a list of fix rates typically available for animal tracking devices.
+A dataset listing typical GPS fix rates for animal tracking devices.
+Useful for selecting typical sampling schedules in wildlife tracking
+projects.
 }
 \keyword{datasets}

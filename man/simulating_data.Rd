@@ -2,45 +2,66 @@
 % Please edit documentation in R/fct_sims.R
 \name{simulating_data}
 \alias{simulating_data}
-\title{Simulate Movement Data from Fitted Models}
+\title{Simulate movement data from continuous-time movement models}
 \usage{
-simulating_data(rv)
+simulating_data(rv, seed)
 }
 \arguments{
-\item{rv}{A reactive values list containing:
+\item{rv}{A \code{reactiveValues} object with all simulation inputs:
 \itemize{
-\item \code{dur} - A list specifying the sampling duration (\code{value} and \code{unit}).
-\item \code{dti} - A list specifying the time interval between locations (\code{value} and \code{unit}).
-\item \code{data_type} - A character string indicating data type.
-\item \code{is_emulate} - Logical; if \code{TRUE}, the function generates an emulated model.
-\item \code{modList} - A list of fitted movement models for simulation.
-\item \code{meanfitList} - A list of a mean model for emulation.
-\item \code{grouped} - Logical; if \code{TRUE}, the simulation considers grouped movement models.
-\item \code{which_meta} - A character vector indicating whether to compare models.
-\item \code{tau_p}, \code{tau_v}, \code{sigma}, \code{mu} - Lists of movement model parameters.
-\item \code{seed0} - An integer used for random seed initialization.
+\item dur A list with elements \code{value} and \code{unit} (e.g.,
+\code{list(value = 2, unit = "months")}), for the study's maximum
+duration. \code{unit} must be either \code{"second"}, \code{"minute"},
+\code{"hour"}, \code{"day"}, \code{"month"}, or \code{"year"}.
+\item dti A list with elements \code{value} and \code{unit} (e.g.,
+\code{list(value = 1, unit = "day")}), specifying the intended
+sampling interval between relocations. \code{unit} must be either
+\code{"second"}, \code{"minute"}, \code{"hour"}, \code{"day"}, \code{"month"},
+or \code{"year"}.
+\item \code{data_type}: Character, data source that informs the
+simulations.
+\item \code{add_ind_var}: Logical; if \code{TRUE}, draws parameters from
+population distribution for each new individual.
+\item \code{modList}: List of fitted models.
+\item \code{meanfitList}: List of mean models for individual variation.
+\item \code{grouped}: Logical; if \code{TRUE}, simulates from two groups.
+\item \code{which_meta}: Character vector; analytical target.
+\item \code{tau_p}, \code{tau_v}, \code{sigma}, \code{mu}: Lists of
+movement parameters.
 }}
+
+\item{seed}{Integer for random number generator,
+ensuring reproducibility.}
 }
 \value{
-A list containing one or two simulated movement datasets (depending on grouping):
+A list of simulated movement datasets:
 \itemize{
-\item If \code{grouped = FALSE}, returns a list with a single simulated dataset.
-\item If \code{grouped = TRUE}, returns a list with two simulated datasets (for groups \code{A} and \code{B}).
+\item If \code{grouped = FALSE}, a list with a single simulated track.
+\item If \code{grouped = TRUE},
+a list with two tracks (from groups A and B).
 }
 }
 \description{
-This function generates simulated location data using movement
-models. The function supports both single and grouped simulations based on
-whether the data is simulated or derived from an emulated or fitted model.
+Generates simulated animal movement tracks based on continuous-time
+movement models using \code{\link[ctmm:simulate.ctmm]{ctmm::simulate()}}. Supports both single-group
+and grouped simulations, as determined by study design and data
+parameters. Used within the \code{movedesign} application workflows to
+create synthetic data for simulation studies and to evaluate study
+design.
 }
 \details{
-The function first constructs a time sequence based on the provided duration and interval.
-If the data is fully simulated from scratch (not conditioned on existing data), it retrieves
-movement model(s) from \code{rv$modList}.
-Otherwise, it either emulates a model using \code{rv$meanfitList} and a random seed
-or constructs a model from movement parameters.
-
-If estimate comparisons are enabled (via \code{which_meta}), two models are prepared.
-The function then runs \code{ctmm::simulate()} to generate simulated movement data.
-The resulting trajectories are pseudonymized before returning.
+This function simulates animal movement tracks based on the selected
+mode and design settings. It first constructs a time sequence using
+the specified duration and interval. Depending on the simulation mode
+(\code{data_type}), it either retrieves movement models from \code{modList}
+(for simulated data) or uses \code{meanfitList} or raw movement parameters
+to build models (for uploaded or selected data). If a group
+comparison is requested, models are prepared for both groups.
+Tracks are then simulated using \code{ctmm::simulate()} and subsequently
+pseudonymized.
 }
+\note{
+This function is intended for internal use and may assume inputs
+follow specific structure and constraints not referenced explicitly.
+}
+\keyword{internal}

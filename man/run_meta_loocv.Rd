@@ -10,42 +10,61 @@ run_meta_loocv(
   set_target = c("hr", "ctsd"),
   subpop = FALSE,
   trace = FALSE,
-  .progress = FALSE,
-  .only_max_m = TRUE,
-  .lists = NULL
+  ...
 )
 }
 \arguments{
-\item{rv}{A list containing outputs, settings and data objects. Must not be NULL.}
+\item{rv}{A \code{reactiveValues} object or list containing simulation
+inputs, fitted models, and (optionally) group assignments.}
 
-\item{set_target}{Character. Research target: \code{"hr"} for home range or \code{"ctsd"} for speed & distance.}
+\item{set_target}{Character vector specifying the target metrics.
+Options are \code{"hr"} for home range area and/or \code{"ctsd"} for movement
+speed. Defaults to \code{c("hr", "ctsd")}.}
 
-\item{subpop}{Logical. If TRUE, will run meta-analyses with groups. Default is FALSE.}
+\item{subpop}{Logical; if \code{TRUE}, analyzes population-level inferences
+by groups (e.g., males vs. females). Requires valid group
+assigments in \code{rv}.}
 
-\item{trace}{Logical. If TRUE, prints progress messages. Default is FALSE.}
+\item{trace}{Logical; if \code{TRUE}, prints progress and diagnostic
+messages. Default is \code{FALSE}.}
 
-\item{.progress}{Logical. If TRUE, will display a progress bar. Default is FALSE.}
-
-\item{.only_max_m}{Logical. If TRUE, will only run the maximum number of individuals. Default is FALSE.}
-
-\item{.lists}{A list containing already created meta inputs. Default is NULL.}
+\item{...}{Additional arguments for advanced control:
+\describe{
+\item{.only_max_m}{Logical. If \code{TRUE}, runs the meta-analysis
+only at the maximum population sample size, skipping all
+intermediate sample sizes.}
+\item{.progress}{Integer. Displays a progress bar.}
+\item{.m}{Integer. Specifies exact sample size to use. Overrides
+automatic sequence generation. Accepts a single value.}
+\item{.lists}{List (optional); supplies precomputed input objects,
+typically created via \code{.build_meta_objects()}.}
+}}
 }
 \value{
-A data frame containing meta-analysis outputs, including estimates, errors, confidence intervals, and group information.
+A data frame containing summarized simulation outputs.
 }
 \description{
-This function runs hierarchical models on movement tracking data,
-for mean home range area (AKDE) or continuous-time speed and distance (CTSD)
-estimates for a sampled population. It leverages the \code{ctmm} R package,
-specifically the \code{meta()} function, to obtain population-level mean parameters.
-This function helps to assess outputs via leave-one-out cross-validation (LOOCV).
+Performs Leave-One-Out Cross-Validation (LOOCV) on hierarchical model
+outputs to assess the influence of individual simulated animals on
+population-level estimates. Supports analyses with or without
+groups.
+
+In each iteration, the function removes one individual, refits
+the hierarchical model to the remaining dataset, and recalculates
+the target population-level estimates. This process is repeated until
+every individual has been excluded once.
+
+This approach provides insight into how sensitive overall conclusions
+are to specific individuals. This helps identify influential
+individuals and assess robustness.
 }
 \examples{
 if(interactive()) {
-run_meta_loocv(rv, set_target = "hr")
+   run_meta_loocv(rv, set_target = "hr")
 }
 
 }
 \author{
 Inês Silva \email{i.simoes-silva@hzdr.de}
 }
+\keyword{internal}

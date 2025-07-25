@@ -2,25 +2,39 @@
 % Please edit documentation in R/fct_analyses.R
 \name{estimate_speed}
 \alias{estimate_speed}
-\title{Estimate movement speed}
+\title{Estimate movement speed for simulated movement data}
 \usage{
 estimate_speed(rv)
 }
 \arguments{
-\item{rv}{A reactive values list containing:
+\item{rv}{A \code{reactiveValues} list containing, at a minimum:
 \itemize{
-\item \code{simList} - A list of simulated movement datasets.
-\item \code{simfitList} - A list of fitted movement models corresponding to \code{simList}.
-}}
+\item \code{simList}: A list of simulated movement datasets
+(e.g., telemetry tracks).
+\item \code{simfitList}: A list of fitted movement models, each
+corresponding to an entry in \code{simList}.
+}
+Each element in \code{simList} should be compatible with
+\code{\link[ctmm:speed]{ctmm::speed()}}, and each model in \code{simfitList} should
+correspond to its respective simulated dataset.}
 }
 \value{
-A named list of \code{ctmm} objects, one per simulation.
+A named list of speed estimates (\code{ctmm} objects), with one entry per
+simulation.For any simulation where speed estimation fails (e.g.,
+due to model fitting issues or incompatible data), \code{NULL} is returned
+for that entry and omitted from the final output.
 }
 \description{
-Estimates movement speed using continuous-time speed and distance (CTSD)
-for each simulated movement dataset using the corresponding fitted movement model.
+Calculates continuous-time speed and distance (CTSD) for each simulated
+movement dataset using its corresponding fitted movement model with
+\code{\link[ctmm:speed]{ctmm::speed()}}. This function is designed for simulation workflows
+where speed metrics are required for each simulated individual.
 }
-\details{
-The function applies \code{ctmm::speed()} to estimate movement speed while handling
-potential warnings and errors gracefully.
+\note{
+This function is intended for internal use and may assume inputs
+follow specific structure and constraints not referenced explicitly.
 }
+\seealso{
+\code{\link[ctmm:speed]{ctmm::speed()}} for details on speed estimation.
+}
+\keyword{internal}
