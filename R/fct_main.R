@@ -2831,103 +2831,27 @@ md_optimize <- function(obj,
       "individual(s)"
     ))
     
-    reps <- 0
-    max_replicates <- 100
-    tmpList <- list()
-    metaList <- list()
-    
-    broke_converge <- FALSE
-    while (!broke_converge && reps < max_replicates) {
+    tmpList <- if (parallel) {
       
-      reps <- reps + 1
-      batch_tmpList <- if (parallel) {
-        
-        parallel::mclapply(
-          seq_len(n_replicates), function(r) .worker(r, m),
-          mc.cores = ncores)
-        
-      } else {
-        
-        if (!trace) pb <- txtProgressBar(
-          min = 0, max = n_replicates, style = 3)
-        
-        res <- vector("list", n_replicates)
-        for (r in seq_len(n_replicates)) {
-          res[[r]] <- .worker(r, m)
-          if (!trace) setTxtProgressBar(pb, r)
-        }
-        
-        if (!trace) close(pb)
-        res
-        
+      parallel::mclapply(
+        seq_len(n_replicates), function(r) .worker(r, m),
+        mc.cores = ncores)
+      
+    } else {
+      
+      if (!trace) pb <- txtProgressBar(
+        min = 0, max = n_replicates, style = 3)
+      
+      res <- vector("list", n_replicates)
+      for (r in seq_len(n_replicates)) {
+        res[[r]] <- .worker(r, m)
+        if (!trace) setTxtProgressBar(pb, r)
       }
       
-      if (length(tmpList) == 0) {
-        tmpList <- batch_tmpList
-      } else {
-        tmpList <- c(tmpList, batch_tmpList)
-      }
+      if (!trace) close(pb)
+      res
       
-      batch_metaList <- lapply(batch_tmpList, function(x) {
-        run_meta_resamples(x,
-                           set_target = obj$set_target,
-                           subpop = obj$grouped,
-                           .m = m_seq[[i]])
-      })
-      metaList <- c(metaList, batch_metaList)
-      
-      if (length(metaList) > 0) {
-        summary <- data.table::rbindlist(
-          metaList, fill = TRUE, idcol = "replicate")
-      } else {
-        summary <- data.table::data.table()
-      }
-      
-      if (has_groups) {
-        data <- summary[summary$group != "All", ]
-      } else {
-        data <- summary[summary$group == "All", ]
-      }
-      
-      err_replicates <- setNames(
-        lapply(set_target, function(target) {
-          data[data$type == target, ]$error
-        }), set_target)
-      
-      err_prev <- setNames(
-        lapply(names(err_prev), function(target) {
-          if (target %in% set_target) {
-            tmp <- data[data$type == target, ]$error
-            c(err_prev[[target]], abs(mean(tmp, na.rm = TRUE)))
-          } else {
-            err_prev[[target]]
-          }
-        }), names(err_prev))
-      
-      variable <- "error"
-      data_subset <- data %>%
-        dplyr::group_by(.data$type, .data$group) %>%
-        dplyr::mutate(
-          cummean = cumsum(.data[[variable]]) /
-            dplyr::row_number()) %>%
-        dplyr::ungroup()
-      
-      diag <- data_subset %>%
-        dplyr::group_by(.data$type, .data$group) %>%
-        dplyr::summarise(
-          recent_cummean = list(tail(.data$cummean, .n_converge)),
-          recent_deltas = list(abs(diff(.data$recent_cummean[[1]]))),
-          max_delta = max(.data$recent_deltas[[1]], na.rm = TRUE),
-          has_converged = all(.data$recent_deltas[[1]] < .tol),
-          .groups = "drop") %>%
-        dplyr::arrange(dplyr::desc(.data$type))
-      
-      if (diag$has_converged) {
-        broke_converge <- TRUE
-        break
-      }
-      
-    } # end of while
+    }
     
     if (i == 1) {
       outList[[i]] <- tmpList
