@@ -13,6 +13,12 @@ quiet <- function(x) {
 #' @noRd
 `%!in%` <- Negate(`%in%`) 
 
+
+#' Null coalescing
+#' 
+#' @noRd
+`%||%` <- function(a, b) if (!is.null(a)) a else b
+
 #' Unicode names
 #' 
 #' @noRd
@@ -351,6 +357,21 @@ help_tip <- function(input, text, placement = "bottom") {
       class = "icon_help") %>%
       bsplus::bs_embed_tooltip(
         title = text, placement = placement))
+}
+
+#' Message formatting
+#'
+#' @description Formats a message string according to the message type.
+#' @keywords internal
+#'
+#' @noRd
+.msg <- function(txt, type = "main") {
+  switch(type,
+         main = msg_main(txt),
+         success = msg_success(txt),
+         danger = msg_danger(txt),
+         warning = msg_warning(txt),
+         txt)
 }
 
 #' Create message logs
