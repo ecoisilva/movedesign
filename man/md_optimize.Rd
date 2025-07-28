@@ -32,8 +32,8 @@ of the convergence check to the console.}
 \item{trace}{Logical; if \code{TRUE} (default), prints progress and
 timing messages to the console.}
 
-\item{parallel}{Logical; if \code{TRUE}, enables parallel processing via
-\code{\link[parallel:mcdummies]{parallel::mclapply()}}. Default is \code{FALSE} (serial execution).}
+\item{parallel}{Logical; if \code{TRUE}, enables parallel processing.
+Default is \code{FALSE}.}
 
 \item{ncores}{Integer; number of CPU cores to use for parallel
 processing. Defaults to all available cores detected by
