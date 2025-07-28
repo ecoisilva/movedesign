@@ -799,8 +799,8 @@ md_merge <- function(...) {
 #'   maximum sample size defined by `n_individuals` in [`md_prepare()`].
 #' @param trace Logical; if `TRUE` (default), prints progress and
 #'   timing messages to the console.
-#' @param parallel Logical; if `TRUE`, enables parallel processing via
-#'   [`parallel::mclapply()`]. Default is `FALSE` (serial execution).
+#' @param parallel Logical; if `TRUE`, enables parallel processing.
+#'   Default is `FALSE`.
 #' @param ncores Integer; number of CPU cores to use for parallel
 #'   processing. Defaults to all available cores detected by
 #'   [`parallel::detectCores()`].
@@ -2656,8 +2656,8 @@ md_configure <- function(data, models = NULL) {
 #'   of the convergence check to the console.
 #' @param trace Logical; if `TRUE` (default), prints progress and
 #'   timing messages to the console.
-#' @param parallel Logical; if `TRUE`, enables parallel processing via
-#'   [`parallel::mclapply()`]. Default is `FALSE` (serial execution).
+#' @param parallel Logical; if `TRUE`, enables parallel processing.
+#'   Default is `FALSE`.
 #' @param ncores Integer; number of CPU cores to use for parallel
 #'   processing. Defaults to all available cores detected by
 #'   [`parallel::detectCores()`].
@@ -3106,8 +3106,8 @@ md_optimize <- function(obj,
         overlaps = dplyr::between(
           .data$error,
           -.data$error_threshold, .data$error_threshold)) 
-    dt_plot_T <- dplyr::filter(dt_plot, overlaps)
-    dt_plot_F <- dplyr::filter(dt_plot, !overlaps)
+    dt_plot_T <- dplyr::filter(dt_plot, .data$overlaps)
+    dt_plot_F <- dplyr::filter(dt_plot, !.data$overlaps)
     
     dt_plot_means <- dt_plot %>% 
       dplyr::mutate(type = factor(
@@ -3124,7 +3124,6 @@ md_optimize <- function(obj,
         error_mean = mean(.data$error, na.rm = TRUE),
         .groups = "drop") %>%
       dplyr::mutate(
-        error_threshold = error_threshold,
         overlaps = dplyr::between(
           .data$error_mean,
           -.data$error_threshold, .data$error_threshold),
