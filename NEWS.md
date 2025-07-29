@@ -1,3 +1,21 @@
+# movedesign 0.3.2
+
+## New features
+
+-   Added new core functions that iteratively simulate movement design scenarios.
+-   Added new plotting functions that highlight convergence diagnostics and outputs.
+-   Implemented S3 classes and methods to represent and manage different stages of the study design workflow.
+
+## Minor improvements
+
+-   Improved documentation of core functions.
+-   Internal code optimization to reduce redundancy.
+
+## Bug fixes
+
+-   Fixed minor bugs affecting plotting and color palettes.
+-   Resolved various small issues to improve function stability and user experience.
+
 # movedesign 0.3.1
 
 ## Minor improvements
