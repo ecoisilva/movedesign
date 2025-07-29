@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 description: > 
   How to design an animal tracking project with 'movedesign'
 vignette: >
-  %\VignetteIndexEntry{Tutorial_ind}
+  %\VignetteIndexEntry{Tutorial for individual estimates}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 knitr:
@@ -50,9 +50,9 @@ knitr::opts_chunk$set(
 
 # Walkthrough
 
-This workflow is presented in Silva *et al.* [-@silva2023movedesign], and is a simplified case study, designed for quick execution. We will use a GPS tracking dataset of African buffalos (*Syncerus caffer*) tracked in Kruger National Park between 2005 and 2006 [@cross2009], to inform our simulations. Our primary goal is to reliably estimate **home range area** for a single African Buffalo. 
+This workflow is presented in Silva *et al.* [-@silva2023movedesign], and is a simplified case study, designed for quick execution. We will use a GPS tracking dataset of African buffalos (*Syncerus caffer*) tracked in Kruger National Park between 2005 and 2006 [@cross2009], to inform our simulations. Our primary goal is to reliably estimate **home range area** for a single African Buffalo.
 
-![](images/tutorial1_img3.png){fig-align="center"}
+![](images/tutorial1_img3.png){fig-align="center" width="655"}
 
 First, we will navigate to (1) the `r fa("file-circle-plus", fill = "#009DA0")` `'Select data'` tab to load a dataset available within the package. Then, we will move to (2) the `r fa("stopwatch", fill = "#009DA0")` `'Sampling design'` tab to define the sampling duration and interval. Finally, we will proceed to (3) the `r fa("compass-drafting")` `'Analyses'` tabs.
 
@@ -76,7 +76,7 @@ When choosing an individual, we must ensure it accurately represents the movemen
 `r fontawesome::fa("bell")` Once validation is successful, the button should now read `'Validated!'` Proceed by clicking the `'Extract'` button.
 :::
 
-![](images/tutorial1_img4.png){fig-align="center"}
+![](images/tutorial1_img4.png){fig-align="center" width="655"}
 
 ### Sampling design
 
@@ -114,7 +114,7 @@ We may include other device limitations, such as location error and success fix 
 
 Two notifications will appear: the first during the calculation of the expected run time, and the second during the simulation and model fitting based on the current parameters. **Wait for both to finish before proceeding.**
 
-![](images/tutorial1_img5.png){fig-align="center"}
+![](images/tutorial1_img5.png){fig-align="center" width="655"}
 
 ### Analyses
 
@@ -146,7 +146,7 @@ The visualization compares the estimated home range to the true home range. Idea
 
 In our case study, a single simulation yielded wide confidence intervals, suggesting high uncertainty and suggesting that a longer sampling duration may be necessary. However, the relative error was low, indicating that while additional data collection may not substantially change the point estimates, it will narrow confidence intervals.
 
-![](images/tutorial1_img6.png){fig-align="center"}
+![](images/tutorial1_img6.png){fig-align="center" width="655"}
 
 #### Speed & distance estimation
 
@@ -166,7 +166,7 @@ Wide confidence intervals indicate high uncertainty, suggesting that a shorter s
 
 Given the current sampling parameters (sampling interval of *one fix every 2 hours* and the realized duration of *10.1 months*), we have an N<sub>speed</sub> ≈ 1,127. This is the equivalent to 1,127 independently sampled velocities. A higher N<sub>speed</sub> enhances estimate precision and reduces uncertainty.
 
-![](images/tutorial1_img7.png){fig-align="center"}
+![](images/tutorial1_img7.png){fig-align="center" width="655"}
 
 ### Report
 
@@ -176,7 +176,7 @@ Given the current sampling parameters (sampling interval of *one fix every 2 hou
 
 The report compiles all settings and outputs in one place, helping us assess whether the *sampling parameters* were sufficient for a reliable **home range area estimate**, and/or **speed and distance estimate**. Use this report to fine-tune your sampling design to ensure robust outputs.
 
-![](images/tutorial1_img8.png){fig-align="center"}
+![](images/tutorial1_img8.png){fig-align="center" width="655"}
 
 You can compare your results to our simulations based on similar timescales and sampling parameters, allowing for a quick assessment of consistency.
 

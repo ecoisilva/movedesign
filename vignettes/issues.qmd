@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 description: > 
   Common installation issues
 vignette: >
-  %\VignetteIndexEntry{Issues}
+  %\VignetteIndexEntry{Installation issues}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 knitr:

@@ -2,9 +2,8 @@
 title: "movedesign"
 author: "Inês Silva"
 date: "`r Sys.Date()`"
-# description: "Get started"
 vignette: >
-  %\VignetteIndexEntry{Get started}
+  %\VignetteIndexEntry{Introduction to movedesign}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 knitr:
@@ -55,7 +54,7 @@ knitr::opts_chunk$set(
 
 The application includes a built-in guided tutorial to help you navigate its features. When you open the `'Home'` tab, you'll find the following:
 
-![](images/tutorial1_img1.png){fig-align="center"}
+![](images/tutorial1_img1.png){fig-align="center" width="655"}
 
 This step-by-step guide will walk you through the app, ensuring you understand its features and functionality. When an action is required, it will be clearly [highlighted]{style="color: white; background: #009DA0;"}. Please follow these instructions carefully, as each step builds on the previous one. If no action is needed, simply continue to the next step by clicking `'Next'` or pressing the right arrow key on your keyboard. The information from the guided tour is also partially available below.
 
