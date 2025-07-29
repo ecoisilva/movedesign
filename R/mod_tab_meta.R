@@ -2294,37 +2294,44 @@ mod_tab_meta_server <- function(id, rv) {
     # HELP MODALS ---------------------------------------------------------
     ## Help modal (resample): ---------------------------------------------
     
-    # observe({
-    #   
-    #   shiny::showModal(
-    #     shiny::modalDialog(
-    #       title = h4(span("Resampling", class = "cl-sea"),
-    #                  "individuals:"),
-    #       
-    #       fluidRow(
-    #         style = paste("margin-right: 20px;",
-    #                       "margin-left: 20px;"),
-    #         
-    #         # h4(style = "margin-top: 30px;", "For more information:"),
-    #         # 
-    #         # p(style = "font-family: var(--monosans);",
-    #         #   "- Noonan, M. J., Fleming, C. H., Akre, T. S.,",
-    #         #   "Drescher-Lehman, J., Gurarie, E., Harrison, A. L.,",
-    #         #   "Kays, R. & Calabrese, J. M. (2019). Scale-insensitive",
-    #         #   "estimation of speed and distance traveled from animal",
-    #         #   "tracking data. Movement Ecology, 7(1), 1-15.")
-    #         
-    #         p("TBA")
-    #         
-    #       ), # end of fluidRow
-    #       
-    #       footer = modalButton("Dismiss"),
-    #       size = "m")) # end of modal
-    #   
-    # }) %>% # end of observe,
-    #   bindEvent(input$metaHelp_resample)
+    observe({
+
+      shiny::showModal(
+        shiny::modalDialog(
+          title = h4(span("Resampling", class = "cl-sea"),
+                     "individuals:"),
+
+          fluidRow(
+            style = paste("margin-right: 20px;",
+                          "margin-left: 20px;"),
+            
+            p("To evaluate how individual estimates contribute to",
+            "variation in the population-level mean, we repeatedly",
+            "reassign individuals into new groups and re-estimate",
+            "the mean across these resampled sets.",
+            br(),
+            "This approach reveals the spread of estimates and helps",
+            "assess the robustness of the observed mean at lower",
+            "population sample sizes."),
+
+            h4(style = "margin-top: 30px;", "For more information:"),
+            p(style = "font-family: var(--monosans);",
+              "Silva, I., Fleming, C. H., Noonan, M. J.,",
+              "Fagan, W. F. & Calabrese, J. M. (2025). Too few, too",
+              "many, or just right? Optimizing sample sizes for",
+              "population-level inferences in animal tracking",
+              "projects (in prep).")
+
+          ), # end of fluidRow
+
+          footer = modalButton("Dismiss"),
+          size = "m")) # end of modal
+
+    }) %>% # end of observe,
+      bindEvent(input$metaHelp_resample)
     
   }) # end of moduleServer
+  
 }
     
 ## To be copied in the UI

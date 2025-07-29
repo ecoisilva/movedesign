@@ -1723,7 +1723,7 @@ mod_tab_report_server <- function(id, rv) {
               style = paste(css_mono, css_bold),
               txt_meta_nsims,
               "Current study design may be",
-              wrap_none("insufficient", color = pal$grn),
+              wrap_none("insufficient", color = pal$dgr),
               "to accurately estimate mean", 
               wrap_none(txt_target[[target]], "."),
               if (length(rv$which_question) == 1)

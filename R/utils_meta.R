@@ -452,9 +452,9 @@ plot_meta_resamples <- function(rv,
   }
   
   if (is.null(colors)) { pal_values <- c(
-    "Yes" = "#009da0", "Near" = "#77b131", "No" = "#dd4b39")
+    "Yes" = "#009da0", "No" = "#dd4b39")
   } else pal_values <- c(
-    "Yes" = colors[[1]], "Near" = colors[[2]], "No" = colors[[3]])
+    "Yes" = colors[[1]], "No" = colors[[2]])
   
   if (random) {
     
@@ -490,7 +490,7 @@ plot_meta_resamples <- function(rv,
              .data$error_uci >= -rv$error_threshold),
         status = dplyr::case_when(
           within_threshold ~ "Yes",
-          !within_threshold & overlaps_with_threshold ~ "Near",
+          # !within_threshold & overlaps_with_threshold ~ "Near",
           TRUE ~ "No")) %>% 
       quiet() %>% 
       suppressMessages() %>% 
@@ -604,7 +604,7 @@ plot_meta_resamples <- function(rv,
              .data$error_uci >= -rv$error_threshold),
         color = dplyr::case_when(
           within_threshold ~ "Yes",
-          !within_threshold & overlaps_with_threshold ~ "Near",
+          # !within_threshold & overlaps_with_threshold ~ "Near",
           TRUE ~ "No"))
     
     txt_caption <- NULL

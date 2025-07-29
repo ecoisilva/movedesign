@@ -47,7 +47,7 @@ mod_viz_meta_server <- function(id, rv) {
         random = rv$random, 
         subpop = rv$grouped, 
         colors = c(pal$sea, 
-                   pal$grn, 
+                   # pal$grn,
                    pal$dgr))
       
       p.optimal <- p.optimal +
