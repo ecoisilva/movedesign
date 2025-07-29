@@ -37,7 +37,7 @@ Default is \code{FALSE}.}
 
 \item{ncores}{Integer; number of CPU cores to use for parallel
 processing. Defaults to all available cores detected by
-\code{\link[parallel:detectCores]{parallel::detectCores()}}.}
+\code{parallel::detectCores()}.}
 
 \item{plot}{Logical. If TRUE, displays a diagnostic plot of
 the final results.}

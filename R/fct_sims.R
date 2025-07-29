@@ -176,11 +176,11 @@ simulating_data <- function(rv, seed) {
 #' 
 #' @details
 #' The function generates initial parameter estimates for each dataset
-#' using [`ctmm::ctmm.guess()`]. If the data includes simulated location
+#' using `ctmm::ctmm.guess()`. If the data includes simulated location
 #' error, it uses an error model accordingly. When `.check_sampling` is
 #' `TRUE`, it compares the sampling duration and interval against optimal
 #' thresholds derived from the provided autocorrelation timescales.
-#' Models are fitted using [`ctmm::ctmm.select()`], which performs model
+#' Models are fitted using `ctmm::ctmm.select()`, which performs model
 #' selection to find the best-fit movement process. If `.rerun` is
 #' enabled, the function identifies simulations with effective 
 #' sample sizes below 0.1 and attempts to reselect models for those.
@@ -208,7 +208,7 @@ simulating_data <- function(rv, seed) {
 #'
 #' - `.check_sampling`: Logical; if `TRUE`, checks whether the sampling
 #'   schedule meets minimum requirements for reliable model fitting via
-#'   [`ctmm::ctmm.fit()`]. This feature is experimental and may change
+#'   `ctmm::ctmm.fit()`. This feature is experimental and may change
 #'    in future versions.
 #'
 #' - `.rerun`: Logical; if `TRUE`, re-runs model selection when
@@ -225,7 +225,7 @@ simulating_data <- function(rv, seed) {
 #' follow specific structure and constraints not referenced explicitly.
 #' 
 #' @seealso
-#' [`ctmm::ctmm.guess()`], [`ctmm::ctmm.select()`]
+#' `ctmm::ctmm.guess()`, `ctmm::ctmm.select()`
 #' 
 #' @keywords internal
 #' @importFrom ctmm ctmm.guess

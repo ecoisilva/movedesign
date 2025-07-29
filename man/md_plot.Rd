@@ -24,10 +24,10 @@ md_plot(
 }}
 
 \item{ci}{Numeric scalar between 0 and 1. The probability of the
-credible interval (CI) to be estimated. Default to \code{0.95} (⁠95\%⁠).}
+credible interval (CI) to be estimated. Default to \code{0.95} (95\%).}
 
 \item{method}{Character. Credible interval estimation method (passed
-to \code{\link[bayestestR:ci]{bayestestR::ci()}}; default: \code{"HDI"}). See \code{\link[bayestestR:ci]{bayestestR::ci()}}
+to \code{bayestestR::ci()}; default: \code{"HDI"}). See \code{?bayestestR::ci()}
 for more details.}
 
 \item{pal}{Character vector of color(s) for the density, CI shading,
@@ -58,7 +58,7 @@ Produces a publication-ready density plot showing the distribution of
 relative error estimates from study design simulations. The plot
 highlights the mean and a shaded credible interval (CI) region,
 following the computation of credible intervals as implemented in
-\code{\link[bayestestR:ci]{bayestestR::ci()}}. If groups are present, density curves for each
+\code{bayestestR::ci()}. If groups are present, density curves for each
 group are overlaid for comparison, using customizable colors.
 
 This function is typically used after running \code{\link[=md_replicate]{md_replicate()}},
@@ -106,6 +106,6 @@ if (interactive()) {
 \seealso{
 \code{\link[=md_replicate]{md_replicate()}},
 \code{\link[=md_check]{md_check()}} for convergence diagnostics,
-and refer to \code{\link[bayestestR:ci]{bayestestR::ci()}} for details on credible interval
+and refer to \code{bayestestR::ci()} for details on credible interval
 computation and interpretation.
 }

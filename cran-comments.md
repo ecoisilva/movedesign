@@ -1,4 +1,25 @@
 
+# Version 0.3.2
+## Re-submission
+
+### R CMD check results
+
+0 errors | 0 warnings | 2 notes
+
+There was two NOTES:
+
+```
+❯ checking CRAN incoming feasibility ... [17s] NOTE
+```
+- Same maintainer, just adding a special character.
+
+```
+❯ checking for future file timestamps ... NOTE
+  unable to verify current time
+```
+
+---
+
 # Version 0.3.1
 ## Re-submission
 

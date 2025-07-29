@@ -23,12 +23,12 @@ md_prepare(
 species used as a workflow label.}
 
 \item{data}{A named list of telemetry objects (from
-\code{\link[ctmm:as.telemetry]{ctmm::as.telemetry()}}) to be used as the empirical basis for the
+\code{ctmm::as.telemetry()}) to be used as the empirical basis for the
 simulations. Each telemetry object must contain valid metadata
 and timestamped locations.}
 
 \item{models}{(Optional) Named list of fitted ctmm models (from
-\code{\link[ctmm:ctmm.fit]{ctmm::ctmm.fit()}} or \code{\link[ctmm:ctmm.fit]{ctmm::ctmm.select()}}). If not supplied,
+\code{ctmm::ctmm.fit()} or \code{ctmm::ctmm.select()}). If not supplied,
 models are fitted automatically.}
 
 \item{n_individuals}{Integer. Number of animals (tags) to include
@@ -134,9 +134,5 @@ if(interactive()) {
  summary(input)
 }
 
-}
-\seealso{
-\code{\link[ctmm:as.telemetry]{ctmm::as.telemetry()}},
-\code{\link[ctmm:ctmm.fit]{ctmm::ctmm.select()}}
 }
 \concept{workflow_steps}

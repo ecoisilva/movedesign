@@ -34,11 +34,11 @@ supports both home range and speed estimation workflows.
 }
 \details{
 The function generates initial parameter estimates for each dataset
-using \code{\link[ctmm:variogram.fit]{ctmm::ctmm.guess()}}. If the data includes simulated location
+using \code{ctmm::ctmm.guess()}. If the data includes simulated location
 error, it uses an error model accordingly. When \code{.check_sampling} is
 \code{TRUE}, it compares the sampling duration and interval against optimal
 thresholds derived from the provided autocorrelation timescales.
-Models are fitted using \code{\link[ctmm:ctmm.fit]{ctmm::ctmm.select()}}, which performs model
+Models are fitted using \code{ctmm::ctmm.select()}, which performs model
 selection to find the best-fit movement process. If \code{.rerun} is
 enabled, the function identifies simulations with effective
 sample sizes below 0.1 and attempts to reselect models for those.
@@ -61,7 +61,7 @@ but required if \code{.check_sampling = TRUE}.
 (used for simulation).
 \item \code{.check_sampling}: Logical; if \code{TRUE}, checks whether the sampling
 schedule meets minimum requirements for reliable model fitting via
-\code{\link[ctmm:ctmm.fit]{ctmm::ctmm.fit()}}. This feature is experimental and may change
+\code{ctmm::ctmm.fit()}. This feature is experimental and may change
 in future versions.
 \item \code{.rerun}: Logical; if \code{TRUE}, re-runs model selection when
 simulations result in very low effective sample sizes, to
@@ -76,6 +76,6 @@ This function is intended for internal use and may assume inputs
 follow specific structure and constraints not referenced explicitly.
 }
 \seealso{
-\code{\link[ctmm:variogram.fit]{ctmm::ctmm.guess()}}, \code{\link[ctmm:ctmm.fit]{ctmm::ctmm.select()}}
+\code{ctmm::ctmm.guess()}, \code{ctmm::ctmm.select()}
 }
 \keyword{internal}

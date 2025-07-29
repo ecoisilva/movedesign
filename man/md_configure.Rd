@@ -8,12 +8,12 @@ md_configure(data, models = NULL)
 }
 \arguments{
 \item{data}{A named list of telemetry objects (from
-\code{\link[ctmm:as.telemetry]{ctmm::as.telemetry()}}) to be used as the empirical basis for the
+\code{ctmm::as.telemetry()}) to be used as the empirical basis for the
 simulations. Each telemetry object must contain valid metadata
 and timestamped locations.}
 
 \item{models}{(Optional) Named list of fitted ctmm models (from
-\code{\link[ctmm:ctmm.fit]{ctmm::ctmm.fit()}} or \code{\link[ctmm:ctmm.fit]{ctmm::ctmm.select()}}). If not supplied,
+\code{ctmm::ctmm.fit()} or \code{ctmm::ctmm.select()}). If not supplied,
 models are fitted automatically.}
 }
 \value{
@@ -30,10 +30,9 @@ a specific analytical target.
 }
 \details{
 The argument \code{data} is \strong{required} and must be supplied directly (as
-a list of telemetry objects, obtained from \code{\link[ctmm:as.telemetry]{ctmm::as.telemetry()}}).
-Arguments with defaults can be skipped using \if{html}{\out{<Enter>}}. The argument
-\code{models} is optional, and if omitted, models will be fitted
-automatically.
+a list of telemetry objects, obtained from \code{ctmm::as.telemetry()}).
+The argument \code{models} is optional, and if omitted, models will be
+fitted automatically.
 }
 \examples{
 if(interactive()) {

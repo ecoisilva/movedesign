@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_app.R
 \name{run_app}
 \alias{run_app}
-\title{Run movedesign' R Shiny Application}
+\title{Run movedesign R Shiny application}
 \usage{
 run_app(
   onStart = NULL,
@@ -13,32 +13,23 @@ run_app(
 )
 }
 \arguments{
-\item{onStart}{A function that will be called before the app is actually run.
-This is only needed for \code{shinyAppObj}, since in the \code{shinyAppDir}
-case, a \code{global.R} file can be used for this purpose.}
+\item{onStart}{A function called before the app runs. Only relevant for
+programmatic usage.}
 
-\item{options}{Named options that should be passed to the \code{runApp} call
-(these can be any of the following: "port", "launch.browser", "host", "quiet",
-"display.mode" and "test.mode"). You can also specify \code{width} and
-\code{height} parameters which provide a hint to the embedding environment
-about the ideal height/width for the app.}
+\item{options}{A named list passed to \code{shiny::runApp}.}
 
-\item{enableBookmarking}{Can be one of \code{"url"}, \code{"server"}, or
-\code{"disable"}. The default value, \code{NULL}, will respect the setting from
-any previous calls to  \code{\link[shiny:enableBookmarking]{enableBookmarking()}}. See \code{\link[shiny:enableBookmarking]{enableBookmarking()}}
-for more information on bookmarking your app.}
+\item{enableBookmarking}{One of \code{url}, \code{server}, or \code{disable}. The
+default, \code{NULL}, respects any previous call to \code{enableBookmarking}.}
 
-\item{uiPattern}{A regular expression that will be applied to each \code{GET}
-request to determine whether the \code{ui} should be used to handle the
-request. Note that the entire request path must match the regular
-expression in order for the match to be considered successful.}
+\item{uiPattern}{A regular expression used to match request paths. The
+request path must match the expression in full to be handled by the UI.}
 
 \item{...}{arguments to pass to golem_opts.
 See \code{?golem::get_golem_options} for more details.}
 }
 \value{
-No return value, called for side effects.
+No return value. This function is called for its side effects.
 }
 \description{
-Run movedesign' R Shiny Application
+Run movedesign R Shiny application
 }

@@ -11,11 +11,11 @@
 #' @param species Character. Scientific or common name of the focal
 #'   species used as a workflow label.
 #' @param data A named list of telemetry objects (from
-#'   [ctmm::as.telemetry()]) to be used as the empirical basis for the
+#'   `ctmm::as.telemetry()`) to be used as the empirical basis for the
 #'   simulations. Each telemetry object must contain valid metadata
 #'   and timestamped locations.
 #' @param models (Optional) Named list of fitted ctmm models (from
-#'   [ctmm::ctmm.fit()] or [ctmm::ctmm.select()]). If not supplied,
+#'   `ctmm::ctmm.fit()` or `ctmm::ctmm.select()`). If not supplied,
 #'   models are fitted automatically.
 #' @param n_individuals Integer. Number of animals (tags) to include
 #'    in the study design; defines the target *population* sample size.
@@ -38,7 +38,7 @@
 #'   population means, or `"ratio"` to compare group means
 #'   (requires `groups`).
 #'   
-#' @param add_individual_variation Logical. If \code{TRUE}, simulates
+#' @param add_individual_variation Logical. If `TRUE`, simulates
 #'   variation by drawing movement parameters from the population 
 #'   distribution.
 #' @param groups (Optional) A named list for group assignments.
@@ -106,10 +106,6 @@
 #'     which_meta = "mean")
 #'  summary(input)
 #' }
-#'
-#' @seealso
-#'   [ctmm::as.telemetry()],
-#'   [ctmm::ctmm.select()]
 #'
 #' @importFrom ctmm %#%
 #' 
@@ -803,7 +799,7 @@ md_merge <- function(...) {
 #'   Default is `FALSE`.
 #' @param ncores Integer; number of CPU cores to use for parallel
 #'   processing. Defaults to all available cores detected by
-#'   [`parallel::detectCores()`].
+#'   `parallel::detectCores()`.
 #'
 #' @return
 #' A list of class `movedesign_output` with two elements:
@@ -970,7 +966,7 @@ md_replicate <- function(obj,
 #' relative error estimates from study design simulations. The plot
 #' highlights the mean and a shaded credible interval (CI) region,
 #' following the computation of credible intervals as implemented in
-#' [`bayestestR::ci()`]. If groups are present, density curves for each
+#' `bayestestR::ci()`. If groups are present, density curves for each
 #' group are overlaid for comparison, using customizable colors.
 #'
 #' This function is typically used after running [`md_replicate()`],
@@ -987,9 +983,9 @@ md_replicate <- function(obj,
 #'   }
 #'
 #' @param ci Numeric scalar between 0 and 1. The probability of the
-#'   credible interval (CI) to be estimated. Default to `0.95` (⁠95%⁠).
+#'   credible interval (CI) to be estimated. Default to `0.95` (95%).
 #' @param method Character. Credible interval estimation method (passed
-#'   to [`bayestestR::ci()`]; default: `"HDI"`). See [`bayestestR::ci()`]
+#'   to `bayestestR::ci()`; default: `"HDI"`). See `?bayestestR::ci()`
 #'   for more details.
 #' @param pal Character vector of color(s) for the density, CI shading,
 #'   and mean line. If a single group, supply one color (default:
@@ -1033,7 +1029,7 @@ md_replicate <- function(obj,
 #' @seealso
 #' [`md_replicate()`],
 #' [`md_check()`] for convergence diagnostics,
-#' and refer to [`bayestestR::ci()`] for details on credible interval
+#' and refer to `bayestestR::ci()` for details on credible interval
 #' computation and interpretation.
 #'
 #' @examples
@@ -2199,17 +2195,16 @@ md_check <- function(obj,
 #'
 #' @details
 #' The argument `data` is **required** and must be supplied directly (as
-#' a list of telemetry objects, obtained from [`ctmm::as.telemetry()`]).
-#' Arguments with defaults can be skipped using <Enter>. The argument
-#' `models` is optional, and if omitted, models will be fitted
-#' automatically.
+#' a list of telemetry objects, obtained from `ctmm::as.telemetry()`).
+#' The argument `models` is optional, and if omitted, models will be
+#' fitted automatically.
 #'
 #' @param data A named list of telemetry objects (from
-#'   [ctmm::as.telemetry()]) to be used as the empirical basis for the
+#'   `ctmm::as.telemetry()`) to be used as the empirical basis for the
 #'   simulations. Each telemetry object must contain valid metadata
 #'   and timestamped locations.
 #' @param models (Optional) Named list of fitted ctmm models (from
-#'   [ctmm::ctmm.fit()] or [ctmm::ctmm.select()]). If not supplied,
+#'   `ctmm::ctmm.fit()` or `ctmm::ctmm.select()`). If not supplied,
 #'   models are fitted automatically.
 #' 
 #' @return
@@ -2660,7 +2655,7 @@ md_configure <- function(data, models = NULL) {
 #'   Default is `FALSE`.
 #' @param ncores Integer; number of CPU cores to use for parallel
 #'   processing. Defaults to all available cores detected by
-#'   [`parallel::detectCores()`].
+#'   `parallel::detectCores()`.
 #' @param plot Logical. If TRUE, displays a diagnostic plot of
 #'   the final results.
 #' @param ... Additional arguments used internally.
