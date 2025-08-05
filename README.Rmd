@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 
-[![CRAN version](https://img.shields.io/cran/v/movedesign?color=%23009da0&label=CRAN%20version)](https://CRAN.R-project.org/package=movedesign) [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.7963190-green?color=%23009da0)](https://doi.org/10.5281/zenodo.7963190) <br>
+[![CRAN version](https://img.shields.io/cran/v/movedesign?color=%23009da0&label=CRAN%20version)](https://CRAN.R-project.org/package=movedesign) [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.16601218-%23009da0.svg)](https://zenodo.org/records/16601218) <br>
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)
 [![Hits](https://hits.sh/github.com/ecoisilva/hits.svg)](https://hits.sh/github.com/ecoisilva/movedesign/) <br>
@@ -86,6 +86,12 @@ To cite `movedesign`, use the following:
 citation("movedesign")
 ```
 
-> Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese, J. M. (2023). movedesign: Shiny R app to evaluate sampling design for animal movement studies. Methods in Ecology and Evolution, 14(9), 2216–2225. DOI: 10.1111/2041-210X.14153
+> Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese, J. M. (2023). movedesign: Shiny R app to evaluate sampling design for animal movement studies. Methods in Ecology and Evolution, 14(9), 2216–2225.
+
+[![DOI](https://img.shields.io/badge/DOI-10.1111%2F2041--210X.14153-009da0)](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.14153)
+
+> Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese, J. M. (2025). Too few, too many, or just right? Optimizing sample sizes for population-level inferences in animal tracking projects. BioRxiv.
+
+[![DOI](https://img.shields.io/badge/DOI-10.1101%2F2025.07.30.667390v1-%23009da0.svg)](https://www.biorxiv.org/content/10.1101/2025.07.30.667390v1)
 
 :::
