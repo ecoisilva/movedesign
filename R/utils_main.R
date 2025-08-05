@@ -332,11 +332,12 @@ summary.movedesign_output <- function(object, ...) {
     .msg(paste0("   Total number of simulations: "), "main"),
     width = 3, justify = "left"),
     length(object$data$simList))
-  if (object$data$grouped) {
-    message(format(
-    .msg(paste0("   Per group: "), "main"),
-    width = 3, justify = "left"),
-    length(object$data$simList)/2) }
+  if (!is.null(object$data$grouped))
+    if (object$data$grouped) {
+      message(format(
+        .msg(paste0("   Per group: "), "main"),
+        width = 3, justify = "left"),
+        length(object$data$simList)/2) }
   if ("hr" %in% object$data$set_target) {
     message(format(
       .msg(paste0("   Home range outputs available? "), "main"),

@@ -760,7 +760,7 @@ md_merge <- function(...) {
   ))
   
   out[sapply(out, is.null)] <- NULL
-  class(out) <- "movedesign_output"
+  class(out) <- "movedesign_preprocess"
   
   return(out)
 }
