@@ -1300,7 +1300,8 @@ mod_tab_meta_server <- function(id, rv) {
             grouped = rv$grouped,
             groups = if (rv$grouped) rv$groups[[2]] else NULL)
           
-          true_value <- lapply(truthList, function(x) out$unit[[1]] %#% x$area)
+          true_value <- lapply(
+            truthList, function(x) out$unit[[1]] %#% x$area)
           names(true_value) <- names(truthList)
         }
         
