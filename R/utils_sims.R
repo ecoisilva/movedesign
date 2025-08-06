@@ -152,9 +152,7 @@ generate_seed <- function(seed_list = NULL) {
 .generate_day_night_t <- function(start_day, 
                                   start_night,
                                   dti_day,
-                                  dti_night, 
-                                  start_time = "00:00:00",
-                                  end_time = "23:59:59") {
+                                  dti_night) {
   
   start_time = "00:00:00"
   end_time = "23:59:59"
@@ -174,9 +172,10 @@ generate_seed <- function(seed_list = NULL) {
   lapply(c(start_day, start_night,
            start_time, end_time), validate_time_format)
   
-  # Validate dti_day and dti_night
-  stopifnot(is.numeric(dti_day) & dti_day > 0,
-            is.numeric(dti_night) & dti_night > 0)
+  if (!is.null(dti_day))
+    stopifnot(is.numeric(dti_day) & dti_day > 0)
+  if (!is.null(dti_night))
+    stopifnot(is.numeric(dti_night) & dti_night > 0)
   
   # Convert times to numeric seconds (total seconds since midnight)
   start_time <- as.numeric(lubridate::hms(start_time))
@@ -193,12 +192,25 @@ generate_seed <- function(seed_list = NULL) {
   intervals <- data.frame(
     start = c(start_time, start_day, start_night),
     end = c(start_day, start_night, end_time),
-    step = c(dti_night, dti_day, dti_night)
-  )
+    step = c(dti_night, dti_day, dti_night),
+    cycle = c("night", "day", "night"))
   
-  return(.generate_irregular_t(intervals, 
+  if (is.null(dti_day)) {
+  }
+  
+  if (is.null(dti_night)) {
+    intervals[1, "step"] <- start_day - start_time
+    intervals[3, "step"] <- start_night - start_day
+  }
+  
+  out <- .generate_irregular_t(intervals, 
                                start_time = start_time, 
-                               end_time = end_time))
+                               end_time = end_time)
+  
+  if (!is.null(dti_day) && is.null(dti_night))
+    out <- out[!out == "0"]
+  
+  return(out)
   
 } # end of function, .generate_day_night_t()
 

@@ -654,7 +654,7 @@ md_merge <- function(...) {
   # Pull shared metadata from first entry:
   metadata_fields <- c(
     "data", "data_type",
-    "get_species", "individual_no",
+    "get_species", "n_individuals",
     "dur", "dti", "add_ind_var",
     "grouped", "groups",
     "set_target", "which_meta", "parallel",
