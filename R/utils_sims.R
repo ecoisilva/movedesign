@@ -1,6 +1,13 @@
 
-#' @title Generate seed
-#' 
+
+#' @title Generate a unique random seed
+#'
+#' @description
+#' Generates a single random integer seed in the range `[1, 9999999]`. If
+#' a `seed_list` is provided, the function ensures the generated seed is
+#' not already present in the list, and avoids generating a value
+#' immediately followed by another in the list.
+#'
 #' @noRd
 generate_seed <- function(seed_list = NULL) {
   
@@ -17,24 +24,45 @@ generate_seed <- function(seed_list = NULL) {
 }
 
 
-#' @title Trigger tag failure
+#' @title Trigger random deployment disruption events
+#' 
 #' @description
-#' Simulates the failure of tagging devices within a dataset by introducing
-#' a given probability of failure. If a failure occurs, data collection is
-#' halted at that point, meaning the absolute sample size of each
-#' simulation may vary. The function returns a list of modified datasets
-#' and a logical vector indicating which devices failed.
+#' Introduces probabilistic failure events into a list of telemetry
+#' datasets, simulating real-world tag malfunction or animal mortality.
+#' Each dataset is truncated stochastically if a failure occurs,
+#' resulting in variable sampling durations across individuals.
+#' 
+#' Failure is applied per individual, with each device having a
+#' user-defined probability (`fail_prob`) of failing. If a failure occurs,
+#'  the dataset is truncated after a random time point.
+#' 
+#' @param obj A list of data frames, where each element corresponds to
+#'   a single individual’s telemetry data.
+#' 
+#' @return
+#' A list with two components:
+#' - `obj`: A list of modified data frames, where some may have been
+#'   truncated due to simulated device failure.
+#' - `dev_failed`: A logical vector indicating which individuals
+#'   experienced tag failure (`TRUE`) and which did not (`FALSE`).
+#' 
+#' @param fail_prob A numeric value between `0` and `1` (default = `0`),
+#'   representing the probability that any given device fails. If `0` or
+#'   `NULL`, all devices are assumed to remain active.
+#'
 #' @noRd
-.trigger_tag_failure <- function(obj, fail_prob = 0) {
-  
-  if (is.null(fail_prob)) return(list(obj = obj,
-                                      dev_failed = logical(length(obj))))
-  if (fail_prob == 0) return(list(obj = obj,
-                                  dev_failed = logical(length(obj))))
+.trigger_disruption <- function(obj, fail_prob = 0) {
   
   # if (!inherits(obj, "movedesign")) {
   #   stop("The 'obj' argument must be of class 'movedesign'.")
   # }
+  
+  if (is.null(fail_prob)) 
+    return(list(obj = obj,
+                dev_failed = logical(length(obj))))
+  if (fail_prob == 0) 
+    return(list(obj = obj,
+                dev_failed = logical(length(obj))))
   
   devices_failed <- logical(length(obj))
   
@@ -47,7 +75,7 @@ generate_seed <- function(seed_list = NULL) {
     to_keep_vec <- rep(1, nrow(x))
     
     if (failure_occurred) {
-      # If failure occurred, simulate data truncation:
+      # If failure occurred, truncate data:
       to_keep_vec <- c(rep(1, 10), cumprod(
         1 - stats::rbinom(nrow(x) - 10, 1, prob = 0.01)))
       if (!any(to_keep_vec == 0)) failure_occurred <- FALSE
@@ -62,23 +90,24 @@ generate_seed <- function(seed_list = NULL) {
   
   return(list(obj = obj, dev_failed = devices_failed))
   
-} # end of function, .trigger_tag_failure()
+} # end of function, .trigger_disruption()
 
 #' @title Trigger fix success rate
+#' 
 #' @description
-#' Simulates fix success rate based on a given  probability. For each
+#' Simulates fix success rate based on a givenprobability. For each
 #' dataset, a number of rows (randomly) corresponding to the success rate
 #' are retained, while the remaining locations are discarded.
 #' 
 #' @noRd
 .trigger_fix_success <- function(obj, prob = 0) {
   
-  if (is.null(prob)) return(obj)
-  if (prob == 0) return(obj)
-  
   # if (!inherits(obj, "movedesign")) {
   #   stop("The 'obj' argument must be of class 'movedesign'.")
   # }
+  
+  if (is.null(prob)) return(obj)
+  if (prob == 0) return(obj)
   
   obj <- lapply(obj, function(x) {
     to_keep <- round(nrow(x) * (1 - prob), 0)
@@ -92,6 +121,7 @@ generate_seed <- function(seed_list = NULL) {
 } # end of function, .trigger_data_loss()
 
 #' @title Trigger location error
+#' 
 #' @description
 #' Simulates location error in tracking data (x, y coordinates) by adding
 #' random noise drawn from a normal distribution. The noise is scaled by
@@ -100,12 +130,12 @@ generate_seed <- function(seed_list = NULL) {
 #' @noRd
 .trigger_error <- function(obj, error = 0) {
   
-  if (is.null(error)) return(obj)
-  if (error == 0) return(obj)
-  
   # if (!inherits(obj, "movedesign")) {
   #   stop("The 'obj' argument must be of class 'movedesign'.")
   # }
+  
+  if (is.null(error)) return(obj)
+  if (error == 0) return(obj)
   
   obj <- lapply(obj, function(x) {
     
@@ -129,24 +159,24 @@ generate_seed <- function(seed_list = NULL) {
 } # end of function, .trigger_error()
 
 
-#' Generate an irregular time sequence based on day/night intervals
+#' @title Generate irregular day/night intervals
+#' 
+#' @description
+#' This function generates a sequence of timestamps with different
+#' sampling intervals for day and night periods.
 #'
-#' This function generates a sequence of timestamps with different step sizes
-#' for day and night periods.
-#'
-#' @param start_day The start time of the daytime period (as "HH:MM:SS").
-#' @param start_night The start time of the nighttime period (as "HH:MM:SS").
-#' @param dti_day The step size during the daytime period (in seconds, must be positive).
-#' @param dti_night The step size during the nighttime period (in seconds, must be positive).
-#' @param start_time The start timestamp (default: "00:00:00").
-#' @param end_time The end timestamp (default: "23:59:59").
+#' @param fail_prob A numeric value between `0` and `1` (default = `0`),
+#'   representing the probability that any given device fails. If `0` or
+#'   `NULL`, all devices are assumed to remain active.
+#'   
+#' @param start_day The start time of the daytime period.
+#' @param start_night The start time of the nighttime period.
+#' @param dti_day The sampling interval during the daytime period
+#'   (in seconds).
+#' @param dti_night The sampling interval during the nighttime period
+#'   (in seconds).
 #' 
 #' @keywords internal
-#' 
-#' @return A sorted vector of POSIXct timestamps.
-#' 
-#' @examples
-#' .generate_day_night_t("06:00:00", "18:00:00", 3600, 4 * 3600)
 #' 
 #' @noRd
 .generate_day_night_t <- function(start_day, 
@@ -215,10 +245,10 @@ generate_seed <- function(seed_list = NULL) {
 } # end of function, .generate_day_night_t()
 
 
-#' Generate an irregular time sequence based on custom intervals
-#'
-#' This function generates a sequence of timestamps with different step sizes
-#' for different time intervals.
+#' @title Generate an irregular day/night time sequence
+#' 
+#' @description
+#' Generate an irregular time sequence based on custom intervals.
 #'
 #' @param intervals A data frame with columns 'start', 'end', and 'step',
 #'   defining time intervals and their respective step sizes (in seconds).
@@ -226,16 +256,6 @@ generate_seed <- function(seed_list = NULL) {
 #' @param end_time The end timestamp (default: "23:59:59").
 #' 
 #' @keywords internal
-#' 
-#' @return A sorted vector of POSIXct timestamps.
-#' 
-#' @examples
-#' intervals <- data.frame(
-#'   start = hms("00:00:00"),
-#'   end = hms("06:00:00"),
-#'   step = 14400)
-#' 
-#' .generate_irregular_t(intervals)
 #' 
 #' @noRd
 .generate_irregular_t <- function(intervals, 
@@ -263,4 +283,85 @@ generate_seed <- function(seed_list = NULL) {
   return(out)
   
 } # end of function, .generate_irregular_t()
+
+
+#' @title Generate an irregular day/night sampling schedule
+#' 
+#' @description
+#' Creates a sequence of POSIXct timestamps over a date range, using
+#' separate time steps for day and night periods within each day. Day and
+#' night periods are defined by user-supplied start times, and sampling
+#' intervals can differ for day and night.
+#'
+#' @param date_start Character or Date.  Start date (inclusive) for
+#'  tracking schedule.
+#' @param date_end Character or Date. End date (inclusive) for
+#'  tracking schedule.
+#' @param daytime_start Character. Time of day (HH:MM:SS) marking the
+#'   start of the daytime period.
+#' @param nighttime_start Character. Time of day (HH:MM:SS) marking the
+#'   start of the nighttime period.
+#' @param dti_day The sampling interval during the daytime period
+#'   (in seconds).
+#' @param dti_night The sampling interval during the nighttime period
+#'   (in seconds).
+#' @param tz Character. Time zone for output timestamps (default: "UTC").
+#'
+#' @return A sorted POSIXct vector of timestamps for the entire schedule.
+#'
+#' @examples
+#' # Generate timestamps for 2 days,
+#' # with sampling interval of 1 hour for daytime, 2 hours for nighttime
+#' ts <- .generate_schedule(
+#'   date_start = "2023-01-01",
+#'   date_end = "2023-01-02",
+#'   daytime_start = "06:00:00",
+#'   nighttime_start = "18:00:00",
+#'   dti_day = 3600,
+#'   dti_night = 7200,
+#'   tz = "UTC"
+#' )
+#' 
+#' @keywords internal
+#' 
+#' @noRd
+.generate_schedule <- function(date_start,
+                               date_end,
+                               daytime_start,
+                               nighttime_start,
+                               dti_day,
+                               dti_night,
+                               tz = "UTC") {
+  
+  date_start <- as.Date(date_start)
+  date_end <- as.Date(date_end)
+  
+  if (date_start > date_end) {
+    stop("'date_start' must be on or before 'date_end'.")
+  }
+  
+  # Generate sequence of dates from start to end:
+  date_seq <- seq.Date(date_start, date_end, by = "1 day")
+  
+  # Preallocate output list:
+  out_list <- vector("list", length(date_seq))
+  
+  for (i in seq_along(date_seq)) {
+    # Generate time offsets (in seconds) for this day
+    seconds_since_midnight <- movedesign:::.generate_day_night_t(
+      start_day = daytime_start,
+      start_night = nighttime_start,
+      dti_day = dti_day,
+      dti_night = dti_night
+    )
+    
+    # Combine with date origin in the correct time zone
+    date_origin <- as.POSIXct(date_seq[i], tz = tz)
+    out_list[[i]] <- date_origin + seconds_since_midnight
+  }
+  
+  # Flatten the list and sort timestamps
+  result <- sort(do.call(c, out_list))
+  return(result)
+}
 
