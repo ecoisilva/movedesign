@@ -95,7 +95,7 @@ generate_seed <- function(seed_list = NULL) {
 #' @title Trigger fix success rate
 #' 
 #' @description
-#' Simulates fix success rate based on a givenprobability. For each
+#' Simulates fix success rate based on a given probability. For each
 #' dataset, a number of rows (randomly) corresponding to the success rate
 #' are retained, while the remaining locations are discarded.
 #' 
@@ -107,7 +107,11 @@ generate_seed <- function(seed_list = NULL) {
   # }
   
   if (is.null(prob)) return(obj)
-  if (prob == 0) return(obj)
+  if (!is.numeric(prob) ||
+      length(prob) != 1 ||
+      is.na(prob) || prob < 0 || prob > 1) {
+    stop("'prob' must be a numeric value between 0 and 1 inclusive.")
+  }
   
   obj <- lapply(obj, function(x) {
     to_keep <- round(nrow(x) * (1 - prob), 0)
