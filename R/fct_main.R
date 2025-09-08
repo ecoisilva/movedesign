@@ -648,11 +648,8 @@ md_merge <- function(...) {
     outs <- outs[[1]]
   }
   
-  
-  if (is.null(outs[[1]]$ignore_mismatch)) {
+  if (is.null(ignore_mismatch)) {
     ignore_mismatch <- FALSE
-  } else {
-    ignore_mismatch <- outs[[1]]$ignore_mismatch
   }
   
   class_list <- vapply(outs, function(x)
