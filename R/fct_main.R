@@ -165,6 +165,34 @@ md_prepare <- function(species = NULL,
   stopifnot(is.list(data))
   if (length(data) == 0) stop("Input 'data' cannot be empty.")
   
+  .validate_sampling <- function(param, key = NULL) {
+    check_entry <- function(x) {
+      is.list(x) &&
+        all(c("value", "unit") %in% names(x)) &&
+        is.numeric(x$value) &&
+        is.character(x$unit) &&
+        length(x$value) == 1 &&
+        length(x$unit) == 1
+    }
+    
+    is_simple <- is.list(param) && check_entry(param)
+    
+    is_list_of_simple <- is.list(param) &&
+      length(param) > 0 &&
+      all(vapply(param, check_entry, logical(1)))
+    
+    if (!(is_simple || is_list_of_simple)) {
+      stop(paste0(
+        "Invalid '", key, "':",
+        "must be either a simple list with numeric 'value' and",
+        "character 'unit', or a list of such lists."
+      ))
+    }
+  }
+  
+  .validate_sampling(dur, "dur")
+  .validate_sampling(dti, "dti")
+  
   if (!is.null(groups)) {
     if (!is.list(groups) || length(groups) < 2) {
       stop(paste("'groups' must be a named list with",
@@ -360,6 +388,10 @@ md_prepare <- function(species = NULL,
     
   } # end of if (!is.null(groups))
   
+  use_global_parameters <- is.list(dur) &&
+    all(c("value", "unit") %in% names(dur)) &&
+    !any(sapply(dur, is.list))
+  
   design <- movedesign_input(list(
     data = data,
     data_type = "selected",
@@ -367,6 +399,7 @@ md_prepare <- function(species = NULL,
     n_individuals = as.numeric(n_individuals),
     dur = dur,
     dti = dti,
+    use_global_parameters = use_global_parameters,
     add_ind_var = add_individual_variation,
     grouped = ifelse(!is.null(groups), TRUE, FALSE),
     groups = groups,
@@ -530,6 +563,7 @@ md_run <- function(design, trace = TRUE) {
     n_individuals = design$n_individuals,
     dur = design$dur,
     dti = design$dti,
+    use_global_parameters = design$use_global_parameters,
     add_ind_var = design$add_ind_var,
     grouped = design$grouped,
     groups = design$groups,
@@ -614,6 +648,13 @@ md_merge <- function(...) {
     outs <- outs[[1]]
   }
   
+  
+  if (is.null(outs[[1]]$ignore_mismatch)) {
+    ignore_mismatch <- FALSE
+  } else {
+    ignore_mismatch <- outs[[1]]$ignore_mismatch
+  }
+  
   class_list <- vapply(outs, function(x)
     if (is.list(x) && length(class(x)) > 0)
       class(x)[1] else NA_character_, character(1))
@@ -658,8 +699,7 @@ md_merge <- function(...) {
     "dur", "dti", "add_ind_var",
     "grouped", "groups",
     "set_target", "which_meta", "parallel",
-    "sigma", "tau_p", "tau_v", "mu",
-    "meanfitList"
+    "sigma", "tau_p", "tau_v", "mu"
   )
   
   # Helper function to compare metadata element-wise:
@@ -671,10 +711,26 @@ md_merge <- function(...) {
     
     for (field in metadata_fields) {
       vals <- lapply(metadatas, `[[`, field)
-      identicals <- vapply(vals[-1], function(v)
-        identical(v, vals[[1]]), logical(1))
+      
+      if (field %in% c("tau_p", "tau_v")) {
+        ref_val <- round(ref[[field]]$All$value, 1)
+        identicals <- vapply(vals[-1], function(v) {
+          if (is.null(v)) return(FALSE)
+          all(round(v$All$value, 1) == ref_val)
+        }, logical(1))
+      } else {
+        # Standard identical check
+        identicals <- vapply(vals[-1], function(v)
+          identical(v, vals[[1]]), logical(1))
+      }
+      
       if (!all(identicals)) {
         mismatches[[field]] <- vals
+        if (field %in% c("tau_p", "tau_v")) {
+          stop(sprintf(
+            "Metadata field '%s' does not match at precision 0.1", 
+            field))
+        }
       } else {
         mismatches[[field]] <- NULL
       }
@@ -687,9 +743,12 @@ md_merge <- function(...) {
   metadatas <- lapply(outs, function(x) x[metadata_fields])
   
   # Check and stop if mismatches exist:
-  mismatched_elements <- find_mismatches(metadatas)
+  mismatched_elements <- NULL
+  if (!ignore_mismatch) {
+    mismatched_elements <- find_mismatches(metadatas)
+  }
   
-  if (length(mismatched_elements) > 0) {
+  if (length(mismatched_elements) > 0 && !ignore_mismatch) {
     mismatched_names <- names(mismatched_elements)
     stop(
       "Metadata mismatch across simulation outputs. Merge aborted.\n",
@@ -698,17 +757,6 @@ md_merge <- function(...) {
       "Inspect elements in `mismatched_elements` for more detail."
     )
   }
-  
-  # # Extract metadata:
-  # metadatas <- lapply(outs, function(x) x[metadata_fields])
-  # # Check that all metadata are identical:
-  # if (!all(vapply(metadatas, function(m) 
-  #   identical(m, metadatas[[1]]), logical(1)))) {
-  #   stop(
-  #     "Metadata mismatch across simulation outputs. Merge aborted.",
-  #     "\nEnsure all inputs share the same design and settings."
-  #   )
-  # }
   
   # Helper to merge and sequentially rename list elements:
   .merge_named_lists <- function(outs, field) {
@@ -749,8 +797,8 @@ md_merge <- function(...) {
   } else NULL
   
   meta <- outs[[1]][metadata_fields]
+  meta$meanfitList <- outs[[1]]$meanfitList
   meta$n_individuals <- length(combined_simList)
-  
   out <- c(meta, list(
     simList = combined_simList,
     simfitList = combined_simfitList,

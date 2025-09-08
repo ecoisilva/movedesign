@@ -1,4 +1,46 @@
 
+#' @title Coerce object to a `movedesign` object
+#'
+#' @description
+#' Internal constructor that validates and wraps a list object as a
+#' `movedesign_preprocess` object. The function checks that the input
+#' file contains required metadata fields and either output objects.
+#' 
+#' @keywords internal
+#' 
+#' @noRd
+.as_md <- function(obj) {
+  
+  if (!is.list(obj)) {
+    stop("Object must be a list.")
+  }
+  
+  metadata_fields <- c(
+    "data", "data_type",
+    "get_species", "n_individuals",
+    "dur", "dti", "add_ind_var",
+    "grouped", "groups",
+    "set_target", "which_meta", "parallel",
+    "sigma", "tau_p", "tau_v", "mu",
+    "meanfitList"
+  )
+  
+  missing_fields <- setdiff(metadata_fields, names(obj))
+  if (length(missing_fields) > 0) {
+    stop("Missing required metadata fields: ",
+         paste(missing_fields, collapse = ", "))
+  }
+  
+  if (!("akdeList" %in% names(obj) ||
+        "ctsdList" %in% names(obj))) {
+    stop("Object must contain either 'akdeList' or 'ctsdList'.")
+  }
+  
+  class(obj) <- unique(c("movedesign_preprocess", class(obj)))
+  return(obj)
+}
+
+
 #' @title Construct a `movedesign` S3 object
 #' 
 #' @description
@@ -399,7 +441,7 @@ summary.movedesign_check <- function(object, ...) {
     n_eval <- length(recent_cummean_i)
     type_i <- diag$type[i]
     stabilized_at_i <- object$stabilized_at %>%
-      dplyr::filter(type == .data$type_i) %>%
+      dplyr::filter(type == type_i) %>%
       dplyr::pull(.data$idx_stable_start)
     
     if (has_groups) {
