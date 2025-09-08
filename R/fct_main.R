@@ -639,17 +639,13 @@ md_run <- function(design, trace = TRUE) {
 #'   \code{\link{md_run}}
 #'
 #' @export
-md_merge <- function(...) {
+md_merge <- function(..., ignore_mismatch = FALSE) {
   outs <- list(...)
   
   if (length(outs) == 1 &&
       is.list(outs[[1]]) &&
       all(sapply(outs[[1]], is.list))) {
     outs <- outs[[1]]
-  }
-  
-  if (is.null(ignore_mismatch)) {
-    ignore_mismatch <- FALSE
   }
   
   class_list <- vapply(outs, function(x)

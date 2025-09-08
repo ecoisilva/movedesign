@@ -9,10 +9,57 @@
 #' @keywords internal
 #' 
 #' @noRd
-.as_md <- function(obj) {
+.as_md <- function(obj, outputs = NULL, ...) {
+  
+  dots <- list(...)
   
   if (!is.list(obj)) {
     stop("Object must be a list.")
+  }
+  
+  if (is.null(dots[["ignore_mismatch"]])) {
+    ignore_mismatch <- FALSE
+  } else {
+    ignore_mismatch <- dots[["ignore_mismatch"]]
+  }
+  
+  if (!is.null(outputs)) {
+    
+    n_replicates <- length(obj)
+    
+    if (length(outputs) > 0) {
+      summary <- data.table::rbindlist(
+        outputs, fill = TRUE, idcol = "replicate")
+    } else {
+      summary <- data.table::data.table()
+    }
+    
+    if (length(obj) > 0) {
+      
+      if (obj[[1]]$grouped) {
+        group_keys <- c("A", "B")
+        common_names <- obj[[1]]$groups[[1]]
+        merged_ids <- lapply(obj, function(x) x$groups[[2]])
+        merged_ids <- Reduce(
+          function(x, y) Map(c, x, y), merged_ids)
+        
+        for (x in seq_along(obj)) {
+          obj[[x]]$groups <- list(common_names, merged_ids)
+        }
+      }
+      
+      merged <- md_merge(obj, ignore_mismatch = ignore_mismatch)
+      class(merged) <- unique(c("moveoutput", class(merged)))
+    } else {
+      merged <- NULL
+    }
+    
+    merged$n_replicates <- n_replicates
+    
+    out <- structure(
+      list(data = merged, summary = summary), class = "movedesign")
+    class(out) <- unique(c("movedesign_output", class(out)))
+    return(out)
   }
   
   metadata_fields <- c(
