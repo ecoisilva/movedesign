@@ -7,7 +7,7 @@
 
 [![CRAN
 version](https://img.shields.io/cran/v/movedesign?color=%23009da0&label=CRAN%20version)](https://CRAN.R-project.org/package=movedesign)
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.16601218-%23009da0.svg)](https://zenodo.org/records/16601218)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.7576243-%23009da0.svg)](https://zenodo.org/records/16601218)
 <br> [![Project Status: Active – The project has reached a stable,
 usable state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
