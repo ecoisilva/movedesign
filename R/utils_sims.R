@@ -352,7 +352,7 @@ generate_seed <- function(seed_list = NULL) {
   
   for (i in seq_along(date_seq)) {
     # Generate time offsets (in seconds) for this day
-    seconds_since_midnight <- movedesign:::.generate_day_night_t(
+    seconds_since_midnight <- .generate_day_night_t(
       start_day = daytime_start,
       start_night = nighttime_start,
       dti_day = dti_day,

@@ -600,6 +600,9 @@ md_run <- function(design, trace = TRUE) {
 #'   minimum, the elements `simList`, `simfitList`, and `seedList`.
 #'   Optional elements such as `akdeList` and `ctsdList` 
 #'   are merged if present.
+#' @param ignore_mismatch Logical; if `TRUE`, the function will
+#'   attempt to merge inputs even if they have mismatched columns.
+#'   Use with caution.
 #'
 #' @return
 #' A single `movedesign_output` object that contains all merged
