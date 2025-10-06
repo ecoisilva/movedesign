@@ -2042,8 +2042,8 @@ md_check <- function(obj,
     }
     
     subtitle_text <- if (length(failed_groups) == 0) {
-      sprintf("All groups converged: last %d values within \u00b1 %g",
-              n_converge - 1, tol)
+      sprintf("Converged: last %d values within \u00b1 %g",
+              n_converge, tol)
     } else if (length(set_target) > 1) {
       paste(
         sprintf("Did not converge: %s (tolerance = \u00b1 %g)", 

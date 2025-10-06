@@ -4,7 +4,7 @@
 \alias{md_merge}
 \title{Merge multiple simulation outputs}
 \usage{
-md_merge(...)
+md_merge(..., ignore_mismatch = FALSE)
 }
 \arguments{
 \item{...}{One or more objects of class \code{movedesign_preprocess},

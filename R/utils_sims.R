@@ -114,7 +114,7 @@ generate_seed <- function(seed_list = NULL) {
   }
   
   obj <- lapply(obj, function(x) {
-    to_keep <- round(nrow(x) * (1 - prob), 0)
+    to_keep <- round(nrow(x) * (prob), 0)
     to_keep_vec <- sort(sample(seq_len(nrow(x)), to_keep, replace = FALSE))
     return(x[to_keep_vec, ])
     
@@ -122,7 +122,7 @@ generate_seed <- function(seed_list = NULL) {
   
   return(obj)
   
-} # end of function, .trigger_data_loss()
+} # end of function, .trigger_fix_success()
 
 #' @title Trigger location error
 #' 
