@@ -6,6 +6,7 @@
 \usage{
 md_plot(
   obj,
+  stat = c("mean", "median"),
   ci = 0.95,
   method = "HDI",
   pal = c("#007d80", "#A12C3B"),
@@ -22,6 +23,9 @@ md_plot(
 \item{error_uci}{Upper credible interval bound for error.}
 \item{group}{(Optional) Group label for comparing densities.}
 }}
+
+\item{stat}{Character string specifying which summary statistic to
+display. Must be \code{"mean"} or \code{"median"}. Defaults to \code{"mean"}.}
 
 \item{ci}{Numeric scalar between 0 and 1. The probability of the
 credible interval (CI) to be estimated. Default to \code{0.95} (95\%).}

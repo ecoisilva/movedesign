@@ -1025,7 +1025,8 @@ md_replicate <- function(obj,
 #'     \item{error_uci}{Upper credible interval bound for error.}
 #'     \item{group}{(Optional) Group label for comparing densities.}
 #'   }
-#'
+#' @param stat Character string specifying which summary statistic to
+#'   display. Must be `"mean"` or `"median"`. Defaults to `"mean"`.
 #' @param ci Numeric scalar between 0 and 1. The probability of the
 #'   credible interval (CI) to be estimated. Default to `0.95` (95%).
 #' @param method Character. Credible interval estimation method (passed
@@ -1104,12 +1105,65 @@ md_replicate <- function(obj,
 #' @importFrom bayestestR ci
 #' @export
 md_plot <- function(obj,
+                    stat = c("mean", "median"),
                     ci = 0.95,
                     method = "HDI",
                     pal = c("#007d80", "#A12C3B"),
                     m = NULL) {
   
+  stat <- match.arg(stat)
+  
+  get_stat <- function(x) if (stat == "mean")
+    mean(x, na.rm = TRUE) else median(x, na.rm = TRUE)
+  
+  get_density_data <- function(d, tp, gr = NULL) {
+    if (nrow(d) == 0) return(NULL)
+    
+    dens <- stats::density(d$error, na.rm = TRUE)
+    cri <- suppressMessages(
+      quiet(.extract_cri(d$error, method = method, ci = ci)))
+    
+    df <- data.frame(
+      x = dens$x,
+      y = dens$y,
+      type = rep(tp, length(dens$x)),
+      group = if (is.null(gr)) NA else rep(gr, length(dens$x)))
+    
+    if (!is.na(cri$lci) && !is.na(cri$uci)) {
+      df <- df[df$x >= cri$lci & df$x <= cri$uci, , drop = FALSE]
+    }
+    
+    if (nrow(df) == 0) return(NULL)
+    return(df)
+  }
+  
+  get_text_data <- function(d, tp, gr = NULL) {
+    if (nrow(d) == 0) return(NULL)
+    
+    cri <- suppressMessages(
+      quiet(.extract_cri(d$error, method = method, ci = ci)))
+    dens <- stats::density(d$error, na.rm = TRUE)
+    
+    max_y <- max(dens$y)
+    x_range <- diff(range(d$error_lci, d$error_uci, na.rm = TRUE))
+    x_adjust <- x_range * 0.005
+    
+    stat_value <- get_stat(d$error)
+    
+    return(data.frame(
+      group = if (is.null(gr)) NA else gr,
+      type = tp,
+      stat_value = stat_value,
+      lci = cri$lci,
+      uci = cri$uci,
+      max_y = max_y,
+      x_adjust = x_adjust,
+      stringsAsFactors = FALSE))
+  }
+  
   x <- y <- type <- caption <- group <- NULL
+  lci <- uci <- stat_value <- NULL
+  stat <- match.arg(stat)
   
   if (!inherits(obj, "movedesign") ||
       !("summary" %in% names(obj))) {
@@ -1138,10 +1192,8 @@ md_plot <- function(obj,
   }
   
   data <- dplyr::mutate(
-    data, dplyr::across(
-      type, ~factor(., levels = c("hr", "ctsd"))))
+    data, type = factor(type, levels = c("hr", "ctsd")))
   set_target <- obj$data$set_target
-  
   facet_by_type <- length(set_target) == 2
   
   has_groups <- "group" %in% names(data) &&
@@ -1153,25 +1205,9 @@ md_plot <- function(obj,
   if (!has_groups) {
     
     data <- data[data$group == "All", ]
-    dens <- do.call(
-      rbind,
-      lapply(unique(data$type), function(tp) {
-        d <- data[data$type == tp, ]
-        
-        if (nrow(d) == 0) return(NULL)
-        dens <- stats::density(d$error, na.rm = TRUE)
-        df <- data.frame(x = dens$x, y = dens$y, type = tp)
-        cri <- suppressMessages(quiet(
-          .extract_cri(d$error, method = method, ci = ci)))
-        if (!is.na(cri$lci) && !is.na(cri$uci)) {
-          df_cri <- subset(df, x >= cri$lci & x <= cri$uci)
-          if (nrow(df_cri) > 0) {
-            df_cri$shaded <- TRUE
-            return(df_cri)
-          }
-        }
-        
-        NULL }))
+    dens <- dplyr::bind_rows(
+      lapply(unique(data$type),
+             \(tp) get_density_data(data[data$type == tp, ], tp)))
     
     if (is.null(dens)) {
       warning(paste(
@@ -1179,66 +1215,40 @@ md_plot <- function(obj,
         "or the input data contains too few replicates,",
         "returning NAs."))
       caption <- paste0("No credible intervals (CI) available; ",
-                        "dotted line: mean of all replicates")
+                        "dotted line: ", stat, " of all replicates")
     } else {
       caption <- paste0("Shaded region: ", as.integer(ci * 100),
                         "% credible interval (CI); ",
-                        "dotted line: mean of all replicates")
+                        "dotted line: ", stat, " of all replicates")
     }
     
-    text <- do.call(
-      rbind, lapply(unique(data$type), function(tp) {
-        d <- data[data$type == tp, ]
-        cri <- suppressMessages(quiet(
-          .extract_cri(d$error, method = method, ci = ci)))
-        dens <- stats::density(d$error, na.rm = TRUE)
-        max_y <- max(dens$y)
-        x_range <- max(d$error_uci, na.rm = TRUE) -
-          min(d$error_lci, na.rm = TRUE)
-        x_adjust <- x_range * 0.005
-        
-        return(data.frame(type = tp,
-                          mean = mean(d$error, na.rm = TRUE),
-                          lci = cri$lci,
-                          uci = cri$uci,
-                          max_y = max_y,
-                          x_adjust = x_adjust))
-      }))
+    text <- dplyr::bind_rows(
+      lapply(unique(data$type),
+             \(tp) get_text_data(data[data$type == tp, ], tp)))
     
-    vline_summary <- data %>%
-      dplyr::group_by(.data$group, .data$type) %>%
-      dplyr::summarise(
-        mean_error = mean(.data$error, na.rm = TRUE),
-        .groups = "drop") %>%
-      dplyr::mutate(add_vline = abs(.data$mean_error) < 0.8) %>%
-      dplyr::filter(.data$add_vline) %>%
+    overlap_zero <- text %>%
+      dplyr::filter(
+        !is.na(lci) & !is.na(uci) & lci <= 0 & uci >= 0) %>%
       dplyr::mutate(xintercept = 0)
     
     p <- ggplot2::ggplot(data = data) +
-      
       ggplot2::geom_vline(
-        data = vline_summary,
+        data = overlap_zero,
         mapping = ggplot2::aes(
           xintercept = .data$xintercept,
           group = interaction(.data$group, .data$type)),
-        color = "grey50",
-        linetype = "solid") +
-      
-      # ggplot2::geom_vline(
-      #   xintercept = 0,
-      #   color = "grey50",
-      #   linetype = "solid") +
+        color = "grey40",
+        linetype = "solid",
+        linewidth = 0.8) +
       
       ggplot2::geom_line(
-        data = do.call(
-          rbind,
+        data = dplyr::bind_rows(
           lapply(unique(data$type), function(tp) {
             d <- data[data$type == tp, ]
             if (nrow(d) == 0) return(NULL)
             dens <- stats::density(d$error, na.rm = TRUE)
             data.frame(x = dens$x, y = dens$y, type = tp)
           })),
-        
         mapping = ggplot2::aes(x = .data$x,
                                y = .data$y,
                                color = .data$type),
@@ -1262,18 +1272,20 @@ md_plot <- function(obj,
       ggplot2::geom_vline(
         data = data.frame(
           type = unique(data$type),
-          mean = tapply(data$error, data$type, mean, na.rm = TRUE)),
-        mapping = ggplot2::aes(xintercept = .data$mean,
-                               color = .data$type),
-        linetype = "dotted", linewidth = 1) +
+          stat_value = tapply(data$error, data$type, get_stat)),
+        ggplot2::aes(xintercept = .data$stat_value,
+                     color = .data$type),
+        linetype = "dotted", linewidth = 1
+      ) +
       
       ggplot2::geom_text(
         data = text,
-        ggplot2::aes(x = .data$mean + .data$x_adjust,
+        ggplot2::aes(x = .data$stat_value + .data$x_adjust,
                      y = .data$max_y * 1.05,
                      label = sprintf(
-                       "Mean = %s", 
-                       scales::percent(.data$mean, 0.1)),
+                       "%s = %s",
+                       tools::toTitleCase(stat),
+                       scales::percent(stat_value, 0.1)),
                      color = .data$type),
         size = 6, 
         hjust = -0.05, 
@@ -1911,10 +1923,13 @@ md_plot_preview <- function(obj,
 #' @export
 md_check <- function(obj,
                      m = NULL,
-                     tol = 0.05,
-                     n_converge = 10,
+                     tol = 0.01,
+                     n_converge = 20,
                      plot = TRUE,
                      pal = c("#007d80", "#A12C3B")) {
+  
+  cummean <- delta_cummean <- last_cummean <- NULL
+  type <- group <- has_converged <- NULL
   
   if (!inherits(obj, "movedesign") ||
       !("summary" %in% names(obj))) {
@@ -1955,15 +1970,20 @@ md_check <- function(obj,
   data_subset <- data %>%
     dplyr::group_by(.data$type, .data$group) %>%
     dplyr::mutate(
-      cummean = cumsum(.data[[variable]]) / dplyr::row_number()
-    ) %>%
+      cummean = cumsum(.data[[variable]]) / dplyr::row_number(),
+      cumvar = cumsum((.data[[variable]] - cummean)^2) / 
+        dplyr::row_number()) %>%
     dplyr::ungroup()
   
   dt_plot <- data_subset %>%
     dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::select(.data$replicate,
+                  .data$type, .data$group, 
+                  .data$error, .data$cummean, .data$cumvar) %>%
     dplyr::mutate(
       index = dplyr::row_number(),
-      value = c(NA, abs(diff(.data$cummean)))) %>%
+      delta_cummean = tail(.data$cummean, 1) - .data$cummean,
+      has_converged = abs(delta_cummean) < tol) %>%
     dplyr::ungroup()
   
   get_r <- ifelse(has_groups,
@@ -1977,44 +1997,51 @@ md_check <- function(obj,
   }  
   
   # Compute convergence diagnostics:
-  diag <- data_subset %>%
+  
+  diag <- dt_plot %>%
     dplyr::group_by(.data$type, .data$group) %>%
     dplyr::summarise(
-      mean_error = mean(.data$error, na.rm = TRUE),
+      last_cummean = tail(data_subset$cummean, 1),
       recent_cummean = list(tail(.data$cummean, n_converge)),
-      recent_deltas = list(abs(diff(.data$recent_cummean[[1]]))),
-      max_delta = max(.data$recent_deltas[[1]], na.rm = TRUE),
-      has_converged = all(.data$recent_deltas[[1]] < tol),
+      recent_delta_cummean = list(tail(.data$delta_cummean, n_converge)),
+      has_converged = all(
+        abs(tail(last_cummean - data_subset$cummean,
+                 n_converge)) < tol),
       .groups = "drop") %>%
     dplyr::arrange(dplyr::desc(.data$type))
   
   if (plot) {
     
-    .find_stable_x <- function(deltas, tol) {
-      n <- length(deltas)
-      below_tol <- deltas < tol
-      for (i in seq_len(n)) {
-        if (is.na(below_tol[i])) next
-        if (below_tol[i] && all(below_tol[i:n], na.rm = TRUE)) {
-          return(i + 1)
+    .find_stable_x <- function(delta_vec, tol) {
+      if(!is.numeric(delta_vec)) stop("delta_vec must be numeric")
+      if(length(delta_vec) == 0) return(NA)
+      
+      abs_delta <- abs(delta_vec)
+      stable_idx <- which(abs_delta <= tol)
+      if(length(stable_idx) == 0) return(NA)
+      
+      for(i in stable_idx) {
+        if(all(abs_delta[i:length(abs_delta)] <= tol)) {
+          return(i)
         }
       }
-      return(NA_integer_)
+      
+      return(NA)
     }
     
-    dt_stable_idx <- data_subset %>%
-      dplyr::select(.data$type, .data$group, .data$cummean) %>%
-      dplyr::group_by(.data$type, .data$group) %>%
-      dplyr::filter(!is.na(.data$cummean)) %>%
-      dplyr::filter(dplyr::n() >= n_converge + 1) %>%
+    dt_stable_idx <- dt_plot %>%
+      dplyr::group_by(type, group) %>%
       dplyr::summarise(
         idx_stable_start = .find_stable_x(
-          deltas = abs(diff(.data$cummean)),
-          tol = tol), .groups = "drop")
-    label_y <- paste0("|", "\u0394", "(cumulative mean)|")
+          delta_vec = delta_cummean, tol = tol),
+        .groups = "drop")
+    
+    label_y <- paste0("|", "\u0394", "(cumulative mean error)|")
     
     dt_plot <- dt_plot %>%
-      dplyr::left_join(diag, by = c("type", "group")) %>%
+      dplyr::left_join(
+        diag %>% dplyr::select(-has_converged),
+        by = c("type", "group")) %>%
       dplyr::left_join(dt_stable_idx, by = c("type", "group"))
     
     dt_rect <- suppressWarnings(
@@ -2045,17 +2072,17 @@ md_check <- function(obj,
     }
     
     subtitle_text <- if (length(failed_groups) == 0) {
-      sprintf("Converged: last %d values within \u00b1 %g",
-              n_converge, tol)
+      sprintf("All groups converged at replicate %d within \u00b1 %g%%",
+              dt_rect$xmin, tol * 100)
     } else if (length(set_target) > 1) {
       paste(
-        sprintf("Did not converge: %s (tolerance = \u00b1 %g)", 
-                failed_groups, tol),
+        sprintf("Did not converge: %s (tolerance = \u00b1 %g%%)", 
+                failed_groups, tol * 100),
         collapse = "\n"
       )
     } else {
-      sprintf("Did not converge: %s (tolerance = \u00b1 %g)", 
-              paste(failed_groups, collapse = ", "), tol)
+      sprintf("Did not converge: %s (tolerance = \u00b1 %g%%)", 
+              paste(failed_groups, collapse = ", "), tol * 100)
     }
     
     dt_plot$type_f <- factor(dt_plot$type, levels = c("hr", "ctsd"))
@@ -2064,15 +2091,15 @@ md_check <- function(obj,
     p <- NULL
     p <- dt_plot %>%
       ggplot2::ggplot(
-        ggplot2::aes(x = .data$index, 
-                     y = .data$value,
+        ggplot2::aes(x = .data$replicate, 
+                     y = .data$delta_cummean,
                      group = .data$group,
                      linetype = .data$group,
                      color = .data$has_converged)) +
       
       { if (length(set_target) > 1)
         ggplot2::facet_wrap(
-          . ~ .data$type_f, # scales = "free",
+          . ~ .data$type_f,
           labeller = ggplot2::labeller(
             type_f = c(
               "hr" = "Home range estimation", 
@@ -2081,8 +2108,11 @@ md_check <- function(obj,
       ggplot2::geom_line(linewidth = 1.1) +
       
       ggplot2::geom_hline(
-        yintercept = tol,
-        linetype = "dashed") +
+        yintercept = 0, linetype = "dashed") +
+      ggplot2::geom_hline(
+        yintercept = tol, linetype = "dashed") +
+      ggplot2::geom_hline(
+        yintercept = -tol, linetype = "dashed") +
       
       { if (nrow(dt_rect) > 0) 
         ggplot2::geom_rect(
@@ -2106,9 +2136,7 @@ md_check <- function(obj,
           "Groups:", values = c("solid", "dashed"),
           drop = FALSE) } +
       
-      ggplot2::scale_y_continuous(
-        expand = ggplot2::expansion(mult = c(0, 0.05)),
-        limits = c(0, NA)) +
+      ggplot2::scale_y_continuous(labels = scales::percent) +
       
       ggplot2::labs(
         title = "Stepwise change in cumulative mean",
@@ -2140,89 +2168,17 @@ md_check <- function(obj,
       p <- p + ggplot2::theme(
         plot.subtitle = ggplot2::element_text(lineheight = 0.7))
     
+    p <- p + theme_movedesign()
     suppressWarnings(print(p))
   }
   
-  # if (verbose) {
-  #   
-  #   for (i in seq_len(nrow(diag))) {
-  #     
-  #     if (has_groups) {
-  #       tg <- paste0(
-  #         ifelse(diag$type[i] == "hr", "home range estimation",
-  #                ifelse(diag$type[i] == "ctsd", "speed estimation",
-  #                       diag$type[i])),
-  #         " - Group ", 
-  #         as.character(diag$group[i]))
-  #     } else {
-  #       tg <- paste0(
-  #         ifelse(diag$type[i] == "hr", "home range estimation",
-  #                ifelse(diag$type[i] == "ctsd", "speed estimation",
-  #                       diag$type[i])))
-  #     }
-  #     
-  #     mean_error_i <- diag$mean_error[i]
-  #     recent_cummean_i <- diag$recent_cummean[[i]]
-  #     max_delta_i <- diag$max_delta[i]
-  #     has_converged_i <- diag$has_converged[i]
-  #     n_eval <- length(recent_cummean_i)
-  #     type_i <- diag$type[i]
-  #     
-  #     if (has_groups) {
-  #       if (i == 1 && type_i == "hr") {
-  #         .header("Home range estimation", 5) }
-  #       if (i == 3 && type_i == "ctsd") {
-  #         .header("Speed \u0026 distance estimation", 5) }
-  #     } else {
-  #       if (i == 1 && type_i == "hr") {
-  #         .header("Home range estimation", 5) }
-  #       if (i == 2 && type_i == "ctsd") {
-  #         .header("Speed \u0026 distance estimation", 5) }
-  #     }
-  #     
-  #     message(sprintf(
-  #       "Convergence check for %s", tg))
-  #     if (abs(mean_error_i) < tol) {
-  #       message(
-  #         "   Mean estimate error: ",
-  #         .msg(paste0(.err_to_txt(mean_error_i), "%"), "success"))
-  #     } else {
-  #       message(
-  #         "   Mean estimate error: ",
-  #         .msg(paste0(.err_to_txt(mean_error_i), "%"), "danger"))
-  #     }
-  #     message(sprintf(
-  #       "   Tolerance: %g, Steps evaluated: %d", tol, n_eval))
-  #     message(sprintf(
-  #       "   Max |\u0394(mean)| in last steps: %g", max_delta_i))
-  #     
-  #     if (has_converged_i) {
-  #       message(sprintf(
-  #         "\u2713 Converged: all %d steps within \u00B1%g.", 
-  #         n_eval - 1, tol))
-  #     } else {
-  #       message(
-  #         .msg("\u2717 Did not converge: ", "danger"),
-  #         "at least one step exceeded tolerance.")
-  #     }
-  #     message("")
-  #   }
-  # }
-  
   structure(list(
-    # recent_deltas = recent_deltas,
-    # max_delta = max_delta,
     grouped = has_groups,
     diagnostics_table = diag,
     tolerance = tol,
     n_converge = n_converge,
     has_converged = diag$has_converged,
-    stabilized_at = dt_stable_idx,
-    cumulative_means = data_subset %>%
-      dplyr::select(c(.data$type,
-                      .data$group,
-                      .data$cummean)) %>%
-      dplyr::arrange(dplyr::desc(.data$type))
+    stabilized_at = dt_stable_idx
   ), class = "movedesign_check")
   
 }
@@ -3487,4 +3443,3 @@ md_optimize <- function(obj,
   return(out)
   
 }
-

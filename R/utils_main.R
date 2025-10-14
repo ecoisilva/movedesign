@@ -481,9 +481,8 @@ summary.movedesign_check <- function(object, ...) {
     }
     
     type_i <- diag$type[i]
-    mean_error_i <- diag$mean_error[i]
+    mean_error_i <- diag$last_cummean[i]
     recent_cummean_i <- diag$recent_cummean[[i]]
-    max_delta_i <- diag$max_delta[i]
     has_converged_i <- diag$has_converged[i]
     n_eval <- length(recent_cummean_i)
     type_i <- diag$type[i]
@@ -515,14 +514,12 @@ summary.movedesign_check <- function(object, ...) {
         .msg(paste0(.err_to_txt(mean_error_i), "%"), "danger"))
     }
     message(sprintf(
-      "   Tolerance: %g, Steps evaluated: %d", tol, n_eval))
-    message(sprintf(
-      "   Max |\u0394(mean)| in last steps: %g", max_delta_i))
+      "   Tolerance: %g%%, Steps evaluated: %d", tol * 100, n_eval))
     
     if (has_converged_i) {
       message(sprintf(
-        "\u2713 Converged: all %d steps within \u00B1 %g.", 
-        n_eval, tol))
+        "\u2713 Converged: all %d steps within \u00B1 %g%%.", 
+        n_eval, tol * 100))
       message(sprintf(
         "    Stabilized at replicate %d.", stabilized_at_i))
     } else {
