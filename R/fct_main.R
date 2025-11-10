@@ -1239,7 +1239,7 @@ md_plot <- function(obj,
         "or the input data contains too few replicates,",
         "returning NAs."))
       caption <- paste0("No credible intervals (CI) available; ",
-                        "A = blue, B = red; dotted lines: means")
+                        "dotted line: ", stat, " of all replicates")
       keep_segment <- FALSE
     }
     
