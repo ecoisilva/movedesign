@@ -251,10 +251,10 @@ summary.movedesign_input <- function(object, ...) {
     .msg(paste0("   Number of individuals requested: "), "main"),
     width = 3, justify = "left"), object$n_individuals)
   if (object$which_m == "set_m") {
-    message(format(
-      .msg(paste0("   Population sample size requested: "), "main"),
-      width = 3, justify = "left"),
-      object$n_individuals) 
+    # message(format(
+    #   .msg(paste0("   Population sample size requested: "), "main"),
+    #   width = 3, justify = "left"),
+    #   object$n_individuals) 
     message(format(
       .msg(paste0("   Sampling duration requested: "), "main"),
       width = 3, justify = "left"),
@@ -323,14 +323,6 @@ print.movedesign_input <- function(x, ...) {
 #' @export
 summary.movedesign_preprocess <- function(object, ...) {
   
-  .header <- function(title, n_dash = 5) {
-    emdash <- "\u2500"
-    header_line <- paste0(
-      strrep(emdash, n_dash), " ", title,
-      " ", strrep(emdash, n_dash), "\n")
-    cat(crayon::bold(header_line))
-  }
-  
   .header("Simulation parameters", 5)
   message(format(
     .msg("   Number of individuals available: ", "main"),
@@ -387,14 +379,6 @@ summary.movedesign_output <- function(object, ...) {
       crayon::green("Yes") else crayon::red("No")
   }
   
-  .header <- function(title, n_dash = 5) {
-    emdash <- "\u2500"
-    header_line <- paste0(
-      strrep(emdash, n_dash), " ", title,
-      " ", strrep(emdash, n_dash), "\n")
-    cat(crayon::bold(header_line))
-  }
-  
   as.movedesign <- function(x) {
     known_design <- c(
       "data",
@@ -416,11 +400,33 @@ summary.movedesign_output <- function(object, ...) {
   }
   summary(as.movedesign(object))
   
+  sim_counts <- object$summary %>%
+    dplyr::group_by(replicate) %>%
+    dplyr::summarise(n_sims = dplyr::n()) %>%
+    dplyr::ungroup()
+  same_n <- length(unique(sim_counts$n_sims)) == 1
+  
+  # if (!same_n) {
+  #   warning("Replicates have different numbers of simulations!")
+  # }
+  
   .header("Simulation details", 5)
+  message(format(
+    .msg(paste0("   Total number of replicates: "), "main"),
+    width = 3, justify = "left"),
+    max(object$summary$replicate, na.rm = TRUE))
   message(format(
     .msg(paste0("   Total number of simulations: "), "main"),
     width = 3, justify = "left"),
     length(object$data$simList))
+  message(format(
+    .msg(paste0("   Simulations per replicate: "), "main"),
+    width = 3, justify = "left"),
+    object$summary %>%
+      dplyr::group_by(replicate) %>%
+      dplyr::pull(m) %>%
+      max(na.rm = TRUE))
+  
   if (!is.null(object$data$grouped))
     if (object$data$grouped) {
       message(format(
@@ -622,10 +628,10 @@ print.movedesign_report <- function(x, ...) {
   emdash <- "\u2500"
   header_line <- paste0(
     strrep(emdash, n_dash), " ", title,
-    " ", strrep(emdash, n_dash), "\n")
+    ":") # " ", strrep(emdash, n_dash), "\n")
   cat(crayon::bold(header_line))
+  
 }
-
 
 # Internal utility for styled message output.
 #' @noRd

@@ -1150,6 +1150,11 @@ md_plot <- function(obj,
     
     stat_value <- get_stat(d$error)
     
+    # Check if cri contains NAs
+    has_na_cri <- any(is.na(cri$lci)) || any(is.na(cri$uci))
+    note_msg <- ifelse(has_na_cri,
+                       "CI contains NA values", NA_character_)
+    
     return(data.frame(
       group = if (is.null(gr)) NA else gr,
       type = tp,
@@ -1158,6 +1163,7 @@ md_plot <- function(obj,
       uci = cri$uci,
       max_y = max_y,
       x_adjust = x_adjust,
+      note = note_msg,
       stringsAsFactors = FALSE))
   }
   
@@ -1211,7 +1217,7 @@ md_plot <- function(obj,
     
     if (is.null(dens)) {
       warning(paste(
-        "The credible intervals (`ci`) may be too large",
+        "`ci` may be too large",
         "or the input data contains too few replicates,",
         "returning NAs."))
       caption <- paste0("No credible intervals (CI) available; ",
@@ -1225,6 +1231,17 @@ md_plot <- function(obj,
     text <- dplyr::bind_rows(
       lapply(unique(data$type),
              \(tp) get_text_data(data[data$type == tp, ], tp)))
+    
+    keep_segment <- TRUE
+    if (any(is.na(text$lci))) {
+      warning(paste(
+        "The credible intervals (`ci`) may be too large",
+        "or the input data contains too few replicates,",
+        "returning NAs."))
+      caption <- paste0("No credible intervals (CI) available; ",
+                        "A = blue, B = red; dotted lines: means")
+      keep_segment <- FALSE
+    }
     
     overlap_zero <- text %>%
       dplyr::filter(
@@ -1260,7 +1277,7 @@ md_plot <- function(obj,
         shape = "|", size = 8, alpha = 0.8,
         inherit.aes = FALSE) +
       
-      { if (!is.null(dens) && nrow(dens) > 0)
+      { if (!is.null(dens) && nrow(dens) > 0 && keep_segment)
         ggplot2::geom_area(
           data = dens,
           mapping = ggplot2::aes(
@@ -1292,27 +1309,32 @@ md_plot <- function(obj,
         show.legend = FALSE) +
       
       { if (!is.null(dens) && nrow(dens) > 0)
-        ggplot2::geom_text(
-          data = text,
-          ggplot2::aes(
-            x = .data$lci - .data$x_adjust, y = 0,
-            label = sprintf(
-              "LCI = %s", scales::percent(.data$lci, 0.1)),
-            color = .data$type),
-          size = 6, 
-          vjust = -3, hjust = 1, 
-          show.legend = FALSE) } +
-      { if (!is.null(dens) && nrow(dens) > 0)
-        ggplot2::geom_text(
-          data = text,
-          ggplot2::aes(
-            x = .data$uci + .data$x_adjust, y = 0,
-            label = sprintf(
-              "UCI = %s", scales::percent(.data$uci, 0.1)),
-            color = .data$type),
-          size = 6,
-          vjust = -3, hjust = 0, 
-          show.legend = FALSE) } +
+        if (!any(is.na(text$lci))) {
+          ggplot2::geom_text(
+            data = text,
+            ggplot2::aes(
+              x = .data$lci - .data$x_adjust, y = 0,
+              label = sprintf(
+                "LCI = %s", scales::percent(.data$lci, 0.1)),
+              color = .data$type),
+            size = 6, 
+            vjust = -3, hjust = 1, 
+            show.legend = FALSE) }
+      } +
+      
+      { if (!is.null(dens) && nrow(dens) > 0) 
+        if (!any(is.na(text$lci))) {
+          ggplot2::geom_text(
+            data = text,
+            ggplot2::aes(
+              x = .data$uci + .data$x_adjust, y = 0,
+              label = sprintf(
+                "UCI = %s", scales::percent(.data$uci, 0.1)),
+              color = .data$type),
+            size = 6,
+            vjust = -3, hjust = 0, 
+            show.legend = FALSE) }
+      } +
       
       { if (length(set_target) > 1)
         ggplot2::facet_wrap(
@@ -1389,7 +1411,7 @@ md_plot <- function(obj,
     
     if (is.null(dens)) {
       warning(paste(
-        "The credible intervals (`ci`) may be too large",
+        "`ci` may be too large",
         "or the input data contains too few replicates,",
         "returning NAs."))
       caption <- paste0("No credible intervals (CI) available; ",
@@ -1973,7 +1995,8 @@ md_check <- function(obj,
       cummean = cumsum(.data[[variable]]) / dplyr::row_number(),
       cumvar = cumsum((.data[[variable]] - cummean)^2) / 
         dplyr::row_number()) %>%
-    dplyr::ungroup()
+    dplyr::ungroup() %>%
+    suppressWarnings()
   
   dt_plot <- data_subset %>%
     dplyr::group_by(.data$type, .data$group) %>%
@@ -1984,7 +2007,8 @@ md_check <- function(obj,
       index = dplyr::row_number(),
       delta_cummean = tail(.data$cummean, 1) - .data$cummean,
       has_converged = abs(delta_cummean) < tol) %>%
-    dplyr::ungroup()
+    dplyr::ungroup() %>%
+    suppressWarnings()
   
   get_r <- ifelse(has_groups,
                   length(data_subset$cummean) / 2,
@@ -2008,7 +2032,8 @@ md_check <- function(obj,
         abs(tail(last_cummean - data_subset$cummean,
                  n_converge)) < tol),
       .groups = "drop") %>%
-    dplyr::arrange(dplyr::desc(.data$type))
+    dplyr::arrange(dplyr::desc(.data$type)) %>%
+    suppressWarnings()
   
   if (plot) {
     
@@ -2107,12 +2132,9 @@ md_check <- function(obj,
       
       ggplot2::geom_line(linewidth = 1.1) +
       
-      ggplot2::geom_hline(
-        yintercept = 0, linetype = "dashed") +
-      ggplot2::geom_hline(
-        yintercept = tol, linetype = "dashed") +
-      ggplot2::geom_hline(
-        yintercept = -tol, linetype = "dashed") +
+      ggplot2::geom_hline(yintercept = 0) +
+      ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
+      ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
       
       { if (nrow(dt_rect) > 0) 
         ggplot2::geom_rect(
@@ -2145,7 +2167,7 @@ md_check <- function(obj,
         y = label_y
       ) +
       
-      ggplot2::theme_classic() +
+      # theme_movedesign() +
       ggplot2::theme(
         text = ggplot2::element_text(size = 18),
         strip.text = ggplot2::element_text(size = 18),
@@ -2155,9 +2177,7 @@ md_check <- function(obj,
           color = NA, fill = NA),
         legend.position = "bottom",
         legend.key.width = ggplot2::unit(1, "cm"),
-        plot.title = ggplot2::element_text(face = "bold"),
         plot.subtitle = ggplot2::element_text(face = "italic"),
-        axis.title = ggplot2::element_text(face = "bold"),
         plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
       ggplot2::guides(color = "none", fill = "none")
     
@@ -2168,7 +2188,6 @@ md_check <- function(obj,
       p <- p + ggplot2::theme(
         plot.subtitle = ggplot2::element_text(lineheight = 0.7))
     
-    p <- p + theme_movedesign()
     suppressWarnings(print(p))
   }
   
