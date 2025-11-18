@@ -423,16 +423,17 @@ summary.movedesign_output <- function(object, ...) {
     .msg(paste0("   Simulations per replicate: "), "main"),
     width = 3, justify = "left"),
     object$summary %>%
-      dplyr::group_by(replicate) %>%
-      dplyr::pull(m) %>%
+      dplyr::group_by(.data$replicate) %>%
+      dplyr::pull(.data$m) %>%
       max(na.rm = TRUE))
   
   if (!is.null(object$data$grouped))
     if (object$data$grouped) {
       message(format(
-        .msg(paste0("   Per group: "), "main"),
+        .msg(paste0("   Simulations per replicate per group: "), "main"),
         width = 3, justify = "left"),
-        length(object$data$simList)/2) }
+        length(object$data$simList)/2/
+          object$data$n_replicates) }
   if ("hr" %in% object$data$set_target) {
     message(format(
       .msg(paste0("   Home range outputs available? "), "main"),
@@ -490,6 +491,7 @@ summary.movedesign_check <- function(object, ...) {
     mean_error_i <- diag$last_cummean[i]
     recent_cummean_i <- diag$recent_cummean[[i]]
     has_converged_i <- diag$has_converged[i]
+    
     n_eval <- length(recent_cummean_i)
     type_i <- diag$type[i]
     stabilized_at_i <- object$stabilized_at %>%
@@ -533,7 +535,12 @@ summary.movedesign_check <- function(object, ...) {
         .msg("\u2717 Did not converge: ", "danger"),
         "at least one step exceeded tolerance.")
     }
-    message("")
+    
+    if (!is.null(object$warning)) {
+      warning(sub("^Warning:\\s*", "", object$warning))
+    }
+    
+    # message("")
   }
   
   invisible(object)
