@@ -4,11 +4,20 @@
 \alias{md_plot_preview}
 \title{Preview plot for movedesign workflow outputs (single replicate)}
 \usage{
-md_plot_preview(obj, error_threshold = 0.05, pal = c("#007d80", "#A12C3B"))
+md_plot_preview(
+  obj,
+  n_resamples = NULL,
+  error_threshold = 0.05,
+  pal = c("#007d80", "#A12C3B")
+)
 }
 \arguments{
 \item{obj}{An object of class \code{movedesign_preprocess}
 (output of \code{\link[=md_run]{md_run()}}).}
+
+\item{n_resamples}{Numeric. Must be a positive value. Defines how many
+combinations are generated for each population sample size,
+with each combination producing a new population-level estimate.}
 
 \item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
 to display as a reference in the plot.}
@@ -24,15 +33,21 @@ and horizontal error threshold lines.
 \description{
 Generates a quick visualization of relative error for home range or
 movement speed estimation from a single replicate of a movedesign
-workflow. This functions shows preliminary outputs only and should not
-be used to evaluate study design.
+workflow.
+The plot can display either the estimates from that replicate for a
+random combination of individuals, or, when resampling is enabled,
+summaries derived from repeated draws of individuals at each population
+sample size (based on the specified number of resamples).
 
-Use the output of \code{\link[=md_run]{md_run()}} (a
-\code{movedesign_preprocess} object). Users should run \code{\link[=md_replicate]{md_replicate()}} for
-a full assessment.
+This functions shows preliminary outputs only based on the output of
+\code{\link[=md_run]{md_run()}} (a \code{movedesign_preprocess} object) and should not be used to
+evaluate study design by itself. Instead, users should run
+\code{\link[=md_replicate]{md_replicate()}} and check for convergence with \code{\link[=md_check]{md_check()}}.
 }
 \details{
-For robust results and credible intervals, use \code{\link[=md_replicate]{md_replicate()}}.
+This plot summarizes a single replicate. Credible intervals and robust
+study design conclusions generally require multiple replicates generated
+with \code{\link[=md_replicate]{md_replicate()}}.
 }
 \examples{
 if (interactive()) {
