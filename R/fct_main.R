@@ -2332,7 +2332,7 @@ md_check <- function(obj,
   diag <- dt_plot %>%
     dplyr::group_by(.data$type, .data$group) %>%
     dplyr::summarise(
-      last_cummean = tail(data_subset$cummean, 1),
+      last_cummean = tail(.data$cummean, 1),
       recent_cummean = list(tail(.data$cummean, n_converge)),
       recent_delta_cummean = list(tail(.data$delta_cummean, n_converge)),
       has_converged = all(

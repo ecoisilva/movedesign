@@ -536,11 +536,11 @@ summary.movedesign_check <- function(object, ...) {
         "at least one step exceeded tolerance.")
     }
     
-    if (!is.null(object$warning)) {
-      warning(sub("^Warning:\\s*", "", object$warning))
-    }
-    
     # message("")
+  }
+  
+  if (!is.null(object$warning)) {
+    warning(sub("^Warning:\\s*", "", object$warning))
   }
   
   invisible(object)
