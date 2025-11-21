@@ -494,8 +494,16 @@ summary.movedesign_check <- function(object, ...) {
     
     n_eval <- length(recent_cummean_i)
     type_i <- diag$type[i]
+    
     stabilized_at_i <- object$stabilized_at %>%
       dplyr::filter(type == type_i) %>%
+      { 
+        if (has_groups) {
+          dplyr::filter(., group == as.character(diag$group[i]))
+        } else {
+          .
+        }
+      } %>%
       dplyr::pull(.data$idx_stable_start)
     
     if (has_groups) {

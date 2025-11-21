@@ -2335,9 +2335,7 @@ md_check <- function(obj,
       last_cummean = tail(.data$cummean, 1),
       recent_cummean = list(tail(.data$cummean, n_converge)),
       recent_delta_cummean = list(tail(.data$delta_cummean, n_converge)),
-      has_converged = all(
-        abs(tail(last_cummean - data_subset$cummean,
-                 n_converge)) < tol),
+      has_converged = all(abs(unlist(recent_delta_cummean)) < tol),
       .groups = "drop") %>%
     dplyr::arrange(dplyr::desc(.data$type)) %>%
     suppressWarnings()
@@ -2484,14 +2482,15 @@ md_check <- function(obj,
         
         theme_classic() +
         ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
-          strip.text = ggplot2::element_text(size = 18),
+          text = ggplot2::element_text(size = 16),
+          strip.text = ggplot2::element_text(size = 16),
           strip.background.x = ggplot2::element_rect(
             color = NA, fill = NA),
           strip.background.y = ggplot2::element_rect(
             color = NA, fill = NA),
           legend.position = "bottom",
           legend.key.width = ggplot2::unit(1, "cm"),
+          plot.title = ggplot2::element_text(size = 20),
           plot.subtitle = ggplot2::element_text(face = "italic")) +
         ggplot2::guides(color = "none", fill = "none")
       p
@@ -2501,10 +2500,11 @@ md_check <- function(obj,
       p <- dt_plot %>%
         ggplot2::ggplot(
           ggplot2::aes(x = .data$replicate, 
-                       y = .data$delta_cummean,
-                       group = .data$group,
-                       linetype = .data$group,
-                       color = .data$has_converged)) +
+                       y = .data$delta_cummean)) +
+        
+        ggplot2::geom_hline(yintercept = 0) +
+        ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
+        ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
         
         { if (length(set_target) > 1)
           ggplot2::facet_wrap(
@@ -2514,11 +2514,11 @@ md_check <- function(obj,
                 "hr" = "Home range estimation", 
                 "ctsd" = "Speed \u0026 distance estimation"))) } +
         
-        ggplot2::geom_line(linewidth = 1.1) +
-        
-        ggplot2::geom_hline(yintercept = 0) +
-        ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
-        ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
+        ggplot2::geom_line(
+          linewidth = 0.5, position = position_dodge(width = 0.5)) +
+        ggplot2::geom_point(
+          ggplot2::aes(color = .data$has_converged),
+          size = 4, position = position_dodge(width = 0.5)) +
         
         { if (nrow(dt_rect) > 0) 
           ggplot2::geom_rect(
@@ -2538,6 +2538,8 @@ md_check <- function(obj,
           drop = FALSE) +
         
         ggplot2::scale_y_continuous(labels = scales::percent) +
+        ggplot2::scale_x_continuous(
+          breaks = scales::breaks_pretty()) +
         
         ggplot2::labs(
           title = "Stepwise change in cumulative mean",
@@ -2549,17 +2551,19 @@ md_check <- function(obj,
         
         theme_classic() +
         ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
-          strip.text = ggplot2::element_text(size = 18),
+          text = ggplot2::element_text(size = 16),
+          strip.text = ggplot2::element_text(size = 16),
           strip.background.x = ggplot2::element_rect(
             color = NA, fill = NA),
           strip.background.y = ggplot2::element_rect(
             color = NA, fill = NA),
           legend.position = "bottom",
           legend.key.width = ggplot2::unit(1, "cm"),
+          plot.title = ggplot2::element_text(size = 20),
           plot.subtitle = ggplot2::element_text(face = "italic")) +
-        ggplot2::guides(color = "none", fill = "none") + 
-        ggplot2::guides(linetype = "none")
+        ggplot2::guides(color = "none", fill = "none", 
+                        linetype = "none")
+      
     }
     
     if (length(set_target) > 1)
@@ -2688,7 +2692,7 @@ md_configure <- function(data, models = NULL) {
     }
   }
   
-  cat(.header("Movement design interactive setup:"))
+  cat(.header("Movement design interactive setup"))
   
   # Prompt for species label:
   species <- .ask_input(
@@ -2800,7 +2804,7 @@ md_configure <- function(data, models = NULL) {
     grouped <- TRUE    
   }
   
-  .header("Sampling parameters:")
+  .header("Sampling parameters")
   
   # Sampling duration:
   
@@ -3136,7 +3140,7 @@ md_optimize <- function(obj,
   
   for (target in set_target) {
     optimal_dur <- round((tau_p[[1]]$value[2] %#% 
-                            tau_p[[1]]$unit[2]) * 100)
+                            tau_p[[1]]$unit[2]) * 30)
     optimal_dti <- round((tau_v[[1]]$value[2] %#% 
                             tau_v[[1]]$unit[2]) / 3)
     
@@ -3275,7 +3279,7 @@ md_optimize <- function(obj,
       }
       
       tmpList <- Map(function(prev, curr) {
-        merged <- md_merge(prev, curr)
+        merged <- md_merge(prev, curr, ignore_mismatch = TRUE)
         merged$n_individuals <- m_current
         return(merged)
       }, outList[[i - 1]], tmpList)
@@ -3497,8 +3501,7 @@ md_optimize <- function(obj,
       dplyr::mutate(
         error_threshold = error_threshold,
         overlaps = dplyr::between(
-          .data$error,
-          -.data$error_threshold, .data$error_threshold)) 
+          .data$error, error_threshold, error_threshold)) 
     dt_plot_T <- dplyr::filter(dt_plot, .data$overlaps)
     dt_plot_F <- dplyr::filter(dt_plot, !.data$overlaps)
     
@@ -3518,8 +3521,7 @@ md_optimize <- function(obj,
         .groups = "drop") %>%
       dplyr::mutate(
         overlaps = dplyr::between(
-          .data$error_mean,
-          -.data$error_threshold, .data$error_threshold),
+          .data$error_mean, error_threshold, error_threshold),
         overlaps = factor(.data$overlaps,
                           levels = c("TRUE", "FALSE")),
         top_facet = .data$type == "hr") %>%
@@ -3613,7 +3615,7 @@ md_optimize <- function(obj,
                                 fill = pal,
                                 size = 3),
             order = 1,
-            text.vjust = 4,
+            # text.vjust = 4,
             label.vjust = 0.4,
             theme = ggplot2::theme(
               legend.key.width = ggplot2::unit(2, "lines"),
@@ -3715,7 +3717,7 @@ md_optimize <- function(obj,
                                 fill = pal,
                                 size = 3),
             order = 1,
-            text.vjust = 4,
+            # text.vjust = 4,
             label.vjust = 0.4,
             theme = ggplot2::theme(
               legend.key.width = ggplot2::unit(2, "lines"),
@@ -3825,10 +3827,14 @@ md_optimize <- function(obj,
     merged <- NULL
   }
   
+  if (!plot) p <- NULL
+  
+  merged$n_replicates <- n_replicates
+  
   out <- structure(list(
     data = merged,
     summary = out_summary,
-    plot = ifelse(plot, p, NULL),
+    plot = p,
     error_threshold = error_threshold,
     sampling_duration = paste0(
       round(obj$dur$value, 1), " ", obj$dur$unit),
@@ -3841,3 +3847,6 @@ md_optimize <- function(obj,
   return(out)
   
 }
+
+
+
