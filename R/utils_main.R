@@ -465,7 +465,7 @@ print.movedesign_output <- function(x, ...) {
 #' @export
 summary.movedesign_check <- function(object, ...) {
   
-  type <- NULL
+  . <- type <- group <- NULL
   
   diag <- object$diag
   has_groups <- object$grouped
@@ -632,7 +632,7 @@ summary.movedesign_report <- function(object, ...) {
 #' @param ... Unused
 #' @export
 print.movedesign_report <- function(x, ...) {
-  invisible(x)
+  summary(x) # invisible(x)
 }
 
 
