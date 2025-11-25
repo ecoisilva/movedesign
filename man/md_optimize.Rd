@@ -6,8 +6,8 @@
 \usage{
 md_optimize(
   obj,
-  n_replicates = NULL,
-  error_threshold = NULL,
+  n_replicates = 20,
+  error_threshold = 0.05,
   verbose = FALSE,
   trace = TRUE,
   parallel = FALSE,
@@ -102,7 +102,6 @@ if(interactive()) {
                       models = models)
                       
   out <- md_optimize(tmp,
-                     n_replicates = 25,
                      error_threshold = 0.05,
                      plot = TRUE)
 }
