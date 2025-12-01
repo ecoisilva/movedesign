@@ -1,0 +1,63 @@
+# Issues
+
+## Resolving installation issues
+
+### Check package dependencies:
+
+The `movedesign` package requires many non-default `R` packages. If you
+are met with errors during installation/updates, try restarting your `R`
+session (in the `RStudio` menu bar, this is `Session` \> `Restart R`; or
+close and re-open `R`). Then, reinstall the package using:
+
+``` r
+remotes::install_github("ecoisilva/movedesign", dependencies = TRUE) 
+```
+
+You may also need to explicitly install the `fontawesome` package:
+
+``` r
+install.packages("fontawesome")
+```
+
+### Resolving “failed to install ‘unknown package’ from GitHub”:
+
+If you see this error when installing from GitHub, follow these steps:
+
+**Step 1:** Generate a GitHub personal access token with the following
+command in the RStudio or `R` console:
+
+``` r
+usethis::create_github_token()
+```
+
+This will take you to GitHub to generate a token. Configure the token
+(or just scroll down and generate it using the default settings) and
+copy it to your clipboard (it is a string of letters and numbers).
+
+**Step 2:** Save the personal access token in your R environment. Back
+in `R`, enter:
+
+``` r
+usethis::edit_r_environ()
+```
+
+This will open the `.Renviron` file in a new RStudio window. Add the
+following line to the file:
+
+    GITHUB_PAT="GITHUB_PERSONAL_ACCESS_TOKEN"
+
+Replace `GITHUB_PERSONAL_ACCESS_TOKEN` with the token you just copied
+from GitHub.
+
+**Step 3:** Save this file, close it, and restart `R`. After that, you
+should be able to install `movedesign` through the usual command:
+
+``` r
+remotes::install_github("ecoisilva/movedesign", dependencies = TRUE) 
+```
+
+------------------------------------------------------------------------
+
+If you encounter any other issues, please contact [Inês
+Silva](mailto:i.simoes-silva@hzdr.de?subject=%5Bmovedesign%5D) for
+assistance.
