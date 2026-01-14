@@ -29,12 +29,14 @@ Imports:
     dplyr,
     fontawesome,
     gdtools,
+    gfonts,
     ggiraph,
     ggplot2,
     ggpubr,
     ggtext,
     golem (>= 0.3.2),
     grDevices,
+    grid,
     gsl,
     lubridate,
     parallel,
@@ -56,6 +58,7 @@ Imports:
     stringr,
     terra,
     tidyr,
+    tools,
     utils,
     viridis
 Suggests:

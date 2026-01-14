@@ -276,6 +276,11 @@ mod_tab_about_server <- function(id, rv) {
     # shinyjs::hide(id = "add_ind_var")
     
     observe({
+      
+      # Retrieve all fonts currently available
+      all_gfonts <- NA
+      all_gfonts <- gfonts::get_all_fonts()
+      
       font_available <- tryCatch({
         gdtools::register_gfont(family = "Roboto Condensed")
       })
