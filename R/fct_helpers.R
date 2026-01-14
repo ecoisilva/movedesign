@@ -10,12 +10,30 @@
 #' @noRd 
 get_hrange_file <- function() { 
   
-  url <- paste0( 
-    "https://github.com/ecoisilva/ecoisilva.github.io/", 
-    "raw/refs/heads/main/static/data/sims_hrange.csv" 
-  ) 
+  url <- paste0(
+    "https://github.com/ecoisilva/ecoisilva.github.io/",
+    "raw/refs/heads/main/static/data/sims_hrange.csv"
+  )
   
-  out <- read.csv(url) 
+  read_remote_csv <- function(url) {
+    tryCatch(
+      {
+        utils::read.csv(url, stringsAsFactors = FALSE)
+      },
+      error = function(e) {
+        message(
+          "Remote resource not available or has changed."
+        )
+        invisible(NULL)
+      }
+    )
+  }
+  
+  out <- read_remote_csv(url)
+  
+  if (is.null(out)) {
+    return(invisible(NULL))
+  }
   
   out_sum <- out %>% 
     dplyr::group_by(.data$duration, .data$tau_p) %>% 
@@ -52,7 +70,25 @@ get_speed_file <- function() {
     "raw/refs/heads/main/static/data/sims_speed.csv" 
   ) 
   
-  out <- read.csv(url) 
+  read_remote_csv <- function(url) {
+    tryCatch(
+      {
+        utils::read.csv(url, stringsAsFactors = FALSE)
+      },
+      error = function(e) {
+        message(
+          "Remote resource not available or has changed."
+        )
+        invisible(NULL)
+      }
+    )
+  }
+  
+  out <- read_remote_csv(url)
+  
+  if (is.null(out)) {
+    return(invisible(NULL))
+  }
   
   out_summary <- out %>% 
     dplyr::group_by(.data$tau_v, .data$dur, .data$dti) %>% 
@@ -175,7 +211,7 @@ abbrv_unit <- function(unit, ui_only = TRUE) {
 #' @noRd 
 fix_unit <- function(input, 
                      unit, 
-                     digits = 3, 
+                     digits = 1, 
                      ui = FALSE, 
                      match_all = TRUE, 
                      convert = FALSE)  { 
@@ -292,10 +328,14 @@ fix_unit <- function(input,
       x[i] <- x_new 
     }    
     
-    # Round value: 
-    y[i] <- ifelse((y[i] %% 1) * 10 == 0,  
-                   round(y[i], 0), 
-                   round(y[i], 1)) 
+    if (digits == 1) {
+      # Round value:
+      y[i] <- ifelse((y[i] %% 1) * 10 == 0,  
+                     round(y[i], 0), 
+                     round(y[i], 1)) 
+    } else {
+      y[i] <- round(y[i], digits)
+    }
     
     # Check if value is equal to 1 (e.g. 1 hour), adjust unit: 
     if (x[i] %in% units_tm)  
@@ -337,7 +377,7 @@ fix_unit <- function(input,
 #' @param tau_p_units character vector of tau p units. 
 #' @param tau_v numeric, integer. velocity autocorrelation timescale. 
 #' @param tau_v_units character vector of tau v units. 
-#' @param sigma numeric, integer. semi-variance or sigma. 
+#' @param sigma numeric, integer. location variance. 
 #' @param tau_p_units character vector of sigma units. 
 #' @param mu numeric vector of length 2 in the format c(x, y). 
 #' 
@@ -1348,13 +1388,13 @@ update_f <- function(x, init) {
 } 
 
 
-#' Rough estimation of computation time 
+#' Rough estimation of computation time
 #' 
-#' @description Estimate computation time of ctmm functions. 
-#' @keywords internal 
+#' @description Estimate computation time of ctmm functions.
+#' @keywords internal
 #' 
-#' @importFrom ctmm %#% 
-#' @importFrom dplyr %>% 
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
 #' @noRd 
 #'  
 guess_time <- function(type = "fit", 
@@ -1367,7 +1407,7 @@ guess_time <- function(type = "fit",
                        trace = FALSE, 
                        parallel = TRUE) { 
   
-  error <- ifelse(!is.null(error), TRUE, FALSE) 
+  error <- ifelse(is.null(error), FALSE, error) 
   
   set_id <- 1 
   

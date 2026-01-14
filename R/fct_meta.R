@@ -520,129 +520,133 @@ run_meta_resamples <- function(rv,
           
         } else {
           
-          truth[["All"]] <- true_estimate[[target]]
           
-          out_est[["All"]] <- .get_estimates(out_meta[["All"]]$meta)
-          out_err[["All"]] <- sapply(out_est[["All"]], .get_errors,
-                                     truth = truth[["All"]])
-          
-          truth_ratio <- NA
-          out_ratio <- c("lci" = NA, "est" = NA, "uci" = NA)
-          subpop_detected[["All"]] <- out_meta[["All"]]$
-            logs$subpop_detected
-          
-          dt_meta <- rbind(
-            dt_meta,
-            data.frame(
-              type = target,
-              m = m,
-              sample = sample,
-              truth = truth[["All"]],
-              est = out_est[["All"]][["est"]],
-              lci = out_est[["All"]][["lci"]],
-              uci = out_est[["All"]][["uci"]],
-              error = out_err[["All"]][["est"]],
-              error_lci = out_err[["All"]][["lci"]],
-              error_uci = out_err[["All"]][["uci"]],
-              ratio_truth = truth_ratio,
-              ratio_est = out_ratio[["est"]],
-              ratio_lci = out_ratio[["lci"]],
-              ratio_uci = out_ratio[["uci"]],
-              overlaps = NA,
-              is_grouped = subpop,
-              group = "All",
-              subpop_detected = as.character(
-                subpop_detected[["All"]])))
-          
-        } # end of if (is.null(out_meta[["All"]]))
-        
-        if (subpop) {
-          
-          if (is.null(out_meta[["groups"]])) {
-            for (group in seq_len(n_groups)) {
+          if (subpop) {
+            
+            if (is.null(out_meta[["groups"]])) {
+              for (group in seq_len(n_groups)) {
+                
+                dt_meta <- rbind(
+                  dt_meta,
+                  data.frame(
+                    type = target,
+                    m = m,
+                    sample = sample,
+                    truth = NA,
+                    est = NA,
+                    lci = NA,
+                    uci = NA,
+                    error = NA,
+                    error_lci = NA,
+                    error_uci = NA,
+                    ratio_truth = NA,
+                    ratio_est = NA,
+                    ratio_lci = NA,
+                    ratio_uci = NA,
+                    overlaps = NA,
+                    is_grouped = subpop,
+                    group = nm_groups[group],
+                    subpop_detected = NA))
+                
+              } # end of [group] loop
               
-              dt_meta <- rbind(
-                dt_meta,
-                data.frame(
-                  type = target,
-                  m = m,
-                  sample = sample,
-                  truth = NA,
-                  est = NA,
-                  lci = NA,
-                  uci = NA,
-                  error = NA,
-                  error_lci = NA,
-                  error_uci = NA,
-                  ratio_truth = NA,
-                  ratio_est = NA,
-                  ratio_lci = NA,
-                  ratio_uci = NA,
-                  overlaps = NA,
-                  is_grouped = subpop,
-                  group = nm_groups[group],
-                  subpop_detected = NA))
+            } else {
               
-            } # end of [group] loop
+              truth_ratio <- true_ratio[[target]]
+              ratios <- .get_ratios(out_meta[["groups"]])
+              
+              out_ratio <- c(
+                "lci" = .get_ratios(out_meta[["groups"]])$lci,
+                "est" = .get_ratios(out_meta[["groups"]])$est,
+                "uci" = .get_ratios(out_meta[["groups"]])$uci)
+              
+              # out_ratio_err <- c(
+              #   "lci" = (ratio_lci - truth_ratio) / truth_ratio,
+              #   "est" = (ratio_est - truth_ratio) / truth_ratio,
+              #   "uci" = (ratio_uci - truth_ratio) / truth_ratio)
+              
+              truth[["A"]] <- true_estimate[[paste0(target, "_A")]]
+              truth[["B"]] <- true_estimate[[paste0(target, "_B")]]
+              
+              out_est[["A"]] <- .get_estimates(out_meta[["groups"]]$meta$A)
+              out_err[["A"]] <- sapply(out_est[["A"]], .get_errors,
+                                       truth = truth[["A"]])
+              
+              out_est[["B"]] <- .get_estimates(out_meta[["groups"]]$meta$B)
+              out_err[["B"]] <- sapply(out_est[["B"]], .get_errors,
+                                       truth = truth[["B"]])
+              
+              subpop_detected[["A"]] <- subpop_detected[["B"]] <- 
+                out_meta[["groups"]]$logs$subpop_detected
+              
+              for (group in seq_len(n_groups)) {
+                
+                dt_meta <- rbind(
+                  dt_meta,
+                  data.frame(
+                    type = target,
+                    m = m,
+                    sample = sample,
+                    truth = truth[[nm_groups[group]]],
+                    est = out_est[[nm_groups[group]]][["est"]],
+                    lci = out_est[[nm_groups[group]]][["lci"]],
+                    uci = out_est[[nm_groups[group]]][["uci"]],
+                    error = out_err[[nm_groups[group]]][["est"]],
+                    error_lci = out_err[[nm_groups[group]]][["lci"]],
+                    error_uci = out_err[[nm_groups[group]]][["uci"]],
+                    ratio_truth = truth_ratio,
+                    ratio_est = out_ratio[["est"]],
+                    ratio_lci = out_ratio[["lci"]],
+                    ratio_uci = out_ratio[["uci"]],
+                    overlaps = NA,
+                    is_grouped = subpop,
+                    group = nm_groups[group],
+                    subpop_detected = as.character(
+                      subpop_detected[[nm_groups[group]]])))
+                
+              } # end of [group] loop
+              
+            } # end of if (is.null(out_meta[["groups"]]))
             
           } else {
             
-            truth_ratio <- true_ratio[[target]]
-            ratios <- .get_ratios(out_meta[["groups"]])
+            truth[["All"]] <- true_estimate[[target]]
             
-            out_ratio <- c(
-              "lci" = .get_ratios(out_meta[["groups"]])$lci,
-              "est" = .get_ratios(out_meta[["groups"]])$est,
-              "uci" = .get_ratios(out_meta[["groups"]])$uci)
+            out_est[["All"]] <- .get_estimates(out_meta[["All"]]$meta)
+            out_err[["All"]] <- sapply(out_est[["All"]], .get_errors,
+                                       truth = truth[["All"]])
             
-            # out_ratio_err <- c(
-            #   "lci" = (ratio_lci - truth_ratio) / truth_ratio,
-            #   "est" = (ratio_est - truth_ratio) / truth_ratio,
-            #   "uci" = (ratio_uci - truth_ratio) / truth_ratio)
+            truth_ratio <- NA
+            out_ratio <- c("lci" = NA, "est" = NA, "uci" = NA)
+            subpop_detected[["All"]] <- out_meta[["All"]]$
+              logs$subpop_detected
             
-            truth[["A"]] <- true_estimate[[paste0(target, "_A")]]
-            truth[["B"]] <- true_estimate[[paste0(target, "_B")]]
+            dt_meta <- rbind(
+              dt_meta,
+              data.frame(
+                type = target,
+                m = m,
+                sample = sample,
+                truth = truth[["All"]],
+                est = out_est[["All"]][["est"]],
+                lci = out_est[["All"]][["lci"]],
+                uci = out_est[["All"]][["uci"]],
+                error = out_err[["All"]][["est"]],
+                error_lci = out_err[["All"]][["lci"]],
+                error_uci = out_err[["All"]][["uci"]],
+                ratio_truth = truth_ratio,
+                ratio_est = out_ratio[["est"]],
+                ratio_lci = out_ratio[["lci"]],
+                ratio_uci = out_ratio[["uci"]],
+                overlaps = NA,
+                is_grouped = subpop,
+                group = "All",
+                subpop_detected = as.character(
+                  subpop_detected[["All"]])))
             
-            out_est[["A"]] <- .get_estimates(out_meta[["groups"]]$meta$A)
-            out_err[["A"]] <- sapply(out_est[["A"]], .get_errors,
-                                     truth = truth[["A"]])
-            
-            out_est[["B"]] <- .get_estimates(out_meta[["groups"]]$meta$B)
-            out_err[["B"]] <- sapply(out_est[["B"]], .get_errors,
-                                     truth = truth[["B"]])
-            
-            subpop_detected[["A"]] <- subpop_detected[["B"]] <- 
-              out_meta[["groups"]]$logs$subpop_detected
-            
-            for (group in seq_len(n_groups)) {
-              
-              dt_meta <- rbind(
-                dt_meta,
-                data.frame(
-                  type = target,
-                  m = m,
-                  sample = sample,
-                  truth = truth[[nm_groups[group]]],
-                  est = out_est[[nm_groups[group]]][["est"]],
-                  lci = out_est[[nm_groups[group]]][["lci"]],
-                  uci = out_est[[nm_groups[group]]][["uci"]],
-                  error = out_err[[nm_groups[group]]][["est"]],
-                  error_lci = out_err[[nm_groups[group]]][["lci"]],
-                  error_uci = out_err[[nm_groups[group]]][["uci"]],
-                  ratio_truth = truth_ratio,
-                  ratio_est = out_ratio[["est"]],
-                  ratio_lci = out_ratio[["lci"]],
-                  ratio_uci = out_ratio[["uci"]],
-                  overlaps = NA,
-                  is_grouped = subpop,
-                  group = nm_groups[group],
-                  subpop_detected = as.character(
-                    subpop_detected[[nm_groups[group]]])))
-              
-            } # end of [group] loop
-            
-          } # end of if (is.null(out_meta[["groups"]]))
-        } # end of if (subpop)
+          } # end of if (subpop)
+          
+        } # end of if (is.null(out_meta[["All"]]))
         
       } # end of [sample] loop [based on the number of samples]
       

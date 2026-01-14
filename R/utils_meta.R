@@ -196,37 +196,70 @@
                                  set_target = c("hr", "ctsd"),
                                  summarized = TRUE) {
   
-  truthList <- setNames(lapply(set_target, function(target) {
+  if (rv$data_type == "simulated") {
     
-    if (target == "hr") {
-      out <- get_true_hr(
-        data = if (!summarized) rv$simList else NULL,
-        sigma = rv$sigma,
-        ind_var = rv$add_ind_var,
-        fit = if (rv$add_ind_var) rv$meanfitList else NULL,
-        grouped = rv$grouped,
-        groups = if (rv$grouped) rv$groups[[2]] else NULL,
-        summarized = summarized) 
-      if (!summarized) names(out) <- names(rv$simList)
-    }
+    truthList <- setNames(lapply(set_target, function(target) {
+      
+      if (target == "hr") {
+        out <- get_true_hr(
+          sigma = rv$sigma,
+          ind_var = FALSE,
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          summarized = summarized) 
+        if (!summarized) names(out) <- names(rv$simList)
+      }
+      
+      if (target == "ctsd") {
+        out <- get_true_speed(
+          tau_p = rv$tau_p,
+          tau_v = rv$tau_v,
+          sigma = rv$sigma,
+          ind_var = FALSE,
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          summarized = summarized)
+        if (!summarized) names(out) <- names(rv$simList)
+      }
+      
+      return(out)
+      
+    }), set_target) # end of lapply
     
-    if (target == "ctsd") {
-      out <- get_true_speed(
-        data = if (!summarized) rv$simList else NULL,
-        tau_p = rv$tau_p,
-        tau_v = rv$tau_v,
-        sigma = rv$sigma,
-        ind_var = rv$add_ind_var,
-        fit = if (rv$add_ind_var) rv$meanfitList else NULL,
-        grouped = rv$grouped,
-        groups = if (rv$grouped) rv$groups[[2]] else NULL,
-        summarized = summarized)
-      if (!summarized) names(out) <- names(rv$simList)
-    }
+  } else {
     
-    return(out)
-    
-  }), set_target) # end of lapply
+    truthList <- setNames(lapply(set_target, function(target) {
+      
+      if (target == "hr") {
+        out <- get_true_hr(
+          data = if (!summarized) rv$simList else NULL,
+          sigma = rv$sigma,
+          ind_var = rv$add_ind_var,
+          fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          summarized = summarized) 
+        if (!summarized) names(out) <- names(rv$simList)
+      }
+      
+      if (target == "ctsd") {
+        out <- get_true_speed(
+          data = if (!summarized) rv$simList else NULL,
+          tau_p = rv$tau_p,
+          tau_v = rv$tau_v,
+          sigma = rv$sigma,
+          ind_var = rv$add_ind_var,
+          fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+          grouped = rv$grouped,
+          groups = if (rv$grouped) rv$groups[[2]] else NULL,
+          summarized = summarized)
+        if (!summarized) names(out) <- names(rv$simList)
+      }
+      
+      return(out)
+      
+    }), set_target) # end of lapply
+  }
   
   return(truthList)
   

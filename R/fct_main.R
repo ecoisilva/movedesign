@@ -121,6 +121,7 @@ md_prepare <- function(species = NULL,
                        which_meta = "mean",
                        add_individual_variation = FALSE,
                        groups = NULL,
+                       seed = NULL,
                        parallel = FALSE) {
   
   if (is.null(species))
@@ -320,7 +321,11 @@ md_prepare <- function(species = NULL,
     
     mu <- list(mu[[1]], mu[[1]], mu[[1]])
     
-    seed0 <- generate_seed()
+    if (is.null(seed)) {
+      seed0 <- seed
+    } else {
+      seed0 <- generate_seed()
+    }
     
     fitA <- tryCatch({
       simulate_seeded(meanfitList[["A"]], seed0)
@@ -329,7 +334,7 @@ md_prepare <- function(species = NULL,
     })
     
     fitB <- tryCatch({
-      simulate_seeded(meanfitList[["B"]], seed0)
+      simulate_seeded(meanfitList[["B"]], seed0 + 1)
     }, error = function(e) {
       message("A warning occurred:", conditionMessage(e), "\n")
     })
@@ -341,7 +346,7 @@ md_prepare <- function(species = NULL,
     })
     
     validate_B <- tryCatch({
-      ctmm::simulate(fitB, t = seq(0, 100, by = 1), seed = seed0)
+      ctmm::simulate(fitB, t = seq(0, 100, by = 1), seed = seed0 + 1)
     }, error = function(e) {
       return(NULL)
     })
@@ -412,7 +417,9 @@ md_prepare <- function(species = NULL,
     sigma = sigma,
     tau_p = tau_p,
     tau_v = tau_v,
-    mu = mu))
+    mu = mu,
+    seed = seed
+    ))
   
   return(design)
 }
@@ -429,6 +436,8 @@ md_prepare <- function(species = NULL,
 #' @param design An object of class `movedesign` (and
 #'   `movedesign_input`), as returned by [md_prepare()], containing
 #'   all study design parameters and data.
+#' @param seeds List of set seeds to ensure reproducibility (optional);
+#'   only needed if replicating from Shiny app into R console.
 #' @param trace Logical. If TRUE (default), print progress and timing
 #'   messages to the console.
 #'
@@ -484,7 +493,7 @@ md_prepare <- function(species = NULL,
 #' }
 #'
 #' @export
-md_run <- function(design, trace = TRUE) {
+md_run <- function(design, seeds = NULL, trace = TRUE) {
   
   if (!inherits(design, "movedesign")) {
     stop(paste("The object must be of class 'movedesign'.",
@@ -505,26 +514,31 @@ md_run <- function(design, trace = TRUE) {
   
   nms <- list()
   for (i in seq_len(m)) {
-    seed <- generate_seed(nms)
+    
+    if (is.null(seeds)) {
+      seed0 <- generate_seed(nms)
+    } else {
+      seed0 <- seeds[[i]]
+    }
     
     if (design$grouped) {
       if (i %% 2 == 0) next
       
-      tmp <- simulating_data(design, seed)
+      tmp <- simulating_data(design, seed0)
       design$simList[[i]] <- tmp[[1]]
       design$simList[[i + 1]] <- tmp[[2]]
       
       design$groups[[2]][["A"]] <- c(
         as.character(design$groups[[2]]$A),
-        as.character(seed))
+        as.character(seed0))
       design$groups[[2]][["B"]] <- c(
         as.character(design$groups[[2]]$B),
-        as.character(seed + 1))
-      nms[[i]] <- seed
-      nms[[i + 1]] <- seed + 1
+        as.character(seed0 + 1))
+      nms[[i]] <- seed0
+      nms[[i + 1]] <- seed0 + 1
     } else {
-      design$simList[[i]] <- simulating_data(design, seed)[[1]]
-      nms[[i]] <- seed
+      design$simList[[i]] <- simulating_data(design, seed0)[[1]]
+      nms[[i]] <- seed0
     }
   }
   design$seedList <- nms
