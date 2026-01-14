@@ -73,12 +73,18 @@ mod_tab_report_ui <- function(id) {
                           maximumValue = 100,
                           value = 95),
                         
-                        actionButton(
+                        shiny::actionButton(
                           inputId = ns("build_report"),
                           icon = icon("bookmark"),
                           label = "Build report",
                           width = "100%",
-                          class = "btn-primary")
+                          class = "btn-primary"),
+                        p(style = "padding-bottom: 0px;"),
+                        shiny::downloadButton(
+                          outputId = ns("download_script"), 
+                          label = "Download R script",
+                          icon = shiny::icon("download"),
+                          style = "width: 100%")
                         
                       ) # end of panel
                     )) # end of tabBox // repTabs_details
@@ -4459,6 +4465,245 @@ mod_tab_report_server <- function(id, rv) {
     #     rv = rv, type = "dist", name = "distErr")
     #   
     # }) # end of observe
+    
+    # DOWNLOAD ----------------------------------------------------------
+    
+    output$download_script <- downloadHandler(
+      filename = function() {
+        paste0("movedesign-script_", 
+               rv$species, "_", Sys.Date(), ".R")
+      },
+      content = function(file) {
+        
+        seed_vector <- unlist(rv$seedList)
+        seed_code <- paste0(
+          "seedList <- c(", seed_vector[1], ",\n",
+          paste0("              ", seed_vector[-1],
+                 collapse = ",\n"), "\n)\n")
+        
+        r_code <- paste0(
+          "# Load package:\n",
+          "library(movedesign)\n",
+          " \n",
+          "# Set initial seed:\n",
+          "seedInit <- ", rv$seedInit, "\n",
+          " \n",
+          "# Set simulation seeds:\n",
+          seed_code,
+          " \n")
+        
+        if (rv$data_type == "simulated") {
+          
+          if (!rv$grouped) {
+            
+            .get_estimate <- function(x) {
+              list(value = x$All["est", "value"],
+                   unit = x$All["est", "unit"])
+            }
+            
+            tau_p_est <- .get_estimate(rv$tau_p)
+            tau_v_est <- .get_estimate(rv$tau_v)
+            sigma_est <- .get_estimate(rv$sigma)
+            
+            r_code <- paste0(
+              r_code,
+              "input <- md_simulate(\n",
+              "  grouped = ", rv$grouped, ",\n",
+              "  tau_p = list(value = ", tau_p_est$value,
+              ", unit = \"", tau_p_est$unit, "\"),\n",
+              "  tau_v = list(value = ", tau_v_est$value,
+              ", unit = \"", tau_v_est$unit, "\"),\n",
+              "  sigma = list(value = ", sigma_est$value,
+              ", unit = \"", sigma_est$unit, "\"),\n",
+              "  dur = list(value = ", rv$dur$value[[1]],
+              ", unit = \"", rv$dur$unit[[1]], "\"),\n",
+              "  dti = list(value = ", rv$dti$value[[1]],
+              ", unit = \"", rv$dti$unit[[1]], "\"),\n",
+              "  n_individuals = ", rv$nsims, ",\n")
+            
+          } else {
+            
+            .get_grouped_parameters <- function(param, name) {
+              groups <- setdiff(names(param), "All")
+              
+              group_strings <- vapply(groups, function(g) {
+                val <- param[[g]]$value[2]
+                unit <- param[[g]]$unit[2]
+                paste0("  ", g, " = list(value = ",
+                       val, ", unit = \"", unit, "\")")
+              }, character(1))
+              
+              paste0(name, " = list(\n",
+                     paste(group_strings, collapse = ",\n"), "\n)")
+            }
+            
+            tau_p_str <- .get_grouped_parameters(rv$tau_p, "tau_p")
+            tau_v_str <- .get_grouped_parameters(rv$tau_v, "tau_v")
+            sigma_str <- .get_grouped_parameters(rv$sigma, "sigma")
+            
+            r_code <- paste0(
+              r_code,
+              "input <- md_simulate(\n",
+              "  grouped = ", rv$grouped, ",\n",
+              "  ", tau_p_str, ",\n",
+              "  ", tau_v_str, ",\n",
+              "  ", sigma_str, ",\n",
+              "  dur = list(value = ", rv$dur$value[[1]],
+              ", unit = \"", rv$dur$unit[[1]], "\"),\n",
+              "  dti = list(value = ", rv$dti$value[[1]],
+              ", unit = \"", rv$dti$unit[[1]], "\"),\n",
+              "  n_individuals = ", rv$nsims, ",\n")
+          }
+          
+        } else {
+          
+          if (rv$data_type == "uploaded") {
+            r_code <- paste0(
+              r_code,
+              "# Read-in data:\n",
+              "data <- read.csv(...)\n",
+              "data_tel <- as.telemetry(data)\n",
+              " \n",
+              "# Run movement model selection:\n",
+              "fits <- list()\n",
+              "for (i in seq_along(data_tel)) {\n",
+              "  guess <- ctmm.guess(data_tel[[i]], ",
+              "interactive = F)\n",
+              "  fits[[i]] <- ctmm.select(data_tel[[i]], guess)\n",
+              "}\n",
+              "summary(fits)\n",
+              " \n")
+          }
+          
+          if (rv$data_type == "selected") {
+            r_code <- paste0(
+              r_code,
+              "# Read-in data:\n",
+              "data(", rv$species, ")\n",
+              "data_tel <- ", rv$species, "\n",
+              " \n",
+              "# Run movement model selection:\n",
+              "fits <- list()\n",
+              "for (i in seq_along(data_tel)) {\n",
+              "  guess <- ctmm.guess(data_tel[[i]], ",
+              "interactive = F)\n",
+              "  fits[[i]] <- ctmm.select(data_tel[[i]], guess)\n",
+              "}\n",
+              "summary(fits)\n",
+              " \n")
+          }
+          
+          if (!rv$grouped) {
+            
+            r_code <- paste0(
+              r_code,
+              "# Prepare initial study design object:\n",
+              "input <- md_prepare(\n",
+              "  species = '", rv$species, "',\n",
+              "  data = data_tel,\n",
+              "  models = fits,\n",
+              "  n_individuals = ", rv$nsims, ",\n",
+              "  dur = list(value = ", rv$dur$value,
+              ", unit = '", rv$dur$unit,"'),\n",
+              "  dti = list(value = ", rv$dti$value,
+              ", unit = '", rv$dti$unit,"'),\n",
+              "  add_individual_variation = ",
+              rv$add_ind_var, ",\n")
+            
+          } else {
+            
+            # Extract groups:
+            groups <- rv$groups$intro
+            group_code <- paste0(
+              "  groups = list(\n",
+              "    A = c(", paste0('"', groups$A, '"', 
+                                   collapse = ", "), "),\n",
+              "    B = c(", paste0('"', groups$B, '"', 
+                                   collapse = ", "), ")\n",
+              ")\n")
+            
+            r_code <- paste0(
+              r_code,
+              "# Prepare initial study design object:\n",
+              "input <- md_prepare(\n",
+              "  species = '", rv$species, "',\n",
+              "  data = data_tel,\n",
+              "  models = fits,\n",
+              group_code,
+              "  n_individuals = ", rv$nsims, ",\n",
+              "  dur = list(value = ", rv$dur$value,
+              ", unit = '", rv$dur$unit,"'),\n",
+              "  dti = list(value = ", rv$dti$value,
+              ", unit = '", rv$dti$unit,"'),\n",
+              "  add_individual_variation = ",
+              rv$add_ind_var, ",\n")
+          }
+        }
+        
+        if (length(rv$which_question) == 2) {
+          r_code <- paste0(
+            r_code,
+            "  set_target = c('", rv$set_target[[1]], "', '",
+            rv$set_target[[2]], "'),\n")
+          
+        } else {
+          r_code <- paste0(
+            r_code,
+            "  set_target = c('", rv$set_target[[1]], "'),\n")
+        }
+        
+        r_code <- paste0(
+          r_code,
+          "  which_meta = c('", rv$which_meta, "'),\n",
+          "  parallel = ", rv$parallel, ",\n",
+          "  seed = seedInit)\n")
+        
+        r_code <- paste0(
+          r_code,
+          " \n",
+          "# Run initial study design simulation:\n",
+          "output_run <- md_run(input, seeds = seedList)\n",
+          " \n")
+        
+        if (rv$random) {
+          r_code <- paste0(
+            r_code,
+            "# Preview outputs from current simulation ",
+            "(one replicate):\n",
+            "md_plot_preview(output_run, n_resamples = ",
+            rv$n_resamples, ")\n",
+            " \n")
+        } else {
+          r_code <- paste0(
+            r_code,
+            "# Preview outputs from current simulation ",
+            "(one replicate):\n",
+            "md_plot_preview(output_run)\n",
+            " \n")
+        }
+        
+        if (rv$data_type != "simulated") {
+          r_code <- paste0(
+            r_code,
+            "# Run more replicates to stabilize outputs:\n",
+            "n_replicates <- 20 # adjust if needed\n",
+            "output_run_rep <- md_replicate(input, ",
+            "n_replicates = n_replicates)\n",
+            " \n",
+            "# Check if number of replicates is ",
+            "sufficient for convergence:\n",
+            "out_check <- md_check(output_run_rep)\n",
+            "out_check # increase n_replicates if ",
+            "needed and re-run!\n",
+            " \n",
+            "# Plot final study design evaluation:\n",
+            "md_plot(output_run_rep)\n",
+            " \n")
+        }
+        
+        writeLines(r_code, file)
+      }
+    )
     
   }) # end of moduleServer
 }
