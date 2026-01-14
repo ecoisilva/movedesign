@@ -15,6 +15,7 @@ md_prepare(
   which_meta = "mean",
   add_individual_variation = FALSE,
   groups = NULL,
+  seed = NULL,
   parallel = FALSE
 )
 }
@@ -134,5 +135,9 @@ if(interactive()) {
  summary(input)
 }
 
+}
+\seealso{
+Other workflow_steps: 
+\code{\link{md_simulate}()}
 }
 \concept{workflow_steps}
