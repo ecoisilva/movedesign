@@ -254,6 +254,7 @@ mod_tab_meta_ui <- function(id) {
                 reactable::reactableOutput(
                   ns("metaTable_m_optimal")),
                 p(style = "margin-top: 30px;"),
+                uiOutput(ns("metaUI_legend_dev_failed")),
                 div(class = "sims-irs",
                     shinyWidgets::sliderTextInput(
                       inputId = ns("meta_nresample"),
@@ -663,6 +664,27 @@ mod_tab_meta_server <- function(id, rv) {
       return(ui)
       
     }) # end of renderUI, "metaUI_legend"
+    
+    output$metaUI_legend_dev_failed <- renderUI({
+      req(any(rv$dev_failed))
+      
+      n_failed <- sum(rv$dev_failed, na.rm = TRUE)
+      
+      ui <- tagList(
+        p(style = "margin-top: 35px;"),
+        span(class = "help-block",
+             style = "text-align: justify !important;",
+             
+             fontawesome::fa("circle-exclamation", fill = pal$dgr),
+             span("Note:", class = "help-block-note"),
+             "Out of", length(rv$simList), "tags,", n_failed,
+             "failed before reaching the set maximum",
+             "sampling duration.", p()
+        ))
+      
+      return(ui)
+      
+    }) # end of renderUI, "metaUI_legend_dev_failed"
     
     ## Render footer for outputs box: -------------------------------------
     

@@ -2184,6 +2184,7 @@ mod_tab_design_server <- function(id, rv) {
       
       start <- Sys.time()
       simList <- simulating_data(rv, rv$seed0)
+      rv$seedInit <- rv$seed0
       
       if (!rv$grouped) {
         rv$seedList <- list(rv$seed0)

@@ -180,6 +180,7 @@ mod_blocks_server <- function(id,
              "outputs" = {
                
                out <- rv[[name]]
+               # out <- out[stats::complete.cases(out), ]
                
                if (grepl("Est", name)) {
                  

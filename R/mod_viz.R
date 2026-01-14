@@ -374,24 +374,146 @@ mod_viz_server <- function(id, rv) {
     
     get_meta_inputs <- reactive({
       datList <- rv$datList
-      fitList <- rv$fitList
       
-      input <- .get_groups(fitList, groups = rv$groups[[1]])
-      txt_target <- list(
-        "hr" = c("area", "home range area"),
-        "ctsd" = c("speed", "movement speed"))
-      
-      out <- lapply(rv$set_target, function(x) {
-        .capture_meta(input,
-                      variable = txt_target[[x]][[1]],
-                      units = FALSE,
-                      verbose = TRUE,
-                      plot = FALSE) %>% 
-          suppressMessages() %>%
-          quiet()
-      })
+      if (rv$data_type != "simulated") {
+        
+        # For uploaded or selected datasets:
+        
+        fitList <- rv$fitList
+        
+        input <- .get_groups(fitList, groups = rv$groups[[1]])
+        txt_target <- list(
+          "hr" = c("area", "home range area"),
+          "ctsd" = c("speed", "movement speed"))
+        
+        out <- lapply(rv$set_target, function(x) {
+          .capture_meta(input,
+                        variable = txt_target[[x]][[1]],
+                        units = FALSE,
+                        verbose = TRUE,
+                        plot = FALSE) %>% 
+            suppressMessages() %>%
+            quiet()
+        })
+        
+      } else {
+        
+        # For simulated datasets:
+        
+        modList <- rv$modList
+        names(rv$modList) <- c("1", "2")
+        input <- .get_groups(modList, groups = rv$groups[[1]])
+        txt_target <- list(
+          "hr" = c("area", "home range area"),
+          "ctsd" = c("speed", "movement speed"))
+        
+        outList <- NULL
+        
+        sig_A <- rv$sigma[["A"]]$value %#% rv$sigma[["A"]]$unit
+        sig_B <- rv$sigma[["B"]]$value %#% rv$sigma[["B"]]$unit
+        area_A <- -2 * log(0.05) * pi * sig_A 
+        area_B <- -2 * log(0.05) * pi * sig_B 
+        
+        v_A <- sqrt((rv$sigma[["A"]]$value[[2]] %#%
+                     rv$sigma[["A"]]$unit[[2]]) * pi/2) / 
+          sqrt(prod((rv$tau_v[["A"]]$value[[2]] %#% 
+                       rv$tau_v[["A"]]$unit[[2]]), 
+                    (rv$tau_p[["A"]]$value[[2]] %#%
+                       rv$tau_p[["A"]]$unit[[2]])))
+        v_B <- sqrt((rv$sigma[["B"]]$value[[2]] %#%
+                       rv$sigma[["B"]]$unit[[2]]) * pi/2) / 
+          sqrt(prod((rv$tau_v[["B"]]$value[[2]] %#% 
+                       rv$tau_v[["B"]]$unit[[2]]), 
+                    (rv$tau_p[["B"]]$value[[2]] %#%
+                       rv$tau_p[["B"]]$unit[[2]])))
+        speed_A <- fix_unit(v_A, "m/s", digits = 4)
+        speed_B <- fix_unit(v_B, "m/s", digits = 4)
+        
+        .make_output <- function(mean_est, label, unit) {
+          
+          .make_meta_mat <- function(est) {
+            m <- matrix(c(NA, est, NA,
+                          NA, NA, NA,
+                          NA, NA, NA),
+                        nrow = 3,
+                        byrow = TRUE)
+            dimnames(m) <- list(
+              c(paste0("mean (", unit, ")"), "CoV²", "CoV"),
+              c("low", "est", "high"))
+            return(m)
+          }
+          
+          meta <- list(
+            A = .make_meta_mat(mean_est["A"]),
+            B = .make_meta_mat(mean_est["B"]))
+          
+          pval <- matrix(
+            NA_real_,
+            nrow = 2,
+            ncol = 2,
+            dimnames = list(c("A/", "B/"), c("/A", "/B")))
+          
+          ratio_est <- outer(mean_est, mean_est, "/")
+          diag(ratio_est) <- 1
+          
+          ratio_arr <- array(NA_real_,
+                             dim = c(2, 2, 3),
+                             dimnames = list(
+                               c("A/", "B/"),
+                               c("/A", "/B"),
+                               c("low", "est", "high")))
+          ratio_arr[, , "est"] <- ratio_est
+          
+          meta$`p-value` <- pval
+          meta$`mean ratio` <- ratio_arr
+          meta$`geometric mean ratio` <- ratio_arr
+          
+          .make_mod_df <- function(models) {
+            data.frame(
+              model = models,
+              delta_AICc = rep(NA_real_, length(models)),
+              stringsAsFactors = FALSE)
+          }
+          
+          mods <- list(
+            var_subpop1 = .make_mod_df(c("Dirac-d",
+                                         "inverse-Gaussian")),
+            var_subpop2 = .make_mod_df(c("Dirac-d",
+                                         "inverse-Gaussian")),
+            var_jointpop = .make_mod_df(c("Dirac-d",
+                                          "inverse-Gaussian")),
+            subpop_detected = .make_mod_df(c("Joint population",
+                                             "Sub-population")))
+          
+          is_subpop_detected <- mean_est["A"] != mean_est["B"]
+          
+          logs <- list(
+            var_subpop1 = FALSE,
+            var_subpop2 = FALSE,
+            var_jointpop = FALSE,
+            subpop_detected = is_subpop_detected)
+          
+          return(list(meta = meta,
+                      mods = mods,
+                      logs = logs,
+                      names = c("A", "B"),
+                      type = NULL))
+        }
+        
+        hr_mean_est <- c(A = area_A[[2]], B = area_B[[2]])
+        hr <- .make_output(mean_est = hr_mean_est,
+                           label = "hr", unit = "m^2")
+        
+        ctsd_mean_est <- c(A = speed_A$value, B = speed_B$value)
+        ctsd <- .make_output(mean_est = ctsd_mean_est,
+                             label = "ctsd", unit = speed_A$unit)
+        
+        out <- list(hr = hr, ctsd = ctsd)
+        
+      }
       
       if (length(rv$set_target) == 1) {
+        
         target_map <- list(
           "hr" = list("hr" = out[["hr"]], "ctsd" = NULL),
           "ctsd" = list("hr" = NULL, "ctsd" = out[["ctsd"]]))
@@ -418,6 +540,22 @@ mod_viz_server <- function(id, rv) {
         rv$which_question, 
         rv$datList,
         rv$groups[[1]]))
+    
+    observe({
+      req(rv$data_type)
+      if (rv$data_type != "simulated") {
+        req(rv$datList, rv$fitList)
+        req(length(rv$fitList) > 0)
+      } else {
+        req(rv$datList, rv$modList)
+      }
+      req(rv$which_question, rv$set_target, rv$grouped, rv$is_valid)
+      req(length(rv$groups[[1]][["A"]]) > 0,
+          length(rv$groups[[1]][["B"]]) > 0)
+      
+      out <- get_meta_inputs()
+      
+    }) # %>% bindEvent(rv$which_question)
     
     output$selectUI_legend_groups <- renderUI({
       req(rv$datList, rv$fitList)

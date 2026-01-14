@@ -47,6 +47,17 @@ mod_tab_report_ui <- function(id) {
                                  verbatimTextOutput(
                                    outputId = ns("rep_nsims"))
                           )), p(style = "padding-bottom: 5px;"),
+                        p(style = "padding-top: 0px"),
+                        
+                        p(HTML("&nbsp;"),
+                          "No. of failed tags:") %>%
+                          tagAppendAttributes(id = 'failed_tags',
+                                              class = 'label_split'),
+                        fluidRow(
+                          column(width = 12,
+                                 verbatimTextOutput(
+                                   outputId = ns("rep_nsims_failed"))
+                          )), p(style = "padding-bottom: 5px;"),
                         
                         uiOutput(outputId = ns("report_emulate")),
                         p(style = "padding-bottom: 5px;"),
@@ -460,6 +471,17 @@ mod_tab_report_server <- function(id, rv) {
       return(length(rv$simList))
       
     }) # end of renderText, "rep_nsims"
+    
+    output$rep_nsims_failed <- renderText({
+      req(length(rv$dev_failed) >= 0)
+      
+      if (any(rv$dev_failed)) {
+        return(sum(rv$dev_failed, na.rm = TRUE))
+      } else {
+        return(0)
+      }
+      
+    }) # end of renderText, "rep_nsims_failed"
     
     # OPERATIONS ----------------------------------------------------------
     ## Credible intervals for home range estimation: ----------------------
@@ -1537,7 +1559,14 @@ mod_tab_report_server <- function(id, rv) {
             "With the current parameters, sub-populations were indeed" else
               "However, sub-populations were"
           
-          if (meta_group_truth$mods$subpop_detected[[2,2]] < 2) {
+          if (rv$data_type == "simulated") {
+            is_delta_aic <- FALSE
+          } else {
+            is_delta_aic <- meta_group_truth$
+              mods$subpop_detected[[2,2]] < 2
+          }
+          
+          if (is_delta_aic) {
             txt_subpop <- span(
               "There was insufficient evidence in the", rv$data_type,
               "dataset to detect sub-populations.")
@@ -1553,20 +1582,33 @@ mod_tab_report_server <- function(id, rv) {
               "through meta-analyses.")
           }
           
+          if (rv$data_type == "simulated") {
+            is_delta_aic <- FALSE
+          } else {
+            is_delta_aic <- meta_group_truth$
+              mods$subpop_detected[[2,2]] < 2
+          }
+          
           col_subpop <- dplyr::case_when(
             is_subpop == is_subpop_detected ~ "cl-sea-d",
-            meta_group_truth$mods$subpop_detected[[2,2]] < 2 ~ "cl-gld",
+            is_delta_aic ~ "cl-dgr", # TODO to check
             TRUE ~ "cl-dgr"
           )
           
-          txt_subpop_detected <- span(
-            txt_subpop_cont, span(
-              if (is_subpop_detected) "detected" else "not detected",
-              class = col_subpop),
-            ifelse(meta_group$mods$subpop_detected[[2,2]] < 2,
-                   "(though with \u0394AICc \uFF1C 2).",
-                   "(\u0394AICc \uFF1E 2).")
-          )
+          if (rv$data_type == "simulated") {
+            txt_subpop_detected <- span(
+              txt_subpop_cont, wrap_none(span(
+                if (is_subpop_detected) "detected" else "not detected",
+                class = col_subpop), "."))
+          } else {
+            txt_subpop_detected <- span(
+              txt_subpop_cont, span(
+                if (is_subpop_detected) "detected" else "not detected",
+                class = col_subpop),
+              ifelse(is_delta_aic,
+                     "(though with \u0394AICc \uFF1C 2).",
+                     "(\u0394AICc \uFF1E 2)."))
+          }
           
           expected_ratio <- .get_ratios(meta_group_truth)
           observed_ratio <- .get_ratios(meta_group)
@@ -2222,12 +2264,6 @@ mod_tab_report_server <- function(id, rv) {
             " in ", span("black", style = "color: black;"), "."))
       }
       
-      if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci)) {
-        interval_type <- "credible intervals"
-      } else {
-        interval_type <- "confidence intervals"
-      }
-      
       txt_now <- NULL
       if (rv$which_meta == "none") {
         txt_now <- tagList(
@@ -2268,6 +2304,13 @@ mod_tab_report_server <- function(id, rv) {
             sim_sd_details)
         }
         
+        interval_type <- "confidence intervals"
+        if (!is.null(rv$hr_cri)) {
+          if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci)) {
+            interval_type <- "credible intervals"
+          }
+        }
+        
         ui <- tagList(
           fontawesome::fa("circle-exclamation", fill = pal$dgr),
           span("Note:", class = "help-block-note"), 
@@ -2302,6 +2345,13 @@ mod_tab_report_server <- function(id, rv) {
                 round(input_taup, 1), " ", taup_unit, ",")
             }
             
+            interval_type <- "confidence intervals"
+            if (!is.null(rv$hr_cri)) {
+              if (!is.na(rv$hr_cri$lci) && !is.na(rv$hr_cri$lci)) {
+                interval_type <- "credible intervals"
+              }
+            }
+            
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
               span("Note:", class = "help-block-note"), 
@@ -2332,6 +2382,13 @@ mod_tab_report_server <- function(id, rv) {
               sim_details <- paste0(
                 "movement processes with \u03C4\u1D65 = ", 
                 round(input_tauv, 1), " ", tauv_unit)
+            }
+            
+            interval_type <- "confidence intervals"
+            if (!is.null(rv$sd_cri)) {
+              if (!is.na(rv$sd_cri$lci) && !is.na(rv$sd_cri$lci)) {
+                interval_type <- "credible intervals"
+              }
             }
             
             ui <- tagList(
