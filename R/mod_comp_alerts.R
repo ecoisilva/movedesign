@@ -24,7 +24,7 @@ mod_comp_alerts_server <- function(id, rv) {
     
     # ALERTS --------------------------------------------------------------
     
-    ## If no groups available after 'simulate' tab:
+    ## If no groups available after 'simulate' tab: -----------------------
     
     observe({
       req(rv$datList,
@@ -48,7 +48,7 @@ mod_comp_alerts_server <- function(id, rv) {
       
     }) # end of observe
     
-    ## If no initial data uploaded, selected or simulated:
+    ## If no initial data uploaded, selected or simulated: ----------------
     
     observe({
       req(rv$active_tab == 'hr' || rv$active_tab == 'ctsd')
@@ -69,7 +69,7 @@ mod_comp_alerts_server <- function(id, rv) {
       
     }) # end of observe
     
-    # If sampling design and analyses don't match:
+    ## If sampling design and analyses don't match: -----------------------
     
     observe({
       req(rv$active_tab == 'report')
@@ -93,9 +93,8 @@ mod_comp_alerts_server <- function(id, rv) {
       }
       
     }) # end of observer
- 
     
-    # If deployment type not set:
+    ## If deployment type not set: ----------------------------------------
     
     observe({
       req(rv$active_tab == 'data_upload' ||

@@ -2123,7 +2123,12 @@ mod_tab_ctsd_server <- function(id, rv) {
           input$show_paths, 
           rv$sd_nsim)
       req(length(rv$ctsdList) == length(rv$simList))
-      req(length(rv$pathList) == length(rv$simList))
+      
+      # if (any(rv$dev_failed)) {
+      #   req(length(rv$dev_failed) == length(rv$simList))
+      # } else {
+      #   req(length(rv$pathList) == length(rv$simList))
+      # }
       
       newdat <- rv$simList[[rv$sd_nsim]]
       alldat <- rv$pathList[[rv$sd_nsim]]
@@ -2155,11 +2160,11 @@ mod_tab_ctsd_server <- function(id, rv) {
           p1 <- ggplot2::geom_path(
             alldat, mapping = ggplot2::aes(
               x = .data$x, y = .data$y),
-            col = "grey70", size = 1.5)
+            col = "grey70", linewidth = 1.5)
           p1_main <- ggplot2::geom_path(
             alldat, mapping = ggplot2::aes(
               x = .data$x, y = .data$y),
-            col = "grey30", size = 0.4)
+            col = "grey30", linewidth = 0.4)
         }
         
         if ("initial" %in% datasets) {

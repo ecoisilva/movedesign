@@ -410,7 +410,7 @@ mod_viz_server <- function(id, rv) {
       }
       
       rv$metaList_groups <- outList
-
+      
       return(out)
       
     }) %>% # end of reactive, "get_meta_inputs",

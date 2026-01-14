@@ -464,7 +464,10 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                 rv$dev_failed <- c(rv$dev_failed, failure_occurred)
                 return(x[to_keep_vec == 1, ])
                 
-              } else return(x)
+              } else {
+                rv$dev_failed <- c(rv$dev_failed, failure_occurred)
+                return(x)
+              }
               
             }) # end of lapply
             

@@ -556,6 +556,7 @@ mod_tab_meta_server <- function(id, rv) {
       req(!is.na(rv$grouped))
       
       out <- rv$metaList[[rv$set_analysis]]
+      req(out)
       is_subpop_detected <- out$logs$subpop_detected
       
       txt <- txt_evidence <- NULL
@@ -563,6 +564,7 @@ mod_tab_meta_server <- function(id, rv) {
       
       txt_match <- "correctly"
       if (rv$grouped) {
+        
         meta_truth <- rv$metaList_groups[[1]][[rv$set_analysis]]
         is_subpop <- meta_truth$logs$subpop_detected
         
@@ -1513,7 +1515,7 @@ mod_tab_meta_server <- function(id, rv) {
       p.groups <- out %>% 
         ggplot2::ggplot(
           ggplot2::aes(x = .data$est,
-                       y = .data$id, 
+                       y =  as.factor(.data$group),
                        shape = as.factor(.data$group),
                        group = as.factor(.data$group),
                        color = as.factor(.data$group))) +
@@ -2135,7 +2137,14 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$which_question, rv$meta_tbl, rv$set_analysis)
       
       n_digits <- 1
-      dt_meta <- rv$meta_tbl %>%
+      dt_meta <- rv$meta_tbl
+      
+      if (rv$grouped) {
+        dt_meta <- dt_meta %>%
+          dplyr::filter(.data$group != "All")
+      }
+      
+      dt_meta <- dt_meta %>%
         dplyr::filter(.data$type == rv$set_analysis) %>% 
         dplyr::select(-c(.data$overlaps, .data$type)) %>%
         dplyr::mutate(subpop = as.logical(.data$subpop_detected)) %>% 

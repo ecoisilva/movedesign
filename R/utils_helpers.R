@@ -1557,12 +1557,14 @@ pseudonymize <- function(data,
       xy <- numeric(0)
     }
     
-    xy <- terra::project(xy, from = proj,to = "+proj=longlat +datum=WGS84")
+    xy <- terra::project(xy, from = proj,
+                         to = "+proj=longlat +datum=WGS84")
     data[[i]]$longitude <- xy[, 1]
     data[[i]]$latitude <- xy[, 2]
     attr(data[[i]], "info")$projection <- proj
     
-    data[[i]]$timestamp <- as.POSIXct(data[[i]]$t, tz = tz, origin = origin)
+    data[[i]]$timestamp <- as.POSIXct(data[[i]]$t,
+                                      tz = tz, origin = origin)
     attr(data[[i]], "info")$timezone <- tz
   }
   

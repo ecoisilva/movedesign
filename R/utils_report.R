@@ -40,8 +40,8 @@
   
   nsims <- ifelse(
     length(rv$simList) == 1,
-    "a single simulation",
-    paste(length(rv$simList), "simulations")
+    "a single individual",
+    paste(length(rv$simList), "individuals")
   )
   
   if (rv$which_meta == "none") {

@@ -40,7 +40,7 @@ mod_tab_report_ui <- function(id) {
                         p(style = "padding-top: 0px"),
                         
                         p(HTML("&nbsp;"),
-                          "No. of simulations:") %>%
+                          "No. of tags:") %>%
                           tagAppendAttributes(class = 'label_split'),
                         fluidRow(
                           column(width = 12,
@@ -395,10 +395,10 @@ mod_tab_report_server <- function(id, rv) {
     
     output$report_emulate <- renderUI({
       
-      ui <- staticBlock("Without individual varation", active = FALSE)
+      ui <- staticBlock("Without individual variation", active = FALSE)
       
       if (req(rv$add_ind_var)) {
-        ui <- staticBlock("With individual varation", active = TRUE)
+        ui <- staticBlock("With individual variation", active = TRUE)
       }
       
       out_ui <- tagList(ui)
@@ -453,7 +453,7 @@ mod_tab_report_server <- function(id, rv) {
       rv$highlight_dti <- input$highlight_dti
     })
     
-    ## Rendering total number of simulations: -----------------------------
+    ## Rendering number of simulations: -----------------------------------
     
     output$rep_nsims <- renderText({
       req(rv$simList)
@@ -1534,22 +1534,23 @@ mod_tab_report_server <- function(id, rv) {
           is_subpop_detected <- meta_group$logs$subpop_detected
           
           txt_subpop_cont <- if (is_subpop == is_subpop_detected) 
-            "As expected, sub-populations were" else
+            "With the current parameters, sub-populations were indeed" else
               "However, sub-populations were"
           
           if (meta_group_truth$mods$subpop_detected[[2,2]] < 2) {
             txt_subpop <- span(
               "There was insufficient evidence in the", rv$data_type,
               "dataset to detect sub-populations.")
-            txt_subpop_cont <- "With the simulations, sub-populations were"
+            txt_subpop_cont <- 
+              "With the current parameters, sub-populations were"
           }  else if (is_subpop) {
             txt_subpop <- span(
               "We expected to detect a sub-population",
-              "through meta_group-analyses.")
+              "through meta-analyses.")
           } else {
             txt_subpop <- span(
               "We expected no sub-populations to be detected",
-              "through meta_group-analyses.")
+              "through meta-analyses.")
           }
           
           col_subpop <- dplyr::case_when(
@@ -1598,11 +1599,11 @@ mod_tab_report_server <- function(id, rv) {
             style = paste(css_mono, css_bold),
             
             if (sufficient_simulations) {
-              tagList("The number of simulations appears sufficient", 
+              tagList("The number of individuals appears sufficient", 
                       "to obtain valid", wrap_none(
                         txt_target[[target]], color = pal$sea, " ratios."))
             } else {
-              tagList("The number of simulations appears insufficient", 
+              tagList("The number of individuals appears insufficient", 
                       "to obtain valid", wrap_none(
                         txt_target[[target]], color = pal$dgr, " ratios."))
             }
@@ -1616,8 +1617,8 @@ mod_tab_report_server <- function(id, rv) {
         
         txt_nsims <- ifelse(
           length(rv$simList) == 1,
-          "for a single simulation",
-          paste("for", length(rv$simList), "simulations"))
+          "for a single individual",
+          paste("for", length(rv$simList), "individuals"))
         
         txt_meta_nsims <- .get_txt_nsim(rv, set_target = target)
         
@@ -2515,7 +2516,7 @@ mod_tab_report_server <- function(id, rv) {
             xend = .data$uci,
             y = 0, yend = 0,
             col = "est_new", linetype = "est_new"),
-          size = .8) %>% 
+          linewidth = .8) %>% 
           suppressWarnings()
         
         hr_p4 <- ggplot2::geom_point(
@@ -2586,7 +2587,7 @@ mod_tab_report_server <- function(id, rv) {
               xend = rv$hr_cri$uci,
               y = 0, yend = 0, col = "est",
               linetype = "est"),
-            size = .8) %>% 
+            linewidth = .8) %>% 
             suppressWarnings() } +
         
         { if (is_dur) hr_p3 } +
@@ -2599,7 +2600,7 @@ mod_tab_report_server <- function(id, rv) {
               xend = rv$hr_cri$uci,
               y = 0, yend = 0, col = "est",
               linetype = "est"),
-            size = .8) %>% 
+            linewidth = .8) %>% 
             suppressWarnings() } +
         
         { if (is_dur) hr_p4 } +
@@ -2862,7 +2863,7 @@ mod_tab_report_server <- function(id, rv) {
             xend = .data$uci,
             y = 0, yend = 0,
             col = "est_new", linetype = "est_new"),
-          size = .8)
+          linewidth = .8)
         
         sd_p4 <- ggplot2::geom_point(
           data = ds2_sd,
@@ -2938,7 +2939,7 @@ mod_tab_report_server <- function(id, rv) {
                 xend = rv$sd_cri$uci,
                 y = 0, yend = 0, col = "est",
                 linetype = "est"),
-              size = .8)
+              linewidth = .8)
           } +
           
           { if (is_dti) sd_p4 } +
@@ -3548,6 +3549,8 @@ mod_tab_report_server <- function(id, rv) {
     
     output$repPlot_comp_hr <- ggiraph::renderGirafe({
       req(rv$which_meta, rv$hrErr)
+      duration <- error <- error_lci <- error_uci <- NULL
+      tau_p <- tooltip_label <- tooltip_class <- NULL
       
       tooltip_css <- paste(
         "font-family: 'Roboto Condensed', sans-serif;",
@@ -3606,13 +3609,13 @@ mod_tab_report_server <- function(id, rv) {
                        yend = .data$y_end),
           col = pal$mdn,
           linetype = "solid",
-          size = 1.5, alpha = .8)
+          linewidth = 1.5, alpha = .8)
         
         p2 <- ggiraph::geom_point_interactive(
           data = newdat,
-          mapping = ggplot2::aes_string(
-            x = "duration",
-            y = "error"),
+          mapping = ggplot2::aes(
+            x = !!rlang::sym("duration"),
+            y = !!rlang::sym("error")),
           size = 3, col = pal$mdn)
       }
       
@@ -3628,53 +3631,54 @@ mod_tab_report_server <- function(id, rv) {
         
         ggplot2::geom_ribbon(
           data = dat_filtered,
-          mapping = ggplot2::aes_string(
-            x = "duration",
-            y = "error",
-            ymin = "error_lci",
-            ymax = "error_uci"),
+          mapping = ggplot2::aes(
+            x = duration,
+            y = error,
+            ymin = error_lci,
+            ymax = error_uci
+          ),
           col = NA, fill = "grey90",
           alpha = .5) +
         
         ggplot2::geom_line(
           data = dat_filtered,
-          mapping = ggplot2::aes_string(x = "duration",
-                                        y = "error",
-                                        group = "tau_p"),
+          mapping = ggplot2::aes(x = duration,
+                                 y = error,
+                                 group = tau_p),
           col = "grey20", linetype = "dotted",
-          size = 0.5) +
+          linewidth = 0.5) +
         
         ggiraph::geom_point_interactive(
           data = dat_filtered,
-          mapping = ggplot2::aes_string(x = "duration",
-                                        y = "error",
-                                        group = "tau_p",
-                                        tooltip = "tooltip_label",
-                                        data_id = "tooltip_class"),
+          mapping = ggplot2::aes(x = duration,
+                                 y = error,
+                                 group = tau_p,
+                                 tooltip = tooltip_label,
+                                 data_id = tooltip_class),
           size = 2.5, shape = 18, col = "grey40") +
         
         ggplot2::geom_segment(
           data = newdat_filtered[index_dur,],
-          ggplot2::aes_string(x = "duration",
-                              xend = "duration",
-                              y = "error_lci",
-                              yend = "error_uci"),
+          ggplot2::aes(x = duration,
+                       xend = duration,
+                       y = error_lci,
+                       yend = error_uci),
           col = pal$sea,
           linetype = "solid",
-          size = 1.5, alpha = .8) +
+          linewidth = 1.5, alpha = .8) +
         
         ggiraph::geom_point_interactive(
           data = newdat_filtered[index_dur,],
-          mapping = ggplot2::aes_string(x = "duration",
-                                        y = "error",
-                                        group = "tau_p",
-                                        tooltip = "tooltip_label",
-                                        data_id = "tooltip_class"),
+          mapping = ggplot2::aes(x = duration,
+                                 y = error,
+                                 group = tau_p,
+                                 tooltip = tooltip_label,
+                                 data_id = tooltip_class),
           col = pal$sea, fill = pal$sea,
           position = pd, shape = 23, size = 5) +
         
         ggplot2::geom_hline(yintercept = 0,
-                            linetype = "solid", size = .5) +
+                            linetype = "solid", linewidth = .5) +
         
         ggplot2::scale_x_continuous(label = scales::comma) +
         ggplot2::scale_y_continuous(labels = scales::percent) +
@@ -3791,7 +3795,7 @@ mod_tab_report_server <- function(id, rv) {
           ymax = .data$error_uci)) +
         
         ggplot2::geom_hline(yintercept = 0,
-                            linetype = "solid", size = .5) +
+                            linetype = "solid", linewidth = .5) +
         
         ggplot2::geom_ribbon(
           fill = pal$sea,
@@ -3799,7 +3803,7 @@ mod_tab_report_server <- function(id, rv) {
         
         ggplot2::geom_line(
           col = pal$sea, linetype = "dotted",
-          size = 0.5) +
+          linewidth = 0.5) +
         
         ggplot2::geom_point(
           size = 2.5, shape = 18, col = pal$sea) +
@@ -3821,7 +3825,7 @@ mod_tab_report_server <- function(id, rv) {
             ggplot2::aes(x = .data$dur,
                          y = .data$error,
                          group = as.factor(.data$dti)),
-            size = .5, alpha = .8,
+            linewidth = .5, alpha = .8,
             linetype = "solid", col = pal$mdn,
             position = ggplot2::position_dodge(
               width = 0.3)) } +

@@ -276,8 +276,8 @@
       seq_along(out_seq) %% 2 == (length(out_seq) %% 2)]
   }
   
-  if (max(out_seq) != n) 
-    stop("Error: max(output) does not equal length(input)")
+  if (max(out_seq) != n)
+    warning("max(output) does not equal length(input)")
   
   return(out_seq)
 }

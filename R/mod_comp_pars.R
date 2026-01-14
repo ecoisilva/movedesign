@@ -372,8 +372,8 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         ggplot2::geom_linerange(ggplot2::aes(xmin = .data$low,
                                              xmax = .data$high)) +
         { if (rv$grouped)
-          ggplot2::facet_wrap(group ~ .,
-                              dir = "v",
+          ggplot2::facet_grid(group ~ .,
+                              # dir = "v",
                               scales = "free_y") } +
         
         ggplot2::labs(x = x_label, y = "") +

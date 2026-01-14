@@ -2542,7 +2542,7 @@ mod_tab_design_server <- function(id, rv) {
             y = device$axis1$a1 + .data$N_area * device$axis1$b1,
             color = "Narea",
             group = 1),
-          size = 3, alpha = .2)
+          linewidth = 3, alpha = .2)
       }
       if (device$add_N2) {
         pN2 <- ggplot2::geom_line(
@@ -2552,7 +2552,7 @@ mod_tab_design_server <- function(id, rv) {
             y = device$axis2$a2 + .data$N_speed * device$axis2$b2,
             color = "Nspeed",
             group = 1),
-          size = 3, alpha = .2)
+          linewidth = 3, alpha = .2)
       }
       
       p <- ggplot2::ggplot(
@@ -2568,7 +2568,7 @@ mod_tab_design_server <- function(id, rv) {
         ggplot2::geom_hline(
           yintercept = 0,
           color = "grey80",
-          size = 0.2) +
+          linewidth = 0.2) +
         
         { if (device$add_N1) pN1 } +
         { if (device$add_N2) pN2 } +

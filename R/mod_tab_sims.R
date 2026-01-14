@@ -556,7 +556,7 @@ mod_tab_sims_server <- function(id, rv) {
     
     observe({
       req(rv$datList,
-          rv$sims$grouped,
+          !rv$sims$grouped,
           rv$active_tab == 'simulate',
           rv$which_meta == "compare",
           rv$data_type == "simulated")
@@ -801,8 +801,8 @@ mod_tab_sims_server <- function(id, rv) {
     ## Prepare model and run simulation: ----------------------------------
     
     simulate_data <- reactive({
-      if (rv$sims$m == 0) reset_reactiveValues(rv) 
-        
+      if (rv$sims$m == 0) reset_reactiveValues(rv)
+      
       rv$sims$m <- rv$sims$m + 1
       rv$tau_p <- list(
         "All" = data.frame(value = c(NA, input$tau_p0, NA),
