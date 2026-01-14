@@ -1,4 +1,336 @@
 
+#' @title Simulate movement data from species-level parameters
+#'
+#' @description
+#' Simulates continuous-time movement trajectories based on
+#' ad hoc movement parameters. The function is designed to support
+#' study design workflows by generating synthetic tracking data under
+#' specified movement, sampling, and analytical assumptions.
+#'
+#' Movement parameters can be specified globally (single group)
+#' or for two groups (e.g. males vs. females). Simulated data
+#' are subsequently passed through the standard `movedesign` workflow
+#' (model fitting, aggregation, and target-metric evaluation).
+#'
+#' @param n_individuals Integer. Number of tracked individuals (tags)
+#'   in the simulated study. This defines the target population-level
+#'   sample size used in downstream inference.
+#' @param tau_p Position autocorrelation timescale(s). Either a single
+#'   list with elements `value` and `unit`, or (when `grouped = TRUE`)
+#'   a named list of such lists, one per group.
+#' @param tau_v Velocity autocorrelation timescale(s). Same structure
+#'   as `tau_p`.
+#' @param sigma Location variance parameter(s). Either a single
+#'   list with elements `value` and `unit`, or (when `grouped = TRUE`)
+#'   a named list of such lists, one per group.
+#' @param dur A list with elements `value` and `unit`
+#'   specifying the study duration (e.g.
+#'   `list(value = 2, unit = "months")`). Valid units are
+#'   `second`, `minute`, `hour`, `day`, `month`, or `year`.
+#' @param dti A list with elements `value` and `unit`
+#'   specifying the intended sampling interval between relocations
+#'   (e.g. `list(value = 1, unit = "day")`). Valid units are the
+#'   same as for `dur`.
+#' @param set_target Character vector specifying which target metrics
+#'   are evaluated in the study design workflow. Must include one or
+#'   both of `hr` (home range estimation) and `ctsd`
+#'   (continuous-time speed and distance).
+#' @param which_meta Character specifying the population-level
+#'   analytical target. Use `mean` (default) to evaluate
+#'   population means, `ratio` to compare group means
+#'   (requires `grouped = TRUE`), or `NULL` for
+#'   single-individual inference.
+#' @param grouped Logical. If `FALSE`, movement parameters
+#'   (`tau_p`, `tau_v`, `sigma`) must be provided as
+#'   single lists. If `TRUE`, each must be a named list of
+#'   group-specific parameter lists, and `n_individuals` must be
+#'   even.
+#' @param seed Optional integer. Random seed used for simulation.
+#'   If `NULL`, a seed is generated internally.
+#' @param parallel Logical. Passed to downstream fitting routines.
+#'   Currently reserved for future parallelization.
+#'
+#' @details
+#' When `grouped = TRUE`, simulations are generated independently
+#' for each group using group-specific movement parameters, but share
+#' the same sampling parameters. Group structure only affects
+#' downstream inference when `which_meta = "ratio"`.
+#'
+#' @note
+#' The realism and interpretability of simulated data critically depend
+#' on the choice of movement parameters.
+#' Users are therefore encouraged to inform parameters with empirical
+#' data whenever possible. In the intended workflow, this is done via
+#' [`md_prepare()`], which derives parameters from fitted movement
+#' models from provided empirical tracking datasets.
+#'
+#' Simulations based on hypothetical or weakly justified parameters may
+#' still be useful for exploratory or pedagogical purposes, but require
+#' caution when evaluating sampling designs, estimator performance, or
+#' ecological inference.
+#'
+#' @return
+#' An object of class `movedesign_input` containing simulated
+#' tracking data, fitted movement models, and all metadata required
+#' for downstream study design evaluation.
+#'
+#' @importFrom ctmm %#%
+#' @family workflow_steps
+#' @export
+md_simulate <- function(n_individuals = NULL,
+                        tau_p,
+                        tau_v,
+                        sigma,
+                        dur = NULL,
+                        dti = NULL,
+                        set_target = c("hr", "ctsd"),
+                        which_meta = "mean",
+                        grouped = FALSE,
+                        seed = NULL,
+                        parallel = FALSE) {
+  
+  species <- "simulated"
+  add_individual_variation <- FALSE
+  
+  .validate_parameters <- function(x, grouped, name) {
+    
+    stop_if <- function(cond, msg) {
+      if (cond) stop(msg, call. = FALSE)
+    }
+    
+    make_df <- function(value, unit) {
+      data.frame(
+        value = c(NA, value, NA),
+        unit  = rep(unit, 3),
+        row.names = c("low", "est", "high")
+      )
+    }
+    
+    if (!grouped) {
+      stop_if(!is.list(x),
+              paste0(name,
+                     " must be a list when grouped = FALSE"))
+      stop_if(!all(c("value", "unit") %in% names(x)),
+              paste0(name,
+                     " must contain 'value' and 'unit'"))
+      
+      return(list(All = make_df(x$value[[1]], x$unit[[1]])))
+    }
+    
+    stop_if(!is.list(x) || is.null(names(x)),
+            paste0(name, 
+                   " must be a named list when grouped = TRUE"))
+    
+    out <- lapply(names(x), function(g) {
+      xi <- x[[g]]
+      stop_if(!is.list(xi),
+              paste0(name, "[[", g, "]] must be a list"))
+      stop_if(!all(c("value", "unit") %in% names(xi)),
+              paste0(name, "[[", g,
+                     "]] must contain 'value' and 'unit'"))
+      
+      make_df(xi$value[[1]], xi$unit[[1]])
+    })
+    
+    names(out) <- names(x)
+    out
+  }
+  
+  .validate_target <- function(set_target) {
+    if (!is.character(set_target) || anyDuplicated(set_target) || 
+        !all(set_target %in% c("hr", "ctsd"))) {
+      stop("`set_target` must be 'hr', 'ctsd', or both.")
+    }
+    return(set_target)
+  }
+  
+  # .validate_meta <- function(which_meta, data) {
+  #   valid_meta <- c("mean", "ratio")
+  #   if (!is.null(which_meta) && !(which_meta %in% valid_meta)) {
+  #     stop("`which_meta` must be either NULL, 'mean', or 'ratio'.")
+  #   }
+  #   if (is.null(which_meta)) {
+  #     if (!inherits(data, "telemetry")) {
+  #       stop(paste("If `which_meta` is NULL, 'data' must be a",
+  #                  "single 'telemetry' object."))
+  #     }
+  #     if (is.null(data$identity)) {
+  #       stop("If `which_meta` is NULL, 'data$identity' must not be NULL.")
+  #     }
+  #   } else {
+  #     if (!is.list(data)) {
+  #       stop(paste("If `which_meta` is 'mean' or 'ratio',",
+  #                  "'data' must be a list of telemetry objects."))
+  #     }
+  #     if (length(data) == 0 || !inherits(data[[1]], "telemetry")) {
+  #       stop(paste("If `which_meta` is 'mean' or 'ratio',",
+  #                  "'data' must be a list of telemetry objects."))
+  #     }
+  #   }
+  #   invisible(TRUE)
+  # }
+  
+  set_target <- .validate_target(set_target)
+  # .validate_meta(which_meta, data)
+  
+  .validate_sampling <- function(param, key = NULL) {
+    check_entry <- function(x) {
+      is.list(x) &&
+        all(c("value", "unit") %in% names(x)) &&
+        is.numeric(x$value) &&
+        is.character(x$unit) &&
+        length(x$value) == 1 &&
+        length(x$unit) == 1
+    }
+    
+    is_simple <- is.list(param) && check_entry(param)
+    
+    is_list_of_simple <- is.list(param) &&
+      length(param) > 0 &&
+      all(vapply(param, check_entry, logical(1)))
+    
+    if (!(is_simple || is_list_of_simple)) {
+      stop(paste0(
+        "Invalid '", key, "':",
+        "must be either a simple list with numeric 'value' and",
+        "character 'unit', or a list of such lists."
+      ))
+    }
+  }
+  
+  .validate_sampling(dur, "dur")
+  .validate_sampling(dti, "dti")
+  
+  if (grouped && which_meta == "mean") {
+    warning(paste0(
+      "Groups were specified, but the analytical target is set",
+      " to `mean`. Therefore, group structure will be ignored.",
+      " If this is not the intended behavior, set",
+      " `which_meta = \"ratio\"` to compare group means."
+    ))
+  }
+  
+  if (which_meta == "ratio") which_meta <- "compare"
+  
+  if (missing(n_individuals) || 
+      !is.numeric(n_individuals) ||
+      length(n_individuals) != 1)
+    stop("'n_individuals' must be a single integer.")
+  if (missing(dur) || 
+      !is.list(dur) ||
+      !all(c("value", "unit") %in% names(dur)))
+    stop("'dur' must be a list with elements 'value' and 'unit'.")
+  if (missing(dti) || 
+      !is.list(dti) || 
+      !all(c("value", "unit") %in% names(dti)))
+    stop("'dti' must be a list with elements 'value' and 'unit'.")
+  
+  if (grouped && n_individuals %% 2 != 0)
+    stop("'n_individuals' must be even when 'grouped' is TRUE.")
+  
+  seed0 <- if (is.null(seed)) generate_seed() else seed
+  
+  tau_p <- .validate_parameters(tau_p, grouped, "tau_p")
+  tau_v <- .validate_parameters(tau_v, grouped, "tau_v")
+  sigma <- .validate_parameters(sigma, grouped, "sigma")
+  
+  if (is.null(dur) || is.null(dti)) {
+    stop("Both dur and dti must be provided", call. = FALSE)
+  }
+  
+  dur0 <- round(dur$value %#% dur$unit, 0)
+  dti0 <- round(dti$value %#% dti$unit, 0)
+  
+  t0 <- seq(0, dur0, by = dti0)[-1]
+  
+  modList <- list()
+  data <- list()
+  for (gr in names(tau_p)) {
+    
+    modList[[gr]] <- prepare_mod(
+      tau_p = tau_p[[gr]]$value[[2]],
+      tau_p_unit = tau_p[[gr]]$unit[[2]],
+      tau_v = tau_v[[gr]]$value[[2]],
+      tau_v_unit = tau_v[[gr]]$unit[[2]],
+      sigma = sigma[[gr]]$value[[2]],
+      sigma_unit = sigma[[gr]]$unit[[2]]
+    )
+    
+    tmp_seed <- seed0
+    if (gr == "B") tmp_seed <- seed0 + 1
+    dat <- ctmm::simulate(modList[[gr]], t = t0, seed = seed)
+    dat <- pseudonymize(dat)
+    dat$index <- seq_len(nrow(dat))
+    dat$id <- as.character(seed0)
+    dat$group <- gr
+    data[[gr]] <- dat
+    
+  }
+  
+  if (!grouped) {
+    names(data) <- c(as.character(seed0))
+  } else {
+    names(data) <- c(as.character(seed0),
+                     as.character(seed0 + 1))
+  }
+  
+  fitList <- fitting_model(data, .parallel = parallel)
+  names(fitList) <- names(data)
+  
+  meanfitList <- list(NULL)
+  names(meanfitList) <- "All"
+  
+  mu <- list(array(0, dim = 2, dimnames = list(c("x", "y"))))
+  names(mu) <- "All"
+  
+  groups <- NULL
+  if (!grouped) {
+    names(modList) <- as.character(seed0)
+    seedList <- list(seed0)
+  } else {
+    names(modList) <- c(as.character(seed0),
+                        as.character(seed0 + 1))
+    groups[[1]] <- list(A = seed0, B = seed0 + 1)
+    groups[[2]] <- list(A = c(), B = c())
+    names(groups) <- NULL
+    
+    seedList <- list(seed0, seed0 + 1)
+  }
+  
+  use_global_parameters <- is.list(dur) &&
+    all(c("value", "unit") %in% names(dur)) &&
+    !any(sapply(dur, is.list))
+  
+  design <- movedesign_input(list(
+    data = data,
+    data_type = "simulated",
+    get_species = species,
+    n_individuals = as.numeric(n_individuals),
+    dur = dur,
+    dti = dti,
+    use_global_parameters = use_global_parameters,
+    add_ind_var = add_individual_variation,
+    grouped = ifelse(grouped, TRUE, FALSE),
+    groups = groups,
+    set_target = set_target,
+    which_meta = which_meta,
+    which_m = "set_m",
+    parallel = parallel,
+    modList = modList,
+    fitList = fitList,
+    meanfitList = meanfitList,
+    sigma = sigma,
+    tau_p = tau_p,
+    tau_v = tau_v,
+    mu = mu,
+    seed = seed
+  ))
+  
+  return(design)
+  
+}
+
+
 #' @title Prepare movement study design inputs
 #'
 #' @description
