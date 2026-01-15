@@ -654,9 +654,9 @@ md_prepare <- function(species = NULL,
     mu <- list(mu[[1]], mu[[1]], mu[[1]])
     
     if (is.null(seed)) {
-      seed0 <- seed
-    } else {
       seed0 <- generate_seed()
+    } else {
+      seed0 <- seed
     }
     
     fitA <- tryCatch({
