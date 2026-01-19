@@ -3886,7 +3886,7 @@ md_optimize <- function(obj,
       dplyr::mutate(
         error_threshold = error_threshold,
         overlaps = dplyr::between(
-          .data$error, error_threshold, error_threshold)) 
+          abs(.data$error), 0, error_threshold)) 
     dt_plot_T <- dplyr::filter(dt_plot, .data$overlaps)
     dt_plot_F <- dplyr::filter(dt_plot, !.data$overlaps)
     
@@ -3906,7 +3906,7 @@ md_optimize <- function(obj,
         .groups = "drop") %>%
       dplyr::mutate(
         overlaps = dplyr::between(
-          .data$error_mean, error_threshold, error_threshold),
+          abs(.data$error_mean), 0, error_threshold),
         overlaps = factor(.data$overlaps,
                           levels = c("TRUE", "FALSE")),
         top_facet = .data$type == "hr") %>%
@@ -3942,7 +3942,7 @@ md_optimize <- function(obj,
           data = dt_plot_T,
           mapping = ggplot2::aes(x = .data$m,
                                  y = .data$error,
-                                 group = .data$sample),
+                                 group = .data$replicate),
           position = ggplot2::position_dodge(width = 1),
           size = 3, shape = 21, alpha = 0.5,
           color = pal[["TRUE"]],
