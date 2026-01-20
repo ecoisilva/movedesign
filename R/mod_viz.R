@@ -438,7 +438,7 @@ mod_viz_server <- function(id, rv) {
                         nrow = 3,
                         byrow = TRUE)
             dimnames(m) <- list(
-              c(paste0("mean (", unit, ")"), "CoV²", "CoV"),
+              c(paste0("mean (", unit, ")"), "CoV^2", "CoV"),
               c("low", "est", "high"))
             return(m)
           }
