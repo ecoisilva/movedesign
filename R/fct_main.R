@@ -1357,6 +1357,754 @@ md_replicate <- function(obj,
 }
 
 
+#' @title Preview plot for movedesign workflow outputs (single replicate)
+#'
+#' @description
+#' Generates a quick visualization of relative error for home range or
+#' movement speed estimation from a single replicate of a movedesign
+#' workflow. 
+#' The plot can display either the estimates from that replicate for a
+#' random combination of individuals, or, when resampling is enabled,
+#' summaries derived from repeated draws of individuals at each population
+#' sample size (based on the specified number of resamples).
+#' 
+#' This functions shows preliminary outputs only based on the output of
+#' [md_run()] (a `movedesign_preprocess` object) and should not be used to
+#' evaluate study design by itself. Instead, users should run
+#' [md_replicate()] and check for convergence with [md_check()].
+#'
+#' @param obj An object of class `movedesign_preprocess` 
+#'   (output of [md_run()]).
+#' @param n_resamples Numeric. Must be a positive value. Defines how many
+#'   combinations are generated for each population sample size,
+#'   with each combination producing a new population-level estimate.
+#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
+#'   to display as a reference in the plot.
+#' @param pal Character vector of two colors for within/outside threshold
+#'   (default: c("#007d80", "#A12C3B")).
+#'
+#' @return
+#' A ggplot object displaying relative error by population sample size,
+#' with point estimate and confidence intervals for mean estimates,
+#' and horizontal error threshold lines.
+#'
+#' @details
+#' This plot summarizes a single replicate. Credible intervals and robust
+#' study design conclusions generally require multiple replicates generated
+#' with [md_replicate()].
+#'
+#' @examples
+#' if (interactive()) {
+#'   input <- md_prepare(
+#'     data = buffalo,
+#'     models = models,
+#'     species = "buffalo",
+#'     n_individuals = 5,
+#'     dur = list(value = 1, unit = "month"),
+#'     dti = list(value = 1, unit = "day"),
+#'     add_individual_variation = TRUE,
+#'     grouped = TRUE,
+#'     set_target = "hr",
+#'     which_meta = "mean"
+#'   )
+#'
+#'   output <- md_run(input)
+#'   md_plot_preview(output, error_threshold = 0.05)
+#' }
+#' 
+#' @seealso [md_run()], [md_replicate()]
+#' @export
+md_plot_preview <- function(obj,
+                            n_resamples = NULL,
+                            error_threshold = 0.05,
+                            pal = c("#007d80", "#A12C3B")) {
+  
+  resampled <- ifelse(is.null(n_resamples), FALSE, TRUE)
+  x <- y <- type <- group <- NULL
+  
+  if (!inherits(obj, "movedesign_preprocess")) {
+    stop(paste(
+      "Input does not appear to be a 'movedesign_preprocess' object.",
+      "\nPlease provide the output of md_run()."))
+  }
+  
+  iter_step <- ifelse(length(obj$simList) <= 10, 2, 4)
+  
+  if (resampled) {
+    out <- run_meta_resamples(
+      obj,
+      set_target = obj$set_target,
+      subpop = obj$grouped,
+      random = resampled, 
+      max_draws = n_resamples,
+      trace = TRUE,
+      .automate_seq = TRUE)
+  } else {
+    out <- run_meta(
+      obj, 
+      set_target = obj$set_target,
+      subpop = obj$grouped, 
+      iter_step = iter_step,
+      trace = TRUE)
+  }
+  
+  out <- out %>% 
+    dplyr::mutate(
+      dplyr::across(
+        type, ~factor(., levels = c("hr", "ctsd")))) %>% 
+    dplyr::mutate(
+      overlaps = dplyr::between(
+        .data$error, 
+        -error_threshold, error_threshold),
+      overlaps = factor(
+        .data$overlaps, levels = c("TRUE", "FALSE")))
+  
+  # browser()
+  
+  if (resampled) {
+    
+    max_draws <- max(unique(out$sample))
+    
+    if (obj$grouped) {
+      
+      out <- dplyr::filter(out, group != "All")
+      out_mean <- out %>% 
+        dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+        dplyr::summarize(
+          n = dplyr::n(),
+          error = mean(.data$error, na.rm = TRUE),
+          error_lci = mean(.data$error_lci, na.rm = TRUE),
+          error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
+        dplyr::rowwise() %>%
+        dplyr::mutate(
+          within_threshold = 
+            (.data$error >= -error_threshold &
+               .data$error <= error_threshold),
+          overlaps_with_threshold = 
+            (.data$error_lci <= error_threshold & 
+               .data$error_uci >= -error_threshold),
+          overlaps = dplyr::case_when(
+            within_threshold ~ "TRUE",
+            TRUE ~ "FALSE"))
+      
+      # browser()
+      
+      incremental <- out %>%
+        dplyr::group_by(.data$group, .data$type) %>%
+        dplyr::arrange(m) %>%
+        dplyr::mutate(
+          incremental_benefit = lag(error) - error,
+          ci_width = error_uci - error_lci,
+          incremental_ci = lag(ci_width) - ci_width) %>%
+        dplyr::select(type, m, sample,
+                      incremental_benefit,
+                      error, error_lci, error_uci,
+                      ci_width, incremental_ci)
+      invisible(
+        incremental %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::group_split() %>%
+          lapply(function(df) {
+            last_rows <- tail(df, 2)
+            n_added <- last_rows$m[2] - last_rows$m[1]
+            benefit <- round(last_rows$incremental_benefit[2] * 100, 1)
+            # lci <- round(last_rows$incremental_lci[2] * 100, 1)
+            # uci <- round(last_rows$incremental_uci[2] * 100, 1)
+            ci_change <- round(last_rows$incremental_ci[2] / 
+                                 last_rows$ci_width[1] * 100, 1)
+            
+            if (last_rows$type[2] == "hr") {
+              type <- "home range estimation"
+            } else { type <- "dpeed \u0026 distance estimation" }
+            
+            message(
+              "For ", type, " of group '",
+              unique(last_rows$group),
+              "', adding the last ", n_added, " individuals ",
+              ifelse(last_rows$incremental_benefit[2] > 0,
+                     "increased", "reduced"),
+              " the mean relative error by ", 
+              benefit, "%", # (95% CI: ", lci, "% to ", uci, "%),",
+              " and ",
+              ifelse(last_rows$incremental_ci[2] > 0,
+                     "contracted", "expanded"),
+              " the 95% CIs width by ", abs(ci_change), "%.")
+          }))
+      
+      
+      
+      
+      only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
+      if (only_one_m) out$m <- factor(out$m)
+      
+      p <- out_mean %>%
+        ggplot2::ggplot(
+          ggplot2::aes(x = .data$m,
+                       y = .data$error,
+                       shape = .data$group,
+                       group = .data$group,
+                       color = .data$overlaps)) +
+        
+        ggplot2::geom_hline(
+          yintercept = 0,
+          linewidth = 0.3,
+          linetype = "solid") +
+        
+        ggplot2::geom_hline(
+          yintercept = error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        ggplot2::geom_hline(
+          yintercept = -error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        
+        ggplot2::geom_jitter(
+          data = out,
+          mapping = ggplot2::aes(x = .data$m,
+                                 y = .data$error,
+                                 group = .data$group,
+                                 shape = .data$group,
+                                 color = .data$overlaps),
+          position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+          size = 3.5, color = "grey80", alpha = 0.9) +
+        
+        ggplot2::geom_linerange(
+          ggplot2::aes(ymin = .data$error_lci,
+                       ymax = .data$error_uci),
+          position = ggplot2::position_dodge(width = 0.5),
+          linewidth = 2.5, alpha = .2,
+          show.legend = TRUE) +
+        { if (!only_one_m)
+          ggplot2::geom_line(
+            position = ggplot2::position_dodge(width = 0.5),
+            linewidth = 0.6, alpha = 0.5,
+            show.legend = TRUE)
+        } +
+        ggplot2::geom_point(
+          position = ggplot2::position_dodge(width = 0.5),
+          size = 3,
+          show.legend = TRUE) +
+        
+        { if (length(obj$set_target) > 1)
+          ggplot2::facet_wrap(
+            . ~ .data$type, scales = "free_y",
+            labeller = ggplot2::labeller(
+              type = c(
+                "hr" = "Home range estimation", 
+                "ctsd" = "Speed \u0026 distance estimation"))) } +
+        
+        ggplot2::labs(
+          x = "Population sample size",
+          y = "Relative error (%)",
+          color = paste0("Within error threshold (\u00B1",
+                         error_threshold * 100, "%)?"),
+          caption = paste(
+            "This plot displays preliminary outputs from a",
+            "single replicate.\n",
+            "For robust inferences, run multiple replicates using",
+            "`md_replicate()`.")) +
+        
+        { if (!only_one_m)
+          ggplot2::scale_x_continuous(
+            breaks = scales::breaks_pretty()) } +
+        ggplot2::scale_y_continuous(
+          labels = scales::percent,
+          breaks = scales::breaks_pretty()) +
+        ggplot2::scale_color_manual(
+          values = c("TRUE" = pal[1],
+                     "FALSE" = pal[2]), drop = FALSE) +
+        ggplot2::scale_shape_manual(
+          "Groups:", values = c(16, 17)) +
+        
+        ggplot2::theme_classic() +
+        ggplot2::theme(
+          text = ggplot2::element_text(size = 18),
+          legend.position = "bottom",
+          strip.text = ggplot2::element_text(size = 18),
+          strip.background.x = ggplot2::element_rect(
+            color = NA, fill = NA),
+          strip.background.y = ggplot2::element_rect(
+            color = NA, fill = NA),
+          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
+        ggplot2::guides()
+    
+    } else {
+      
+      out_mean <- suppressMessages(
+        out %>% 
+          dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+          dplyr::summarize(
+            n = dplyr::n(),
+            error = mean(.data$error, na.rm = TRUE),
+            error_lci = mean(.data$error_lci, na.rm = TRUE),
+            error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            within_threshold = 
+              (.data$error >= -error_threshold &
+                 .data$error <= error_threshold),
+            overlaps_with_threshold = 
+              (.data$error_lci <= error_threshold & 
+                 .data$error_uci >= -error_threshold),
+            overlaps = dplyr::case_when(
+              within_threshold ~ "TRUE",
+              TRUE ~ "FALSE"))
+      )
+      
+      # browser()
+      
+      # currently only doing it for whatever is the last sample
+      incremental <- out_mean %>%
+        dplyr::group_by(.data$group, .data$type) %>%
+        dplyr::arrange(m) %>%
+        dplyr::mutate(
+          incremental_benefit = lag(error) - error,
+          ci_width = error_uci - error_lci,
+          incremental_ci = lag(ci_width) - ci_width
+        ) %>%
+        dplyr::select(
+          type, m,
+          incremental_benefit,
+          error, error_lci, error_uci,
+          ci_width, incremental_ci
+        )
+      
+      invisible(
+        incremental %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::group_split() %>%
+          lapply(function(df) {
+            
+            last_rows <- tail(df, 2)
+            
+            m_prev <- last_rows$m[1]
+            m_now  <- last_rows$m[2]
+            
+            n_added <- m_now - m_prev
+            pct_increase <- round(100 * n_added / m_prev, 1)
+            
+            benefit <- round(last_rows$incremental_benefit[2] * 100, 1)
+            
+            ci_change <- round(
+              last_rows$incremental_ci[2] /
+                last_rows$ci_width[1] * 100,
+              1
+            )
+            
+            if (last_rows$type[2] == "hr") {
+              type <- "home range estimation"
+            } else {
+              type <- "speed & distance estimation"
+            }
+            
+            message(
+              "For ", type,
+              ", adding ", n_added, " individuals ",
+              "from ", m_prev, " to ", m_now, " individuals (",
+              pct_increase, "% increase in population sample size) will",
+              ", on average, ",
+              ifelse(last_rows$incremental_benefit[2] > 0,
+                     "increase", "reduce"),
+              " the mean relative error by ",
+              benefit, "% and ",
+              ifelse(last_rows$incremental_ci[2] > 0,
+                     "contract", "expand"),
+              " the 95% CIs width by ", abs(ci_change), "%."
+            )
+          })
+      )
+      
+      p <- out_mean %>%
+        ggplot2::ggplot(
+          ggplot2::aes(x = .data$m,
+                       y = .data$error,
+                       group = .data$group,
+                       shape = .data$group,
+                       color = .data$overlaps)) +
+        
+        ggplot2::geom_hline(
+          yintercept = 0,
+          linewidth = 0.3,
+          linetype = "solid") +
+        
+        ggplot2::geom_hline(
+          yintercept = error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        ggplot2::geom_hline(
+          yintercept = -error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        
+        ggplot2::geom_jitter(
+          data = out,
+          mapping = ggplot2::aes(x = .data$m,
+                                 y = .data$error,
+                                 group = .data$group,
+                                 shape = .data$group,
+                                 color = .data$overlaps),
+          position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+          size = 3.5, color = "grey80", alpha = 0.9) +
+        
+        ggplot2::geom_linerange(
+          ggplot2::aes(ymin = .data$error_lci,
+                       ymax = .data$error_uci),
+          position = ggplot2::position_dodge(width = 0.8),
+          linewidth = 2.5, alpha = .2,
+          show.legend = TRUE) +
+        ggplot2::geom_line(
+          position = ggplot2::position_dodge(width = 0.8),
+          linewidth = 0.6, alpha = 0.5,
+          show.legend = TRUE) +
+        ggplot2::geom_point(
+          position = ggplot2::position_dodge(width = 0.8),
+          size = 3,
+          show.legend = TRUE) +
+        
+        { if (length(obj$set_target) > 1)
+          ggplot2::facet_wrap(
+            . ~ .data$type, scales = "free_y",
+            labeller = ggplot2::labeller(
+              type = c(
+                "hr" = "Home range estimation", 
+                "ctsd" = "Speed \u0026 distance estimation"))) } +
+        
+        ggplot2::labs(
+          x = "Population sample size",
+          y = "Relative error (%)",
+          color = paste0("Within error threshold (\u00B1",
+                         error_threshold * 100, "%)?"),
+          caption = paste(
+            "This plot displays preliminary outputs from a",
+            "single replicate.\n",
+            "For robust inferences, run multiple replicates using",
+            "`md_replicate()`.")) +
+        
+        ggplot2::scale_x_continuous(
+          breaks = scales::breaks_pretty()) +
+        ggplot2::scale_y_continuous(
+          labels = scales::percent,
+          breaks = scales::breaks_pretty()) +
+        ggplot2::scale_color_manual(
+          values = c("TRUE" = pal[1],
+                     "FALSE" = pal[2]), drop = FALSE) +
+        
+        ggplot2::theme_classic() +
+        ggplot2::theme(
+          text = ggplot2::element_text(size = 18),
+          legend.position = "bottom",
+          strip.text = ggplot2::element_text(size = 18),
+          strip.background.x = ggplot2::element_rect(
+            color = NA, fill = NA),
+          strip.background.y = ggplot2::element_rect(
+            color = NA, fill = NA),
+          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
+        ggplot2::guides(shape = "none")
+    }
+    
+    warning(
+      "You are viewing preliminary results from a single replicate ",
+      "and ", n_resamples, " resamples. ",
+      "To assess variability and credible intervals, please run ",
+      "`md_replicate()` to generate multiple replicates and ",
+      "aggregate results.")
+    
+  } else {
+    
+    incremental <- out %>%
+      dplyr::group_by(.data$group, .data$type) %>%
+      dplyr::arrange(m) %>%
+      dplyr::mutate(
+        incremental_benefit = lag(error) - error,
+        # incremental_lci = lag(error_lci) - error_uci,
+        # incremental_uci = lag(error_uci) - error_lci,
+        ci_width = error_uci - error_lci,
+        incremental_ci = lag(ci_width) - ci_width) %>%
+      dplyr::select(type, m, sample,
+                    incremental_benefit,
+                    # incremental_lci,
+                    # incremental_uci,
+                    error, error_lci, error_uci,
+                    ci_width, incremental_ci)
+    
+    if (obj$grouped) {
+      
+      # browser()
+      invisible(
+        incremental %>%
+        dplyr::group_by(.data$type, .data$group) %>%
+        dplyr::group_split() %>%
+        lapply(function(df) {
+          last_rows <- tail(df, 2)
+          n_added <- last_rows$m[2] - last_rows$m[1]
+          benefit <- round(last_rows$incremental_benefit[2] * 100, 1)
+          # lci <- round(last_rows$incremental_lci[2] * 100, 1)
+          # uci <- round(last_rows$incremental_uci[2] * 100, 1)
+          ci_change <- round(last_rows$incremental_ci[2] / 
+                                   last_rows$ci_width[1] * 100, 1)
+          
+          if (last_rows$type[2] == "hr") {
+            type <- "home range estimation"
+          } else { type <- "dpeed \u0026 distance estimation" }
+          
+          message(
+            "For ", type, " of group '",
+            unique(last_rows$group),
+            "', adding the last ", n_added, " individuals ",
+            ifelse(last_rows$incremental_benefit[2] > 0,
+                   "increased", "reduced"),
+            " the mean relative error by ", 
+            benefit, "%", # (95% CI: ", lci, "% to ", uci, "%),",
+            " and ",
+            ifelse(last_rows$incremental_ci[2] > 0,
+                   "contracted", "expanded"),
+            " the 95% CIs width by ", abs(ci_change), "%.")
+        }))
+      
+      out <- dplyr::filter(out, group != "All") 
+      out_mean <- out %>%
+        dplyr::group_by(.data$group, .data$type) %>%
+        dplyr::slice_max(.data$m) %>%
+        dplyr::summarise(
+          error_mean = .data$error,
+          x_pos = .data$m,
+          y_pos = .data$error_lci,
+          color = ifelse(abs(.data$error) < error_threshold,
+                         pal[1], pal[2]),
+          .groups = "drop")
+      
+      only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
+      if (only_one_m) out$m <- factor(out$m)
+      
+      p <- out %>%
+        ggplot2::ggplot(
+          ggplot2::aes(x = .data$m,
+                       y = .data$error,
+                       shape = .data$group,
+                       group = .data$group,
+                       color = .data$overlaps)) +
+        
+        ggplot2::geom_hline(
+          yintercept = error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        ggplot2::geom_hline(
+          yintercept = -error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        
+        ggplot2::geom_hline(
+          yintercept = 0,
+          linewidth = 0.3,
+          linetype = "solid") +
+        
+        ggplot2::geom_linerange(
+          ggplot2::aes(ymin = .data$error_lci,
+                       ymax = .data$error_uci),
+          position = ggplot2::position_dodge(width = 0.5),
+          linewidth = 2.5, alpha = .2,
+          show.legend = TRUE) +
+        
+        { if (!only_one_m)
+          ggplot2::geom_line(
+            position = ggplot2::position_dodge(width = 0.5),
+            linewidth = 0.6, alpha = 0.5,
+            show.legend = TRUE)
+        } +
+        ggplot2::geom_point(
+          position = ggplot2::position_dodge(width = 0.5),
+          size = 3,
+          show.legend = TRUE) +
+        
+        { if (length(obj$set_target) > 1)
+          ggplot2::facet_wrap(
+            . ~ .data$type, scales = "free_y",
+            labeller = ggplot2::labeller(
+              type = c(
+                "hr" = "Home range estimation", 
+                "ctsd" = "Speed \u0026 distance estimation"))) } +
+        
+        ggplot2::labs(
+          x = "Population sample size",
+          y = "Relative error (%)",
+          color = paste0("Within error threshold (\u00B1",
+                         error_threshold * 100, "%)?"),
+          caption = paste(
+            "This plot displays preliminary outputs from a",
+            "single replicate.\n",
+            "For robust inferences, run multiple replicates using",
+            "`md_replicate()`.")) +
+        
+        { if (!only_one_m)
+          ggplot2::scale_x_continuous(
+            breaks = scales::breaks_pretty()) } +
+        ggplot2::scale_y_continuous(
+          labels = scales::percent,
+          breaks = scales::breaks_pretty()) +
+        ggplot2::scale_color_manual(
+          values = c("TRUE" = pal[1],
+                     "FALSE" = pal[2]), drop = FALSE) +
+        ggplot2::scale_shape_manual(
+          "Groups:", values = c(16, 17)) +
+        
+        ggplot2::theme_classic() +
+        ggplot2::theme(
+          text = ggplot2::element_text(size = 18),
+          legend.position = "bottom",
+          strip.text = ggplot2::element_text(size = 18),
+          strip.background.x = ggplot2::element_rect(
+            color = NA, fill = NA),
+          strip.background.y = ggplot2::element_rect(
+            color = NA, fill = NA),
+          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
+        ggplot2::guides()
+      
+    } else {
+      
+      # browser()
+      invisible(
+        incremental %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::group_split() %>%
+          lapply(function(df) {
+            last_rows <- tail(df, 2)
+            n_added <- last_rows$m[2] - last_rows$m[1]
+            benefit <- round(last_rows$incremental_benefit[2] * 100, 1)
+            ci_change <- round(last_rows$incremental_ci[2] / 
+                                 last_rows$ci_width[1] * 100, 1)
+            
+            if (last_rows$type[2] == "hr") {
+              type <- "home range estimation"
+            } else { type <- "dpeed \u0026 distance estimation" }
+            
+            message(
+              "For ", type,
+              ", adding the last ", n_added, " individuals ",
+              ifelse(last_rows$incremental_benefit[2] > 0,
+                     "increased", "reduced"),
+              " the mean relative error by ", 
+              benefit, "%",
+              " and ",
+              ifelse(last_rows$incremental_ci[2] > 0,
+                     "contracted", "expanded"),
+              " the 95% CI width by ", abs(ci_change), "%.")
+          }))
+      
+      # y_offset_df <- out %>%
+      #   dplyr::group_by(.data$type) %>%
+      #   dplyr::summarise(
+      #     y_range = max(.data$error, na.rm = TRUE) - 
+      #                   min(.data$error, na.rm = TRUE),
+      #     .groups = "drop"
+      #   )
+      
+      out_mean <- out %>%
+        dplyr::group_by(.data$group, .data$type) %>%
+        dplyr::slice_max(.data$m) %>%
+        dplyr::summarise(
+          error_mean = .data$error,
+          x_pos = .data$m,
+          y_pos = .data$error_lci,
+          color = ifelse(abs(.data$error) < error_threshold,
+                         pal[1], pal[2]),
+          .groups = "drop"
+        ) # %>%
+      # dplyr::left_join(y_offset_df, by = "type") %>%
+      # dplyr::mutate(
+      #   y_offset = ifelse(is.finite(y_range) & y_range > 0,
+      #                     y_range * 0.01, 0.01),
+      #   y_pos_label = y_pos - y_offset)
+      
+      p <- out %>%
+        ggplot2::ggplot(
+          ggplot2::aes(x = .data$m,
+                       y = .data$error,
+                       group = .data$group,
+                       color = .data$overlaps)) +
+        
+        ggplot2::geom_hline(
+          yintercept = error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        ggplot2::geom_hline(
+          yintercept = -error_threshold,
+          alpha = 0.5,
+          linetype = "dotted", linewidth = 0.4) +
+        
+        ggplot2::geom_hline(
+          yintercept = 0,
+          linewidth = 0.3,
+          linetype = "solid") +
+        
+        ggplot2::geom_linerange(
+          ggplot2::aes(ymin = .data$error_lci,
+                       ymax = .data$error_uci),
+          position = ggplot2::position_dodge(width = 0.8),
+          linewidth = 2.5, alpha = .2,
+          show.legend = TRUE) +
+        ggplot2::geom_line(
+          position = ggplot2::position_dodge(width = 0.8),
+          linewidth = 0.6, alpha = 0.5,
+          show.legend = TRUE) +
+        ggplot2::geom_point(
+          position = ggplot2::position_dodge(width = 0.8),
+          size = 3,
+          show.legend = TRUE) +
+        
+        { if (length(obj$set_target) > 1)
+          ggplot2::facet_wrap(
+            . ~ .data$type, scales = "free_y",
+            labeller = ggplot2::labeller(
+              type = c(
+                "hr" = "Home range estimation", 
+                "ctsd" = "Speed \u0026 distance estimation"))) } +
+        
+        ggplot2::labs(
+          x = "Population sample size",
+          y = "Relative error (%)",
+          color = paste0("Within error threshold (\u00B1",
+                         error_threshold * 100, "%)?"),
+          caption = paste(
+            "This plot displays preliminary outputs from a",
+            "single replicate.\n",
+            "For robust inferences, run multiple replicates using",
+            "`md_replicate()`.")) +
+        
+        ggplot2::scale_x_continuous(
+          breaks = scales::breaks_pretty()) +
+        ggplot2::scale_y_continuous(
+          labels = scales::percent,
+          breaks = scales::breaks_pretty()) +
+        ggplot2::scale_color_manual(
+          values = c("TRUE" = pal[1],
+                     "FALSE" = pal[2]), drop = FALSE) +
+        
+        ggplot2::theme_classic() +
+        ggplot2::theme(
+          text = ggplot2::element_text(size = 18),
+          legend.position = "bottom",
+          strip.text = ggplot2::element_text(size = 18),
+          strip.background.x = ggplot2::element_rect(
+            color = NA, fill = NA),
+          strip.background.y = ggplot2::element_rect(
+            color = NA, fill = NA),
+          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
+        ggplot2::guides(shape = "none")
+    }
+    
+    warning(
+      "You are viewing preliminary results from a single replicate. ",
+      "To assess variability and credible intervals, please run ",
+      "`md_replicate()` to generate multiple replicates and ",
+      "aggregate results.")
+  }
+  
+  return(p)
+  
+}
+
+
 #' @title Visualize study design outputs
 #'
 #' @description
@@ -1930,9 +2678,9 @@ md_plot <- function(obj,
       ggplot2::labs(
         title = if (!is.null(obj$data$n_replicates))
           paste0(
-          "Number of replicates: ", obj$data$n_replicates, "\n",
-          "Number of individuals: ",
-          max(obj$summary$m, na.rm = TRUE))
+            "Number of replicates: ", obj$data$n_replicates, "\n",
+            "Number of individuals: ",
+            max(obj$summary$m, na.rm = TRUE))
         else NULL,
         caption = caption,
         x = "Relative error (%)", y = NULL) +
@@ -1950,564 +2698,6 @@ md_plot <- function(obj,
   }
 }
 
-
-#' @title Preview plot for movedesign workflow outputs (single replicate)
-#'
-#' @description
-#' Generates a quick visualization of relative error for home range or
-#' movement speed estimation from a single replicate of a movedesign
-#' workflow. 
-#' The plot can display either the estimates from that replicate for a
-#' random combination of individuals, or, when resampling is enabled,
-#' summaries derived from repeated draws of individuals at each population
-#' sample size (based on the specified number of resamples).
-#' 
-#' This functions shows preliminary outputs only based on the output of
-#' [md_run()] (a `movedesign_preprocess` object) and should not be used to
-#' evaluate study design by itself. Instead, users should run
-#' [md_replicate()] and check for convergence with [md_check()].
-#'
-#' @param obj An object of class `movedesign_preprocess` 
-#'   (output of [md_run()]).
-#' @param n_resamples Numeric. Must be a positive value. Defines how many
-#'   combinations are generated for each population sample size,
-#'   with each combination producing a new population-level estimate.
-#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
-#'   to display as a reference in the plot.
-#' @param pal Character vector of two colors for within/outside threshold
-#'   (default: c("#007d80", "#A12C3B")).
-#'
-#' @return
-#' A ggplot object displaying relative error by population sample size,
-#' with point estimate and confidence intervals for mean estimates,
-#' and horizontal error threshold lines.
-#'
-#' @details
-#' This plot summarizes a single replicate. Credible intervals and robust
-#' study design conclusions generally require multiple replicates generated
-#' with [md_replicate()].
-#'
-#' @examples
-#' if (interactive()) {
-#'   input <- md_prepare(
-#'     data = buffalo,
-#'     models = models,
-#'     species = "buffalo",
-#'     n_individuals = 5,
-#'     dur = list(value = 1, unit = "month"),
-#'     dti = list(value = 1, unit = "day"),
-#'     add_individual_variation = TRUE,
-#'     grouped = TRUE,
-#'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
-#'
-#'   output <- md_run(input)
-#'   md_plot_preview(output, error_threshold = 0.05)
-#' }
-#' 
-#' @seealso [md_run()], [md_replicate()]
-#' @export
-md_plot_preview <- function(obj,
-                            n_resamples = NULL,
-                            error_threshold = 0.05,
-                            pal = c("#007d80", "#A12C3B")) {
-  
-  resampled <- ifelse(is.null(n_resamples), FALSE, TRUE)
-  x <- y <- type <- group <- NULL
-  
-  if (!inherits(obj, "movedesign_preprocess")) {
-    stop(paste(
-      "Input does not appear to be a 'movedesign_preprocess' object.",
-      "\nPlease provide the output of md_run()."))
-  }
-  
-  iter_step <- ifelse(length(obj$simList) <= 10, 2, 4)
-  
-  if (resampled) {
-    out <- run_meta_resamples(
-      obj,
-      set_target = obj$set_target,
-      subpop = obj$grouped,
-      random = resampled, 
-      max_draws = n_resamples,
-      trace = TRUE,
-      .automate_seq = TRUE)
-  } else {
-    out <- run_meta(
-      obj, 
-      set_target = obj$set_target,
-      subpop = obj$grouped, 
-      iter_step = iter_step,
-      trace = TRUE)
-  }
-  
-  out <- out %>% 
-    dplyr::mutate(
-      dplyr::across(
-        type, ~factor(., levels = c("hr", "ctsd")))) %>% 
-    dplyr::mutate(
-      overlaps = dplyr::between(
-        .data$error, 
-        -error_threshold, error_threshold),
-      overlaps = factor(
-        .data$overlaps, levels = c("TRUE", "FALSE")))
-  
-  if (resampled) {
-    
-    max_draws <- max(unique(out$sample))
-    
-    if (obj$grouped) {
-      
-      out <- dplyr::filter(out, group != "All")
-      out_mean <- out %>% 
-        dplyr::group_by(.data$type, .data$group, .data$m) %>% 
-        dplyr::summarize(
-          n = dplyr::n(),
-          error = mean(.data$error, na.rm = TRUE),
-          error_lci = mean(.data$error_lci, na.rm = TRUE),
-          error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
-        dplyr::rowwise() %>%
-        dplyr::mutate(
-          within_threshold = 
-            (.data$error >= -error_threshold &
-               .data$error <= error_threshold),
-          overlaps_with_threshold = 
-            (.data$error_lci <= error_threshold & 
-               .data$error_uci >= -error_threshold),
-          overlaps = dplyr::case_when(
-            within_threshold ~ "TRUE",
-            TRUE ~ "FALSE"))
-      
-      only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
-      if (only_one_m) out$m <- factor(out$m)
-      
-      p <- out_mean %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$m,
-                       y = .data$error,
-                       shape = .data$group,
-                       group = .data$group,
-                       color = .data$overlaps)) +
-        
-        ggplot2::geom_hline(
-          yintercept = 0,
-          linewidth = 0.3,
-          linetype = "solid") +
-        
-        ggplot2::geom_hline(
-          yintercept = error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        ggplot2::geom_hline(
-          yintercept = -error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        
-        ggplot2::geom_jitter(
-          data = out,
-          mapping = ggplot2::aes(x = .data$m,
-                                 y = .data$error,
-                                 group = .data$group,
-                                 shape = .data$group,
-                                 color = .data$overlaps),
-          position = ggplot2::position_jitterdodge(dodge.width = 0.4),
-          size = 3.5, color = "grey80", alpha = 0.9) +
-        
-        ggplot2::geom_linerange(
-          ggplot2::aes(ymin = .data$error_lci,
-                       ymax = .data$error_uci),
-          position = ggplot2::position_dodge(width = 0.5),
-          linewidth = 2.5, alpha = .2,
-          show.legend = TRUE) +
-        { if (!only_one_m)
-          ggplot2::geom_line(
-            position = ggplot2::position_dodge(width = 0.5),
-            linewidth = 0.6, alpha = 0.5,
-            show.legend = TRUE)
-        } +
-        ggplot2::geom_point(
-          position = ggplot2::position_dodge(width = 0.5),
-          size = 3,
-          show.legend = TRUE) +
-        
-        { if (length(obj$set_target) > 1)
-          ggplot2::facet_wrap(
-            . ~ .data$type, scales = "free_y",
-            labeller = ggplot2::labeller(
-              type = c(
-                "hr" = "Home range estimation", 
-                "ctsd" = "Speed \u0026 distance estimation"))) } +
-        
-        ggplot2::labs(
-          x = "Population sample size",
-          y = "Relative error (%)",
-          color = paste0("Within error threshold (\u00B1",
-                         error_threshold * 100, "%)?"),
-          caption = paste(
-            "This plot displays preliminary outputs from a",
-            "single replicate.\n",
-            "For robust inferences, run multiple replicates using",
-            "`md_replicate()`.")) +
-        
-        { if (!only_one_m)
-          ggplot2::scale_x_continuous(
-            breaks = scales::breaks_pretty()) } +
-        ggplot2::scale_y_continuous(
-          labels = scales::percent,
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_color_manual(
-          values = c("TRUE" = pal[1],
-                     "FALSE" = pal[2]), drop = FALSE) +
-        ggplot2::scale_shape_manual(
-          "Groups:", values = c(16, 17)) +
-        
-        ggplot2::theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
-          legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
-        ggplot2::guides()
-    
-    } else {
-      
-      out_mean <- suppressMessages(
-        out %>% 
-          dplyr::group_by(.data$type, .data$group, .data$m) %>% 
-          dplyr::summarize(
-            n = dplyr::n(),
-            error = mean(.data$error, na.rm = TRUE),
-            error_lci = mean(.data$error_lci, na.rm = TRUE),
-            error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
-          dplyr::rowwise() %>%
-          dplyr::mutate(
-            within_threshold = 
-              (.data$error >= -error_threshold &
-                 .data$error <= error_threshold),
-            overlaps_with_threshold = 
-              (.data$error_lci <= error_threshold & 
-                 .data$error_uci >= -error_threshold),
-            overlaps = dplyr::case_when(
-              within_threshold ~ "TRUE",
-              TRUE ~ "FALSE"))
-      )
-      
-      p <- out_mean %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$m,
-                       y = .data$error,
-                       group = .data$group,
-                       shape = .data$group,
-                       color = .data$overlaps)) +
-        
-        ggplot2::geom_hline(
-          yintercept = 0,
-          linewidth = 0.3,
-          linetype = "solid") +
-        
-        ggplot2::geom_hline(
-          yintercept = error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        ggplot2::geom_hline(
-          yintercept = -error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        
-        ggplot2::geom_jitter(
-          data = out,
-          mapping = ggplot2::aes(x = .data$m,
-                                 y = .data$error,
-                                 group = .data$group,
-                                 shape = .data$group,
-                                 color = .data$overlaps),
-          position = ggplot2::position_jitterdodge(dodge.width = 0.4),
-          size = 3.5, color = "grey80", alpha = 0.9) +
-        
-        ggplot2::geom_linerange(
-          ggplot2::aes(ymin = .data$error_lci,
-                       ymax = .data$error_uci),
-          position = ggplot2::position_dodge(width = 0.8),
-          linewidth = 2.5, alpha = .2,
-          show.legend = TRUE) +
-        ggplot2::geom_line(
-          position = ggplot2::position_dodge(width = 0.8),
-          linewidth = 0.6, alpha = 0.5,
-          show.legend = TRUE) +
-        ggplot2::geom_point(
-          position = ggplot2::position_dodge(width = 0.8),
-          size = 3,
-          show.legend = TRUE) +
-        
-        { if (length(obj$set_target) > 1)
-          ggplot2::facet_wrap(
-            . ~ .data$type, scales = "free_y",
-            labeller = ggplot2::labeller(
-              type = c(
-                "hr" = "Home range estimation", 
-                "ctsd" = "Speed \u0026 distance estimation"))) } +
-        
-        ggplot2::labs(
-          x = "Population sample size",
-          y = "Relative error (%)",
-          color = paste0("Within error threshold (\u00B1",
-                         error_threshold * 100, "%)?"),
-          caption = paste(
-            "This plot displays preliminary outputs from a",
-            "single replicate.\n",
-            "For robust inferences, run multiple replicates using",
-            "`md_replicate()`.")) +
-        
-        ggplot2::scale_x_continuous(
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_y_continuous(
-          labels = scales::percent,
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_color_manual(
-          values = c("TRUE" = pal[1],
-                     "FALSE" = pal[2]), drop = FALSE) +
-        
-        ggplot2::theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
-          legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
-        ggplot2::guides(shape = "none")
-    }
-    
-    warning(
-      "You are viewing preliminary results from a single replicate ",
-      "and ", n_resamples, " resamples. ",
-      "To assess variability and credible intervals, please run ",
-      "`md_replicate()` to generate multiple replicates and ",
-      "aggregate results.")
-    
-  } else {
-    
-    if (obj$grouped) {
-      
-      out <- dplyr::filter(out, group != "All") 
-      out_mean <- out %>%
-        dplyr::group_by(.data$group, .data$type) %>%
-        dplyr::slice_max(.data$m) %>%
-        dplyr::summarise(
-          error_mean = .data$error,
-          x_pos = .data$m,
-          y_pos = .data$error_lci,
-          color = ifelse(abs(.data$error) < error_threshold,
-                         pal[1], pal[2]),
-          .groups = "drop")
-      
-      only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
-      if (only_one_m) out$m <- factor(out$m)
-      
-      p <- out %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$m,
-                       y = .data$error,
-                       shape = .data$group,
-                       group = .data$group,
-                       color = .data$overlaps)) +
-        
-        ggplot2::geom_hline(
-          yintercept = error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        ggplot2::geom_hline(
-          yintercept = -error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        
-        ggplot2::geom_hline(
-          yintercept = 0,
-          linewidth = 0.3,
-          linetype = "solid") +
-        
-        ggplot2::geom_linerange(
-          ggplot2::aes(ymin = .data$error_lci,
-                       ymax = .data$error_uci),
-          position = ggplot2::position_dodge(width = 0.5),
-          linewidth = 2.5, alpha = .2,
-          show.legend = TRUE) +
-        
-        { if (!only_one_m)
-          ggplot2::geom_line(
-            position = ggplot2::position_dodge(width = 0.5),
-            linewidth = 0.6, alpha = 0.5,
-            show.legend = TRUE)
-        } +
-        ggplot2::geom_point(
-          position = ggplot2::position_dodge(width = 0.5),
-          size = 3,
-          show.legend = TRUE) +
-        
-        { if (length(obj$set_target) > 1)
-          ggplot2::facet_wrap(
-            . ~ .data$type, scales = "free_y",
-            labeller = ggplot2::labeller(
-              type = c(
-                "hr" = "Home range estimation", 
-                "ctsd" = "Speed \u0026 distance estimation"))) } +
-        
-        ggplot2::labs(
-          x = "Population sample size",
-          y = "Relative error (%)",
-          color = paste0("Within error threshold (\u00B1",
-                         error_threshold * 100, "%)?"),
-          caption = paste(
-            "This plot displays preliminary outputs from a",
-            "single replicate.\n",
-            "For robust inferences, run multiple replicates using",
-            "`md_replicate()`.")) +
-        
-        { if (!only_one_m)
-          ggplot2::scale_x_continuous(
-            breaks = scales::breaks_pretty()) } +
-        ggplot2::scale_y_continuous(
-          labels = scales::percent,
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_color_manual(
-          values = c("TRUE" = pal[1],
-                     "FALSE" = pal[2]), drop = FALSE) +
-        ggplot2::scale_shape_manual(
-          "Groups:", values = c(16, 17)) +
-        
-        ggplot2::theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
-          legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
-        ggplot2::guides()
-      
-    } else {
-      
-      # y_offset_df <- out %>%
-      #   dplyr::group_by(.data$type) %>%
-      #   dplyr::summarise(
-      #     y_range = max(.data$error, na.rm = TRUE) - 
-      #                   min(.data$error, na.rm = TRUE),
-      #     .groups = "drop"
-      #   )
-      
-      out_mean <- out %>%
-        dplyr::group_by(.data$group, .data$type) %>%
-        dplyr::slice_max(.data$m) %>%
-        dplyr::summarise(
-          error_mean = .data$error,
-          x_pos = .data$m,
-          y_pos = .data$error_lci,
-          color = ifelse(abs(.data$error) < error_threshold,
-                         pal[1], pal[2]),
-          .groups = "drop"
-        ) # %>%
-      # dplyr::left_join(y_offset_df, by = "type") %>%
-      # dplyr::mutate(
-      #   y_offset = ifelse(is.finite(y_range) & y_range > 0,
-      #                     y_range * 0.01, 0.01),
-      #   y_pos_label = y_pos - y_offset)
-      
-      p <- out %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$m,
-                       y = .data$error,
-                       group = .data$group,
-                       color = .data$overlaps)) +
-        
-        ggplot2::geom_hline(
-          yintercept = error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        ggplot2::geom_hline(
-          yintercept = -error_threshold,
-          alpha = 0.5,
-          linetype = "dotted", linewidth = 0.4) +
-        
-        ggplot2::geom_hline(
-          yintercept = 0,
-          linewidth = 0.3,
-          linetype = "solid") +
-        
-        ggplot2::geom_linerange(
-          ggplot2::aes(ymin = .data$error_lci,
-                       ymax = .data$error_uci),
-          position = ggplot2::position_dodge(width = 0.8),
-          linewidth = 2.5, alpha = .2,
-          show.legend = TRUE) +
-        ggplot2::geom_line(
-          position = ggplot2::position_dodge(width = 0.8),
-          linewidth = 0.6, alpha = 0.5,
-          show.legend = TRUE) +
-        ggplot2::geom_point(
-          position = ggplot2::position_dodge(width = 0.8),
-          size = 3,
-          show.legend = TRUE) +
-        
-        { if (length(obj$set_target) > 1)
-          ggplot2::facet_wrap(
-            . ~ .data$type, scales = "free_y",
-            labeller = ggplot2::labeller(
-              type = c(
-                "hr" = "Home range estimation", 
-                "ctsd" = "Speed \u0026 distance estimation"))) } +
-        
-        ggplot2::labs(
-          x = "Population sample size",
-          y = "Relative error (%)",
-          color = paste0("Within error threshold (\u00B1",
-                         error_threshold * 100, "%)?"),
-          caption = paste(
-            "This plot displays preliminary outputs from a",
-            "single replicate.\n",
-            "For robust inferences, run multiple replicates using",
-            "`md_replicate()`.")) +
-        
-        ggplot2::scale_x_continuous(
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_y_continuous(
-          labels = scales::percent,
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_color_manual(
-          values = c("TRUE" = pal[1],
-                     "FALSE" = pal[2]), drop = FALSE) +
-        
-        ggplot2::theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
-          legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
-        ggplot2::guides(shape = "none")
-    }
-    
-    warning(
-      "You are viewing preliminary results from a single replicate. ",
-      "To assess variability and credible intervals, please run ",
-      "`md_replicate()` to generate multiple replicates and ",
-      "aggregate results.")
-  }
-  
-  return(p)
-  
-}
 
 #' @title Assess output convergence in simulation outputs
 #'
@@ -2686,236 +2876,235 @@ md_check <- function(obj,
     dplyr::arrange(dplyr::desc(.data$type)) %>%
     suppressWarnings()
   
-  if (plot) {
+  .find_stable_x <- function(delta_vec, tol) {
+    if(!is.numeric(delta_vec)) stop("delta_vec must be numeric")
+    if(length(delta_vec) == 0) return(NA)
     
-    .find_stable_x <- function(delta_vec, tol) {
-      if(!is.numeric(delta_vec)) stop("delta_vec must be numeric")
-      if(length(delta_vec) == 0) return(NA)
-      
-      abs_delta <- abs(delta_vec)
-      stable_idx <- which(abs_delta <= tol)
-      if(length(stable_idx) == 0) return(NA)
-      
-      for(i in stable_idx) {
-        if(all(abs_delta[i:length(abs_delta)] <= tol)) {
-          return(i)
-        }
+    abs_delta <- abs(delta_vec)
+    stable_idx <- which(abs_delta <= tol)
+    if(length(stable_idx) == 0) return(NA)
+    
+    for(i in stable_idx) {
+      if(all(abs_delta[i:length(abs_delta)] <= tol)) {
+        return(i)
       }
-      
-      return(NA)
     }
     
-    dt_stable_idx <- dt_plot %>%
-      dplyr::group_by(type, group) %>%
+    return(NA)
+  }
+  
+  dt_stable_idx <- dt_plot %>%
+    dplyr::group_by(type, group) %>%
+    dplyr::summarise(
+      idx_stable_start = .find_stable_x(
+        delta_vec = delta_cummean, tol = tol),
+      .groups = "drop")
+  
+  label_y <- paste0("|", "\u0394", "(cumulative mean error)|")
+  
+  dt_plot <- dt_plot %>%
+    dplyr::left_join(
+      diag %>% dplyr::select(-has_converged),
+      by = c("type", "group")) %>%
+    dplyr::left_join(dt_stable_idx, by = c("type", "group"))
+  
+  dt_rect <- suppressWarnings(
+    dt_plot %>%
+      dplyr::group_by(.data$type, .data$group) %>%
+      dplyr::filter(!is.na(.data$idx_stable_start)) %>%
       dplyr::summarise(
-        idx_stable_start = .find_stable_x(
-          delta_vec = delta_cummean, tol = tol),
-        .groups = "drop")
-    
-    label_y <- paste0("|", "\u0394", "(cumulative mean error)|")
-    
-    dt_plot <- dt_plot %>%
-      dplyr::left_join(
-        diag %>% dplyr::select(-has_converged),
-        by = c("type", "group")) %>%
-      dplyr::left_join(dt_stable_idx, by = c("type", "group"))
-    
-    dt_rect <- suppressWarnings(
-      dt_plot %>%
-        dplyr::group_by(.data$type, .data$group) %>%
-        dplyr::filter(!is.na(.data$idx_stable_start)) %>%
-        dplyr::summarise(
-          xmin = .data$idx_stable_start[1],
-          xmax = max(.data$index, na.rm = TRUE),
-          .groups = "drop"))
-    failed_groups <- diag %>%
-      dplyr::filter(!.data$has_converged) %>%
-      dplyr::mutate(
-        group_label = if (has_groups) {
-          paste(.data$type, .data$group, sep = " / ")
-        } else {
-          dplyr::case_when(
-            .data$type == "hr" ~ "mean home range",
-            .data$type == "ctsd" ~ "mean speed",
-            TRUE ~ as.character(.data$type))
-        }
-      ) %>%
-      dplyr::pull(.data$group_label)
-    
-    if (has_groups) {
-      failed_groups <- gsub("^hr", "mean home range", failed_groups)
-      failed_groups <- gsub("^ctsd", "mean speed", failed_groups)
-    }
-    
-    subtitle_text <- if (length(failed_groups) == 0) {
-      sprintf("All groups converged at replicate %d within \u00b1 %g%%",
-              dt_rect$xmin, tol * 100)
-    } else if (length(set_target) > 1) {
-      paste(
-        sprintf("Did not converge: %s (tolerance = \u00b1 %g%%)", 
-                failed_groups, tol * 100),
-        collapse = "\n"
-      )
-    } else {
+        xmin = .data$idx_stable_start[1],
+        xmax = max(.data$index, na.rm = TRUE),
+        .groups = "drop"))
+  failed_groups <- diag %>%
+    dplyr::filter(!.data$has_converged) %>%
+    dplyr::mutate(
+      group_label = if (has_groups) {
+        paste(.data$type, .data$group, sep = " / ")
+      } else {
+        dplyr::case_when(
+          .data$type == "hr" ~ "mean home range",
+          .data$type == "ctsd" ~ "mean speed",
+          TRUE ~ as.character(.data$type))
+      }
+    ) %>%
+    dplyr::pull(.data$group_label)
+  
+  if (has_groups) {
+    failed_groups <- gsub("^hr", "mean home range", failed_groups)
+    failed_groups <- gsub("^ctsd", "mean speed", failed_groups)
+  }
+  
+  subtitle_text <- if (length(failed_groups) == 0) {
+    sprintf("All groups converged at replicate %d within \u00b1 %g%%",
+            dt_rect$xmin, tol * 100)
+  } else if (length(set_target) > 1) {
+    paste(
       sprintf("Did not converge: %s (tolerance = \u00b1 %g%%)", 
-              paste(failed_groups, collapse = ", "), tol * 100)
-    }
+              failed_groups, tol * 100),
+      collapse = "\n"
+    )
+  } else {
+    sprintf("Did not converge: %s (tolerance = \u00b1 %g%%)", 
+            paste(failed_groups, collapse = ", "), tol * 100)
+  }
+  
+  dt_plot$type_f <- factor(dt_plot$type, levels = c("hr", "ctsd"))
+  dt_rect$type_f <- factor(dt_rect$type, levels = c("hr", "ctsd"))
+  
+  p <- NULL
+  if (has_groups) {
     
-    dt_plot$type_f <- factor(dt_plot$type, levels = c("hr", "ctsd"))
-    dt_rect$type_f <- factor(dt_rect$type, levels = c("hr", "ctsd"))
+    p <- dt_plot %>%
+      ggplot2::ggplot(
+        ggplot2::aes(x = .data$replicate, 
+                     y = .data$delta_cummean,
+                     group = .data$group,
+                     shape = .data$group,
+                     linetype = .data$group)) +
+      
+      ggplot2::geom_hline(yintercept = 0) +
+      ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
+      ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
+      
+      { if (length(set_target) > 1)
+        ggplot2::facet_wrap(
+          . ~ .data$type_f,
+          labeller = ggplot2::labeller(
+            type_f = c(
+              "hr" = "Home range estimation", 
+              "ctsd" = "Speed \u0026 distance estimation"))) } +
+      
+      ggplot2::geom_line(
+        linewidth = 0.5, position = position_dodge(width = 0.5)) +
+      ggplot2::geom_point(
+        ggplot2::aes(color = .data$has_converged),
+        size = 4, position = position_dodge(width = 0.5)) +
+      
+      { if (nrow(dt_rect) > 0) 
+        ggplot2::geom_rect(
+          data = dt_rect,
+          mapping = ggplot2::aes(
+            xmin = .data$xmin,
+            xmax = .data$xmax, 
+            ymin = -Inf, 
+            ymax = Inf),
+          fill = "black",
+          alpha = 0.08,
+          inherit.aes = FALSE) } +
+      
+      ggplot2::scale_color_manual(
+        values = c("TRUE" = pal[1],
+                   "FALSE" = pal[2]),
+        drop = FALSE) +
+      
+      ggplot2::scale_shape_manual(
+        "Groups:", values = c(16, 17), drop = FALSE) +
+      ggplot2::scale_linetype_manual(
+        "Groups:", values = c("solid", "dashed"),
+        drop = FALSE) +
+      
+      ggplot2::scale_y_continuous(labels = scales::percent) +
+      
+      ggplot2::labs(
+        title = "Stepwise change in cumulative mean",
+        subtitle = subtitle_text,
+        caption = caption,
+        x = "Replicate index",
+        y = label_y
+      ) +
+      
+      theme_classic() +
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 16),
+        strip.text = ggplot2::element_text(size = 16),
+        strip.background.x = ggplot2::element_rect(
+          color = NA, fill = NA),
+        strip.background.y = ggplot2::element_rect(
+          color = NA, fill = NA),
+        legend.position = "bottom",
+        legend.key.width = ggplot2::unit(1, "cm"),
+        plot.title = ggplot2::element_text(size = 20),
+        plot.subtitle = ggplot2::element_text(face = "italic")) +
+      ggplot2::guides(color = "none", fill = "none")
+    p
     
-    p <- NULL
-    if (has_groups) {
-      
-      p <- dt_plot %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$replicate, 
-                       y = .data$delta_cummean,
-                       group = .data$group,
-                       shape = .data$group,
-                       linetype = .data$group)) +
-        
-        ggplot2::geom_hline(yintercept = 0) +
-        ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
-        ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
-        
-        { if (length(set_target) > 1)
-          ggplot2::facet_wrap(
-            . ~ .data$type_f,
-            labeller = ggplot2::labeller(
-              type_f = c(
-                "hr" = "Home range estimation", 
-                "ctsd" = "Speed \u0026 distance estimation"))) } +
-        
-        ggplot2::geom_line(
-          linewidth = 0.5, position = position_dodge(width = 0.5)) +
-        ggplot2::geom_point(
-          ggplot2::aes(color = .data$has_converged),
-          size = 4, position = position_dodge(width = 0.5)) +
-        
-        { if (nrow(dt_rect) > 0) 
-          ggplot2::geom_rect(
-            data = dt_rect,
-            mapping = ggplot2::aes(
-              xmin = .data$xmin,
-              xmax = .data$xmax, 
-              ymin = -Inf, 
-              ymax = Inf),
-            fill = "black",
-            alpha = 0.08,
-            inherit.aes = FALSE) } +
-        
-        ggplot2::scale_color_manual(
-          values = c("TRUE" = pal[1],
-                     "FALSE" = pal[2]),
-          drop = FALSE) +
-        
-        ggplot2::scale_shape_manual(
-          "Groups:", values = c(16, 17), drop = FALSE) +
-        ggplot2::scale_linetype_manual(
-            "Groups:", values = c("solid", "dashed"),
-            drop = FALSE) +
-        
-        ggplot2::scale_y_continuous(labels = scales::percent) +
-        
-        ggplot2::labs(
-          title = "Stepwise change in cumulative mean",
-          subtitle = subtitle_text,
-          caption = caption,
-          x = "Replicate index",
-          y = label_y
-        ) +
-        
-        theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 16),
-          strip.text = ggplot2::element_text(size = 16),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          legend.position = "bottom",
-          legend.key.width = ggplot2::unit(1, "cm"),
-          plot.title = ggplot2::element_text(size = 20),
-          plot.subtitle = ggplot2::element_text(face = "italic")) +
-        ggplot2::guides(color = "none", fill = "none")
-      p
-      
-    } else {
-      
-      p <- dt_plot %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$replicate, 
-                       y = .data$delta_cummean)) +
-        
-        ggplot2::geom_hline(yintercept = 0) +
-        ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
-        ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
-        
-        { if (length(set_target) > 1)
-          ggplot2::facet_wrap(
-            . ~ .data$type_f,
-            labeller = ggplot2::labeller(
-              type_f = c(
-                "hr" = "Home range estimation", 
-                "ctsd" = "Speed \u0026 distance estimation"))) } +
-        
-        ggplot2::geom_line(
-          linewidth = 0.5, position = position_dodge(width = 0.5)) +
-        ggplot2::geom_point(
-          ggplot2::aes(color = .data$has_converged),
-          size = 4, position = position_dodge(width = 0.5)) +
-        
-        { if (nrow(dt_rect) > 0) 
-          ggplot2::geom_rect(
-            data = dt_rect,
-            mapping = ggplot2::aes(
-              xmin = .data$xmin,
-              xmax = .data$xmax, 
-              ymin = -Inf, 
-              ymax = Inf),
-            fill = "black",
-            alpha = 0.08,
-            inherit.aes = FALSE) } +
-        
-        ggplot2::scale_color_manual(
-          values = c("TRUE" = pal[1],
-                     "FALSE" = pal[2]),
-          drop = FALSE) +
-        
-        ggplot2::scale_y_continuous(labels = scales::percent) +
-        ggplot2::scale_x_continuous(
-          breaks = scales::breaks_pretty()) +
-        
-        ggplot2::labs(
-          title = "Stepwise change in cumulative mean",
-          subtitle = subtitle_text,
-          caption = caption,
-          x = "Replicate index",
-          y = label_y
-        ) +
-        
-        theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 16),
-          strip.text = ggplot2::element_text(size = 16),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          legend.position = "bottom",
-          legend.key.width = ggplot2::unit(1, "cm"),
-          plot.title = ggplot2::element_text(size = 20),
-          plot.subtitle = ggplot2::element_text(face = "italic")) +
-        ggplot2::guides(color = "none", fill = "none", 
-                        linetype = "none")
-      
-    }
+  } else {
     
-    if (length(set_target) > 1)
-      p <- p + ggplot2::theme(
-        plot.subtitle = ggplot2::element_text(lineheight = 0.7))
+    p <- dt_plot %>%
+      ggplot2::ggplot(
+        ggplot2::aes(x = .data$replicate, 
+                     y = .data$delta_cummean)) +
+      
+      ggplot2::geom_hline(yintercept = 0) +
+      ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
+      ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
+      
+      { if (length(set_target) > 1)
+        ggplot2::facet_wrap(
+          . ~ .data$type_f,
+          labeller = ggplot2::labeller(
+            type_f = c(
+              "hr" = "Home range estimation", 
+              "ctsd" = "Speed \u0026 distance estimation"))) } +
+      
+      ggplot2::geom_line(
+        linewidth = 0.5, position = position_dodge(width = 0.5)) +
+      ggplot2::geom_point(
+        ggplot2::aes(color = .data$has_converged),
+        size = 4, position = position_dodge(width = 0.5)) +
+      
+      { if (nrow(dt_rect) > 0) 
+        ggplot2::geom_rect(
+          data = dt_rect,
+          mapping = ggplot2::aes(
+            xmin = .data$xmin,
+            xmax = .data$xmax, 
+            ymin = -Inf, 
+            ymax = Inf),
+          fill = "black",
+          alpha = 0.08,
+          inherit.aes = FALSE) } +
+      
+      ggplot2::scale_color_manual(
+        values = c("TRUE" = pal[1],
+                   "FALSE" = pal[2]),
+        drop = FALSE) +
+      
+      ggplot2::scale_y_continuous(labels = scales::percent) +
+      ggplot2::scale_x_continuous(
+        breaks = scales::breaks_pretty()) +
+      
+      ggplot2::labs(
+        title = "Stepwise change in cumulative mean",
+        subtitle = subtitle_text,
+        caption = caption,
+        x = "Replicate index",
+        y = label_y
+      ) +
+      
+      theme_classic() +
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 16),
+        strip.text = ggplot2::element_text(size = 16),
+        strip.background.x = ggplot2::element_rect(
+          color = NA, fill = NA),
+        strip.background.y = ggplot2::element_rect(
+          color = NA, fill = NA),
+        legend.position = "bottom",
+        legend.key.width = ggplot2::unit(1, "cm"),
+        plot.title = ggplot2::element_text(size = 20),
+        plot.subtitle = ggplot2::element_text(face = "italic")) +
+      ggplot2::guides(color = "none", fill = "none", 
+                      linetype = "none")
     
+  }
+  
+  if (length(set_target) > 1)
+    p <- p + ggplot2::theme(
+      plot.subtitle = ggplot2::element_text(lineheight = 0.7))
+  
+  if (plot) {
     suppressWarnings(print(p))
   }
   
@@ -2926,6 +3115,7 @@ md_check <- function(obj,
     n_converge = n_converge,
     has_converged = diag$has_converged,
     stabilized_at = dt_stable_idx,
+    plot = p,
     warning = caption
   ), class = "movedesign_check")
   
@@ -3446,6 +3636,9 @@ md_optimize <- function(obj,
                         plot = FALSE,
                         ...) {
   
+  if (n_replicates < 5)
+    stop("`n_replicates` must be set to at least 5.")
+    
   `%||%` <- function(x, y) if (!is.null(x)) x else y
   
   dots <- list(...)
@@ -3477,13 +3670,29 @@ md_optimize <- function(obj,
   group <- groups <- top_facet <- NULL
   hr_dur <- hr_dti <- ctsd_dur <- ctsd_dti <- NULL
   
+  tmp_N_area <- tmp_N_speed <- NA 
   if (length(set_target) == 1) {
     err_prev <- setNames(list(rep(1, 10)), set_target)
+    if (set_target == "hr") 
+      tmp_N_area <- suppressWarnings(
+        extract_dof(obj$meanfitList, "area"))[[1]]
+    if (set_target == "ctsd") 
+      tmp_N_speed <- suppressWarnings(
+        extract_dof(obj$meanfitList, "speed"))[[1]]
   } else if (length(set_target) == 2) {
     err_prev <- list("hr" = rep(1, 10), "ctsd" = rep(1, 10))
+    tmp_N_area <- suppressWarnings(
+      extract_dof(obj$meanfitList, "area"))[[1]]
+    tmp_N_speed <- suppressWarnings(
+      extract_dof(obj$meanfitList, "speed"))[[1]]
   }
   
-  tmp_tau_p_val <- tau_p[[1]][2, "value"] %#% tau_p[[1]][2, "unit"]
+  if (obj$add_ind_var) {
+    tmp_tau_p_val <- tau_p[[1]][3, "value"] %#% tau_p[[1]][3, "unit"]
+  } else {
+    tmp_tau_p_val <- tau_p[[1]][2, "value"] %#% tau_p[[1]][2, "unit"]
+  }
+  
   warn_and_confirm <- function(total_years, error_threshold_label) {
     if (total_years > 4) {
       cat('', msg_warning("!"),
@@ -3507,15 +3716,22 @@ md_optimize <- function(obj,
     }
   }
   
-  tmp_tau_p_val <- tau_p[[1]][2, "value"] %#% tau_p[[1]][2, "unit"]
-  
   if (error_threshold <= 0.01) {
-    N <- 256
+    N <- 280
     error_label <- "1%"
   } else if (error_threshold <= 0.05) {
     N <- 150
     error_label <- "5%"
-  } else {
+  } else if (error_threshold <= 0.1) {
+    N <- 100
+    error_label <- paste0(round(error_threshold * 100, 0), "%")
+  } else if (error_threshold <= 0.2) {
+    N <- 80
+    error_label <- paste0(round(error_threshold * 100, 0), "%")
+  } else if (error_threshold <= 0.5) {
+    N <- 40
+    error_label <- paste0(round(error_threshold * 100, 0), "%")
+  } else if (error_threshold <= 0.5) {
     N <- 30
     error_label <- paste0(round(error_threshold * 100, 0), "%")
   }
@@ -3524,8 +3740,7 @@ md_optimize <- function(obj,
   warn_and_confirm(total_years, error_label)
   
   for (target in set_target) {
-    optimal_dur <- round((tau_p[[1]]$value[2] %#% 
-                            tau_p[[1]]$unit[2]) * N)
+    optimal_dur <- round(tmp_tau_p_val * N)
     optimal_dti <- round((tau_v[[1]]$value[2] %#% 
                             tau_v[[1]]$unit[2]) / 3)
     
@@ -3597,6 +3812,10 @@ md_optimize <- function(obj,
   summaryList <- vector("list", length(m_seq))
   
   start_total <- Sys.time()
+  print(
+    sprintf(
+      "End time: %s",
+      format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
   
   for (i in seq_along(m_seq)) {
     
@@ -3738,17 +3957,17 @@ md_optimize <- function(obj,
     err_values <- unlist(err_values)
     
     if (obj$which_meta == "mean") {
-      
+
       overlaps_with_truth <- dplyr::between(
         unique(data$truth),
         mean(data$lci, na.rm = TRUE),
         mean(data$uci, na.rm = TRUE))
-      
+
       all(unlist(err_replicates) < error_threshold)
       all(err_values < error_threshold)
       overlaps_with_truth
       diag$has_converged
-      
+
       if (!diag$has_converged) {
         warning(
           sprintf(
@@ -3756,57 +3975,57 @@ md_optimize <- function(obj,
             n_replicates, "Consider increasing 'n_replicates'."
           ), call. = FALSE)
       }
-      
+
       if (all(err_values < error_threshold) &&
           all(unlist(err_replicates) < error_threshold) &&
           overlaps_with_truth && diag$has_converged) {
         broke <- TRUE
-        break
+        # break
       }
-      
+
     } # end of if (which_meta == "mean")
-    
+
     if (obj$which_meta == "compare") {
-      
+
       cov <- Inf
       if (all(err_values < error_threshold)) {
-        
+
         input <- .get_groups(obj$fitList, groups = groups)
-        
+
         out_cov <- list()
         overlaps_with_truth <- list()
         ratios <- list()
         for (target in set_target) {
-          
+
           out_meta <- list()
           out_meta_truth <- list()
           if (target == "hr") variable <- "area"
           if (target == "ctsd") variable <- "speed"
-          
+
           out_meta_truth[[target]] <- .capture_meta(
             input,
             variable = variable,
             units = FALSE,
             verbose = TRUE,
-            plot = FALSE) %>% 
+            plot = FALSE) %>%
             suppressMessages() %>%
             quiet()
-          
+
           out_cov[[target]] <- c()
-          overlaps_with_truth[[target]] <- c()          
+          overlaps_with_truth[[target]] <- c()
           ratios[[target]] <- c()
-          
+
           for (tmp in tmpList) {
-            
+
             if (target == "hr") tmp_input <- tmp$akdeList
             if (target == "ctsd") tmp_input <- tmp$akdeList
-            
+
             tmp_input <- list(
               tmp_input,
               .get_groups(tmp_input,
                           groups = tmp$groups[[2]]))
             names(tmp_input) <- c("All", "groups")
-            
+
             out_meta[[target]] <- setNames(
               lapply(tmp_input, function(x) {
                 return(.capture_meta(x,
@@ -3817,7 +4036,7 @@ md_optimize <- function(obj,
                                      plot = FALSE) %>%
                          suppressMessages())
               }), names(tmp_input))
-            
+
             tmp_data <- dplyr::filter(data, .data$type == target)
             if (!is.na(tmp_data[nrow(tmp_data), ]$est)) {
               cov <- out_meta[[target]][["All"]]$meta[
@@ -3827,42 +4046,42 @@ md_optimize <- function(obj,
             } else {
               out_cov[[target]] <- c(out_cov[[target]], 0)
             }
-            
+
             if (!is.null(out_meta[[target]][["groups"]])) {
-              
+
               ratios[[target]] <- c(
                 ratios[[target]],
                 .get_ratios(out_meta[[target]][["groups"]])$est)
-              
+
               overlaps_with_truth[[target]] <- c(
                 overlaps_with_truth[[target]],
                 dplyr::between(
                   .get_ratios(out_meta[[target]][["groups"]])$est,
-                  .get_ratios(out_meta_truth[[target]])$lci, 
+                  .get_ratios(out_meta_truth[[target]])$lci,
                   .get_ratios(out_meta_truth[[target]])$uci))
-              
+
             } else {
               ratios[[target]] <- c(ratios[[target]], NA)
               overlaps_with_truth[[target]] <- c(
                 overlaps_with_truth[[target]], FALSE)
             }
-            
+
           } # end of [tmp] loop (tmList)
-          
+
         } # end of [target] loop
-        
+
         # out_cov
         # overlaps_with_truth
         # ratios
-        
+
         cov <- lapply(out_cov, tail, n = 1)
-        
+
         # if cov -> infinity,
         # still sensitive to small changes in the mean.
-        if (!all(is.infinite(unlist(cov))) && 
+        if (!all(is.infinite(unlist(cov))) &&
             all(unlist(overlaps_with_truth))) {
           broke <- TRUE
-          break
+          # break
         }
       }
       
@@ -3872,45 +4091,68 @@ md_optimize <- function(obj,
   
   summary_full <- data.table::rbindlist(summaryList, fill = TRUE)
   
+  if (has_groups) {
+    dt_plot <- summary_full[summary_full$group != "All", ]
+  } else {
+    dt_plot <- summary_full[summary_full$group == "All", ]
+  }
+  
+  dt_plot <- dt_plot %>%
+    dplyr::mutate(
+      error_threshold = error_threshold,
+      overlaps = dplyr::between(
+        abs(.data$error), 0, error_threshold)) 
+  dt_plot_T <- dplyr::filter(dt_plot, .data$overlaps)
+  dt_plot_F <- dplyr::filter(dt_plot, !.data$overlaps)
+  
+  dt_plot_means <- dt_plot %>% 
+    dplyr::mutate(type = factor(
+      .data$type, levels = c("hr", "ctsd"))) %>%
+    dplyr::select(
+      "type", "m", "group",
+      "error", "error_lci", "error_uci") %>% 
+    dplyr::distinct() %>%
+    dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+    dplyr::summarize(
+      n = dplyr::n(),
+      error_sd = stats::sd(.data$error, na.rm = TRUE),
+      error_mean = mean(.data$error, na.rm = TRUE),
+      error_mean_lci = error_mean - stats::qt(
+        0.975, df = n - 1) * error_sd / sqrt(n),
+      error_mean_uci = error_mean + stats::qt(
+        0.975, df = n - 1) * error_sd / sqrt(n),
+      .groups = "drop") %>%
+    dplyr::mutate(
+      overlaps = dplyr::between(
+        abs(.data$error_mean), 0, error_threshold),
+      overlaps = factor(.data$overlaps,
+                        levels = c("TRUE", "FALSE")),
+      top_facet = .data$type == "hr") %>%
+    dplyr::ungroup()
+  
+  replicate_ok <- dt_plot %>%
+    dplyr::group_by(.data$type, .data$group, .data$m) %>%
+    dplyr::summarize(
+      all_within_threshold =
+        all(abs(.data$error) <= unique(.data$error_threshold)),
+      .groups = "drop")
+  broke_when <- dt_plot_means %>%
+    dplyr::inner_join(
+      replicate_ok,
+      by = c("type", "group", "m")
+    ) %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::arrange(.data$m, .by_group = TRUE) %>%
+    dplyr::filter(
+      .data$overlaps == TRUE,
+      .data$all_within_threshold == TRUE
+    ) %>%
+    dplyr::slice_head(n = 1) %>%
+    dplyr::ungroup()
+  
+  pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
+  
   if (plot) {
-    
-    pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
-    
-    if (has_groups) {
-      dt_plot <- summary_full[summary_full$group != "All", ]
-    } else {
-      dt_plot <- summary_full[summary_full$group == "All", ]
-    }
-    
-    dt_plot <- dt_plot %>%
-      dplyr::mutate(
-        error_threshold = error_threshold,
-        overlaps = dplyr::between(
-          abs(.data$error), 0, error_threshold)) 
-    dt_plot_T <- dplyr::filter(dt_plot, .data$overlaps)
-    dt_plot_F <- dplyr::filter(dt_plot, !.data$overlaps)
-    
-    dt_plot_means <- dt_plot %>% 
-      dplyr::mutate(type = factor(
-        .data$type, levels = c("hr", "ctsd"))) %>%
-      dplyr::select(
-        "type", "m", "group",
-        "error", "error_lci", "error_uci") %>% 
-      dplyr::distinct() %>%
-      dplyr::group_by(.data$type, .data$group, .data$m) %>% 
-      dplyr::summarize(
-        n = dplyr::n(),
-        error_mean_lci = mean(.data$error_lci, na.rm = TRUE),
-        error_mean_uci = mean(.data$error_uci, na.rm = TRUE),
-        error_mean = mean(.data$error, na.rm = TRUE),
-        .groups = "drop") %>%
-      dplyr::mutate(
-        overlaps = dplyr::between(
-          abs(.data$error_mean), 0, error_threshold),
-        overlaps = factor(.data$overlaps,
-                          levels = c("TRUE", "FALSE")),
-        top_facet = .data$type == "hr") %>%
-      dplyr::ungroup()
     
     if (!has_groups) {
       
@@ -4138,21 +4380,27 @@ md_optimize <- function(obj,
   
   if (broke) {
     message(format(
-      .msg(paste0("   Minimum population sample size: "),
-           "success"), width = 3, justify = "left"),
+      .msg(paste0("   Maximum population sample size evaluated: "),
+           "danger"), width = 3, justify = "left"),
       m_seq[[i]])
+    message(format(
+      .msg(paste0("   Minimum population sample size needed: "),
+           "success"), width = 3, justify = "left"),
+      broke_when$m[[1]]) # m_seq[[i]])
     message(format(
       .msg(paste0("   Sampling duration: "),
            "success"), width = 3, justify = "left"),
       round(obj$dur$value, 1), " ", obj$dur$unit)
-    message(format(
-      .msg(paste0("   Sampling interval: "), 
-           "success"), width = 3, justify = "left"),
-      round(obj$dti$value, 1), " ", obj$dti$unit)
+    if ("ctsd" %in% set_target) {
+      message(format(
+        .msg(paste0("   Sampling interval: "), 
+             "success"), width = 3, justify = "left"),
+        round(obj$dti$value, 1), " ", obj$dti$unit) }
     message(sprintf(
       " \u2713 Error below threshold of %.1f%%. %s",
       error_threshold * 100,
       "Minimum sample size achieved!"))
+    
   } else {
     message(format(
       .msg(paste0("   Maximum population sample size evaluated: "),
@@ -4162,10 +4410,12 @@ md_optimize <- function(obj,
       .msg(paste0("   Sampling duration: "),
            "danger"), width = 3, justify = "left"),
       round(obj$dur$value, 1), " ", obj$dur$unit)
-    message(format(
-      .msg(paste0("   Sampling interval: "), 
-           "danger"), width = 3, justify = "left"),
-      round(obj$dti$value, 1), " ", obj$dti$unit)
+    if ("ctsd" %in% set_target) {
+      message(format(
+        .msg(paste0("   Sampling interval: "), 
+             "danger"), width = 3, justify = "left"),
+        round(obj$dti$value, 1), " ", obj$dti$unit) 
+    }
     message(sprintf(
       " \u2717 Error above threshold of %.1f%%. %s",
       error_threshold * 100,
@@ -4174,6 +4424,11 @@ md_optimize <- function(obj,
       "   Increase", .msg("maximum population sample size", "danger"),
       "and try again."))
   }
+  
+  print(
+    sprintf(
+      "End time: %s",
+      format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")))
   
   message("Total elapsed time:")
   print(difftime(Sys.time(), start_total))
@@ -4668,4 +4923,5 @@ md_stack <- function(obj, ...) {
   return(out)
   
 }
+
 
