@@ -520,6 +520,39 @@ run_meta_resamples <- function(rv,
           
         } else {
           
+          truth[["All"]] <- true_estimate[[target]]
+          
+          out_est[["All"]] <- .get_estimates(out_meta[["All"]]$meta)
+          out_err[["All"]] <- sapply(out_est[["All"]], .get_errors,
+                                     truth = truth[["All"]])
+          
+          truth_ratio <- NA
+          out_ratio <- c("lci" = NA, "est" = NA, "uci" = NA)
+          subpop_detected[["All"]] <- out_meta[["All"]]$
+            logs$subpop_detected
+          
+          dt_meta <- rbind(
+            dt_meta,
+            data.frame(
+              type = target,
+              m = m,
+              sample = sample,
+              truth = truth[["All"]],
+              est = out_est[["All"]][["est"]],
+              lci = out_est[["All"]][["lci"]],
+              uci = out_est[["All"]][["uci"]],
+              error = out_err[["All"]][["est"]],
+              error_lci = out_err[["All"]][["lci"]],
+              error_uci = out_err[["All"]][["uci"]],
+              ratio_truth = truth_ratio,
+              ratio_est = out_ratio[["est"]],
+              ratio_lci = out_ratio[["lci"]],
+              ratio_uci = out_ratio[["uci"]],
+              overlaps = NA,
+              is_grouped = subpop,
+              group = "All",
+              subpop_detected = as.character(
+                subpop_detected[["All"]])))
           
           if (subpop) {
             
@@ -607,43 +640,7 @@ run_meta_resamples <- function(rv,
               } # end of [group] loop
               
             } # end of if (is.null(out_meta[["groups"]]))
-            
-          } else {
-            
-            truth[["All"]] <- true_estimate[[target]]
-            
-            out_est[["All"]] <- .get_estimates(out_meta[["All"]]$meta)
-            out_err[["All"]] <- sapply(out_est[["All"]], .get_errors,
-                                       truth = truth[["All"]])
-            
-            truth_ratio <- NA
-            out_ratio <- c("lci" = NA, "est" = NA, "uci" = NA)
-            subpop_detected[["All"]] <- out_meta[["All"]]$
-              logs$subpop_detected
-            
-            dt_meta <- rbind(
-              dt_meta,
-              data.frame(
-                type = target,
-                m = m,
-                sample = sample,
-                truth = truth[["All"]],
-                est = out_est[["All"]][["est"]],
-                lci = out_est[["All"]][["lci"]],
-                uci = out_est[["All"]][["uci"]],
-                error = out_err[["All"]][["est"]],
-                error_lci = out_err[["All"]][["lci"]],
-                error_uci = out_err[["All"]][["uci"]],
-                ratio_truth = truth_ratio,
-                ratio_est = out_ratio[["est"]],
-                ratio_lci = out_ratio[["lci"]],
-                ratio_uci = out_ratio[["uci"]],
-                overlaps = NA,
-                is_grouped = subpop,
-                group = "All",
-                subpop_detected = as.character(
-                  subpop_detected[["All"]])))
-            
+          
           } # end of if (subpop)
           
         } # end of if (is.null(out_meta[["All"]]))
