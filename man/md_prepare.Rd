@@ -15,8 +15,8 @@ md_prepare(
   which_meta = "mean",
   add_individual_variation = FALSE,
   groups = NULL,
-  seed = NULL,
-  parallel = FALSE
+  parallel = FALSE,
+  .seed = NULL
 )
 }
 \arguments{
@@ -69,6 +69,9 @@ Each element is a character vector of individual names
 
 \item{parallel}{Logical. If \code{TRUE}, enables parallel processing
 for model fitting, which speeds up analyses.}
+
+\item{.seed}{Set seeds to ensure reproducibility (optional);
+only needed if replicating from Shiny app into R console.}
 }
 \value{
 An object of class \code{movedesign_input} (and \code{movedesign}). This is

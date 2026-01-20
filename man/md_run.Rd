@@ -4,14 +4,14 @@
 \alias{md_run}
 \title{Run study design workflow}
 \usage{
-md_run(design, seeds = NULL, trace = TRUE)
+md_run(design, .seeds = NULL, trace = TRUE)
 }
 \arguments{
 \item{design}{An object of class \code{movedesign} (and
 \code{movedesign_input}), as returned by \code{\link[=md_prepare]{md_prepare()}}, containing
 all study design parameters and data.}
 
-\item{seeds}{List of set seeds to ensure reproducibility (optional);
+\item{.seeds}{List of set seeds to ensure reproducibility (optional);
 only needed if replicating from Shiny app into R console.}
 
 \item{trace}{Logical. If TRUE (default), print progress and timing
