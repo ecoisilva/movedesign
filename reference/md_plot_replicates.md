@@ -9,7 +9,7 @@ outside a user-defined error threshold.
 ## Usage
 
 ``` r
-md_plot_replicates(obj, ci = 0.95, error_threshold)
+md_plot_replicates(obj, ci = 0.95, error_threshold = 0.05)
 ```
 
 ## Arguments

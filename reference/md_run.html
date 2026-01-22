@@ -58,7 +58,7 @@ Progress and timing messages are printed by default.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">md_run</span><span class="op">(</span><span class="va">design</span>, trace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">md_run</span><span class="op">(</span><span class="va">design</span>, .seeds <span class="op">=</span> <span class="cn">NULL</span>, trace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -69,6 +69,11 @@ Progress and timing messages are printed by default.</p>
 <dd><p>An object of class <code>movedesign</code> (and
 <code>movedesign_input</code>), as returned by <code><a href="md_prepare.html">md_prepare()</a></code>, containing
 all study design parameters and data.</p></dd>
+
+
+<dt id="arg--seeds">.seeds<a class="anchor" aria-label="anchor" href="#arg--seeds"></a></dt>
+<dd><p>List of set seeds to ensure reproducibility (optional);
+only needed if replicating from Shiny app into R console.</p></dd>
 
 
 <dt id="arg-trace">trace<a class="anchor" aria-label="anchor" href="#arg-trace"></a></dt>

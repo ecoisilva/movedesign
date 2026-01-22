@@ -10,7 +10,7 @@ returned object. Progress and timing messages are printed by default.
 ## Usage
 
 ``` r
-md_run(design, trace = TRUE)
+md_run(design, .seeds = NULL, trace = TRUE)
 ```
 
 ## Arguments
@@ -21,6 +21,11 @@ md_run(design, trace = TRUE)
   by
   [`md_prepare()`](https://ecoisilva.github.io/movedesign/reference/md_prepare.md),
   containing all study design parameters and data.
+
+- .seeds:
+
+  List of set seeds to ensure reproducibility (optional); only needed if
+  replicating from Shiny app into R console.
 
 - trace:
 

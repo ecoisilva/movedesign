@@ -15,7 +15,7 @@ simulation inference.
 md_replicate(
   obj,
   n_replicates,
-  verbose = FALSE,
+  verbose = TRUE,
   trace = TRUE,
   parallel = FALSE,
   ncores = parallel::detectCores()

@@ -8,6 +8,12 @@
 - [`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md)
   : Assess output convergence in simulation outputs
 
+- [`md_compare()`](https://ecoisilva.github.io/movedesign/reference/md_compare.md)
+  : Visualize study design outputs
+
+- [`md_compare_preview()`](https://ecoisilva.github.io/movedesign/reference/md_compare_preview.md)
+  : Preview plot for movedesign workflow outputs (single replicate)
+
 - [`md_configure()`](https://ecoisilva.github.io/movedesign/reference/md_configure.md)
   : Interactively configure movement design setup
 
@@ -34,6 +40,9 @@
 
 - [`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md)
   : Run study design workflow
+
+- [`md_simulate()`](https://ecoisilva.github.io/movedesign/reference/md_simulate.md)
+  : Simulate movement data from species-level parameters
 
 - [`md_stack()`](https://ecoisilva.github.io/movedesign/reference/md_stack.md)
   : Stack simulation outputs as replicates

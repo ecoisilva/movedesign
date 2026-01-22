@@ -20,7 +20,8 @@ md_prepare(
   which_meta = "mean",
   add_individual_variation = FALSE,
   groups = NULL,
-  parallel = FALSE
+  parallel = FALSE,
+  .seed = NULL
 )
 ```
 
@@ -95,6 +96,11 @@ md_prepare(
   Logical. If `TRUE`, enables parallel processing for model fitting,
   which speeds up analyses.
 
+- .seed:
+
+  Set seeds to ensure reproducibility (optional); only needed if
+  replicating from Shiny app into R console.
+
 ## Value
 
 An object of class `movedesign_input` (and `movedesign`). This is a
@@ -141,6 +147,11 @@ ecology analyses. It performs the following key steps:
 
 - Gathers settings (sample size, duration, sampling, grouping) into a
   single object.
+
+## See also
+
+Other workflow_steps:
+[`md_simulate()`](https://ecoisilva.github.io/movedesign/reference/md_simulate.md)
 
 ## Examples
 

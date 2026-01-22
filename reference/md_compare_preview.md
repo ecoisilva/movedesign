@@ -18,8 +18,8 @@ and check for convergence with
 ## Usage
 
 ``` r
-md_plot_preview(
-  obj,
+md_compare_preview(
+  objs,
   n_resamples = NULL,
   error_threshold = 0.05,
   pal = c("#007d80", "#A12C3B"),
@@ -29,9 +29,9 @@ md_plot_preview(
 
 ## Arguments
 
-- obj:
+- objs:
 
-  An object of class `movedesign_preprocess` (output of
+  A list of object of class `movedesign_preprocess` (outputs of
   [`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md)).
 
 - n_resamples:
@@ -76,7 +76,7 @@ with
 
 ``` r
 if (interactive()) {
-  input <- md_prepare(
+  inputA <- md_prepare(
     data = buffalo,
     models = models,
     species = "buffalo",
@@ -88,8 +88,22 @@ if (interactive()) {
     set_target = "hr",
     which_meta = "mean"
   )
+  inputB <- md_prepare(
+    data = buffalo,
+    models = models,
+    species = "buffalo",
+    n_individuals = 5,
+    dur = list(value = 10, unit = "days"),
+    dti = list(value = 1, unit = "day"),
+    add_individual_variation = TRUE,
+    grouped = TRUE,
+    set_target = "hr",
+    which_meta = "mean"
+  )
 
-  output <- md_run(input)
-  md_plot_preview(output, error_threshold = 0.05)
+  outputA <- md_run(inputA)
+  outputB <- md_run(inputB)
+  md_compare_preview(list(outputA,
+                          outputB), error_threshold = 0.05)
 }
 ```
