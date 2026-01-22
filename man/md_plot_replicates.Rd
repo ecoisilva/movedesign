@@ -4,7 +4,7 @@
 \alias{md_plot_replicates}
 \title{Plot replicate error estimates and confidence intervals}
 \usage{
-md_plot_replicates(obj, ci = 0.95, error_threshold)
+md_plot_replicates(obj, ci = 0.95, error_threshold = 0.05)
 }
 \arguments{
 \item{obj}{A movement design output object (see \code{\link[=md_replicate]{md_replicate()}}

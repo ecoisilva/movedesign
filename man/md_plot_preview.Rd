@@ -8,7 +8,8 @@ md_plot_preview(
   obj,
   n_resamples = NULL,
   error_threshold = 0.05,
-  pal = c("#007d80", "#A12C3B")
+  pal = c("#007d80", "#A12C3B"),
+  ...
 )
 }
 \arguments{
@@ -24,6 +25,8 @@ to display as a reference in the plot.}
 
 \item{pal}{Character vector of two colors for within/outside threshold
 (default: c("#007d80", "#A12C3B")).}
+
+\item{...}{Additional arguments used internally.}
 }
 \value{
 A ggplot object displaying relative error by population sample size,
