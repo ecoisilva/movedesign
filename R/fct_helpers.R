@@ -746,72 +746,6 @@ calculate_ci <- function(data, level = 0.95) {
 } 
 
 
-#' Extract sigma 
-#' 
-#' @description Extracting sigma from ctmm fit. 
-#' @keywords internal 
-#' 
-#' @importFrom ctmm %#% 
-#' @noRd 
-get_sigma <- function(x, level = 0.95) { 
-  
-  nant <- function(x, to) { 
-    NAN <- is.na(x) 
-    if (any(NAN)) { 
-      to <- array(to, length(x)) 
-      x[NAN] <- to[NAN] 
-    } 
-    return(x) 
-  } 
-  
-  get_area_covm <- function(sigma, ave = TRUE) { 
-    # sigma <- x$sigma 
-    
-    if (ncol(sigma) == 1) { 
-      sigma <- sigma@par["major"] 
-    } else { 
-      sigma <- attr(sigma, "par")[c("major", "minor")] 
-      sigma <- sort(sigma, decreasing = TRUE) 
-    } 
-    DIM <- length(sigma) 
-    sigma <- prod(sigma) 
-    if (ave) sigma <- sigma^(1/DIM) 
-    return(sigma) 
-  } 
-  
-  
-  if ("sigma" %!in% names(x)) { 
-    return(NULL) 
-  } 
-  
-  alpha <- 1 - level 
-  sigma <- x$sigma@par 
-  AREA <- get_area_covm(x) 
-  AREA 
-  
-  if ("major" %!in% dimnames(x$COV)[[1]]) { 
-    VAR <- Inf 
-  } else if (x$isotropic[1]) { 
-    VAR <- x$COV["major", "major"] 
-  } else { 
-    P <- c("major", "minor") 
-    GRAD <- AREA/sigma[P]/2 
-    VAR <- c(GRAD %*% x$COV[P, P] %*% GRAD) 
-  } 
-  
-  if (x$range) { 
-    DOF <- nant(AREA^2/abs(VAR), 0) 
-  } else { 
-    DOF <- 0 
-  }  
-  
-  DOF <- 2 * DOF 
-  # VAR <- 2*AREA^2/DOF 
-  AREA <- chisq.ci(AREA, DOF = DOF, alpha = alpha) 
-  return(AREA) 
-} 
-
-
 #' Extract parameters. 
 #' 
 #' @description Extracting values and units from ctmm summaries. 
@@ -883,11 +817,6 @@ extract_pars <- function(
       return(data.frame(tmp, 
                         row.names = c("low", "est", "high"))) 
       
-      # tmp <- get_sigma(obj[[x]]) 
-      # tmp <- fix_unit(data.frame(value = tmp, unit = "m^2"), 
-      #                 convert = TRUE) 
-      #  
-      # return(data.frame(tmp, row.names = c("low", "est", "high"))) 
     } 
     
     # Special cases of movement processes: 
