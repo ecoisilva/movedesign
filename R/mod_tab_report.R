@@ -1597,7 +1597,7 @@ mod_tab_report_server <- function(id, rv) {
           
           col_subpop <- dplyr::case_when(
             is_subpop == is_subpop_detected ~ "cl-sea-d",
-            is_delta_aic ~ "cl-dgr", # TODO to check
+            is_delta_aic ~ "cl-dgr",
             TRUE ~ "cl-dgr"
           )
           
@@ -4466,7 +4466,7 @@ mod_tab_report_server <- function(id, rv) {
     #   
     # }) # end of observe
     
-    # DOWNLOAD ----------------------------------------------------------
+    # DOWNLOAD R SCRIPT ---------------------------------------------------
     
     output$download_script <- downloadHandler(
       filename = function() {
@@ -4479,11 +4479,19 @@ mod_tab_report_server <- function(id, rv) {
         seed_code <- paste0(
           "seedList <- c(", seed_vector[1], ",\n",
           paste0("              ", seed_vector[-1],
-                 collapse = ",\n"), "\n)\n")
+                 collapse = ",\n"), ")\n")
         
         r_code <- paste0(
           "# Load package:\n",
-          "library(movedesign)\n",
+          "library(movedesign)\n")
+        if (rv$data_type == "selected") {
+          r_code <- paste0(
+            r_code,
+            "library(ctmm)\n")
+        }
+        
+        r_code <- paste0(
+          r_code,
           " \n",
           "# Set initial seed:\n",
           "seedInit <- ", rv$seedInit, "\n",
@@ -4519,7 +4527,7 @@ mod_tab_report_server <- function(id, rv) {
               ", unit = \"", rv$dur$unit[[1]], "\"),\n",
               "  dti = list(value = ", rv$dti$value[[1]],
               ", unit = \"", rv$dti$unit[[1]], "\"),\n",
-              "  n_individuals = ", rv$nsims, ",\n")
+              "  n_individuals = ", length(rv$simList), ",\n")
             
           } else {
             
@@ -4552,7 +4560,7 @@ mod_tab_report_server <- function(id, rv) {
               ", unit = \"", rv$dur$unit[[1]], "\"),\n",
               "  dti = list(value = ", rv$dti$value[[1]],
               ", unit = \"", rv$dti$unit[[1]], "\"),\n",
-              "  n_individuals = ", rv$nsims, ",\n")
+              "  n_individuals = ", length(rv$simList), ",\n")
           }
           
         } else {
@@ -4567,6 +4575,7 @@ mod_tab_report_server <- function(id, rv) {
               "# Run movement model selection:\n",
               "fits <- list()\n",
               "for (i in seq_along(data_tel)) {\n",
+              "  print(paste(i, \"out of\", length(data_tel)))\n",
               "  guess <- ctmm.guess(data_tel[[i]], ",
               "interactive = F)\n",
               "  fits[[i]] <- ctmm.select(data_tel[[i]], guess)\n",
@@ -4599,14 +4608,14 @@ mod_tab_report_server <- function(id, rv) {
               r_code,
               "# Prepare initial study design object:\n",
               "input <- md_prepare(\n",
-              "  species = '", rv$species, "',\n",
+              "  species = \"", rv$species, "\",\n",
               "  data = data_tel,\n",
               "  models = fits,\n",
-              "  n_individuals = ", rv$nsims, ",\n",
+              "  n_individuals = ", length(rv$simList), ",\n",
               "  dur = list(value = ", rv$dur$value,
-              ", unit = '", rv$dur$unit,"'),\n",
+              ", unit = \"", rv$dur$unit,"\"),\n",
               "  dti = list(value = ", rv$dti$value,
-              ", unit = '", rv$dti$unit,"'),\n",
+              ", unit = \"", rv$dti$unit,"\"),\n",
               "  add_individual_variation = ",
               rv$add_ind_var, ",\n")
             
@@ -4619,22 +4628,21 @@ mod_tab_report_server <- function(id, rv) {
               "    A = c(", paste0('"', groups$A, '"', 
                                    collapse = ", "), "),\n",
               "    B = c(", paste0('"', groups$B, '"', 
-                                   collapse = ", "), ")\n",
-              ")\n")
+                                   collapse = ", "), ")),\n")
             
             r_code <- paste0(
               r_code,
               "# Prepare initial study design object:\n",
               "input <- md_prepare(\n",
-              "  species = '", rv$species, "',\n",
+              "  species = \"", rv$species, "\",\n",
               "  data = data_tel,\n",
               "  models = fits,\n",
               group_code,
-              "  n_individuals = ", rv$nsims, ",\n",
+              "  n_individuals = ", length(rv$simList), ",\n",
               "  dur = list(value = ", rv$dur$value,
-              ", unit = '", rv$dur$unit,"'),\n",
+              ", unit = \"", rv$dur$unit,"\"),\n",
               "  dti = list(value = ", rv$dti$value,
-              ", unit = '", rv$dti$unit,"'),\n",
+              ", unit = \"", rv$dti$unit,"\"),\n",
               "  add_individual_variation = ",
               rv$add_ind_var, ",\n")
           }
@@ -4643,26 +4651,29 @@ mod_tab_report_server <- function(id, rv) {
         if (length(rv$which_question) == 2) {
           r_code <- paste0(
             r_code,
-            "  set_target = c('", rv$set_target[[1]], "', '",
-            rv$set_target[[2]], "'),\n")
+            "  set_target = c(\"", rv$set_target[[1]], "\", \"",
+            rv$set_target[[2]], "\"),\n")
           
         } else {
           r_code <- paste0(
             r_code,
-            "  set_target = c('", rv$set_target[[1]], "'),\n")
+            "  set_target = c(\"", rv$set_target[[1]], "\"),\n")
         }
+        
+        if (rv$which_meta == "compare") which_meta <- "ratio"
+        else which_meta <- rv$which_meta
         
         r_code <- paste0(
           r_code,
-          "  which_meta = c('", rv$which_meta, "'),\n",
+          "  which_meta = c(\"", which_meta, "\"),\n",
           "  parallel = ", rv$parallel, ",\n",
-          "  seed = seedInit)\n")
+          "  .seed = seedInit)\n")
         
         r_code <- paste0(
           r_code,
           " \n",
           "# Run initial study design simulation:\n",
-          "output_run <- md_run(input, seeds = seedList)\n",
+          "output_run <- md_run(input, .seeds = seedList)\n",
           " \n")
         
         if (rv$random) {
@@ -4670,16 +4681,18 @@ mod_tab_report_server <- function(id, rv) {
             r_code,
             "# Preview outputs from current simulation ",
             "(one replicate):\n",
-            "md_plot_preview(output_run, n_resamples = ",
-            rv$n_resamples, ")\n",
-            " \n")
+            "md_plot_preview(output_run, .seed = seedInit,\n",
+            "                n_resamples = ", rv$n_resamples, ",\n",
+            "                error_threshold = ", rv$error_threshold,
+            ")\n \n")
         } else {
           r_code <- paste0(
             r_code,
             "# Preview outputs from current simulation ",
             "(one replicate):\n",
-            "md_plot_preview(output_run)\n",
-            " \n")
+            "md_plot_preview(output_run, .seed = seedInit,\n",
+            "                error_threshold = ", rv$error_threshold,
+            ")\n \n")
         }
         
         if (rv$data_type != "simulated") {
@@ -4689,12 +4702,6 @@ mod_tab_report_server <- function(id, rv) {
             "n_replicates <- 20 # adjust if needed\n",
             "output_run_rep <- md_replicate(input, ",
             "n_replicates = n_replicates)\n",
-            " \n",
-            "# Check if number of replicates is ",
-            "sufficient for convergence:\n",
-            "out_check <- md_check(output_run_rep)\n",
-            "out_check # increase n_replicates if ",
-            "needed and re-run!\n",
             " \n",
             "# Plot final study design evaluation:\n",
             "md_plot(output_run_rep)\n",

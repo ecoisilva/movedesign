@@ -825,27 +825,15 @@ mod_viz_server <- function(id, rv) {
       out <- plotting_outliers(dat, rv$is_font)
       ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
       
-      # shinyFeedback::showToast(
-      #   type = "success",
-      #   message = "Outlier plots completed!",
-      #   .options = list(
-      #     timeOut = 3000,
-      #     extendedTimeOut = 3500,
-      #     progressBar = FALSE,
-      #     closeButton = TRUE,
-      #     preventDuplicates = TRUE,
-      #     positionClass = "toast-bottom-right"))
-      
       ggiraph::girafe(
         ggobj = suppressWarnings(
-          ggpubr::ggarrange(plotlist = out$plot)),
+          patchwork::wrap_plots(out$plot)),
         options = list(
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
-          ggiraph::opts_sizing(rescale = TRUE, width = .5),
+          ggiraph::opts_sizing(rescale = TRUE, width = .75),
           ggiraph::opts_hover(css = paste("fill: #ffbf00;",
-                                          "stroke: #ffbf00;"))
-        ))
+                                          "stroke: #ffbf00;"))))
 
     }) # end of renderGirafe // vizPlot_outlier
     
@@ -873,14 +861,13 @@ mod_viz_server <- function(id, rv) {
         font_available = rv$is_font)
       
       ggiraph::girafe(
-        ggobj = suppressWarnings(ggpubr::ggarrange(plotlist = p)),
+        ggobj = suppressWarnings(patchwork::wrap_plots(p)),
         options = list(
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
-          ggiraph::opts_sizing(rescale = TRUE, width = .5),
+          ggiraph::opts_sizing(rescale = TRUE, width = .65),
           ggiraph::opts_hover(css = paste("fill: #ffbf00;",
-                                          "stroke: #ffbf00;"))
-        ))
+                                          "stroke: #ffbf00;"))))
       
     }) # end of renderGirafe // vizPlot_svf
     

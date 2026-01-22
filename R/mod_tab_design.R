@@ -2823,14 +2823,14 @@ mod_tab_design_server <- function(id, rv) {
                         font_available = rv$is_font)
       
       ggiraph::girafe(
-        ggobj = suppressWarnings(ggpubr::ggarrange(plotlist = p)),
+        ggobj = suppressWarnings(
+          patchwork::wrap_plots(p)),
         options = list(
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
           ggiraph::opts_sizing(rescale = TRUE, width = .5),
           ggiraph::opts_hover(css = paste("fill: #ffbf00;",
-                                          "stroke: #ffbf00;"))
-        ))
+                                          "stroke: #ffbf00;"))))
       
     }) # end of renderGirafe, "devPlot_svf"
     

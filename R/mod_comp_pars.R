@@ -381,9 +381,13 @@ mod_comp_pars_server <- function(id, rv, set_type) {
         
         theme_movedesign(font_available = rv$is_font) +
         { if (!rv$grouped)
-          ggplot2::theme(axis.text.y = ggplot2::element_text(
-            color = x_axis_color)) %>%
+          ggplot2::theme(
+            axis.text.y = ggplot2::element_text(
+              color = x_axis_color)) %>%
             suppressWarnings() } +
+        { if (rv$grouped)
+        ggplot2::theme(
+          strip.text.y = ggplot2::element_text(angle = 0)) } +
         ggplot2::theme(legend.position = "none")
       
       ggiraph::girafe(

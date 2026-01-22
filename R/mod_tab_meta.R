@@ -352,6 +352,83 @@ mod_tab_meta_server <- function(id, rv) {
     
     ## Update number of resamples: ----------------------------------------
     
+    n_resamples_debounced <- reactive({
+      req(!is.null(input$n_resamples))
+      input$n_resamples
+    }) %>% 
+      debounce(250)
+    
+    observe({
+      req(rv$active_tab == 'meta')
+      req(!is.null(rv$grouped), rv$set_analysis)
+      
+      input <- list()
+      
+      if (rv$set_analysis == "hr") {
+        req(rv$akdeList)
+        input[[1]] <- rv$akdeList
+        input[[1]][sapply(input[[1]], is.null)] <- NULL
+      }
+      
+      if (rv$set_analysis == "ctsd") {
+        req(rv$ctsdList)
+        input[[1]] <- rv$ctsdList[
+          !.check_for_inf_speed(rv$ctsdList)]
+        
+        input[[1]][sapply(input[[1]], is.null)] <- NULL
+      }
+      
+      names(input) <- "All"
+      
+      m_seq <- NULL
+      m_seq <- .get_sequence(input[["All"]],
+                             grouped = rv$grouped,
+                             .step = 2,
+                             .max_m = NULL,
+                             .automate_seq = FALSE)
+      
+      max_m <- max(m_seq)
+      combinations_df <- data.frame(
+        m = m_seq,
+        n_combinations = choose(max_m, m_seq))
+      
+      max_combinations <- max(
+        combinations_df$n_combinations, na.rm = TRUE)
+      
+      if (n_resamples_debounced() > max_combinations) {
+
+        warning(paste0(
+          "n_resamples = ", n_resamples_debounced(),
+          " exceeds the maximum number of unique combinations",
+          if (rv$grouped) " per group." else ".",
+          " Only ", max(combinations_df$n_combinations),
+          " unique combinations will be drawn."
+        ), call. = FALSE)
+
+        shinyWidgets::updateAutonumericInput(
+          session = session,
+          inputId = "n_resamples",
+          label = NULL,
+          value = max_combinations,
+          options = list(
+            currencySymbol = " resamples(s)",
+            currencySymbolPlacement = "s",
+            decimalPlaces = 0,
+            minimumValue = 1,
+            maximumValue = max_combinations,
+            wheelStep = 5))
+
+        rv$n_resamples <- max_combinations
+
+      } else {
+
+        rv$n_resamples <- n_resamples_debounced()
+
+      }
+      
+    }) %>% # end of observe,
+      bindEvent(n_resamples_debounced())
+    
     # observe({
     #   req(rv$active_tab == 'meta')
     #   req(rv$simList)
@@ -454,7 +531,6 @@ mod_tab_meta_server <- function(id, rv) {
       else return(0)
     }) # end of renderText, "nsims_total"
     
-    
     ## Render new text (for effect size): ---------------------------------
     
     output$txt_hr_ratio <- renderText({
@@ -527,6 +603,7 @@ mod_tab_meta_server <- function(id, rv) {
     observe({
       req(rv$active_tab == 'meta',
           rv$meta_tbl_resample)
+      
       rv$meta_nresample <- max(rv$meta_tbl_resample$sample)
       
       if (rv$meta_nresample <= 1) {
@@ -1064,7 +1141,8 @@ mod_tab_meta_server <- function(id, rv) {
         subpop = rv$grouped,
         random = FALSE, 
         trace = FALSE,
-        .automate_seq = TRUE)
+        .automate_seq = TRUE,
+        .seed = rv$seedInit)
       
       msg_log(
         style = "success",
@@ -1151,7 +1229,8 @@ mod_tab_meta_server <- function(id, rv) {
         random = TRUE, 
         max_draws = rv$n_resamples,
         trace = TRUE,
-        .automate_seq = TRUE)
+        .automate_seq = TRUE,
+        .seed = rv$seedInit)
       
       msg_log(
         style = "success",
@@ -1187,14 +1266,14 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$which_question,
           !is.null(rv$grouped),
           rv$set_analysis,
-          rv$meta_tbl)
+          rv$meta_tbl,
+          rv$n_resamples)
       
       rv$random <- TRUE
-      rv$n_resamples <- input$n_resamples
       
       if (!is.null(rv$meta_tbl_resample)) {
         max_n_resamples <- max(rv$meta_tbl_resample$sample)
-        rv$n_resamples <- input$n_resamples - max_n_resamples
+        rv$n_resamples <- rv$n_resamples - max_n_resamples
       }
       
       tmp <- get_meta_resampled_outputs()
@@ -2186,14 +2265,12 @@ mod_tab_meta_server <- function(id, rv) {
         est = "Mean",
         uci = "95% UCI",
         subpop = "Detected?",
-        group = "Group"
-      )
+        group = "Group")
       
       colgroups <- list(
         reactable::colGroup(
-          name = "Error", columns = c("error_lci", 
-                                      "error",
-                                      "error_uci")))
+          name = "Error",
+          columns = c("error_lci", "error", "error_uci")))
       
       reactable::reactable(
         data = dt_meta,

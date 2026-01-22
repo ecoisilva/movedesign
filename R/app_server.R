@@ -276,20 +276,10 @@ app_server <- function(input, output, session) {
   # -----------------------------------------------------------------------
   
   # Table theme:
-  options(reactable.theme = reactable::reactableTheme(
-    rowSelectedStyle = list(
-      backgroundColor = "#eee",
-      boxShadow = "inset 2px 0 0 0 #009da0"
-    )
-  ))
+  options(
+    reactable.theme = reactable::reactableTheme(
+      rowSelectedStyle = list(
+        backgroundColor = "#eee",
+        boxShadow = "inset 2px 0 0 0 #009da0")))
   
-  # onStop(function() {
-  #   message("Session stopped")
-  #
-  #   # if (!is.null(fixrates)) rm("fixrates", envir = .GlobalEnv)
-  #   # if (!is.null(sims_hrange)) rm("sims_hrange", envir = .GlobalEnv)
-  #   # if (!is.null(sims_speed)) rm("sims_speed", envir = .GlobalEnv)
-  #   # # print(ls(envir = .GlobalEnv))
-  #
-  # }) # end of onStop
 }
