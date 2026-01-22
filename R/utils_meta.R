@@ -321,11 +321,15 @@
 #' @description Get sets for a iterately larger population sample size.
 #' @keywords internal
 #'
+#' @importFrom utils combn
+#' 
 #' @noRd
 #'
 .get_sets <- function(input,
                       groups = NULL, 
-                      set_size = 2) {
+                      set_size = 2,
+                      .seed = NULL,
+                      .max_draws = 100) {
   
   group_labels <- NULL
   if (!is.null(groups)) {
@@ -340,14 +344,24 @@
   num_sets <- ceiling(length(input) / set_size)
   if (length(input) %% set_size != 0)
     out <- rep(seq_len(num_sets), each = set_size)[seq_along(input)]
-  else 
+  else
     out <- rep(seq_len(num_sets), each = set_size,
                length.out = length(input))
+  
+  out_random <- tryCatch({
+    t(combn(length(input), set_size))
+  }, error = function(e) {
+    if (!is.null(.seed)) set.seed(.seed)
+    tmp <- t(replicate(.max_draws, sort(
+      sample.int(length(input), set_size, replace = FALSE))))
+    tmp <- tmp[do.call(order, as.data.frame(tmp)), ]
+    tmp <- unique(tmp)
+  })
   
   return(list(names = names(input),
               labels = group_labels,
               out = out,
-              out_random = sample(out),
+              out_random = out_random,
               sets = max(unique(out))))
 }
 
@@ -462,6 +476,8 @@ plot_meta_resamples <- function(rv,
                                 subpop = FALSE, 
                                 colors = NULL) {
   
+  n <- error <- error_sd <- NULL
+  
   stopifnot(!is.null(rv$meta_tbl),
             !is.null(rv$which_m),
             !is.null(rv$which_meta),
@@ -490,6 +506,7 @@ plot_meta_resamples <- function(rv,
     "Yes" = colors[[1]], "No" = colors[[2]])
   
   if (random) {
+    req(rv$meta_nresample > 1)
     
     if (!is.null(rv$meta_nresample))
       out <- dplyr::filter(rv$meta_tbl_resample,
@@ -507,12 +524,15 @@ plot_meta_resamples <- function(rv,
     max_draws <- max(unique(out$sample))
     
     out_mean <- out %>% 
-      dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+      dplyr::group_by(.data$type, .data$group, .data$m) %>%
       dplyr::summarize(
         n = dplyr::n(),
+        error_sd = stats::sd(.data$error, na.rm = TRUE),
         error = mean(.data$error, na.rm = TRUE),
-        error_lci = mean(.data$error_lci, na.rm = TRUE),
-        error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
+        error_lci = error - stats::qt(
+          0.975, df = n - 1) * error_sd / sqrt(n),
+        error_uci = error + stats::qt(
+          0.975, df = n - 1) * error_sd / sqrt(n)) %>%
       dplyr::rowwise() %>%
       dplyr::mutate(
         within_threshold = 
@@ -523,7 +543,6 @@ plot_meta_resamples <- function(rv,
              .data$error_uci >= -rv$error_threshold),
         status = dplyr::case_when(
           within_threshold ~ "Yes",
-          # !within_threshold & overlaps_with_threshold ~ "Near",
           TRUE ~ "No")) %>% 
       quiet() %>% 
       suppressMessages() %>% 
@@ -601,7 +620,6 @@ plot_meta_resamples <- function(rv,
           margin = ggplot2::margin(b = 2)),
         plot.subtitle = ggtext::element_markdown(
           size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
-    p.optimal
     
     if (rv$which_meta == "mean") {
       p.optimal <- p.optimal +
@@ -637,7 +655,6 @@ plot_meta_resamples <- function(rv,
              .data$error_uci >= -rv$error_threshold),
         color = dplyr::case_when(
           within_threshold ~ "Yes",
-          # !within_threshold & overlaps_with_threshold ~ "Near",
           TRUE ~ "No"))
     
     txt_caption <- NULL

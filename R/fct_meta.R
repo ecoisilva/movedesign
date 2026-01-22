@@ -275,11 +275,12 @@ run_meta_resamples <- function(rv,
   `%||%` <- function(x, y) if (!is.null(x)) x else y
   
   dots <- list(...)
+  .automate_seq <- dots[[".automate_seq"]] %||% FALSE
   .only_max_m <- dots[[".only_max_m"]] %||% FALSE
   .max_m <- dots[[".max_m"]] %||% NULL
-  .m <- dots[[".m"]] %||% NULL
   .lists <- dots[[".lists"]] %||% NULL
-  .automate_seq <- dots[[".automate_seq"]] %||% FALSE
+  .seed <- dots[[".seed"]] %||% NULL
+  .m <- dots[[".m"]] %||% NULL
   
   if (!is.logical(random) || length(random) != 1) {
     stop("'random' must be a single logical value (TRUE or FALSE)")
@@ -390,6 +391,23 @@ run_meta_resamples <- function(rv,
       m_seq <- .m
     }
     
+    max_m <- max(m_seq)
+    combinations_df <- data.frame(
+      m = m_seq,
+      n_combinations = choose(max_m, m_seq))
+    
+    if (max_draws > max(combinations_df$n_combinations,
+                        na.rm = TRUE)) {
+      
+      warning(paste0(
+          "n_resamples = ", max_draws,
+          " exceeds the maximum number of unique combinations.",
+          " Only ", max(combinations_df$n_combinations),
+          " unique combinations will be drawn."
+        ), call. = FALSE)
+      
+    }
+    
     for (m in m_seq) {
       if (m == 1) next
       
@@ -398,26 +416,35 @@ run_meta_resamples <- function(rv,
         start_t <- Sys.time()
       }
       
-      arg <- setNames(lapply(input, function(x) {
+      arg <- setNames(lapply(seq_along(input), function(i) {
         
-        sets <- .get_sets(x, set_size = m)
+        x <- input[[i]]
+        if (is.null(.seed)) {
+          unit_seed <- NULL
+        } else {
+          unit_seed <- .seed + m * 10^4 + i
+        }
+        
+        sets <- .get_sets(x, set_size = m, 
+                          .seed = unit_seed,
+                          .max_draws = max_draws)
+        
+        if (!is.null(.seed)) set.seed(unit_seed)
+        randomize <- sample.int(nrow(sets$out_random)) 
+        sets$out_random <- sets$out_random[
+          randomize, , drop = FALSE]
+        
         if (sets$sets == 1) return(sets)
         
         if (random) {
-          out_random <- if (length(x) < 10) {
-            do.call(rbind, combinat::permn(sets$out))
-          } else {
-            do.call(rbind, replicate(
-              10^6, sample(sets$out), simplify = FALSE))
-          }
           
-          out_random <- dplyr::distinct(as.data.frame(out_random))
-          if (nrow(out_random) > max_draws) {
-            out_random <- out_random[
-              sample(nrow(out_random), max_draws), , drop = FALSE]
+          if (nrow(sets$out_random) > max_draws) {
+            
+            if (!is.null(.seed)) set.seed(unit_seed)
+            sets$out_random <- sets$out_random[
+              sample(nrow(sets$out_random),
+                     max_draws), , drop = FALSE]
           }
-          
-          sets$out_random <- out_random
         }
         
         return(sets)
@@ -439,44 +466,32 @@ run_meta_resamples <- function(rv,
       for (sample in seq_len(n_samples)) {
         
         inputList <- list()
-        if (subpop && random) {
-          # No group assigments:
-          inputList[["All"]] <- if (arg[["All"]]$sets == 1) {
-            input[["All"]][arg[["All"]]$out_random == 1]
-          } else {
-            input[["All"]][arg[["All"]]$out_random[sample, ] == 1]
-          }
-        } else {
-          inputList[["All"]] <- if (n_samples == 1) {
-            input[["All"]][arg[["All"]]$out_random == 1]
-          } else {
-            input[["All"]][arg[["All"]]$out_random[sample, ] == 1]
-          }
-        }
         
+        # No group assigments:
+        inputList[["All"]] <- input[["All"]][
+          arg[["All"]]$out_random[sample, ]]
+        
+        # Group assigments:
         if (subpop) {
-          # Group assigments:
-          inputList[["groups"]] <- c(input_groups[["A"]],
-                                     input_groups[["B"]])
-          out_random <- c( 
-            if (n_samples == 1) arg[["A"]]$out_random else
-              arg[["A"]]$out_random[sample, ],
-            if (n_samples == 1) arg[["B"]]$out_random else
-              arg[["B"]]$out_random[sample, ])
           
-          if (all(names(inputList[["groups"]]) != 
-                  c(arg[["A"]]$names, arg[["B"]]$names)))
-            stop("Issue with groups..")
-          
-          inputList[["groups"]] <- .get_groups(
-            inputList[["groups"]][out_random == 1],
-            groups = rv$groups[[2]])
+          if (random) {
+            inputList[["groups"]] <- list(
+              A = input_groups[["A"]][arg[["A"]]$out_random[sample, ]],
+              B = input_groups[["B"]][arg[["B"]]$out_random[sample, ]])
+          } else {
+            inputList[["groups"]] <- list(
+              A = input_groups[["A"]][
+                arg[["A"]]$out_random[sample, ]],
+              B = input_groups[["B"]][
+                arg[["B"]]$out_random[sample, ]])
+          }
         }
         
         if (target == "hr") variable <- "area"
         if (target == "ctsd") variable <- "speed"
         
         out_meta <- setNames(lapply(inputList, function(x) {
+          
           return(.capture_meta(x,
                                variable = variable,
                                sort = TRUE,
@@ -740,6 +755,7 @@ run_meta <- function(rv,
   .automate_seq <- dots[[".automate_seq"]] %||% FALSE
   .only_max_m <- dots[[".only_max_m"]] %||% FALSE
   .lists <- dots[[".lists"]] %||% NULL
+  .seed <- dots[[".seed"]] %||% NULL
   
   return(run_meta_resamples(rv,
                             set_target = set_target,
@@ -750,7 +766,8 @@ run_meta <- function(rv,
                             iter_step = iter_step,
                             .automate_seq = .automate_seq,
                             .only_max_m = .only_max_m,
-                            .lists = .lists))
+                            .lists = .lists,
+                            .seed = .seed))
 }
 
 
