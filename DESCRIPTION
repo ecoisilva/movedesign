@@ -21,7 +21,6 @@ Depends:
 Imports: 
     bayestestR,
     bsplus,
-    combinat,
     config (>= 0.3.1),
     crayon,
     ctmm (>= 0.6.1),
@@ -32,7 +31,6 @@ Imports:
     gfonts,
     ggiraph,
     ggplot2,
-    ggpubr,
     ggtext,
     golem (>= 0.3.2),
     grDevices,
