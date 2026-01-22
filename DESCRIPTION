@@ -1,6 +1,6 @@
 Package: movedesign
 Title: Study Design Toolbox for Movement Ecology Studies
-Version: 0.3.2
+Version: 0.3.3
 Authors@R: 
     person("Inês", "Silva", , "i.simoes-silva@hzdr.de", role = c("cre", "aut", "cph"),
            comment = c(ORCID = "0000-0003-4850-6193"))
@@ -35,7 +35,6 @@ Imports:
     golem (>= 0.3.2),
     grDevices,
     grid,
-    gsl,
     lubridate,
     parallel,
     parsedate,
