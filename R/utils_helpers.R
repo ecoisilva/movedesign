@@ -872,34 +872,18 @@ plotting_outliers <- function(data,
     }
     D <- distanceMLE(d, error, return.VAR = TRUE)
     d <- D[, 1]
-    VAR.d <- D[, 2]
-    rm(D)
-    
-    # if ("z" %in% names(data[[x]])) {
-    #   error <- UERE$UERE[, "vertical"]
-    #   names(error) <- rownames(UERE$UERE)
-    #   error <- ctmm::ctmm(error = error, axes = c("z"))
-    #   error <- get.error(data[[x]], error, calibrate = TRUE)
-    #   Vz <- assign_speeds(data[[x]], UERE = error, DT = DT,
-    #                       axes = "z")
-    #   vz <- Vz$v.t
-    #   VAR.vz <- Vz$VAR.t
-    #   dz <- get.telemetry(data[[x]], axes = c("z"))
-    #   dz <- dz - stats::median(data[[x]]$z)
-    #   dz <- abs(dz)
-    #   DZ <- distanceMLE(dz, error, axes = "z", 
-    #                     return.VAR = TRUE)
-    #   dz <- DZ[, 1]
-    #   VAR.dz <- DZ[, 2]
-    #   rm(DZ)
-    # }
     
     lwd <- Vs$v.dt
-    if (diff(range(lwd))) lwd <- lwd / max(lwd) else lwd <- 0
-    if (diff(range(d))) cex <- d/max(d) * 4 else cex <- 0
+    lwd <- if (diff(range(lwd))) { lwd/max(lwd) } else { 0 }
+    col <- grDevices::rgb(0, 0, lwd, lwd)
+    lwd <- 2 * lwd
+    n <- length(data$t)
     
-    palette <- grDevices::colorRampPalette(
-      c("white", "#dd4b39"))(length(cex))
+    by <- D[, 1]
+    cex <- if (diff(range(by))) { by/max(by) } else { 0 }
+    gamma <- 0.5
+    cex2 <- cex ^ gamma
+    palette <- grDevices::rgb(cex, 0, 0, cex)
     
     ft_size <- ifelse(m == 1, 13, ifelse(m >= 10, 6, 11))
     
@@ -923,9 +907,10 @@ plotting_outliers <- function(data,
       
       ggplot2::geom_point(
         ggplot2::aes(x = .data$x, y = .data$y),
-        color = palette, size = cex, shape = 20) +
+        color = palette, size = cex * 2, shape = 20) +
       
       ggplot2::scale_size_identity() +
+      
       ggplot2::labs(x = NULL, y = NULL) +
       theme_movedesign(font_available = font_available,
                        ft_size = ft_size) +
