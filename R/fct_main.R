@@ -921,7 +921,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
 #'   minimum, the elements `simList`, `simfitList`, and `seedList`.
 #'   Optional elements such as `akdeList` and `ctsdList` 
 #'   are merged if present.
-#' @param ignore_mismatch Logical; if `TRUE`, the function will
+#' @param .ignore_mismatch Logical; if `TRUE`, the function will
 #'   attempt to merge inputs even if they have mismatched columns.
 #'   Use with caution.
 #'
@@ -963,7 +963,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
 #'   \code{\link{md_run}}
 #'
 #' @export
-md_merge <- function(..., ignore_mismatch = FALSE) {
+md_merge <- function(..., .ignore_mismatch = FALSE) {
   outs <- list(...)
   
   if (length(outs) == 1 &&
@@ -1054,11 +1054,11 @@ md_merge <- function(..., ignore_mismatch = FALSE) {
   
   # Check and stop if mismatches exist:
   mismatched_elements <- NULL
-  if (!ignore_mismatch) {
+  if (!.ignore_mismatch) {
     mismatched_elements <- find_mismatches(metadatas)
   }
   
-  if (length(mismatched_elements) > 0 && !ignore_mismatch) {
+  if (length(mismatched_elements) > 0 && !.ignore_mismatch) {
     mismatched_names <- names(mismatched_elements)
     stop(
       "Metadata mismatch across simulation outputs. Merge aborted.\n",
@@ -1208,29 +1208,47 @@ md_replicate <- function(obj,
                          parallel = FALSE,
                          ncores = parallel::detectCores()) {
   
-  stopifnot(inherits(obj, "movedesign"))
   stopifnot(is.numeric(n_replicates) && n_replicates > 0)
   
-  if (n_replicates < 5)
-    stop("`n_replicates` must be set to at least 5.")
+  is_input <- inherits(obj, "movedesign_input")
+  is_output <- inherits(obj, "movedesign_output")
+  
+  if (!is_input && !is_output) {
+    stop("`obj` must be a `movedesign_input` ",
+         "or `movedesign_output` object.")
+  }
+  
+  if (is_output) {
+    base_input <- obj$input
+    existing_out <- obj$data
+    existing_meta <- obj$summary
+    offset <- obj$data$n_replicates
+    
+  } else {
+    if (n_replicates < 5)
+      stop("`n_replicates` must be set to at least 5.")
+    
+    base_input <- obj
+    existing_out <- NULL
+    existing_meta <- NULL
+    offset <- 0
+  }
   
   .worker <- function(i) {
+    rep_id <- offset + i
     
-    if (trace) message(.msg(
-      sprintf("\u2014 Replicate %s of %s", i, n_replicates), "main"))
-    out <- md_run(obj, trace = trace)
+    if (trace)
+      message(.msg(sprintf("— Replicate %s of %s", rep_id,
+                           offset + n_replicates), "main"))
     
-    if (verbose) {
-      set_m <- NULL 
-    } else { 
-      set_m <- obj$n_individuals
-    }
-    meta <- run_meta_resamples(
-      out,
-      set_target = obj$set_target,
-      subpop = obj$grouped,
-      .m = set_m
-    )
+    out <- md_run(base_input, trace = trace)
+    set_m <- if (verbose) NULL else base_input$n_individuals
+    
+    meta <- run_meta_resamples(out,
+                               set_target = base_input$set_target,
+                               subpop = base_input$grouped,
+                               .m = set_m)
+    
     list(out = out, meta = meta)
   }
   
@@ -1246,17 +1264,22 @@ md_replicate <- function(obj,
   
   tryCatch({
     if (parallel) {
+      
       tmp <- parallel::mclapply(
         seq_len(n_replicates), 
         function(i) .worker(i), mc.cores = ncores)
+      
       for (i in seq_along(n_replicates)) {
         outList[[i]] <- tmp[[i]]$out
         metaList[[i]] <- tmp[[i]]$meta
         completed <- i
       }
+      
     } else {
+      
       if (!trace)
         pb <- txtProgressBar(min = 0, max = n_replicates, style = 3)
+      
       for (i in seq_len(n_replicates)) {
         out <- .worker(i)
         outList[[i]] <- out$out
@@ -1264,30 +1287,52 @@ md_replicate <- function(obj,
         completed <- i
         if (!trace) setTxtProgressBar(pb, i)
       }
+      
       if (!trace) close(pb)
+      
     }
+    
     TRUE
+    
   }, interrupt = function(e) {
-    message(.msg(sprintf(
-      "\nUser interrupt detected. Returning %s out of %s results.",
-      completed, n_replicates), "error"))
+    
+    if (!is_output) {
+      message(.msg(sprintf(
+        "\nUser interrupt detected. Returning %s out of %s results.",
+        completed, n_replicates), "error"))
+    } else {
+      message(.msg(sprintf(
+        "User interrupt detected. Returning %s new replicates.",
+        completed), "error"))
+    }
+    
     FALSE
+    
   })
   
-  # Remove NULL elements (if interrupted)
+  # Remove NULL elements (if interrupted):
   outList <- outList[seq_len(completed)]
   metaList <- metaList[seq_len(completed)]
   
   if (length(metaList) > 0) {
-    summary <- data.table::rbindlist(
+    new_meta <- data.table::rbindlist(
       metaList, fill = TRUE, idcol = "replicate")
   } else {
-    summary <- data.table::data.table()
+    new_meta <- data.table::data.table()
+  }
+  
+  if (!is.null(existing_meta)) {
+    new_meta$replicate <- new_meta$replicate +
+      max(existing_meta$replicate)
+    summary <- data.table::rbindlist(
+      list(existing_meta, new_meta), fill = TRUE)
+  } else {
+    summary <- new_meta
   }
   
   if (length(outList) > 0) {
     
-    if (obj$grouped) {
+    if (base_input$grouped) {
       group_keys <- c("A", "B")
       common_names <- outList[[1]]$groups[[1]]
       merged_ids <- lapply(outList, function(x) x$groups[[2]])
@@ -1299,10 +1344,19 @@ md_replicate <- function(obj,
       }
     }
     
-    merged <- md_merge(outList)
-    class(merged) <- unique(c("moveoutput", class(merged)))
+    if (!is.null(existing_out)) {
+      merged <- md_merge(c(list(existing_out), outList),
+                         .ignore_mismatch = TRUE)
+    } else {
+      merged <- md_merge(outList)
+    }
+    
+    class(merged) <- unique(c("movedesign_output", class(merged)))
+    
   } else {
+    
     merged <- NULL
+    
   }
   
   if (trace) {
@@ -1323,7 +1377,7 @@ md_replicate <- function(obj,
                 length(merged$simList) else 0), "success"))
   }
   
-  merged$n_replicates <- completed
+  merged$n_replicates <- offset + completed
   
   print(
     sprintf(
@@ -1336,8 +1390,10 @@ md_replicate <- function(obj,
                 attr(time, "units")))
   
   out <- structure(
-    list(data = merged,
+    list(input = base_input,
+         data = merged,
          summary = summary,
+         error_threshold = error_threshold,
          verbose = verbose), class = "movedesign")
   class(out) <- unique(c("movedesign_output", class(out)))
   return(out)
@@ -3039,7 +3095,7 @@ md_configure <- function(data, models = NULL) {
   sample_mode <- .ask_choice(
     "Do you want to:",
     c("Verify study design for a specific population sample size",
-      "Find the 'optimal' sampling parameters required for a target")
+      "Find the optimal study design required for a target")
   )
   # sample_mode <- .ask_choice(
   #   "Do you want to:",
@@ -3125,11 +3181,11 @@ md_configure <- function(data, models = NULL) {
     grouped <- TRUE    
   }
   
-  .header("Sampling parameters")
-  
   # Sampling duration:
   
   if (sample_mode == 1) {
+    .header("Sampling parameters")
+    
     dur_unit <- .ask_input(
       "Sampling duration unit", "days",
       function(x) !is.null(normalize_unit(x)),
@@ -3414,7 +3470,7 @@ md_configure <- function(data, models = NULL) {
 md_optimize <- function(obj,
                         n_replicates = 20,
                         error_threshold = 0.05,
-                        verbose = FALSE,
+                        verbose = TRUE,
                         trace = TRUE,
                         parallel = FALSE,
                         ncores = parallel::detectCores(),
@@ -3669,7 +3725,7 @@ md_optimize <- function(obj,
       }
       
       tmpList <- Map(function(prev, curr) {
-        merged <- md_merge(prev, curr, ignore_mismatch = TRUE)
+        merged <- md_merge(prev, curr, .ignore_mismatch = TRUE)
         merged$n_individuals <- m_current
         return(merged)
       }, outList[[i - 1]], tmpList)
@@ -3677,8 +3733,6 @@ md_optimize <- function(obj,
       outList[[i]] <- tmpList
       class(outList[[i]]) <- "movedesign_preprocess"
     }
-    class(outList[[i]][[1]])
-    names(outList[[i]][[1]])
     
     metaList <- lapply(tmpList, function(x) {
       run_meta_resamples(x,
@@ -3749,19 +3803,6 @@ md_optimize <- function(obj,
         mean(data$lci, na.rm = TRUE),
         mean(data$uci, na.rm = TRUE))
       
-      all(unlist(err_replicates) < error_threshold)
-      all(err_values < error_threshold)
-      overlaps_with_truth
-      diag$has_converged
-      
-      if (!diag$has_converged) {
-        warning(
-          sprintf(
-            "Model failing to converge with %s replicates. %s",
-            n_replicates, "Consider increasing 'n_replicates'."
-          ), call. = FALSE)
-      }
-      
       if (all(err_values < error_threshold) &&
           all(unlist(err_replicates) < error_threshold) &&
           overlaps_with_truth && diag$has_converged) {
@@ -3776,7 +3817,7 @@ md_optimize <- function(obj,
       cov <- Inf
       if (all(err_values < error_threshold)) {
         
-        input <- .get_groups(obj$fitList, groups = groups)
+        input <- .get_groups(obj$fitList, groups = obj$groups[[1]])
         
         out_cov <- list()
         overlaps_with_truth <- list()
@@ -3856,10 +3897,6 @@ md_optimize <- function(obj,
           
         } # end of [target] loop
         
-        # out_cov
-        # overlaps_with_truth
-        # ratios
-        
         cov <- lapply(out_cov, tail, n = 1)
         
         # if cov -> infinity,
@@ -3874,6 +3911,14 @@ md_optimize <- function(obj,
     } # end of if (which_meta == "compare")
     
   } # end of [i] loop
+  
+  if (any(!diag$has_converged)) {
+    warning(
+      sprintf(
+        "Model failing to converge with %s replicates. %s",
+        n_replicates, "Consider increasing 'n_replicates'."
+      ), call. = FALSE)
+  }
   
   summary_full <- data.table::rbindlist(summaryList, fill = TRUE)
   
@@ -3891,7 +3936,7 @@ md_optimize <- function(obj,
   dt_plot_T <- dplyr::filter(dt_plot, .data$overlaps)
   dt_plot_F <- dplyr::filter(dt_plot, !.data$overlaps)
   
-  dt_plot_means <- dt_plot %>% 
+  dt_plot_means <- dt_plot %>%
     dplyr::mutate(type = factor(
       .data$type, levels = c("hr", "ctsd"))) %>%
     dplyr::select(
@@ -3907,6 +3952,10 @@ md_optimize <- function(obj,
         0.975, df = n - 1) * error_sd / sqrt(n),
       error_mean_uci = error_mean + stats::qt(
         0.975, df = n - 1) * error_sd / sqrt(n),
+      pred_lci = error_mean - stats::qt(
+        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
+      pred_uci = error_mean + stats::qt(
+        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
       .groups = "drop") %>%
     dplyr::mutate(
       overlaps = dplyr::between(
@@ -3938,227 +3987,232 @@ md_optimize <- function(obj,
   
   pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
   
-  if (plot) {
+  if (!has_groups) {
     
-    if (!has_groups) {
+    p <- dt_plot_means %>%
+      ggplot2::ggplot(
+        ggplot2::aes(x = .data$m,
+                     y = .data$error_mean,
+                     color = .data$overlaps,
+                     fill = .data$overlaps,
+                     group = .data$m)) +
       
-      p <- dt_plot_means %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$m,
-                       y = .data$error_mean,
-                       color = .data$overlaps,
-                       fill = .data$overlaps,
-                       group = .data$m)) +
-        
-        { if (length(set_target) > 1)
-          ggplot2::facet_wrap(
-            ggplot2::vars(type),
-            scales = "free") } +
-        
-        ggplot2::geom_jitter(
-          dt_plot_F,
-          mapping = ggplot2::aes(x = .data$m,
-                                 y = .data$error,
-                                 group = .data$replicate),
-          position = ggplot2::position_dodge(width = 1),
-          size = 3, shape = 21, alpha = 0.5,
-          color = pal[["FALSE"]],
-          fill = pal[["FALSE"]]
-        ) +
-        
-        ggplot2::geom_jitter(
-          data = dt_plot_T,
-          mapping = ggplot2::aes(x = .data$m,
-                                 y = .data$error,
-                                 group = .data$replicate),
-          position = ggplot2::position_dodge(width = 1),
-          size = 3, shape = 21, alpha = 0.5,
-          color = pal[["TRUE"]],
-          fill = pal[["TRUE"]]
-        ) +
-        
-        ggplot2::geom_hline(
-          yintercept = 0,
-          linewidth = 0.3,
-          linetype = "solid") +
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, top_facet),
-          ggplot2::aes(yintercept = error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, top_facet),
-          ggplot2::aes(yintercept = -error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, !top_facet),
-          ggplot2::aes(yintercept = error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, !top_facet),
-          ggplot2::aes(yintercept = -error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        
-        ggplot2::geom_linerange(
-          ggplot2::aes(ymin = .data$error_mean_lci,
-                       ymax = .data$error_mean_uci),
-          show.legend = TRUE,
-          position = ggplot2::position_dodge(width = 0.4),
-          color = "black", linewidth = 0.4) +
-        ggplot2::geom_point(
-          show.legend = TRUE,
-          position = ggplot2::position_dodge(width = 0.4),
-          color = "black", shape = 21, size = 5) +
-        
-        ggplot2::labs(
-          x = "Population sample size",
-          y = "Relative error (%)") +
-        
-        ggplot2::scale_fill_manual(
-          name = paste0("Within error threshold (\u00B1",
-                        error_threshold * 100, "%)?"),
-          breaks = c("TRUE", "FALSE"),
-          values = pal, drop = FALSE,
-          guide = ggplot2::guide_legend(
-            override.aes = list(color = pal,
-                                fill = pal,
-                                size = 3),
-            order = 1,
-            # text.vjust = 4,
-            label.vjust = 0.4,
-            theme = ggplot2::theme(
-              legend.key.width = ggplot2::unit(2, "lines"),
-              legend.key.height = ggplot2::unit(0.5, "lines")))) +
-        
-        ggplot2::scale_shape_manual(values = c(16, 16)) +
-        ggplot2::scale_x_continuous(
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_y_continuous(
-          labels = scales::percent,
-          breaks = scales::breaks_pretty()) +
-        
-        ggplot2::theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 15),
-          legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          plot.margin = ggplot2::unit(
-            c(1, 1, 1, 1), "cm")) +
-        ggplot2::guides(shape = "none")
+      { if (length(set_target) > 1)
+        ggplot2::facet_wrap(
+          ggplot2::vars(type),
+          scales = "free") } +
       
-    } else {
+      ggplot2::geom_jitter(
+        dt_plot_F,
+        mapping = ggplot2::aes(x = .data$m,
+                               y = .data$error,
+                               group = .data$replicate),
+        position = ggplot2::position_dodge(width = 1),
+        size = 3, shape = 21, alpha = 0.5,
+        color = pal[["FALSE"]],
+        fill = pal[["FALSE"]]) +
       
-      p <- dt_plot_means %>%
-        ggplot2::ggplot(
-          ggplot2::aes(x = .data$m,
-                       y = .data$error_mean,
-                       group = .data$group,
-                       shape = .data$group,
-                       fill = .data$overlaps)) +
-        
-        { if (length(set_target) > 1)
-          ggplot2::facet_wrap(
-            ggplot2::vars(type),
-            scales = "free") } +
-        
-        ggplot2::geom_jitter(
-          dt_plot,
-          mapping = ggplot2::aes(
-            x = .data$m,
-            y = .data$error,
-            group = .data$group,
-            shape = .data$group,
-            fill = .data$overlaps),
-          position = ggplot2::position_jitterdodge(dodge.width = 0.4),
-          size = 3, alpha = 0.5, color = "transparent") +
-        
-        ggplot2::geom_hline(
-          yintercept = 0,
-          linewidth = 0.3,
-          linetype = "solid") +
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, top_facet),
-          ggplot2::aes(yintercept = error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, top_facet),
-          ggplot2::aes(yintercept = -error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, !top_facet),
-          ggplot2::aes(yintercept = error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        ggplot2::geom_hline(
-          data = subset(dt_plot_means, !top_facet),
-          ggplot2::aes(yintercept = -error_threshold),
-          linewidth = 0.7,
-          linetype = "dotted") +
-        
-        ggplot2::geom_linerange(
-          ggplot2::aes(ymin = .data$error_mean_lci,
-                       ymax = .data$error_mean_uci),
-          position = ggplot2::position_dodge(width = 0.4),
-          color = "black", linewidth = 0.4,
-          show.legend = FALSE) +
-        ggplot2::geom_point(
-          position = ggplot2::position_dodge(width = 0.4),
-          size = 5) +
-        
-        ggplot2::labs(
-          x = "Population sample size",
-          y = "Relative error (%)") +
-        
-        ggplot2::scale_fill_manual(
-          name = paste0("Within error threshold (\u00B1",
-                        error_threshold * 100, "%)?"),
-          breaks = c("TRUE", "FALSE"),
-          values = pal, drop = FALSE,
-          guide = ggplot2::guide_legend(
-            override.aes = list(color = pal,
-                                fill = pal,
-                                size = 3),
-            order = 1,
-            label.vjust = 0.4,
-            theme = ggplot2::theme(
-              legend.key.width = ggplot2::unit(2, "lines"),
-              legend.key.height = ggplot2::unit(0.5, "lines")))) +
-        
-        ggplot2::scale_shape_manual(
-          "Groups:", values = c(21, 24)) +
-        ggplot2::scale_x_continuous(
-          breaks = scales::breaks_pretty()) +
-        ggplot2::scale_y_continuous(
-          labels = scales::percent,
-          breaks = scales::breaks_pretty()) +
-        
-        ggplot2::theme_classic() +
-        ggplot2::theme(
-          text = ggplot2::element_text(size = 15),
-          legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
-          strip.background.x = ggplot2::element_rect(
-            color = NA, fill = NA),
-          strip.background.y = ggplot2::element_rect(
-            color = NA, fill = NA),
-          plot.margin = ggplot2::unit(
-            c(1, 1, 1, 1), "cm"))
-    }
+      ggplot2::geom_jitter(
+        data = dt_plot_T,
+        mapping = ggplot2::aes(x = .data$m,
+                               y = .data$error,
+                               group = .data$replicate),
+        position = ggplot2::position_dodge(width = 1),
+        size = 3, shape = 21, alpha = 0.5,
+        color = pal[["TRUE"]],
+        fill = pal[["TRUE"]]) +
+      
+      ggplot2::geom_hline(
+        yintercept = 0,
+        linewidth = 0.3,
+        linetype = "solid") +
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, top_facet),
+        ggplot2::aes(yintercept = error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, top_facet),
+        ggplot2::aes(yintercept = -error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, !top_facet),
+        ggplot2::aes(yintercept = error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, !top_facet),
+        ggplot2::aes(yintercept = -error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      
+      ggplot2::geom_linerange(
+        ggplot2::aes(ymin = .data$error_mean_lci,
+                     ymax = .data$error_mean_uci),
+        show.legend = TRUE,
+        position = ggplot2::position_dodge(width = 0.4),
+        color = "black", linewidth = 1) +
+      ggplot2::geom_linerange(
+        ggplot2::aes(ymin = .data$pred_lci,
+                     ymax = .data$pred_uci),
+        show.legend = TRUE,
+        position = ggplot2::position_dodge(width = 0.4),
+        color = "black", linewidth = 0.4) +
+      
+      ggplot2::geom_point(
+        show.legend = TRUE,
+        position = ggplot2::position_dodge(width = 0.4),
+        color = "black", shape = 21, size = 5) +
+      
+      ggplot2::labs(
+        x = "Population sample size",
+        y = "Relative error (%)") +
+      
+      ggplot2::scale_fill_manual(
+        name = paste0("Within error threshold (\u00B1",
+                      error_threshold * 100, "%)?"),
+        breaks = c("TRUE", "FALSE"),
+        values = pal, drop = FALSE,
+        guide = ggplot2::guide_legend(
+          override.aes = list(color = pal,
+                              fill = pal,
+                              size = 3),
+          order = 1,
+          label.vjust = 0.4,
+          theme = ggplot2::theme(
+            legend.key.width = ggplot2::unit(2, "lines"),
+            legend.key.height = ggplot2::unit(0.5, "lines")))) +
+      
+      ggplot2::scale_shape_manual(values = c(16, 16)) +
+      ggplot2::scale_x_continuous(
+        breaks = scales::breaks_pretty()) +
+      ggplot2::scale_y_continuous(
+        labels = scales::percent,
+        breaks = scales::breaks_pretty()) +
+      
+      ggplot2::theme_classic() +
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 13),
+        legend.position = "bottom",
+        strip.text = ggplot2::element_text(size = 16),
+        strip.background.x = ggplot2::element_rect(
+          color = NA, fill = NA),
+        strip.background.y = ggplot2::element_rect(
+          color = NA, fill = NA),
+        plot.margin = ggplot2::unit(
+          c(1, 1, 1, 1), "cm")) +
+      ggplot2::guides(shape = "none")
     
-    print(p)
+  } else {
     
+    p <- dt_plot_means %>%
+      ggplot2::ggplot(
+        ggplot2::aes(x = .data$m,
+                     y = .data$error_mean,
+                     group = .data$group,
+                     shape = .data$group,
+                     fill = .data$overlaps)) +
+      
+      { if (length(set_target) > 1)
+        ggplot2::facet_wrap(
+          ggplot2::vars(type),
+          scales = "free") } +
+      
+      ggplot2::geom_jitter(
+        dt_plot,
+        mapping = ggplot2::aes(
+          x = .data$m,
+          y = .data$error,
+          group = .data$group,
+          shape = .data$group,
+          fill = .data$overlaps),
+        position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+        size = 3, alpha = 0.5, color = "transparent") +
+      
+      ggplot2::geom_hline(
+        yintercept = 0,
+        linewidth = 0.3,
+        linetype = "solid") +
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, top_facet),
+        ggplot2::aes(yintercept = error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, top_facet),
+        ggplot2::aes(yintercept = -error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, !top_facet),
+        ggplot2::aes(yintercept = error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, !top_facet),
+        ggplot2::aes(yintercept = -error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      
+      ggplot2::geom_linerange(
+        ggplot2::aes(ymin = .data$error_mean_lci,
+                     ymax = .data$error_mean_uci),
+        show.legend = TRUE,
+        position = ggplot2::position_dodge(width = 0.4),
+        color = "black", linewidth = 1) +
+      ggplot2::geom_linerange(
+        ggplot2::aes(ymin = .data$pred_lci,
+                     ymax = .data$pred_uci),
+        show.legend = TRUE,
+        position = ggplot2::position_dodge(width = 0.4),
+        color = "black", linewidth = 0.4) +
+      
+      ggplot2::geom_point(
+        position = ggplot2::position_dodge(width = 0.4),
+        size = 5) +
+      
+      ggplot2::labs(
+        x = "Population sample size",
+        y = "Relative error (%)") +
+      
+      ggplot2::scale_fill_manual(
+        name = paste0("Within error threshold (\u00B1",
+                      error_threshold * 100, "%)?"),
+        breaks = c("TRUE", "FALSE"),
+        values = pal, drop = FALSE,
+        guide = ggplot2::guide_legend(
+          override.aes = list(color = pal,
+                              fill = pal,
+                              size = 3),
+          order = 1,
+          label.vjust = 0.4)) +
+      
+      ggplot2::scale_shape_manual(
+        "Groups:", values = c(21, 24)) +
+      ggplot2::scale_x_continuous(
+        breaks = scales::breaks_pretty()) +
+      ggplot2::scale_y_continuous(
+        labels = scales::percent,
+        breaks = scales::breaks_pretty()) +
+      
+      ggplot2::theme_classic() +
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 13),
+        legend.position = "bottom",
+        strip.text = ggplot2::element_text(size = 16),
+        strip.background.x = ggplot2::element_rect(
+          color = NA, fill = NA),
+        strip.background.y = ggplot2::element_rect(
+          color = NA, fill = NA),
+        plot.margin = ggplot2::unit(
+          c(1, 1, 1, 1), "cm"))
+    p
   }
+  
+  if (plot) print(p)
   
   cat("\n")
   .header("Final parameters", 4)
@@ -4247,7 +4301,7 @@ md_optimize <- function(obj,
     }
     
     merged <- md_merge(tmpList)
-    class(merged) <- unique(c("moveoutput", class(merged)))
+    class(merged) <- unique(c("movedesign_output", class(merged)))
   } else {
     merged <- NULL
   }
@@ -4256,20 +4310,23 @@ md_optimize <- function(obj,
   
   merged$n_replicates <- n_replicates
   
-  out <- structure(list(
-    data = merged,
-    summary = out_summary,
-    plot_data = dt_plot_means,
-    plot = p,
-    error_threshold = error_threshold,
-    sampling_duration = paste0(
-      round(obj$dur$value, 1), " ", obj$dur$unit),
-    sampling_interval = paste0(
-      round(obj$dti$value, 1), " ", obj$dti$unit),
-    sample_size_achieved = broke,
-    minimum_population_sample_size = m_seq[[i]]
-  ), class = "movedesign")
+  out <- structure(
+    list(data = merged,
+         summary = summary_full,
+         verbose = verbose,
+         diagnostics_table = diag,
+         plot_data = dt_plot,
+         plot = p,
+         error_threshold = error_threshold,
+         sampling_duration = paste0(
+           round(obj$dur$value, 1), " ", obj$dur$unit),
+         sampling_interval = paste0(
+           round(obj$dti$value, 1), " ", obj$dti$unit),
+         sample_size_achieved = broke,
+         minimum_population_sample_size = m_seq[[i]]
+    ), class = "movedesign")
   class(out) <- unique(c("movedesign_report", class(out)))
+  
   return(out)
   
 }
@@ -4288,9 +4345,6 @@ md_optimize <- function(obj,
 #'   or [`md_stack()`]).
 #' @param ci Numeric scalar between 0 and 1. The probability of the
 #'   credible interval (CI) to be estimated. Default to `0.95` (95%).
-#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
-#'   to display as a reference in the plot (errors outside this range
-#'   are highlighted in red).
 #' 
 #' @return A list of class `movedesign_report` containing:
 #' A list with two elements:
@@ -4307,9 +4361,7 @@ md_optimize <- function(obj,
 #' if(interactive()) {
 #'   obj <- md_replicate(...)
 #'   
-#'   plots <- md_plot_replicates(obj,
-#'                               ci = 0.95,
-#'                               error_threshold = 0.05)
+#'   plots <- md_plot_replicates(obj)
 #'   # Display the plots:
 #'   plots[[1]]
 #'   plots[[2]]
@@ -4320,8 +4372,16 @@ md_optimize <- function(obj,
 #' 
 #' @export
 md_plot_replicates <- function(obj,
-                               ci = 0.95,
-                               error_threshold = 0.05) {
+                               ci = 0.95) {
+  
+  if (!inherits(obj, "movedesign_report") &&
+      !inherits(obj, "movedesign_output")) {
+    
+    stop("`obj` must be either a 'movedesign_report' ",
+         "(from `md_replicate()`) or a ",
+         "'movedesign_output' object ",
+         "(from `md_optimize()`).", call. = FALSE)
+  }
   
   overlaps <- NULL
   n <- error_mean <- error_sd <- NULL
@@ -4352,6 +4412,7 @@ md_plot_replicates <- function(obj,
   }
   
   alpha <- 1 - ci
+  error_threshold <- obj$error_threshold
   
   data <- obj$summary %>%
     dplyr::mutate(
@@ -4554,7 +4615,7 @@ md_plot_replicates <- function(obj,
     
     ggplot2::scale_shape_manual(
       "Groups:", values = c(16, 17)) +
-    ggplot2::scale_fill_manual(
+    ggplot2::scale_color_manual(
       name = paste0("Within error threshold (\u00B1",
                     error_threshold * 100, "%)?"),
       breaks = c("TRUE", "FALSE"),
@@ -4580,10 +4641,16 @@ md_plot_replicates <- function(obj,
     ggplot2::theme(
       legend.position = "right",
       plot.title = ggtext::element_markdown(
-        size = 14, margin = ggplot2::margin(b = 5))) +
-    ggplot2::guides(color = "none")
-  if (!has_groups) p.replicates <- p.replicates +
-    ggplot2::guides(shape = "none")
+        size = 14, margin = ggplot2::margin(b = 5)))
+  
+  if (!has_groups) {
+    p.replicates <- p.replicates +
+      ggplot2::guides(fill = "none") +
+      ggplot2::guides(shape = "none")
+  } else {
+    p.replicates <- p.replicates +
+      ggplot2::guides(fill = "none")
+  }
   
   return(p.replicates +
            ggplot2::theme(legend.position = "bottom"))
@@ -4628,10 +4695,10 @@ md_stack <- function(obj, ...) {
     stop("Object must be a list.")
   }
   
-  if (is.null(dots[["ignore_mismatch"]])) {
-    ignore_mismatch <- FALSE
+  if (is.null(dots[[".ignore_mismatch"]])) {
+    .ignore_mismatch <- FALSE
   } else {
-    ignore_mismatch <- dots[["ignore_mismatch"]]
+    .ignore_mismatch <- dots[[".ignore_mismatch"]]
   }
   
   n_replicates <- length(obj)
@@ -4671,8 +4738,8 @@ md_stack <- function(obj, ...) {
       }
     }
     
-    merged <- md_merge(obj, ignore_mismatch = ignore_mismatch)
-    class(merged) <- unique(c("moveoutput", class(merged)))
+    merged <- md_merge(obj, .ignore_mismatch = .ignore_mismatch)
+    class(merged) <- unique(c("movedesign_output", class(merged)))
   } else {
     merged <- NULL
   }
@@ -4820,6 +4887,7 @@ md_compare_preview <- function(objs,
   }
   
   processed_outs <- lapply(seq_along(objs), function(i) {
+    print(paste("Design", i))
     process_obj(objs[[i]], paste0("Obj", i))
   })
   
@@ -4868,8 +4936,6 @@ md_compare_preview <- function(objs,
                 0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
               pred_uci = error + stats::qt(
                 0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n)) %>%
-            # error_lci = mean(.data$error_lci, na.rm = TRUE),
-            # error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
             dplyr::rowwise() %>%
             dplyr::mutate(
               within_threshold = 
@@ -4923,7 +4989,8 @@ md_compare_preview <- function(objs,
                   group = .data$group,
                   shape = .data$group,
                   color = .data$overlaps),
-                position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+                position = ggplot2::position_jitterdodge(
+                  dodge.width = 0.4),
                 size = 3.5, color = "grey80", alpha = 0.9) } +
             { if (!only_one_m)
               ggplot2::geom_linerange(
@@ -4972,9 +5039,9 @@ md_compare_preview <- function(objs,
               ggplot2::coord_cartesian(ylim = global_y_range) } +
             ggplot2::theme_classic() +
             ggplot2::theme(
-              text = ggplot2::element_text(size = 18),
               legend.position = "bottom",
-              strip.text = ggplot2::element_text(size = 18),
+              text = ggplot2::element_text(size = 13),
+              strip.text = ggplot2::element_text(size = 16),
               strip.background.x = ggplot2::element_rect(
                 color = NA, fill = NA),
               strip.background.y = ggplot2::element_rect(
@@ -4999,8 +5066,6 @@ md_compare_preview <- function(objs,
                 0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
               pred_uci = error + stats::qt(
                 0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n)) %>%
-            # error_lci = mean(.data$error_lci, na.rm = TRUE),
-            # error_uci = mean(.data$error_uci, na.rm = TRUE)) %>%
             dplyr::rowwise() %>%
             dplyr::mutate(
               within_threshold = 
@@ -5087,9 +5152,9 @@ md_compare_preview <- function(objs,
             ggplot2::coord_cartesian(ylim = global_y_range) } +
           ggplot2::theme_classic() +
           ggplot2::theme(
-            text = ggplot2::element_text(size = 18),
             legend.position = "bottom",
-            strip.text = ggplot2::element_text(size = 18),
+            text = ggplot2::element_text(size = 13),
+            strip.text = ggplot2::element_text(size = 16),
             strip.background.x = ggplot2::element_rect(
               color = NA, fill = NA),
             strip.background.y = ggplot2::element_rect(
@@ -5187,9 +5252,9 @@ md_compare_preview <- function(objs,
             ggplot2::coord_cartesian(ylim = global_y_range) } +
           ggplot2::theme_classic() +
           ggplot2::theme(
-            text = ggplot2::element_text(size = 18),
             legend.position = "bottom",
-            strip.text = ggplot2::element_text(size = 18),
+            text = ggplot2::element_text(size = 13),
+            strip.text = ggplot2::element_text(size = 16),
             strip.background.x = ggplot2::element_rect(
               color = NA, fill = NA),
             strip.background.y = ggplot2::element_rect(
@@ -5273,9 +5338,9 @@ md_compare_preview <- function(objs,
             ggplot2::coord_cartesian(ylim = global_y_range) } +
           ggplot2::theme_classic() +
           ggplot2::theme(
-            text = ggplot2::element_text(size = 18),
             legend.position = "bottom",
-            strip.text = ggplot2::element_text(size = 18),
+            text = ggplot2::element_text(size = 13),
+            strip.text = ggplot2::element_text(size = 16),
             strip.background.x = ggplot2::element_rect(
               color = NA, fill = NA),
             strip.background.y = ggplot2::element_rect(
@@ -5498,7 +5563,7 @@ md_compare <- function(objs,
   
   stat <- match.arg(stat)
   
-  if (inherits(objs[[1]], "moveoutput") &&
+  if (inherits(objs[[1]], "movedesign_output") &&
       inherits(objs[[1]], "movedesign_preprocess")) {
     objs <- list(objs) 
     single_obj <- TRUE

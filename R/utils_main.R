@@ -17,10 +17,10 @@
     stop("Object must be a list.")
   }
   
-  if (is.null(dots[["ignore_mismatch"]])) {
-    ignore_mismatch <- FALSE
+  if (is.null(dots[[".ignore_mismatch"]])) {
+    .ignore_mismatch <- FALSE
   } else {
-    ignore_mismatch <- dots[["ignore_mismatch"]]
+    .ignore_mismatch <- dots[[".ignore_mismatch"]]
   }
   
   if (!is.null(outputs)) {
@@ -48,8 +48,8 @@
         }
       }
       
-      merged <- md_merge(obj, ignore_mismatch = ignore_mismatch)
-      class(merged) <- unique(c("moveoutput", class(merged)))
+      merged <- md_merge(obj, .ignore_mismatch = .ignore_mismatch)
+      class(merged) <- unique(c("movedesign_output", class(merged)))
     } else {
       merged <- NULL
     }
@@ -633,6 +633,27 @@ summary.movedesign_report <- function(object, ...) {
 #' @export
 print.movedesign_report <- function(x, ...) {
   summary(x) # invisible(x)
+}
+
+
+#' Plot movedesign report outputs
+#'
+#' @description
+#' S3 method for plotting a `movedesign_report` object.
+#' Returns the precomputed ggplot stored in the object.
+#'
+#' @param x A `movedesign_report` object returned by
+#'   `md_optimize()` or similar.
+#' @param ... Unused
+#'
+#' @export
+plot.movedesign_report <- function(x, ...) {
+  
+  if (is.null(x$plot)) {
+    stop("No plot stored in this `movedesign_report` object.")
+  }
+  
+  return(x$plot)
 }
 
 
