@@ -8,7 +8,7 @@ md_optimize(
   obj,
   n_replicates = 20,
   error_threshold = 0.05,
-  verbose = FALSE,
+  verbose = TRUE,
   trace = TRUE,
   parallel = FALSE,
   ncores = parallel::detectCores(),

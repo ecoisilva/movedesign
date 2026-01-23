@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![R-CMD-check](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ecoisilva/movedesign/actions/workflows/R-CMD-check.yaml)
 [![Hits](https://hits.sh/github.com/ecoisilva/hits.svg)](https://hits.sh/github.com/ecoisilva/movedesign/) <br>
+<!-- ![Open Source Love](https://badges.frapsoft.com/os/v2/open-source.svg?v=103) -->
 <!-- [![Github last commit date](https://img.shields.io/github/last-commit/ecoisilva/movedesign.svg?label=Updated&logo=github&cacheSeconds=600)](https://github.com/ecoisilva/movedesign/commits) -->
 <!-- [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/movedesign)](https://cran.r-project.org/package=movedesign) -->
 

@@ -4,7 +4,7 @@
 \alias{md_plot_replicates}
 \title{Plot replicate error estimates and confidence intervals}
 \usage{
-md_plot_replicates(obj, ci = 0.95, error_threshold = 0.05)
+md_plot_replicates(obj, ci = 0.95)
 }
 \arguments{
 \item{obj}{A movement design output object (see \code{\link[=md_replicate]{md_replicate()}}
@@ -12,10 +12,6 @@ or \code{\link[=md_stack]{md_stack()}}).}
 
 \item{ci}{Numeric scalar between 0 and 1. The probability of the
 credible interval (CI) to be estimated. Default to \code{0.95} (95\%).}
-
-\item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
-to display as a reference in the plot (errors outside this range
-are highlighted in red).}
 }
 \value{
 A list of class \code{movedesign_report} containing:
@@ -40,9 +36,7 @@ outside a user-defined error threshold.
 if(interactive()) {
   obj <- md_replicate(...)
   
-  plots <- md_plot_replicates(obj,
-                              ci = 0.95,
-                              error_threshold = 0.05)
+  plots <- md_plot_replicates(obj)
   # Display the plots:
   plots[[1]]
   plots[[2]]

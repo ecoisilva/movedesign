@@ -4,7 +4,7 @@
 \alias{md_merge}
 \title{Merge multiple simulation outputs}
 \usage{
-md_merge(..., ignore_mismatch = FALSE)
+md_merge(..., .ignore_mismatch = FALSE)
 }
 \arguments{
 \item{...}{One or more objects of class \code{movedesign_preprocess},
@@ -13,7 +13,7 @@ minimum, the elements \code{simList}, \code{simfitList}, and \code{seedList}.
 Optional elements such as \code{akdeList} and \code{ctsdList}
 are merged if present.}
 
-\item{ignore_mismatch}{Logical; if \code{TRUE}, the function will
+\item{.ignore_mismatch}{Logical; if \code{TRUE}, the function will
 attempt to merge inputs even if they have mismatched columns.
 Use with caution.}
 }
