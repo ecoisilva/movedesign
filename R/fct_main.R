@@ -1155,6 +1155,8 @@ md_merge <- function(..., .ignore_mismatch = FALSE) {
 #'   timing messages to the console.
 #' @param parallel Logical; if `TRUE`, enables parallel processing.
 #'   Default is `FALSE`.
+#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
+#'   to display as a reference in the plot.
 #' @param ncores Integer; number of CPU cores to use for parallel
 #'   processing. Defaults to all available cores detected by
 #'   `parallel::detectCores()`.
@@ -1206,6 +1208,7 @@ md_replicate <- function(obj,
                          verbose = TRUE,
                          trace = TRUE,
                          parallel = FALSE,
+                         error_threshold = 0.05,
                          ncores = parallel::detectCores()) {
   
   stopifnot(is.numeric(n_replicates) && n_replicates > 0)
@@ -1393,7 +1396,7 @@ md_replicate <- function(obj,
     list(input = base_input,
          data = merged,
          summary = summary,
-         # error_threshold = error_threshold,
+         error_threshold = error_threshold,
          verbose = verbose), class = "movedesign")
   class(out) <- unique(c("movedesign_output", class(out)))
   return(out)
