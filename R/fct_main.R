@@ -1238,7 +1238,7 @@ md_replicate <- function(obj,
     rep_id <- offset + i
     
     if (trace)
-      message(.msg(sprintf("— Replicate %s of %s", rep_id,
+      message(.msg(sprintf("\u2014 Replicate %s of %s", rep_id,
                            offset + n_replicates), "main"))
     
     out <- md_run(base_input, trace = trace)
@@ -1393,7 +1393,7 @@ md_replicate <- function(obj,
     list(input = base_input,
          data = merged,
          summary = summary,
-         error_threshold = error_threshold,
+         # error_threshold = error_threshold,
          verbose = verbose), class = "movedesign")
   class(out) <- unique(c("movedesign_output", class(out)))
   return(out)

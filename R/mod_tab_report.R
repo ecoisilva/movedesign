@@ -4665,7 +4665,7 @@ mod_tab_report_server <- function(id, rv) {
         
         r_code <- paste0(
           r_code,
-          "  which_meta = c(\"", which_meta, "\"),\n",
+          "  which_meta = \"", which_meta, "\",\n",
           "  parallel = ", rv$parallel, ",\n",
           "  .seed = seedInit)\n")
         
