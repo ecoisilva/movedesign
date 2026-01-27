@@ -1140,7 +1140,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       
       msg_log(
         style = "success",
-        message = paste0("Species and individual ",
+        message = paste0("Species and individual(s) ",
                          msg_success("validated"), "."),
         detail = paste0("Species selected is the ",
                         msg_success(rv$species_binom),

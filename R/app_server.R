@@ -276,10 +276,17 @@ app_server <- function(input, output, session) {
   # -----------------------------------------------------------------------
   
   # Table theme:
+  
   options(
     reactable.theme = reactable::reactableTheme(
       rowSelectedStyle = list(
         backgroundColor = "#eee",
         boxShadow = "inset 2px 0 0 0 #009da0")))
+  
+  onStop(function() {
+    cat(paste0("\u2014 Thank you for using ",
+               msg_success("movedesign"), "!"), "\n")
+    
+  }) # end of onStop
   
 }
