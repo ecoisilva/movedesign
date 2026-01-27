@@ -24,7 +24,7 @@ or \code{\link[=md_configure]{md_configure()}}).}
 candidate sample size.}
 
 \item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
-to display as a reference in the plot.}
+used as a reference point.}
 
 \item{verbose}{Logical. If \code{TRUE} (default), prints a summary
 of the convergence check to the console.}

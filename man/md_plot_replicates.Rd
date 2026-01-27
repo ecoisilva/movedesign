@@ -19,7 +19,7 @@ A list with two elements:
 \itemize{
 \item \code{p}: A \code{ggplot} object displaying the results from a single
 replicate, showing individual error estimates and their confidence
-intervals. It is equivalente to the output from \code{\link[=md_plot]{md_plot()}}.
+intervals.
 \item \code{p.replicates}: A \code{ggplot} object summarizing mean errors
 across all replicates, with aggregated estimates in the foreground
 and individual replicates shown in lighter tones in the background.

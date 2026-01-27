@@ -34,7 +34,6 @@ Imports:
     ggtext,
     golem (>= 0.3.2),
     grDevices,
-    grid,
     lubridate,
     parallel,
     parsedate,
