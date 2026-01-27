@@ -63,7 +63,7 @@
       plot = FALSE,
       type = "hr")
     
-    danger_msg <- "Outputs are empty. Run home range estimation first."
+    danger_msg <- "Outputs are empty. Run analyses first."
     if (is.null(datList[[1]][["hr"]])) {
       stop(danger_msg)
     } else {

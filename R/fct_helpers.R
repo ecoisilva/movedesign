@@ -753,7 +753,7 @@ calculate_ci <- function(data, level = 0.95) {
 #' 
 #' @importFrom ctmm %#% 
 #' @noRd 
-extract_pars <- function( 
+extract_pars <- function(
     obj, # data = NULL, 
     name = c("position", "velocity", "sigma", "speed"), 
     si_units = FALSE, 
@@ -796,30 +796,30 @@ extract_pars <- function(
   } 
   
   out <- list() 
-  out <- lapply(seq_along(obj), function(x) { 
+  out <- lapply(seq_along(obj), function(x) {
     
     sum.obj <- summary(obj[[x]], units = !si_units) 
     nms.obj <- rownames(sum.obj$CI) 
     
     if (var == "area") { 
-      tmp <- sum.obj$CI[grep(var, nms.obj), ] 
-      unit <- extract_units(nms.obj[grep(var, nms.obj)]) 
       
-      if (!is.null(nrow(tmp)))  
-        if (nrow(tmp) > 1) 
-          tmp <- subset(tmp, !grepl("^CoV", row.names(tmp)))[1,] 
-      
-      tmp <- data.frame(value = tmp / -2 / log(0.05) / pi, 
-                        unit = unit) 
-      
-      if (!si_units) tmp <- fix_unit(tmp, convert = TRUE) 
+      tmp <- sum.obj$CI[grep(var, nms.obj), ]
+      unit <- extract_units(nms.obj[grep(var, nms.obj)])
+
+      if (!is.null(nrow(tmp)))
+        if (nrow(tmp) > 1)
+          tmp <- subset(tmp, !grepl("^CoV", row.names(tmp)))[1,]
+
+      tmp <- data.frame(value = tmp / -2 / log(0.05) / pi,
+                        unit = unit)
+
+      if (!si_units) tmp <- fix_unit(tmp, convert = TRUE)
       
       return(data.frame(tmp, 
-                        row.names = c("low", "est", "high"))) 
-      
+                        row.names = c("low", "est", "high")))
     } 
     
-    # Special cases of movement processes: 
+    # Special cases of movement processes:
     tmp_name <- name 
     tmp <- sum.obj$CI[grep(name, nms.obj), ] 
     unit <- extract_units(nms.obj[grep(name, nms.obj)]) 
@@ -827,7 +827,7 @@ extract_pars <- function(
     if (length(obj[[x]]$tau) == 2 && 
         all(obj[[x]]$tau[1] == obj[[x]]$tau[2])) { 
       
-      # (OUΩ and OUf): 
+      # (OUΩ and OUf):
       tmp_name <- ifelse(any(grepl("decay", nms.obj)),  
                          "decay", "\u03C4") 
       tmp <- sum.obj$CI[grep(tmp_name, nms.obj), ] 
@@ -844,13 +844,13 @@ extract_pars <- function(
     
     return(data.frame(value = tmp, unit = unit, 
                       row.names = c("low", "est", "high"))) 
-  }) 
+  })
   
   names(out) <- names(obj) 
   out[sapply(out, is.null)] <- NULL 
   if (length(out) == 0) return(NULL) 
   return(out) 
-} 
+}
 
 
 #' Extract sampling parameters. 
