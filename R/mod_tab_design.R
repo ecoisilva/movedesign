@@ -43,13 +43,13 @@ mod_tab_design_ui <- function(id) {
           ),
           
           div(id = "content_device-type",
-              p("Which type are you evaluating?") %>%
-                tagAppendAttributes(class = 'label_center'),
               
               shiny::selectizeInput(
                 inputId = ns("device_type"),
                 width = "260px",
-                label = NULL,
+                label = p("Which type are you evaluating?") %>%
+                  tagAppendAttributes(
+                    class = 'label_center no-bottom'),
                 choices = c("GPS/Satellite logger" = "GPS",
                             "VHF transmitter" = "VHF"),
                 options = list(
@@ -69,7 +69,41 @@ mod_tab_design_ui <- function(id) {
             selected = character(0),
             checkIcon = list(yes = icon("ok", lib = "glyphicon"),
                              no = icon("remove", lib = "glyphicon")))),
-          br()
+          
+          div(
+            style = paste("width: 200px; margin-left: auto;",
+                          "margin-right: auto; text-align: center;"),
+            
+            shinyWidgets::autonumericInput(
+              inputId = ns("device_price"),
+              label = tagList(
+                tagAppendAttributes(
+                  p("What is your budget?"),
+                  class = "label_center no-bottom"),
+                span("Price per unit:",
+                           style = paste(
+                             "display: block;",
+                             "text-align: center;"))),
+              currencySymbol = "",
+              currencySymbolPlacement = "p",
+              decimalPlaces = 0,
+              minimumValue = 0,
+              value = 1000,
+              wheelStep = 1000),
+            shinyWidgets::autonumericInput(
+              inputId = ns("device_max_budget"),
+              label = span("Maximum budget:",
+                           style = paste(
+                             "display: block;",
+                             "align: center !important;")),
+              currencySymbol = "",
+              currencySymbolPlacement = "p",
+              decimalPlaces = 0,
+              minimumValue = 0,
+              value = 4000, # 20000
+              wheelStep = 1000)),
+          br(),
+          uiOutput(ns("devUI_optimize"))
           
         ) # end of column (text)
       ), # end of box // device_intro
@@ -80,6 +114,8 @@ mod_tab_design_ui <- function(id) {
           
           ## SETTINGS -----------------------------------------------------
           ### Device settings: --------------------------------------------
+          
+          uiOutput(ns("devBox_optimization_settings")),
           
           shinydashboardPlus::box(
             title = span("Device settings", class = "ttl-box_solid"),
@@ -440,6 +476,8 @@ mod_tab_design_ui <- function(id) {
           # Specify sampling parameters: ----------------------------------
           
           div(class = "col-lg-6 no-padding-left",
+              
+              uiOutput(ns("devBox_optimization_sampling")),
               
               shinydashboardPlus::box(
                 title = span("Sampling parameters",
@@ -834,6 +872,24 @@ mod_tab_design_server <- function(id, rv) {
       
     }) # end of observe
     
+    ## Number of tags based on price/budget: ------------------------------
+    
+    observe({
+      req(rv$active_tab == 'device',
+          rv$which_m)
+      
+      if (rv$which_m == "get_all") {
+        if (req(input$device_price) &&
+            req(input$device_max_budget)) {
+          
+          gps_price_unit <- input$device_price
+          gps_budget <- input$device_max_budget
+          rv$n_units <- floor(gps_budget/gps_price_unit)
+        }
+      }
+      
+    }) # end of observe
+    
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at start: --------------------------------------------
     
@@ -850,6 +906,11 @@ mod_tab_design_server <- function(id, rv) {
     for (i in 1:length(boxnames)) {
       shinyjs::hide(id = paste0("devBox_", boxnames[i]))
     }
+    
+    shinyjs::hide(id = "device_type")
+    shinyjs::hide(id = "device_price")
+    shinyjs::hide(id = "device_max_budget")
+    shinyjs::hide(id = "devUI_optimize")
     
     shinyjs::hide(id = "which_limitations")
     shinyjs::hide(id = "min_frq")
@@ -904,7 +965,7 @@ mod_tab_design_server <- function(id, rv) {
     ## Update device settings: --------------------------------------------
     
     observe({
-      req(input$device_type)
+      req(rv$which_m != "get_all", input$device_type)
       rv$device_type <- input$device_type
       
       shinyjs::show(id = "devBox_sampling")
@@ -1177,10 +1238,9 @@ mod_tab_design_server <- function(id, rv) {
       
       out <- p(style = "max-width: 700px;",
                
-               "This sampling design is equal to a new location",
-               "every", span(txt_dti, class = "cl-sea"),
-               txt_frq,
-               "for a duration of", txt_dur)
+               "The current sampling design is equal to a new",
+               "location every", span(txt_dti, class = "cl-sea"),
+               txt_frq, "for a duration of", txt_dur)
       
       return(out)
       
@@ -1305,7 +1365,7 @@ mod_tab_design_server <- function(id, rv) {
     }) %>% # end of observe,
       bindEvent(input$vhf_dti_unit)
     
-    ## Changing sampling parameters: --------------------------------------
+    ## Change sampling parameters: ----------------------------------------
     
     output$gpsSelect_fix <- renderUI({
       
@@ -1642,6 +1702,155 @@ mod_tab_design_server <- function(id, rv) {
       
     }) %>% # end of renderUI, "devUI_sumLegend"
       bindEvent(rv$dev$tbl)
+    
+    ## If finding all sampling parameters: --------------------------------
+    
+    observe({
+      req(rv$active_tab == 'device',
+          rv$which_m)
+      
+      if (rv$which_m == "get_all") {
+        shinyjs::hide(id = "devBox_sampling")
+        
+        shinyjs::hide(id = "device_type")
+        shinyjs::show(id = "device_price")
+        shinyjs::show(id = "device_max_budget")
+        shinyjs::show(id = "devUI_optimize")
+      } else {
+        shinyjs::show(id = "device_type")
+        shinyjs::hide(id = "device_price")
+        shinyjs::hide(id = "device_max_budget")
+        shinyjs::hide(id = "devUI_optimize")
+      }
+      
+    }) # end of observe
+    
+    ### Render optimization boxes: ----------------------------------------
+    
+    output$devBox_optimization_settings <- renderUI({
+      req(rv$which_m == "get_all")
+      
+      tagList(
+        shinydashboardPlus::box(
+          title = span("Optimization settings", class = "ttl-box_solid"),
+          id = ns("devBox_optimization"),
+          status = "warning",
+          width = NULL,
+          solidHeader = TRUE,
+          collapsible = FALSE,
+          
+          column(
+            width = 12, align = "left",
+            
+            fluidRow(
+              p(style = "padding: 0px;"),
+              
+              fluidRow(
+                column(width = 12,
+                       div(
+                         p(style = "text-align: left !important;",
+                           HTML("&nbsp;"), "Number of tags:") %>%
+                           tagAppendAttributes(class = 'label_split')),
+                       
+                       verbatimTextOutput(outputId = ns("m_units"))
+                )),
+              br(),
+              
+              shinyWidgets::numericInputIcon(
+                inputId = ns("error_threshold_opt"),
+                label = "Error threshold:",
+                min = 1,
+                max = 95,
+                value = 5,
+                step = 1,
+                icon = list(NULL, icon("percent"))),
+              
+              shinyWidgets::autonumericInput(
+                inputId = ns("n_replicates"),
+                label = "Number of replicates:",
+                currencySymbol = " replicates(s)",
+                currencySymbolPlacement = "s",
+                decimalPlaces = 0,
+                minimumValue = 5,
+                maximumValue = 500,
+                value = 5,
+                wheelStep = 1)
+              
+            ) # end of fluidRow
+            
+          ) # end of column
+          
+        ), # end of box // mBox_nsims
+        
+      ) # end of tagList
+      
+    }) # end of renderUI, devBox_optimization_settings
+    
+    output$devBox_optimization_sampling <- renderUI({
+      req(rv$which_m == "get_all",
+          rv$dur, rv$dti)
+      
+      shinydashboardPlus::box(
+        title = span("Sampling parameters",
+                     class = "ttl-box_solid"),
+        id = ns("devBox_sampling_optimal"),
+        status = "primary",
+        width = NULL,
+        solidHeader = TRUE,
+        collapsible = FALSE,
+        
+        uiOutput(ns("devText"))
+        
+      ) # end of box
+      
+    }) # end of renderUI, devBox_optimization_sampling
+    
+    ### Render number of tags: --------------------------------------------
+    
+    output$m_units <- renderText({
+      req(rv$n_units)
+      
+      return(paste(rv$n_units, "tags"))
+      
+    }) # end of renderText, "m_units"
+    
+    ### Render optimization button: ---------------------------------------
+    
+    output$devUI_optimize <- renderUI({
+      
+      column(
+        align = "center", width = 12,
+       
+        p(style = "text-align: center;",
+          "If you wish to get the optimal sampling parameters,",
+          br(), "then click the",
+          icon("bolt", class = "cl-mdn"),
+          wrap_none(span("Run optimization", class = "cl-mdn")),
+          "button."),
+        
+        splitLayout(
+          cellWidths = c("38px", "1%", "200px"),
+          cellArgs = list(style = 'align: center;'),
+          
+          shiny::actionButton(
+            inputId = ns("devHelp_optimize"),
+            label = NULL,
+            width = "100%",
+            icon = icon("circle-question"),
+            class = "btn-warning"),
+          br(),
+          shiny::actionButton(
+            inputId = ns("run_optimization"),
+            label = "Run optimization",
+            icon =  icon("bolt"),
+            width = "100%",
+            class = "btn-primary")
+        ),
+        br()
+        
+      ) # end of column
+      
+    }) # end of renderUI, devUI_optimize
     
     # ALERTS --------------------------------------------------------------
     
@@ -2196,7 +2405,7 @@ mod_tab_design_server <- function(id, rv) {
         names(simList) <- c(rv$seed0, rv$seed0 + 1)
       }
       
-      rv$nsims <- NULL # length(simList)
+      rv$n_sims <- NULL
       rv$needs_fit <- TRUE
       rv$is_analyses <- FALSE
       rv$hr_completed <- FALSE
@@ -2480,6 +2689,573 @@ mod_tab_design_server <- function(id, rv) {
     }) %>% # end of observe,
       bindEvent(rv$dev$confirm_time)
     
+    # OPTIMIZATION --------------------------------------------------------
+    
+    observe({
+      req(rv$species,
+          rv$which_question,
+          rv$which_meta,
+          rv$n_units)
+      req(rv$datList,
+          rv$tau_p,
+          rv$tau_v,
+          rv$sigma,
+          rv$parallel)
+      req(!is.null(rv$add_ind_var))
+      if (rv$add_ind_var) req(rv$meanfitList)
+      
+      rv$n_sims <- NULL
+      rv$is_analyses <- FALSE
+      rv$hr_completed <- FALSE
+      rv$sd_completed <- FALSE
+      
+      target_map <- c("Home range" = "hr",
+                      "Speed & distance" = "ctsd")
+      set_target <- target_map[rv$which_question]
+      
+      dur <- dti <- NULL
+      groups <- NULL
+      if (rv$grouped) groups <- rv$group[[1]]
+      
+      design <- movedesign_input(list(
+        data = rv$datList,
+        data_type = rv$data_type,
+        get_species = rv$species,
+        n_individuals = as.numeric(rv$n_units),
+        dur = dur,
+        dti = dti,
+        add_ind_var = rv$add_ind_var,
+        grouped = rv$grouped,
+        groups = groups,
+        set_target = set_target,
+        which_meta = rv$which_meta,
+        which_m = rv$which_m,
+        parallel = rv$parallel,
+        fitList = rv$fitList,
+        meanfitList = rv$meanfitList,
+        sigma = rv$sigma,
+        tau_p = rv$tau_p,
+        tau_v = rv$tau_v,
+        mu = rv$mu))
+      
+      start <- Sys.time()
+      msg_log(
+        style = "warning",
+        message = paste0("Optimizing ",
+                         msg_warning("sampling parameters"), "..."))
+      loading_modal("Optimizing sampling parameters")
+      
+      req(input$n_replicates, input$error_threshold_opt)
+      rv$error_threshold <- input$error_threshold_opt/100
+      rv$n_replicates <- input$n_replicates
+      
+      out_optimize <- tryCatch({
+        md_optimize(design,
+                    n_replicates = rv$n_replicates,
+                    error_threshold = rv$error_threshold,
+                    plot = FALSE, trace = FALSE,
+                    .console_alert = FALSE)
+      }, error = function(e) { e })
+      
+      if (inherits(out_optimize, "error")) {
+        
+        msg_log(
+          style = "danger",
+          message = paste0(
+            "Optimization ", msg_danger("failed"), "."))
+        print(out_optimize)
+        
+      } else {
+        
+        shinyjs::show(id = "devBox_sims")
+        
+        rv$dur <- out_optimize$data$dur
+        rv$dti <- out_optimize$data$dti
+        
+        rv$seedInit <- out_optimize$data$seedList[[1]]
+        rv$seedList <- out_optimize$data$seedList
+        
+        rv$simList <- out_optimize$data$simList
+        rv$simfitList <- out_optimize$data$simfitList
+        
+        rv$dev$is_valid <- TRUE
+        rv$needs_fit <- FALSE
+        
+        rv$err_prev <- list("hr" = rep(1, 10),
+                            "ctsd" = rep(1, 10))
+        
+        if ("hr" %in% set_target) rv$is_analyses <- TRUE
+        if ("ctsd" %in% set_target) rv$sd_completed <- TRUE
+        
+        rv$fail_prob <- NULL
+        rv$error <- NULL
+        
+        rv$is_fitted <- "Yes"
+        rv$dev$n <- lapply(rv$simList, function(x) nrow(x))
+        
+        if ("hr" %in% set_target) {
+          rv$dev$N1 <- lapply(seq_along(rv$simList), function(x) {
+            n <- nrow(rv$simList[[x]])
+            tmpnms <- names(summary(rv$simfitList[[x]])$DOF)
+            N1 <- summary(rv$simfitList[[x]])$
+              DOF[grep('area', tmpnms)][[1]]
+            return(N1)
+          })
+        }
+        
+        if ("ctsd" %in% set_target) {
+          rv$dev$N2 <- lapply(seq_along(rv$simList), function(x) {
+            n <- nrow(rv$simList[[x]])
+            tmpnms <- names(summary(rv$simfitList[[x]])$DOF)
+            N2 <- summary(rv$simfitList[[x]])$DOF[
+              grep('speed', tmpnms)][[1]]
+            return(N2)
+          })
+        }
+        
+        # Assign groups:
+        if (rv$grouped) {
+          rv$groups[[2]] <- out_optimize$data$groups[[2]]
+        }
+        
+        lapply(seq_along(rv$simfitList), function(x) {
+          
+          group <- 1
+          if (rv$grouped) {
+            
+            get_group <- function(seed, groups) {
+              if (as.character(seed) %in% groups[["A"]]) { 
+                return("A") } else { return("B") }
+            }
+            
+            group <- get_group(rv$seedList[[x]], rv$groups[[2]])
+          }
+          
+          if (rv$add_ind_var) {
+            tau_p <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[x]]),
+              "position")[[1]]
+            tau_v <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[x]]),
+              "velocity")[[1]]
+            sigma <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]], 
+                             rv$seedList[[x]]),
+              "sigma")[[1]]
+            
+          } else {
+            tau_p <- rv$tau_p[[group]]
+            tau_v <- rv$tau_v[[group]]
+            sigma <- rv$sigma[[group]]
+          }
+          
+          rv$dev$tbl <<- rbind(
+            rv$dev$tbl,
+            .build_tbl(
+              device = rv$device_type,
+              group = if (rv$grouped) group else NA,
+              data = rv$simList[[x]],
+              seed = rv$seedList[[x]],
+              obj = rv$simfitList[[x]],
+              tau_p = tau_p,
+              tau_v = tau_v,
+              sigma = sigma))
+          
+        })
+        
+        rv$report_dev_yn <- TRUE
+        
+        if ("hr" %in% set_target) {
+          
+          rv$akdeList <- out_optimize$data$akdeList
+          truthList <- get_true_hr(
+            data = rv$simList,
+            seed = rv$seedList,
+            sigma = rv$sigma,
+            
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL)
+          rv$truth$hr <- truthList
+          
+          req(length(rv$simList) == length(rv$akdeList))
+          
+          out_est_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0), 
+                                   est = numeric(0),
+                                   uci = numeric(0),
+                                   unit = character(0))
+          out_err_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0),
+                                   est = numeric(0),
+                                   uci = numeric(0))
+          
+          i <- 1
+          rv$hr$tbl <- NULL
+          for (i in seq_along(rv$akdeList)) {
+            
+            group <- 1
+            if (rv$grouped) {
+              nm <- names(rv$simList)[[i]]
+              group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
+            }
+            
+            if (rv$add_ind_var) {
+              tau_p <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               rv$seedList[[i]]),
+                "position")[[1]]
+              tau_v <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               rv$seedList[[i]]),
+                "velocity")[[1]]
+              sigma <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               rv$seedList[[i]]),
+                "sigma")[[1]]
+            } else {
+              tau_p <- rv$tau_p[[group]]
+              tau_v <- rv$tau_v[[group]]
+              sigma <- rv$sigma[[group]]
+            }
+            
+            seed <- as.character(rv$seedList[[i]])
+            hr_truth <- rv$truth$hr[[seed]]$area
+            N1 <- extract_dof(rv$simfitList[[i]], "area")[[1]]
+            
+            tmpsum <- tryCatch(
+              summary(rv$akdeList[[i]]),
+              error = function(e) e)
+            
+            if (is.null(rv$akdeList[[i]]) || 
+                is.null(tmpsum) || length(tmpsum) == 0 ||
+                any(tmpsum[[1]] == 0) ||
+                inherits(tmpsum, "error") || N1 < 0.001) {
+              
+              out_est_df <- out_est_df %>%
+                dplyr::add_row(
+                  seed = rv$seedList[[i]],
+                  lci = NA, est = NA, uci = NA, unit = NA)
+              out_err_df <- out_err_df %>%
+                dplyr::add_row(
+                  seed = rv$seedList[[i]],
+                  lci = NA, est = NA, uci = NA)
+              
+              rv$hr$tbl <<- rbind(
+                rv$hr$tbl, 
+                .build_tbl(
+                  target = "hr",
+                  group = if (rv$grouped) group else NA,
+                  data = rv$simList[[i]], 
+                  seed = names(rv$simList)[[i]],
+                  obj = rv$akdeList[[i]],
+                  tau_p = tau_p,
+                  tau_v = tau_v,
+                  sigma = sigma,
+                  area = out_est_df[i, ],
+                  area_error = out_err_df[i, ]))
+              next
+            }
+            
+            tmpname <- rownames(summary(rv$akdeList[[i]])$CI)
+            tmpunit <- extract_units(tmpname[grep('^area', tmpname)])
+            
+            out_est_df <- out_est_df %>%
+              dplyr::add_row(
+                seed = rv$seedList[[i]],
+                lci = tmpsum$CI[1], 
+                est = tmpsum$CI[2], 
+                uci = tmpsum$CI[3], 
+                unit = tmpunit)
+            out_err_df <- out_err_df %>%
+              dplyr::add_row(
+                seed = rv$seedList[[i]],
+                lci = ((tmpsum$CI[1] %#% tmpunit) - hr_truth) / hr_truth, 
+                est = ((tmpsum$CI[2] %#% tmpunit) - hr_truth) / hr_truth, 
+                uci = ((tmpsum$CI[3] %#% tmpunit) - hr_truth) / hr_truth) 
+            
+            rv$hr$tbl <<- rbind(
+              rv$hr$tbl, 
+              .build_tbl(
+                target = "hr",
+                group = if (rv$grouped) group else NA,
+                data = rv$simList[[i]], 
+                seed = rv$seedList[[i]],
+                obj = rv$akdeList[[i]],
+                tau_p = tau_p,
+                tau_v = tau_v,
+                sigma = sigma,
+                area = out_est_df[i, ],
+                area_error = out_err_df[i, ]))
+          }
+          
+          rv$hrEst <<- rbind(rv$hrEst, out_est_df)
+          rv$hrErr <<- rbind(rv$hrErr, out_err_df)
+          
+          rv$hr_completed <- TRUE
+        }
+        
+        if ("ctsd" %in% set_target) {
+          
+          # browser()
+          rv$sd_completed <- TRUE
+          rv$ctsdList <- out_optimize$data$ctsdList
+          
+          truthList <- get_true_speed(
+            data = rv$simList,
+            seed = rv$seedList,
+            
+            tau_p = rv$tau_p,
+            tau_v = rv$tau_v,
+            sigma = rv$sigma,
+            
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) rv$groups[[2]] else NULL)
+          rv$truth$ctsd <- truthList
+          
+          out_est_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0), 
+                                   est = numeric(0),
+                                   uci = numeric(0),
+                                   unit = character(0))
+          out_err_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0),
+                                   est = numeric(0),
+                                   uci = numeric(0))
+          
+          for (i in seq_along(rv$ctsdList)) {
+            
+            sdList <- rv$ctsdList[[i]]
+            
+            # If speed() returns NULL (multiple simulation)
+            if (is.null(sdList)) {
+              out_est_df <- out_est_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_err_df <- out_err_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+              
+              # rv$pathList <<- c(rv$pathList, list(NULL))
+              next
+            }
+            
+            # [quickfix for older ctmm versions]
+            if ("CI" %in% names(sdList))
+              sdList <- sdList$CI
+            
+            # If speed() returns Inf
+            to_check <- sdList[1, "est"]
+            
+            if (is.infinite(to_check)) {
+              out_est_df <- out_est_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_err_df <- out_err_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+              
+              # rv$pathList <<- c(rv$pathList, list(NULL))
+              next
+            }
+            
+            tmpname <- rownames(sdList)
+            tmpunit <- extract_units(tmpname[grep("speed", tmpname)])
+            
+            group <- 1
+            if (rv$grouped) {
+              nm <- names(rv$simList)[[i]]
+              group <- ifelse(nm %in% rv$groups[[2]]$A, "A", "B")
+            }
+            
+            seed <- as.character(rv$seedList[[i]])
+            sd_truth <- rv$truth$ctsd[[seed]]
+            
+            out_est_df <- out_est_df %>%
+              dplyr::add_row(seed = rv$seedList[[i]],
+                             lci = sdList[1], 
+                             est = sdList[2],
+                             uci = sdList[3],
+                             unit = tmpunit)
+            
+            out_err_df <- out_err_df %>%
+              dplyr::add_row(
+                seed = rv$seedList[[i]],
+                lci = ((sdList[[1]] %#% tmpunit) - sd_truth) / sd_truth,
+                est = ((sdList[[2]] %#% tmpunit) - sd_truth) / sd_truth,
+                uci = ((sdList[[3]] %#% tmpunit) - sd_truth) / sd_truth)
+          }
+          
+          rv$speedEst <- out_est_df
+          rv$speedErr <- out_err_df
+          rv$is_analyses <- TRUE
+          rv$is_report <- FALSE
+          rv$is_meta <- FALSE
+          rv$is_ctsd <- TRUE
+          
+          out_dist_est_df <- data.frame(seed = numeric(0),
+                                        lci = numeric(0),
+                                        est = numeric(0),
+                                        uci = numeric(0),
+                                        unit = character(0))
+          out_dist_err_df <- data.frame(seed = numeric(0),
+                                        lci = numeric(0),
+                                        est = numeric(0),
+                                        uci = numeric(0))
+          
+          dur_days <- "days" %#% rv$dur$value %#% rv$dur$unit
+          unit_new <- "kilometers/day"
+          
+          pathList <- list()
+          for (i in seq_along(rv$ctsdList)) {
+            
+            sdList <- rv$ctsdList[[i]]
+            pathList[[i]] <- estimate_trajectory(
+              data = rv$simList[i],
+              fit = rv$simfitList[i],
+              groups = if (rv$grouped) rv$groups[[2]] else NULL,
+              dur = rv$dur,
+              tau_v = rv$tau_v,
+              seed = rv$seedList[i])[[1]]
+            
+            if (is.null(sdList) ||
+                is.null(pathList[[i]])) {
+              out_dist_est_df <- out_dist_est_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_dist_err_df <- out_dist_err_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+              next
+            }
+            
+            truth <- sum(pathList[[i]]$dist, na.rm = TRUE)
+            unit_old <- rv$speedEst$unit[i]
+            
+            if (!is.na(rv$speedEst$est[i])) {
+              
+              dist_lci <- (unit_new %#% rv$speedEst$lci[i]
+                           %#% unit_old) * dur_days
+              dist_est <- (unit_new %#% rv$speedEst$est[i]
+                           %#% unit_old) * dur_days
+              dist_uci <- (unit_new %#% rv$speedEst$uci[i]
+                           %#% unit_old) * dur_days
+              
+              dist_unit <- "kilometers"
+              truth <- dist_unit %#% truth
+              
+              out_dist_est_df <- out_dist_est_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = dist_lci, 
+                               est = dist_est, 
+                               uci = dist_uci, 
+                               unit = dist_unit)
+              
+              out_dist_err_df <- out_dist_err_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = (dist_lci - truth) / truth,
+                               est = (dist_est - truth) / truth,
+                               uci = (dist_uci - truth) / truth)
+            } else {
+              out_dist_est_df <- out_dist_est_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_dist_err_df <- out_dist_err_df %>%
+                dplyr::add_row(seed = rv$seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+            }
+          }
+          
+          rv$pathList <- pathList
+          rv$distEst <- out_dist_est_df
+          rv$distErr <- out_dist_err_df
+          
+          rv$sd$tbl <- NULL
+          for (i in seq_along(rv$ctsdList)) {
+            
+            group <- 1
+            if (rv$grouped) {
+              group <- ifelse(
+                names(rv$simList)[[i]] %in% rv$groups[[2]]$A,
+                "A", "B")
+            }
+            
+            if (rv$add_ind_var) {
+              tau_p <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               rv$seedList[[i]]),
+                "position")[[1]]
+              tau_v <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               rv$seedList[[i]]),
+                "velocity")[[1]]
+              sigma <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               rv$seedList[[i]]),
+                "sigma")[[1]]
+            } else {
+              tau_p <- rv$tau_p[[group]]
+              tau_v <- rv$tau_v[[group]]
+              sigma <- rv$sigma[[group]]
+            }
+            
+            rv$sd$tbl <<- rbind(
+              rv$sd$tbl, 
+              .build_tbl(
+                target = "ctsd",
+                group = if (rv$grouped) group else NA,
+                data = rv$simList[[i]],
+                seed = names(rv$simList)[[i]],
+                obj = rv$ctsdList[[i]],
+                tau_p = tau_p,
+                tau_v = tau_v,
+                sigma = sigma,
+                speed = rv$speedEst[i, ],
+                speed_error = rv$speedErr[i, ],
+                distance = rv$distEst[i, ],
+                distance_error = rv$distErr[i, ]))
+          }
+          
+          rv$sd_completed <- TRUE
+        }
+        
+        rv$is_analyses <- TRUE
+        rv$is_report <- FALSE
+        rv$is_meta <- FALSE
+        
+        msg_log(
+          style = "success",
+          message = paste0("Optimization ",
+                           msg_success("completed"), "."),
+          run_time = difftime(Sys.time(), start, units = "sec"))
+
+        if (!rv$tour_active) {
+          shinyalert::shinyalert(
+            className = "modal_success",
+            type = "success",
+            title = "Success!",
+            text = tagList(span(
+              "Proceed to the", br(),
+              icon("layer-group", class = "cl-mdn"),
+              span('Meta-analyses', class = "cl-mdn"), "tab."
+            )),
+            html = TRUE,
+            size = "xs")
+        }
+      }
+      
+      shinybusy::remove_modal_spinner()
+      
+    }) %>% # end of observe,
+      bindEvent(input$run_optimization)
+  
     # PLOTS ---------------------------------------------------------------
     ## Plotting GPS battery life: -----------------------------------------
     
@@ -2491,6 +3267,7 @@ mod_tab_design_server <- function(id, rv) {
     
     output$devPlot_gps <- ggiraph::renderGirafe({
       req(rv$active_tab == 'device',
+          rv$which_m != "get_all",
           rv$dev$dur$value,
           rv$dev$dur$unit,
           input$gps_dti_max)
@@ -2813,10 +3590,8 @@ mod_tab_design_server <- function(id, rv) {
       rv$simsvfList <- extract_svf(rv$simList,
                                    rv$simfitList, fraction = 1)
       
-      if (length(rv$simList) == 1) hex_fill <- pal$dgr
-      else hex_fill <- c(pal$grn, pal$sea)
       p <- plotting_svf(rv$simsvfList,
-                        fill = hex_fill,
+                        fill = rep(pal$dgr, length(rv$simList)),
                         add_fit = ifelse(is.null(input$dev_add_fit),
                                          FALSE, input$dev_add_fit),
                         fraction = input$dev_fraction / 100,
@@ -2825,6 +3600,8 @@ mod_tab_design_server <- function(id, rv) {
       ggiraph::girafe(
         ggobj = suppressWarnings(
           patchwork::wrap_plots(p)),
+        width_svg = 8,
+        height_svg = 4,
         options = list(
           ggiraph::opts_selection(type = "none"),
           ggiraph::opts_toolbar(saveaspng = FALSE),
@@ -2975,6 +3752,10 @@ mod_tab_design_server <- function(id, rv) {
         N1 = "N (area)",
         N2 = "N (speed)",
         fit = "Fitted?")
+      
+      if (rv$which_m == "get_all") {
+        dt_dv <- dplyr::select(dt_dv, -c(.data$device))
+      }
       
       reactable::reactable(
         dt_dv,

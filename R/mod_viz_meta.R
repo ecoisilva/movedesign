@@ -41,10 +41,17 @@ mod_viz_meta_server <- function(id, rv) {
         req(rv$metaList_groups)
         req(rv$metaList[[rv$set_analysis]]) }
       
+      is_replicates <- FALSE
+      if (rv$which_m == "get_all") {
+        req(rv$error_threshold)
+        is_replicates <- TRUE
+      }
+      
       p.optimal <- plot_meta_resamples(
         rv,
         set_target = rv$set_analysis,
-        random = rv$random, 
+        randomize = rv$random, 
+        replicate = is_replicates,
         subpop = rv$grouped, 
         colors = c(pal$sea, 
                    pal$dgr))
@@ -55,11 +62,6 @@ mod_viz_meta_server <- function(id, rv) {
           legend.position = "bottom",
           plot.title = ggtext::element_markdown(
             size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
-      
-      if (rv$which_meta == "mean") {
-        p.optimal <- p.optimal +
-          ggplot2::guides(shape = "none")
-      }
       
       if (rv$which_meta == "mean") {
         p.optimal <- p.optimal +

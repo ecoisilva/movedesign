@@ -196,8 +196,15 @@ mod_tab_about_ui <- function(id) {
                         tagList(span(em(
                           '"I want to determine the',
                           span("minimum", class = "cl-jgl"),
-                          'number of VHF/GPS tags."')))),
-                      choiceValues = list("set_m", "get_m"),
+                          'number of VHF/GPS tags."'))),
+                        tagList(span(em(
+                          '"I want to get the',
+                          span("recommended", class = "cl-jgl"),
+                          'sampling parameters."')))
+                        ),
+                      choiceValues = list("set_m",
+                                          "get_m",
+                                          "get_all"),
                       selected = character(0),
                       checkIcon = list(
                         yes = tags$i(class = "fa fa-check-square",
@@ -358,7 +365,32 @@ mod_tab_about_server <- function(id, rv) {
         text = tagList(span(
           "Searching for the", span("minimum", class = "cl-jgl"),
           "number of VHF/GPS tags is an iterative process.",
-          "Currently, this option only allows for one",
+          "This option only allows for one",
+          span("research question", class = "cl-dgr"),
+          "at a time. Please select either 'Home range' or",
+          "'Speed & distance' (but not both) to proceed.")),
+        confirmButtonText = "Dismiss",
+        html = TRUE,
+        size = "xs")
+      
+    }) # end of observe
+    
+    observe({
+      req(rv$which_m == "get_all",
+          length(rv$which_question) == 2)
+      
+      shinyWidgets::updateCheckboxGroupButtons(
+        session = session,
+        inputId = "which_question",
+        selected = character(0))
+      
+      shinyalert::shinyalert(
+        type = "error",
+        title = "Warning",
+        text = tagList(span(
+          "Searching for the", span("optimal", class = "cl-jgl"),
+          "sampling parameters is an iterative process.",
+          "This option only allows for one",
           span("research question", class = "cl-dgr"),
           "at a time. Please select either 'Home range' or",
           "'Speed & distance' (but not both) to proceed.")),

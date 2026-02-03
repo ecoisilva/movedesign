@@ -416,7 +416,7 @@ mod_tab_hrange_server <- function(id, rv) {
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     # observe({
-    #   if (req(rv$nsims) != length(req(rv$simfitList)))
+    #   if (req(rv$n_sims) != length(req(rv$simfitList)))
     #     shinyjs::hide(id = "hrBox_viz")
     # })
     
@@ -1175,13 +1175,16 @@ mod_tab_hrange_server <- function(id, rv) {
         
         if (rv$add_ind_var) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[sim_no]]),
             "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[sim_no]]),
             "velocity")[[1]]
           sigma <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[sim_no]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[sim_no]]),
             "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]

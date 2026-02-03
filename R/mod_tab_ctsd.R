@@ -404,7 +404,7 @@ mod_tab_ctsd_server <- function(id, rv) {
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     observe({
-      if (req(rv$nsims) != length(req(rv$simfitList)))
+      if (req(rv$n_sims) != length(req(rv$simfitList)))
         shinyjs::hide(id = "sdBox_viz")
     })
 

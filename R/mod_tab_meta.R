@@ -98,14 +98,14 @@ mod_tab_meta_ui <- function(id) {
           shinydashboardPlus::box(
             title = tagList(
               icon("bolt", class = "cl-jgl"),
-              span("Simulations:", class = "ttl-box cl-jgl")),
+              span("Population:", class = "ttl-box cl-jgl")),
             id = ns("metaBox_simulations"),
             width = NULL,
             solidHeader = FALSE,
             collapsible = FALSE,
             
             p(style = "text-align: right !important;",
-              HTML("&nbsp;"), "No. simulations (total):") %>%
+              HTML("&nbsp;"), "Number of tags (total):") %>%
               tagAppendAttributes(class = 'label_split'),
             
             fluidRow(
@@ -233,7 +233,7 @@ mod_tab_meta_ui <- function(id) {
               ) # end of panels (1 out of 2)
             ), # end of tabs
             
-            footer = uiOutput("metaUI_footer")
+            footer = uiOutput("metaUI_outputs_footer")
             
           ), # end of box // metaBox_viz
           
@@ -262,41 +262,7 @@ mod_tab_meta_ui <- function(id) {
                       choices = seq(1, 100, by = 1)))
                 ),
             
-            footer = column(
-              width = 12,
-              style = "max-width: 390px; float: right;",
-              
-              splitLayout(
-                cellWidths = c("20%", "1%",
-                               "41.5%", "1%",
-                               "38.5%"),
-                cellArgs = list(style = "align: center;"),
-                
-                shiny::actionButton(
-                  inputId = ns("metaHelp_resample"),
-                  label = NULL,
-                  width = "100%",
-                  icon = icon("circle-question"),
-                  class = "btn-warning"),
-                br(),
-                shiny::actionButton(
-                  inputId = ns("run_meta_resample"),
-                  label = span("Resample"),
-                  icon =  icon("wand-sparkles"),
-                  width = "100%",
-                  class = "btn-sims"),
-                br(),
-                shinyWidgets::autonumericInput(
-                  inputId = ns("n_resamples"),
-                  label = NULL,
-                  currencySymbol = " resamples(s)",
-                  currencySymbolPlacement = "s",
-                  decimalPlaces = 0,
-                  minimumValue = 1,
-                  maximumValue = 1000,
-                  value = 5, wheelStep = 5),
-                
-              )) # end of footer
+            footer = uiOutput(ns("metaUI_summary_footer"))
             
           ) # end of box // metaBox_summary
           
@@ -349,6 +315,14 @@ mod_tab_meta_server <- function(id, rv) {
       bindEvent(list(rv$which_question,
                      input$metaOutput_target,
                      input$run_meta))
+    
+    observe({
+      req(rv$active_tab == 'meta', rv$which_m)
+      
+      if (rv$which_m == "get_all")
+        rv$set_analysis <- rv$set_target
+      
+    }) # end of observe
     
     ## Update number of resamples: ----------------------------------------
     
@@ -527,8 +501,15 @@ mod_tab_meta_server <- function(id, rv) {
     }) # end of observe
     
     output$nsims_total <- renderText({
-      if (!is.null(rv$simList)) return(length(rv$simList))
-      else return(0)
+      req(rv$which_m)
+      
+      if (rv$which_m == "get_all") {
+        req(rv$n_units)
+        return(paste(rv$n_units, "tags"))
+      } else {
+        return(length(rv$simList %||% 0))
+      }
+      
     }) # end of renderText, "nsims_total"
     
     ## Render new text (for effect size): ---------------------------------
@@ -765,7 +746,7 @@ mod_tab_meta_server <- function(id, rv) {
     
     ## Render footer for outputs box: -------------------------------------
     
-    output$metaUI_footer <- renderUI({
+    output$metaUI_outputs_footer <- renderUI({
       req(rv$is_meta, rv$which_m)
       
       if (rv$which_m == "get_m") {
@@ -799,7 +780,53 @@ mod_tab_meta_server <- function(id, rv) {
         return(NULL)
       }
       
-    }) # end of renderUI, "metaUI_footer"
+    }) # end of renderUI, "metaUI_outputs_footer"
+    
+    
+    output$metaUI_summary_footer <- renderUI({
+      req(rv$is_meta, rv$which_m)
+      
+      if (rv$which_m == "get_all") {
+        return(NULL)
+        
+      } else {
+        return(column(
+          width = 12,
+          style = "max-width: 390px; float: right;",
+          
+          splitLayout(
+            cellWidths = c("20%", "1%",
+                           "41.5%", "1%",
+                           "38.5%"),
+            cellArgs = list(style = "align: center;"),
+            
+            shiny::actionButton(
+              inputId = ns("metaHelp_resample"),
+              label = NULL,
+              width = "100%",
+              icon = icon("circle-question"),
+              class = "btn-warning"),
+            br(),
+            shiny::actionButton(
+              inputId = ns("run_meta_resample"),
+              label = span("Resample"),
+              icon =  icon("wand-sparkles"),
+              width = "100%",
+              class = "btn-sims"),
+            br(),
+            shinyWidgets::autonumericInput(
+              inputId = ns("n_resamples"),
+              label = NULL,
+              currencySymbol = " resamples(s)",
+              currencySymbolPlacement = "s",
+              decimalPlaces = 0,
+              minimumValue = 1,
+              maximumValue = 1000,
+              value = 5, wheelStep = 5)
+          )))
+      }
+      
+    }) # end of renderUI, "metaUI_summary_footer"
     
     # OPERATIONS ----------------------------------------------------------
     ## Run global meta-analyses: ------------------------------------------
@@ -1044,7 +1071,10 @@ mod_tab_meta_server <- function(id, rv) {
         }
       }
       
-      shinyjs::show(id = "metaBox_outputs")
+      if (rv$which_m != "get_all") {
+        shinyjs::show(id = "metaBox_outputs")
+      }
+      
       if ("Home range" %in% rv$which_question) {
         shinyjs::show(id = "metaBox_err_hr")
       }
@@ -1127,6 +1157,9 @@ mod_tab_meta_server <- function(id, rv) {
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$ctsdList)
         req(length(rv$ctsdList) > 1)
+        if (length(rv$simList) != length(rv$ctsdList)) {
+          warning("Movement is fractal")
+        }
         req(length(rv$simList) == length(rv$ctsdList))
         if (any(is.null(rv$ctsdList))) {
           tmp <- rv$ctsdList
@@ -1136,13 +1169,55 @@ mod_tab_meta_server <- function(id, rv) {
         get_analysis <- c(get_analysis, "ctsd")
       }
       
-      tmp <- run_meta_resamples(
-        rv, set_target = get_analysis,
-        subpop = rv$grouped,
-        random = FALSE, 
-        trace = FALSE,
-        .automate_seq = TRUE,
-        .seed = rv$seedInit)
+      if (rv$which_m != "get_all") {
+        
+        tmp <- run_meta_resamples(
+          rv, set_target = get_analysis,
+          subpop = rv$grouped,
+          randomize = FALSE,
+          trace = FALSE,
+          .automate_seq = TRUE,
+          .seed = rv$seedInit)
+        
+      } else {
+        req(rv$n_units)
+        
+        .worker <- function(i) {
+          message(.msg(sprintf("\u2014 Replicate %s of %s", i,
+                               rv$n_replicates), "main"))
+          
+          run_meta_resamples(rv,
+                             set_target = get_analysis,
+                             subpop = rv$grouped,
+                             .m = rv$n_units)
+        }
+        
+        m_seq <- .get_sequence(seq_len(rv$n_units),
+                               grouped = rv$grouped,
+                               .step = 2, .max_m = rv$n_units,
+                               .automate_seq = TRUE)
+        
+        metaList <- list()
+        for (i in seq_along(m_seq)) {
+          tmp <- lapply(
+            seq_len(rv$n_replicates), function(x) {
+              run_meta_resamples(rv,
+                                 set_target = get_analysis,
+                                 subpop = rv$grouped,
+                                 .m = m_seq[[i]])
+            })
+          
+          if (length(tmp) > 0) {
+            metaList[[i]] <- data.table::rbindlist(
+              tmp, fill = TRUE, idcol = "replicate")
+          } else {
+            metaList[[i]] <- data.table::data.table()
+          }
+        }
+        
+        tmp <- data.table::rbindlist(metaList)
+        
+      }
       
       msg_log(
         style = "success",
@@ -1171,8 +1246,6 @@ mod_tab_meta_server <- function(id, rv) {
       rv$random <- FALSE
       
       tmp <- get_meta_outputs()
-      # rv$meta_tbl <<- dplyr::bind_rows(rv$meta_tbl, tmp)
-      # rv$meta_tbl <- dplyr::distinct(rv$meta_tbl)
       rv$meta_tbl <- tmp
       rv$meta_tbl_resample <- NULL
       
@@ -1226,7 +1299,7 @@ mod_tab_meta_server <- function(id, rv) {
       tmp <- run_meta_resamples(
         rv, set_target = get_analysis,
         subpop = rv$grouped,
-        random = TRUE, 
+        randomize = TRUE, 
         max_draws = rv$n_resamples,
         trace = TRUE,
         .automate_seq = TRUE,
@@ -2332,12 +2405,12 @@ mod_tab_meta_server <- function(id, rv) {
     ## Outputs: -----------------------------------------------------------
     
     observe({
-      req(rv$metaErr,
+      req(rv$which_m, rv$metaErr,
           "Home range" %in% rv$which_question)
       
-      mod_blocks_server(
-        id = "metaBlock_hr",
-        rv = rv, type = "hr", name = "metaErr")
+        mod_blocks_server(
+          id = "metaBlock_hr",
+          rv = rv, type = "hr", name = "metaErr")
       
     }) # end of observe
     

@@ -181,10 +181,10 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
       if (rv$which_m == "set_m") {
         req(input$nsims)
-        rv$nsims <- as.numeric(input$nsims)
+        rv$n_sims <- as.numeric(input$nsims)
       } else if (rv$which_m == "get_m") {
         req(input$nsims_max)
-        rv$nsims <- as.numeric(input$nsims_max)
+        rv$n_sims <- as.numeric(input$nsims_max)
       }
       
     }) %>% # end of observe,
@@ -368,8 +368,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       if (rv$data_type != "simulated") req(rv$fitList)
       else req(rv$modList)
       
-      if ("compare" %in% rv$which_meta) req((rv$nsims - 2) > 0) 
-      else req((rv$nsims - 1) > 0)
+      if ("compare" %in% rv$which_meta) req((rv$n_sims - 2) > 0) 
+      else req((rv$n_sims - 1) > 0)
       
       rv$m$needs_fit <- FALSE
       subpop <- rv$grouped
@@ -639,7 +639,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         msg_log(
           style = "warning",
           message = paste0("Model selection for ", num_sims,
-                           " simulation(s) (out of ", rv$nsims, ") ",
+                           " simulation(s) (out of ", rv$n_sims, ") ",
                            msg_warning("in progress"), ","),
           detail = "This may take a while...")
         
@@ -661,7 +661,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         names(rv$simfitList) <- names(rv$simList)
         
         lapply(seq_along(simList), function(x) {
-          nm <- names(rv$simList)[[(rv$nsims - num_sims) + x]]
+          nm <- names(rv$simList)[[(rv$n_sims - num_sims) + x]]
           
           group <- 1
           if (rv$grouped) {
@@ -671,15 +671,15 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (rv$add_ind_var) {
             tau_p <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
               "position")[[1]]
             tau_v <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
               "velocity")[[1]]
             sigma <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
               "sigma")[[1]]
             
           } else {
@@ -694,7 +694,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               device = rv$device_type,
               group = if (rv$grouped) group else NA,
               data = simList[[x]],
-              # seed = rv$seedList[[(rv$nsims - num_sims) + x]],
+              # seed = rv$seedList[[(rv$n_sims - num_sims) + x]],
               seed = names(simList)[[x]],
               obj = simfitList[[x]],
               tau_p = tau_p,
@@ -719,7 +719,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           rv$dev$N1 <- c(rv$dev$N1, extract_dof(fit, "area"))
           rv$dev$N2 <- c(rv$dev$N2, extract_dof(fit, "speed"))
           
-          nm <- names(rv$simList)[[(rv$nsims - num_sims) + i]]
+          nm <- names(rv$simList)[[(rv$n_sims - num_sims) + i]]
           
           group <- 1
           if (rv$grouped) {
@@ -729,15 +729,15 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           if (rv$add_ind_var) {
             tau_p <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
               "position")[[1]]
             tau_v <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
               "velocity")[[1]]
             sigma <- extract_pars(
               emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$nsims - num_sims) + x]]),
+                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
               "sigma")[[1]]
             
           } else {
@@ -752,7 +752,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               device = rv$device_type,
               group = if (rv$grouped) group else NA,
               data = simList[[i]], 
-              seed = rv$seedList[[(rv$nsims - num_sims) + i]],
+              seed = rv$seedList[[(rv$n_sims - num_sims) + i]],
               obj = fit,
               tau_p = tau_p,
               tau_v = tau_v,
@@ -858,10 +858,10 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         req(rv$fitList) else req(rv$modList)
       
       if ("compare" %in% rv$which_meta) 
-        req((rv$nsims - 2) > 0) else req((rv$nsims - 1) > 0)
+        req((rv$n_sims - 2) > 0) else req((rv$n_sims - 1) > 0)
       
       num_sims <- length(rv$simList)
-      seq_for <- (num_sims + 1):rv$nsims
+      seq_for <- (num_sims + 1):rv$n_sims
       rv$m$needs_fit <- FALSE
       
       shinybusy::show_modal_spinner(
@@ -1717,7 +1717,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       shinybusy::remove_modal_spinner()
       
       txt_full <- tagList(
-        p("You specified a maximum of", rv$nsims, "tags.",
+        p("You specified a maximum of", rv$n_sims, "tags.",
           "Under the current assumptions and an error threshold",
           "of", wrap_none(rv$error_threshold * 100, "%,"),
           "a stable estimate of the population mean",
@@ -1744,7 +1744,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       #     "population-level inferences in animal tracking",
       #     "projects (in prep)."))
       
-      if (length(rv$simList) < rv$nsims) {
+      if (length(rv$simList) < rv$n_sims) {
         
         shiny::showModal(
           shiny::modalDialog(
@@ -1763,7 +1763,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             footer = modalButton("Dismiss"),
             size = "m")) # end of modal
         
-      } else if (length(rv$simList) == rv$nsims) {
+      } else if (length(rv$simList) == rv$n_sims) {
         
         if (all(err_values < rv$error_threshold)) {
           
@@ -1795,7 +1795,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                 style = paste("margin-right: 20px;",
                               "margin-left: 20px;"),
                 
-                p("You specified a maximum of", rv$nsims, "tags,",
+                p("You specified a maximum of", rv$n_sims, "tags,",
                   "which was not sufficient to achieve a stable",
                   "estimate of the population mean",
                   "within the threshold of", 
@@ -1819,7 +1819,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               size = "m")) # end of modal
           
         } # end of if (all(err_values < rv$error_threshold))
-      } # end of if (length(rv$simList) < rv$nsims)
+      } # end of if (length(rv$simList) < rv$n_sims)
       
     }, label = "o-m_sims_minimum_m") %>% # end of observer
       bindEvent(input$mButton_repeat)

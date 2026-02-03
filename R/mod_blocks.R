@@ -53,7 +53,7 @@ mod_blocks_server <- function(id,
     
     prepare_outputs <- reactive({
       
-      perc <- subtitle <- NULL
+      error <- error_sd <- perc <- subtitle <- NULL
       block_type <- get_block_type()
       
       switch(block_type,
@@ -235,6 +235,33 @@ mod_blocks_server <- function(id,
                                 out[get_id, "est"],
                                 out[get_id, "uci"])
                    }
+                 }
+                 
+                 
+                 if (rv$which_m == "get_all") {
+                   req(rv$meta_tbl)
+                   
+                   out <- rv$meta_tbl %>% 
+                     dplyr::group_by(.data$type,
+                                     .data$group,
+                                     .data$m) %>%
+                     dplyr::summarize(
+                       n = dplyr::n(),
+                       error_sd = stats::sd(.data$error, na.rm = TRUE),
+                       error = mean(.data$error, na.rm = TRUE),
+                       error_lci = error - stats::qt(
+                         0.975, df = n - 1) * error_sd / sqrt(n),
+                       error_uci = error + stats::qt(
+                         0.975, df = n - 1) * error_sd / sqrt(n)) %>%
+                     dplyr::slice(which.max(.data$m)) %>%
+                     dplyr::filter(type == type) %>%
+                     quiet() %>% 
+                     suppressMessages() %>% 
+                     suppressWarnings()
+                   
+                   value <- c(mean(out$error_lci[1]),
+                              mean(out$error[1]),
+                              mean(out$error_uci[1]))
                  }
                  
                } # end of outputs (error)
