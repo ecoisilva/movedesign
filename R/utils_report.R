@@ -32,55 +32,79 @@
   return(out)
 }
 
-#' @title Get text for mean error estimate
+
+#' @title Get text for mean errors
+#' 
 #' @noRd
-.get_txt_nsim <- function(rv, set_target = c("hr", "ctsd")) {
-  set_target <- match.arg(set_target)
-  name <- paste0(set_target, "Err")
+.format_mean_error <- function(rv,
+                               set_target = c("hr", "ctsd")) {
   
-  nsims <- ifelse(
-    length(rv$simList) == 1,
-    "a single individual",
-    paste(length(rv$simList), "individuals")
-  )
+  set_target <- match.arg(set_target)
+  err_name <- paste0(set_target, "Err")
+  
+  n_tags <- if (rv$which_m != "get_all") {
+    length(rv$simList)
+  } else {
+    rv$n_units
+  }
+  
+  txt_n_tags <- if (n_tags == 1) {
+    "a single individual"
+  } else {
+    paste(n_tags, "individuals")
+  }
   
   if (rv$which_meta == "none") {
-    txt_nsim <- paste0(
-      "Your mean error estimate based on ", nsims, " was ",
-      .err_to_txt(rv[[name]]$est), "%."
-    )
-  } else {
-    err <- rv$meta_tbl %>%
-      dplyr::filter(.data$group == "All", 
-                    .data$type == set_target) %>%
-      dplyr::slice(which.max(.data$m))
-    
-    direction <- ifelse(dplyr::pull(err, .data$error) > 0,
-                        "overestimated", "underestimated")
-    
-    if (set_target == "hr") {
-      txt_nsim <- paste0(
-        "The mean home range area based on ", nsims, " was ",
-        direction, " by ", 
-        .err_to_txt(dplyr::pull(err, .data$error)), "% [",
-        .err_to_txt(dplyr::pull(err, .data$error_lci)), ", ",
-        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."
-      )
-    } else if (set_target == "ctsd") {
-      txt_nsim <- paste0(
-        "The mean speed based on ", nsims, " was ",
-        direction, " by ", 
-        .err_to_txt(dplyr::pull(err, .data$error)), "% [",
-        .err_to_txt(dplyr::pull(err, .data$error_lci)), ", ",
-        .err_to_txt(dplyr::pull(err, .data$error_uci)), "]."
-      )
-    }
+    return(paste0(
+      "Your mean error estimate based on ", txt_n_tags, " was ",
+      .err_to_txt(rv[[err_name]]$est), "%."))
   }
-  return(txt_nsim)
+  
+  meta <- rv$meta_tbl[
+    rv$meta_tbl$group == "All" &
+      rv$meta_tbl$type == set_target, , drop = FALSE]
+  
+  if (rv$which_m != "get_all") {
+    err <- meta[which.max(meta$m), , drop = FALSE]
+    
+  } else {
+    summaries <- lapply(split(meta, meta$m), function(x) {
+      n <- nrow(x)
+      error <- mean(x$error, na.rm = TRUE)
+      sd_error <- stats::sd(x$error, na.rm = TRUE)
+      se <- sd_error / sqrt(n)
+      
+      data.frame(
+        m = x$m[1],
+        error = error,
+        error_lci = error - stats::qt(0.975, df = n - 1) * se,
+        error_uci = error + stats::qt(0.975, df = n - 1) * se)
+    })
+    
+    summaries <- do.call(rbind, summaries)
+    err <- summaries[which.max(summaries$m), , drop = FALSE]
+    
+  }
+  
+  txt_direction <- ifelse(dplyr::pull(err, .data$error) > 0,
+                          "overestimated", "underestimated")
+  
+  txt_target <- switch(set_target,
+                       hr = "home range area",
+                       ctsd = "speed")
+  
+  return(paste0(
+    "The mean ", txt_target, " based on ", txt_n_tags,
+    " was ", txt_direction, " by ",
+    .err_to_txt(err$error), "% [",
+    .err_to_txt(err$error_lci), ", ",
+    .err_to_txt(err$error_uci), "]."))
+  
 }
 
 
 #' @title Prepare species and sampling parameters for the report
+#' 
 #' @noRd
 .build_parameters <- function(rv) {
   
@@ -143,6 +167,7 @@
 }
 
 #' @title Prepare CIs from meta outputs
+#' 
 #' @noRd
 .extract_ci <- function(meta, type_key) {
   CI <- meta[grep(type_key, meta$type), ]
@@ -152,43 +177,40 @@
 }
 
 #' @title Prepare outputs for the report
+#' 
 #' @noRd
-.build_outputs <- function(rv, ratio = FALSE) {
+.format_outputs <- function(rv, ratio = FALSE) {
   
-  set_target <- NULL
-  txt_ratio_order <- txt_link_meta <- NULL
-  truth <- coi <- cri <- list()
+  out_truth <- out_coi <- out_cri <- list()
   txt_target <- txt_title <- list()
-  if (rv$grouped) {
-    txt_ratio_order <- "(for group A/group B)"
-  }
   
+  txt_ratio_order <- NULL
+  if (rv$grouped) txt_ratio_order <- "(for group A/group B)"
+  
+  out_targets <- NULL
   if ("Home range" %in% rv$which_question) {
-    set_target <- c(set_target, "hr")
-    txt_target[["hr"]] <- "home range area"
-    txt_title[["hr"]] <- "Home range meta-analyses:"
+    out_targets <- c(out_targets, "hr")
     
-    truth_summarized <- get_true_hr(
+    out_truth[["hr"]] <- get_true_hr(
       sigma = rv$sigma,
       ind_var = rv$add_ind_var,
       fit = if (rv$add_ind_var) rv$meanfitList else NULL,
       grouped = FALSE,
-      summarized = TRUE)
+      summarized = TRUE)[["All"]]$area
     
-    truth[["hr"]] <- truth_summarized[["All"]]$area
+    txt_target[["hr"]] <- "home range area"
+    txt_title[["hr"]] <- "Home range meta-analyses:"
     
-    coi[["hr"]] <- .extract_ci(rv$metaErr, "hr")
-    cri[["hr"]] <- c("lci" = rv$hr_cri$lci,
-                     "est" = rv$hr_cri$est,
-                     "uci" = rv$hr_cri$uci)
+    out_coi[["hr"]] <- .extract_ci(rv$metaErr, "hr")
+    out_cri[["hr"]] <- c("lci" = rv$hr_cri$lci,
+                         "est" = rv$hr_cri$est,
+                         "uci" = rv$hr_cri$uci)
   }
   
   if ("Speed & distance" %in% rv$which_question) {
-    set_target <- c(set_target, "ctsd")
-    txt_target[["ctsd"]] <- "movement speed"
-    txt_title[["ctsd"]] <- "Speed meta-analyses:"
+    out_targets <- c(out_targets, "ctsd")
     
-    truth_summarized <- get_true_speed(
+    out_truth[["ctsd"]] <- get_true_speed(
       data = rv$simList,
       seed = rv$seedList,
       tau_p = rv$tau_p,
@@ -197,25 +219,26 @@
       ind_var = rv$add_ind_var,
       fit = if (rv$add_ind_var) rv$meanfitList else NULL,
       grouped = FALSE,
-      summarized = TRUE)
+      summarized = TRUE)[["All"]]
     
-    truth[["ctsd"]] <- truth_summarized[["All"]]
+    txt_target[["ctsd"]] <- "movement speed"
+    txt_title[["ctsd"]] <- "Speed meta-analyses:"
     
-    coi[["ctsd"]] <- .extract_ci(rv$metaErr, "sd")
-    cri[["ctsd"]] <- c("lci" = rv$sd_cri$lci,
-                       "est" = rv$sd_cri$est,
-                       "uci" = rv$sd_cri$uci)
+    out_coi[["ctsd"]] <- .extract_ci(rv$metaErr, "sd")
+    out_cri[["ctsd"]] <- c("lci" = rv$sd_cri$lci,
+                           "est" = rv$sd_cri$est,
+                           "uci" = rv$sd_cri$uci)
   }
   
-  set_style_title <- paste("display: inline-block;",
-                           "font-family: var(--sans);",
-                           "font-weight: 400;",
-                           "font-style: italic;",
-                           "font-size: 18px;",
-                           "color: var(--sea-dark);",
-                           "margin-bottom: 8px;")
+  css_title <- paste("display: inline-block;",
+                     "font-family: var(--sans);",
+                     "font-weight: 400;",
+                     "font-style: italic;",
+                     "font-size: 18px;",
+                     "color: var(--sea-dark);",
+                     "margin-bottom: 8px;")
   
-  txt_link_meta <- span(
+  txt_meta_link <- span(
     style = paste("text-align: center;",
                   "font-weight: bold;",
                   "font-family: var(--monosans);"),
@@ -223,13 +246,13 @@
     shiny::icon("layer-group", class = "cl-sea"),
     span("Meta-analyses", class = "cl-sea"), "tab.")
 
-  return(list(set_target = set_target,
+  return(list(css_title = css_title,
+              out_targets = out_targets,
+              out_truth = out_truth,
+              out_coi = out_coi,
+              out_cri = out_cri,
               txt_target = txt_target,
               txt_title = txt_title,
-              get_truth = truth,
-              get_coi = coi,
-              get_cri = cri,
-              set_style_title = set_style_title,
-              txt_link_meta = txt_link_meta,
+              txt_meta_link = txt_meta_link,
               txt_ratio_order = txt_ratio_order))
 }

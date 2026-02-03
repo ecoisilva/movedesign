@@ -198,8 +198,8 @@
 #' @param subpop Logical; if TRUE, analyzes population-level inferences
 #'   by subpopulations/groups (e.g., males vs. females). Requires group
 #'   assigments in `rv`.
-#' @param random Logical; if TRUE, performs random sampling of individuals
-#'   using different combinations (up to max_draws).
+#' @param randomize Logical; if TRUE, performs random sampling of
+#'   individuals using different combinations (up to max_draws).
 #' @param max_draws Integer; maximum number of random draws per
 #'   combination size when \code{random=TRUE}.
 #'   Ignored if \code{random=FALSE}.
@@ -266,7 +266,7 @@
 run_meta_resamples <- function(rv,
                                set_target = c("hr", "ctsd"),
                                subpop = FALSE,
-                               random = FALSE,
+                               randomize = FALSE,
                                max_draws = 100,
                                iter_step = 2,
                                trace = FALSE,
@@ -282,16 +282,16 @@ run_meta_resamples <- function(rv,
   .seed <- dots[[".seed"]] %||% NULL
   .m <- dots[[".m"]] %||% NULL
   
-  if (!is.logical(random) || length(random) != 1) {
-    stop("'random' must be a single logical value (TRUE or FALSE)")
+  if (!is.logical(randomize) || length(randomize) != 1) {
+    stop("'randomize' must be a single logical value (TRUE or FALSE)")
   }
   
-  if (random && (!is.numeric(max_draws) ||
+  if (randomize && (!is.numeric(max_draws) ||
                  length(max_draws) != 1 ||
                  max_draws <= 0))
     stop("'max_draws' must be a single positive numeric",
-         " value when 'random' is TRUE")
-  if (!random) max_draws <- 1
+         " value when 'randomize' is TRUE")
+  if (!randomize) max_draws <- 1
   
   if (!is.null(.m)) {
     if (!is.numeric(.m) || .m %% 1 != 0 || .m < 1) {
@@ -430,13 +430,13 @@ run_meta_resamples <- function(rv,
                           .max_draws = max_draws)
         
         if (!is.null(.seed)) set.seed(unit_seed)
-        randomize <- sample.int(nrow(sets$out_random)) 
+        n_randomize <- sample.int(nrow(sets$out_random)) 
         sets$out_random <- sets$out_random[
-          randomize, , drop = FALSE]
+          n_randomize, , drop = FALSE]
         
         if (sets$sets == 1) return(sets)
         
-        if (random) {
+        if (randomize) {
           
           if (nrow(sets$out_random) > max_draws) {
             
@@ -452,7 +452,7 @@ run_meta_resamples <- function(rv,
       }), names(input))
       
       n_samples <- 1
-      if (random && max_draws > 1) {
+      if (randomize && max_draws > 1) {
         n_samples <- if(subpop) nrow(arg[["A"]]$out_random) else 
           nrow(arg[["All"]]$out_random)
         
@@ -474,7 +474,7 @@ run_meta_resamples <- function(rv,
         # Group assigments:
         if (subpop) {
           
-          if (random) {
+          if (randomize) {
             inputList[["groups"]] <- list(
               A = input_groups[["A"]][arg[["A"]]$out_random[sample, ]],
               B = input_groups[["B"]][arg[["B"]]$out_random[sample, ]])
@@ -760,7 +760,7 @@ run_meta <- function(rv,
   return(run_meta_resamples(rv,
                             set_target = set_target,
                             subpop = subpop,
-                            random = FALSE,
+                            randomize = FALSE,
                             max_draws = NULL,
                             trace = trace,
                             iter_step = iter_step,

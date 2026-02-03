@@ -22,10 +22,10 @@ quiet <- function(x) {
 #' Unicode names
 #' 
 #' @noRd
-txt.tau_p <- "\u03C4\u209A"
-txt.tau_v <- "\u03C4\u1D65"
-txt.sig_p <- "\u03C3\u209A"
-txt.sig_v <- "\u03C3\u1D65"
+txt_taup <- "\u03C4\u209A"
+txt_tauv <- "\u03C4\u1D65"
+txt_sigp <- "\u03C3\u209A"
+txt_sigv <- "\u03C3\u1D65"
 
 #' Get confidence interval (uci)
 #' 
@@ -235,7 +235,8 @@ errorBlock <- function(icon = NULL,
     shiny::tags$span(class = "errorblock-header",
                      tmptext, br(), style = color_err),
     shiny::tags$span(class = "errorblock-value",
-                     span(HTML(paste0(value, "%")), style = color_err)),
+                     span(HTML(paste0(value, "%")), 
+                          style = color_err)),
     shiny::tags$span(class = "errorblock-header", br(),
                      range), out_nsims
   ) # end of div
@@ -297,17 +298,6 @@ staticBlock <- function(text,
 extract_units <- function(input, name = NULL) {
   
   if (length(input) == 0) return(NULL)
-  
-  # if (class(input)[1] != "list" && class(input[[1]])[1] != "ctmm") {
-  #   input <- summary(input)
-  # } else {
-  #   input <- summary(input[[1]])
-  # }
-  #   
-  # if (inherits(input, "data.frame")) {
-  #   tmp <- rownames(input)
-  #   input <- tmp[grep(name, tmp)]
-  # }
   
   tryCatch(
     expr = {
@@ -496,7 +486,7 @@ reset_reactiveValues <- function(rv) {
   
   if (!is.null(isolate(rv$hr))) rv$hr <- NULL
   if (!is.null(isolate(rv$sd))) rv$sd <- NULL
-  if (!is.null(isolate(rv$nsims))) rv$nsims <- NULL
+  if (!is.null(isolate(rv$n_sims))) rv$n_sims <- NULL
   
 }
 

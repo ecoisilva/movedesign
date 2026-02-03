@@ -210,10 +210,20 @@ summary.movedesign_input <- function(object, ...) {
       .msg(paste0("   Number of individuals used: "), "main"),
       width = 3, justify = "left"),
       length(object$data)) }
-  message(format(
-    .msg(paste0("   Grouped: "), "main"),
+  
+  if (object$grouped) {
     width = 3, justify = "left"),
     ifelse(object$grouped, "TRUE", "FALSE"))
+    message(format(
+      .msg(paste0("   Groups: "), "main"),
+      width = 3, justify = "left"),
+      paste0("\n",
+             "     A = ", paste0('"', object$groups[[1]][[1]], '"',
+                                collapse = ", "), "\n",
+             "     B = ", paste0('"', object$groups[[1]][[2]], '"',
+                                collapse = ", "), "\n"))
+  }
+
   if (object$which_m == "set_m") {
   message(format(
     .msg(paste0("   Effective sample size (area): "), "main"),
@@ -233,13 +243,13 @@ summary.movedesign_input <- function(object, ...) {
     .msg(paste0("   Position autocorrelation timescale: "), "main"),
     width = 3, justify = "left"),
     round(object$tau_p[["All"]]$value[2], 1), " ",
-    object$tau_p[["All"]]$unit[2])
+    fix_unit(object$tau_p[["All"]][2, ])$unit)
   if ("ctsd" %in% object$set_target) {
   message(format(
     .msg(paste0("   Velocity autocorrelation timescale: "), "main"),
     width = 3, justify = "left"),
     round(object$tau_v[["All"]]$value[2], 1), " ",
-    object$tau_v[["All"]]$unit[2]) }
+    fix_unit(object$tau_v[["All"]][2, ])$unit) }
   message(format(
     .msg(paste0("   Location variance: "), "main"),
     width = 3, justify = "left"),
@@ -264,10 +274,15 @@ summary.movedesign_input <- function(object, ...) {
       width = 3, justify = "left"),
       round(object$dti$value, 1), " ", object$dti$unit)
   }
+  
+  target_map <- c("hr" = "home range",
+                  "ctsd" = "speed")
+  set_target <- target_map[object$set_target]
+  
   message(format(
     .msg(paste0("   Research target(s) requested: "), "main"),
     width = 3, justify = "left"),
-    paste(object$set_target, collapse = ", "))
+    paste(set_target, collapse = ", "))
   message(format(
     .msg(paste0("   Analytical target(s) requested: "), "main"),
     width = 3, justify = "left"),
@@ -278,14 +293,21 @@ summary.movedesign_input <- function(object, ...) {
   if (object$which_m == "set_m") {
     message(.msg(
       paste0("   Verifying study design for a specific ",
-             .msg("population sample size", "success"), "."),
+             .msg("population sample size", "success"), ","),
       "main"))
   }
   if (object$which_m == "get_m") {
     message(.msg(
       paste0("   Find the minimum ",
              .msg("population sample size", "success"),
-             " required for a target."),
+             " required for a target,"),
+      "main"))
+  }
+  if (object$which_m == "get_all") {
+    message(.msg(
+      paste0("   Find the recommended ",
+             .msg("sampling parameters", "success"),
+             " required for a target,"),
       "main"))
   }
   

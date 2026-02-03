@@ -92,44 +92,42 @@ md_simulate <- function(n_individuals = NULL,
   species <- "simulated"
   add_individual_variation <- FALSE
   
+  .stop_if <- function(cond, msg) {
+    if (cond) stop(msg, call. = FALSE)
+  }
+  
   .validate_parameters <- function(x, grouped, name) {
     
-    stop_if <- function(cond, msg) {
-      if (cond) stop(msg, call. = FALSE)
-    }
-    
-    make_df <- function(value, unit) {
-      data.frame(
-        value = c(NA, value, NA),
-        unit  = rep(unit, 3),
-        row.names = c("low", "est", "high")
-      )
+    .make_df <- function(value, unit) {
+      data.frame(value = c(NA, value, NA),
+                 unit  = rep(unit, 3),
+                 row.names = c("low", "est", "high"))
     }
     
     if (!grouped) {
-      stop_if(!is.list(x),
+      .stop_if(!is.list(x),
               paste0(name,
                      " must be a list when grouped = FALSE"))
-      stop_if(!all(c("value", "unit") %in% names(x)),
+      .stop_if(!all(c("value", "unit") %in% names(x)),
               paste0(name,
                      " must contain 'value' and 'unit'"))
       
-      return(list(All = make_df(x$value[[1]], x$unit[[1]])))
+      return(list(All = .make_df(x$value[[1]], x$unit[[1]])))
     }
     
-    stop_if(!is.list(x) || is.null(names(x)),
+    .stop_if(!is.list(x) || is.null(names(x)),
             paste0(name, 
                    " must be a named list when grouped = TRUE"))
     
     out <- lapply(names(x), function(g) {
       xi <- x[[g]]
-      stop_if(!is.list(xi),
+      .stop_if(!is.list(xi),
               paste0(name, "[[", g, "]] must be a list"))
-      stop_if(!all(c("value", "unit") %in% names(xi)),
+      .stop_if(!all(c("value", "unit") %in% names(xi)),
               paste0(name, "[[", g,
                      "]] must contain 'value' and 'unit'"))
       
-      make_df(xi$value[[1]], xi$unit[[1]])
+      .make_df(xi$value[[1]], xi$unit[[1]])
     })
     
     names(out) <- names(x)
@@ -296,8 +294,7 @@ md_simulate <- function(n_individuals = NULL,
     tau_p = tau_p,
     tau_v = tau_v,
     mu = mu,
-    seed = seed
-  ))
+    seed = seed))
   
   return(design)
   
@@ -408,7 +405,6 @@ md_simulate <- function(n_individuals = NULL,
 #'     n_individuals = 5,
 #'     dur = list(value = 1, unit = "month"),
 #'     dti = list(value = 1, unit = "day"),
-#'     add_individual_variation = TRUE,
 #'     set_target = "hr",
 #'     which_meta = "mean")
 #'  summary(input)
@@ -498,8 +494,32 @@ md_prepare <- function(species = NULL,
     }
   }
   
-  .validate_sampling(dur, "dur")
-  .validate_sampling(dti, "dti")
+  if (!is.null(dur)) {
+    if (missing(dur) || 
+        !is.list(dur) ||
+        !all(c("value", "unit") %in% names(dur)))
+      stop("'dur' must be a list with elements 'value' and 'unit'.")
+    if (missing(dti) || 
+        !is.list(dti) || 
+        !all(c("value", "unit") %in% names(dti)))
+      stop("'dti' must be a list with elements 'value' and 'unit'.")
+    .validate_sampling(dur, "dur")
+  }
+  
+  if (!is.null(dti)) {
+    if (missing(dur) || 
+        !is.list(dur) ||
+        !all(c("value", "unit") %in% names(dur)))
+      stop("'dur' must be a list with elements 'value' and 'unit'.")
+    if (missing(dti) || 
+        !is.list(dti) || 
+        !all(c("value", "unit") %in% names(dti)))
+      stop("'dti' must be a list with elements 'value' and 'unit'.")
+    .validate_sampling(dti, "dti")
+  }
+  
+  which_m <- ifelse(is.null(dur) && is.null(dti),
+                    "get_all", "set_m")
   
   if (!is.null(groups)) {
     if (!is.list(groups) || length(groups) < 2) {
@@ -553,14 +573,6 @@ md_prepare <- function(species = NULL,
       !is.numeric(n_individuals) ||
       length(n_individuals) != 1)
     stop("'n_individuals' must be a single integer.")
-  if (missing(dur) || 
-      !is.list(dur) ||
-      !all(c("value", "unit") %in% names(dur)))
-    stop("'dur' must be a list with elements 'value' and 'unit'.")
-  if (missing(dti) || 
-      !is.list(dti) || 
-      !all(c("value", "unit") %in% names(dti)))
-    stop("'dti' must be a list with elements 'value' and 'unit'.")
   
   if (!is.null(groups) && n_individuals %% 2 != 0)
     stop("'n_individuals' must be even when 'groups' is not NULL.")
@@ -588,9 +600,25 @@ md_prepare <- function(species = NULL,
     tau_v <- extract_pars(fitList, "velocity", meta = TRUE)
   }
   
+  if (is.null(tau_p)) {
+    if ("hr" %in% set_target)
+      stop(paste("Position autocorrelation timescale (tau_p)",
+                 "is required for home range estimation."))
+  } else {
+    names(tau_p) <- "All"
+  }
+  
+  if (is.null(tau_v)) {
+    if ("ctsd" %in% set_target)
+      stop(paste("Velocity autocorrelation timescale (tau_v)",
+                 "is required for speed & distance estimation."))
+    
+  } else {
+    names(tau_v) <- "All"
+  }
+  
   mu <- list(array(0, dim = 2, dimnames = list(c("x", "y"))))
-  names(sigma) <- names(tau_p) <- names(tau_v) <- "All"
-  names(mu) <- "All"
+  names(sigma) <- names(mu) <- "All"
   
   if (!is.null(groups)) {
     
@@ -683,12 +711,14 @@ md_prepare <- function(species = NULL,
     }))
     names(tau_p) <- c("All", "A", "B") 
     
-    tau_v <- c(tau_v, lapply(1:2, function(x) {
-      extract_pars(
-        obj = fit[[x]], 
-        name = "velocity", meta = TRUE)[[1]]
-    }))
-    names(tau_v) <- c("All", "A", "B") 
+    if (!is.null(tau_v)) {
+      tau_v <- c(tau_v, lapply(1:2, function(x) {
+        extract_pars(
+          obj = fit[[x]], 
+          name = "velocity", meta = TRUE)[[1]]
+      }))
+      names(tau_v) <- c("All", "A", "B") 
+    }
     
     mu <- list(array(0, dim = 2, 
                      dimnames = list(c("x", "y"))),
@@ -717,7 +747,7 @@ md_prepare <- function(species = NULL,
     groups = groups,
     set_target = set_target,
     which_meta = which_meta,
-    which_m = "set_m",
+    which_m = which_m,
     parallel = parallel,
     fitList = fitList,
     meanfitList = meanfitList,
@@ -725,8 +755,7 @@ md_prepare <- function(species = NULL,
     tau_p = tau_p,
     tau_v = tau_v,
     mu = mu,
-    seed = .seed
-  ))
+    seed = .seed))
   
   return(design)
 }
@@ -792,7 +821,7 @@ md_prepare <- function(species = NULL,
 #'   n_individuals = 5,
 #'   dur = list(value = 1, unit = "month"),
 #'   dti = list(value = 1, unit = "day"),
-#'   add_individual_variation = TRUE,
+#'   add_individual_variation = FALSE,
 #'   set_target = "hr",
 #'   which_meta = "mean"
 #' )
@@ -964,7 +993,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
 #'     n_individuals = 5,
 #'     dur = list(value = 1, unit = "month"),
 #'     dti = list(value = 1, unit = "day"),
-#'     add_individual_variation = TRUE,
+#'     add_individual_variation = FALSE,
 #'     grouped = FALSE,
 #'     set_target = "hr",
 #'     which_meta = "mean"
@@ -1467,7 +1496,7 @@ md_replicate <- function(obj,
 #'     n_individuals = 5,
 #'     dur = list(value = 1, unit = "month"),
 #'     dti = list(value = 1, unit = "day"),
-#'     add_individual_variation = TRUE,
+#'     add_individual_variation = FALSE,
 #'     grouped = TRUE,
 #'     set_target = "hr",
 #'     which_meta = "mean"
@@ -1504,7 +1533,7 @@ md_plot_preview <- function(obj,
       obj,
       set_target = obj$set_target,
       subpop = obj$grouped,
-      random = resampled, 
+      randomize = resampled, 
       max_draws = n_resamples,
       trace = TRUE,
       .automate_seq = TRUE,
@@ -3510,11 +3539,11 @@ md_configure <- function(data, models = NULL) {
 md_optimize <- function(obj,
                         n_replicates = 20,
                         error_threshold = 0.05,
+                        plot = FALSE,
                         verbose = TRUE,
-                        trace = TRUE,
                         parallel = FALSE,
                         ncores = parallel::detectCores(),
-                        plot = FALSE,
+                        trace = TRUE,
                         ...) {
   
   if (n_replicates < 5)
@@ -3523,22 +3552,59 @@ md_optimize <- function(obj,
   `%||%` <- function(x, y) if (!is.null(x)) x else y
   
   dots <- list(...)
-  .n_converge <- dots[[".n_converge"]] %||% 5
   .tol <- dots[[".tol"]] %||% 0.05
+  .seeds <- dots[[".seeds"]] %||% NULL
+  .n_converge <- dots[[".n_converge"]] %||% 5
+  .console_alert <- dots[[".console_alert"]] %||% TRUE
   
-  . <- type <- NULL
+  . <- n <- type <- NULL
   stopifnot(inherits(obj, "movedesign_input"))
   stopifnot(is.numeric(error_threshold) &&
               error_threshold > 0 && error_threshold < 1)
   stopifnot(is.numeric(n_replicates) && n_replicates > 0)
   
+  if (!is.null(.seeds)) {
+    if (length(.seeds) !=  obj$n_individuals * n_replicates)
+      stop(paste("Length of .seeds should match",
+                 "no. of tags * no. of replicates"))
+  }
+  
+  .calc_dti <- function(N, tauv, dur) {
+    
+    .calc_ess <- function(dti, tauv, dur) {
+      n_obs <- floor(dur / dti)
+      r <- dti / tauv
+      return(ifelse(dti > tauv,
+                    ifelse(dti > 3 * tauv, 0,
+                           (n_obs) / (r)^r * r),
+                    (n_obs) / tauv * dti))
+    }
+    
+    fractions <- c(3, 2.5, 2, 1.5, 1, 0.75, 0.5)
+    
+    for (f in fractions) {
+      dti <- round(tauv / f)
+      N2 <- .calc_ess(dti, tauv, dur)
+      if (N2 <= N) return(dti)
+    }
+    
+    dti <- round(tauv / 0.5)
+    N2 <- .calc_ess(dti, tauv, dur)
+    
+    return(dti)
+  }
+  
   .worker <- function(r, m) {
-    if (trace) message(.msg(
+    message(.msg(
       sprintf("\u2014 Replicate %s of %s", r,
               n_replicates), "main"))
     
     obj$n_individuals <- ifelse(obj$grouped, m * 2, m)
-    out <- md_run(obj, trace = FALSE)
+    if (is.null(.seeds)) {
+      out <- md_run(obj, trace = FALSE)
+    } else {
+      out <- md_run(obj, .seeds = seeds_split[[r]], trace = FALSE)
+    }
     return(out)
   }
   
@@ -3547,6 +3613,11 @@ md_optimize <- function(obj,
   tau_p <- obj$tau_p
   tau_v <- obj$tau_v
   .max_m <- obj$n_individuals
+  
+  if (!is.null(.seeds)) {
+    seeds_split <- split(.seeds, 
+                         ceiling(seq_along(.seeds) / .max_m))
+  }
   
   group <- groups <- top_facet <- NULL
   hr_dur <- hr_dti <- ctsd_dur <- ctsd_dti <- NULL
@@ -3570,18 +3641,44 @@ md_optimize <- function(obj,
   }
   
   if (obj$add_ind_var) {
-    tmp_tau_p_val <- tau_p[[1]][3, "value"] %#% tau_p[[1]][3, "unit"]
+    taup <- tau_p[[1]][3, "value"] %#% tau_p[[1]][3, "unit"]
   } else {
-    tmp_tau_p_val <- tau_p[[1]][2, "value"] %#% tau_p[[1]][2, "unit"]
+    taup <- tau_p[[1]][2, "value"] %#% tau_p[[1]][2, "unit"]
+  }
+  
+  if (error_threshold <= 0.01) {
+    N1 <- 280
+    N1 <- 1000
+    error_label <- "1%"
+  } else if (error_threshold <= 0.05) {
+    N1 <- 150
+    N2 <- 500
+    error_label <- "5%"
+  } else if (error_threshold <= 0.10) {
+    N1 <- 100
+    N2 <- 250
+    error_label <- paste0(round(error_threshold * 100, 0), "%")
+  } else if (error_threshold <= 0.25) {
+    N1 <- 80
+    N2 <- 40
+    error_label <- paste0(round(error_threshold * 100, 0), "%")
+  } else if (error_threshold <= 0.50) {
+    N1 <- 40
+    N2 <- 30
+    error_label <- paste0(round(error_threshold * 100, 0), "%")
+  } else {
+    N1 <- 30
+    N1 <- 30
+    error_label <- paste0(round(error_threshold * 100, 0), "%")
   }
   
   warn_and_confirm <- function(total_years, error_threshold_label) {
-    if (total_years > 4) {
+    if (total_years > 5) {
       cat('', msg_warning("!"),
           paste0("Error threshold is set to ", 
                  msg_warning(error_threshold_label), ","), "\n",
           ' ', paste0(
-            "This setting may result in a recommended ",
+            "This threshold may result in a recommended ",
             "tracking duration of over ",
             msg_warning(paste(round(total_years, 0), "years")), ".\n")
       )
@@ -3598,9 +3695,9 @@ md_optimize <- function(obj,
     }
   }
   
-  if (error_threshold <= 0.01) {
-    N <- 280
-    error_label <- "1%"
+  total_years <- "years" %#% (N1 * taup)
+  if ("hr" %in% set_target) warn_and_confirm(total_years, error_label)
+  
   } else if (error_threshold <= 0.05) {
     N <- 150
     error_label <- "5%"
@@ -3620,19 +3717,20 @@ md_optimize <- function(obj,
   
   total_years <- "years" %#% (N * tmp_tau_p_val)
   warn_and_confirm(total_years, error_label)
+  optimal_dur <- round(taup * N1)
+  if (!is.null(tau_v)) {
+    tauv <- tau_v[[1]][2, "value"] %#% tau_v[[1]][2, "unit"]
+    optimal_dti <- round(tauv / 3)
+  }
   
   for (target in set_target) {
-    optimal_dur <- round(tmp_tau_p_val * N)
-    optimal_dti <- round((tau_v[[1]]$value[2] %#% 
-                            tau_v[[1]]$unit[2]) / 3)
-    
     if (target == "hr") {
       dti <- 1 %#% "day"
       dur <- optimal_dur
       count <- 0
       repeat {
-        n <- floor(dur / dti)
-        if (n <= 2000 || count > 20) break
+        n_obs <- floor(dur / dti)
+        if (n_obs <= 2000 || count > 20) break
         dti <- dti * 2
         count <- count + 1
       }
@@ -3644,16 +3742,21 @@ md_optimize <- function(obj,
       dur <- 8 %#% "days"
       dti <- optimal_dti
       count <- 0
+      
+      dti <- .calc_dti(N2, tauv, dur)
+      
       repeat {
-        n <- floor(dur / dti)
-        if ((n >= 1000 && n <= 2000) || count > 20) break
+        n_obs <- floor(dur / dti)
+        if (n_obs <= 1100 || count > 20) break
         dur <- dur / 2
         count <- count + 1
         if (dur < 2 %#% "days") break
       }
+      
       ctsd_dur <- fix_unit(dur, "seconds", convert = TRUE)
       ctsd_dti <- fix_unit(dti, "seconds", convert = TRUE)
     }
+    
   } # end of [target] loop
   
   if (all(c("hr", "ctsd") %in% set_target)) {
@@ -3721,17 +3824,16 @@ md_optimize <- function(obj,
         mc.cores = ncores)
       
     } else {
-      
-      if (!trace) pb <- txtProgressBar(
-        min = 0, max = n_replicates, style = 3)
+      # if (trace) pb <- txtProgressBar(
+      #   min = 0, max = n_replicates, style = 3)
       
       res <- vector("list", n_replicates)
       for (r in seq_len(n_replicates)) {
         res[[r]] <- .worker(r, m)
-        if (!trace) setTxtProgressBar(pb, r)
+        # if (trace) setTxtProgressBar(pb, r)
       }
       
-      if (!trace) close(pb)
+      # if (trace) close(pb)
       res
       
     }
@@ -3952,12 +4054,17 @@ md_optimize <- function(obj,
     
   } # end of [i] loop
   
+  has_converged <- TRUE
   if (any(!diag$has_converged)) {
-    warning(
-      sprintf(
+    
+    # if (trace) {
+      warning(sprintf(
         "Failing to converge with %s replicates. %s",
         n_replicates, "Consider increasing 'n_replicates'."
       ), call. = FALSE)
+    # }
+    
+    has_converged <- FALSE
   }
   
   summary_full <- data.table::rbindlist(summaryList, fill = TRUE)
@@ -4006,31 +4113,6 @@ md_optimize <- function(obj,
                         levels = c("TRUE", "FALSE")),
       top_facet = .data$type == "hr") %>%
     dplyr::ungroup()
-  
-  broke_when <- dt_plot_means %>%
-    dplyr::inner_join(
-      dt_plot %>%
-        dplyr::group_by(.data$type, .data$group, .data$m) %>%
-        dplyr::summarize(
-          all_within_threshold =
-            all(abs(.data$error) <= unique(.data$error_threshold)),
-          .groups = "drop"),
-      by = c("type", "group", "m")
-    ) %>%
-    dplyr::group_by(.data$type, .data$group) %>%
-    dplyr::arrange(.data$m, .by_group = TRUE) %>%
-    dplyr::filter(
-      .data$overlaps == TRUE,
-      .data$all_within_threshold == TRUE
-    ) %>%
-    dplyr::slice_head(n = 1) %>%
-    dplyr::ungroup()
-  
-  broke_when_m <- if (length(broke_when$m) >= 1) {
-    broke_when$m[[1]]
-  } else {
-    NA
-  }
   
   pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
   
@@ -4151,94 +4233,157 @@ md_optimize <- function(obj,
   
   if (plot) print(p)
   
-  cat("\n")
-  .header("Final parameters", 4)
+  broke_when <- dt_plot_means %>%
+    dplyr::inner_join(
+      dt_plot %>%
+        dplyr::group_by(.data$type, .data$group, .data$m) %>%
+        dplyr::summarize(
+          all_within_threshold =
+            all(abs(.data$error) <= unique(.data$error_threshold)),
+          .groups = "drop"),
+      by = c("type", "group", "m")
+    ) %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::arrange(.data$m, .by_group = TRUE) %>%
+    dplyr::filter(
+      .data$overlaps == TRUE,
+      .data$all_within_threshold == TRUE
+    ) %>%
+    dplyr::slice_head(n = 1) %>%
+    dplyr::ungroup()
   
-  if (broke && is.na(broke_when_m)) {
-    
-    n_outside_threshold <- dt_plot %>%
-      dplyr::group_by(.data$type, .data$group) %>%
-      dplyr::filter(.data$m == max(.data$m, na.rm = TRUE)) %>%
-      dplyr::summarise(
-        n_outside_threshold = sum(
-          abs(.data$error) > .data$error_threshold,
-          na.rm = TRUE
-        ),
-        n_replicates = dplyr::n(),
-        .groups = "keep"
-      ) %>%
-      dplyr::pull(n_outside_threshold)
-    
-    message(format(
-      .msg(paste0("   Maximum population sample size evaluated: "),
-           "danger"), width = 3, justify = "left"),
-      m_seq[[i]])
-    message(format(
-      .msg(paste0("   Sampling duration: "),
-           "success"), width = 3, justify = "left"),
-      round(obj$dur$value, 1), " ", obj$dur$unit)
-    if ("ctsd" %in% set_target) {
-      message(format(
-        .msg(paste0("   Sampling interval: "), 
-             "success"), width = 3, justify = "left"),
-        round(obj$dti$value, 1), " ", obj$dti$unit) }
-    message(sprintf(
-      " \u2713 Mean error below threshold of %.1f%%.",
-      error_threshold * 100))
-    message(sprintf(
-      paste0(" However, with %d individuals, ",
-             .msg("%d replicate%s ", "danger"), 
-             "fell outside the ",
-             .msg("error threshold", "danger"), "."),
-      .max_m,
-      n_outside_threshold,
-      ifelse(n_outside_threshold == 1, "", "s")))
-    
-  } else if (broke) {
-    message(format(
-      .msg(paste0("   Maximum population sample size evaluated: "),
-           "danger"), width = 3, justify = "left"),
-      m_seq[[i]])
-    message(format(
-      .msg(paste0("   Minimum population sample size needed: "),
-           "success"), width = 3, justify = "left"),
-      broke_when_m)
-    message(format(
-      .msg(paste0("   Sampling duration: "),
-           "success"), width = 3, justify = "left"),
-      round(obj$dur$value, 1), " ", obj$dur$unit)
-    if ("ctsd" %in% set_target) {
-      message(format(
-        .msg(paste0("   Sampling interval: "), 
-             "success"), width = 3, justify = "left"),
-        round(obj$dti$value, 1), " ", obj$dti$unit) }
-    message(sprintf(
-      " \u2713 Error below threshold of %.1f%%. %s",
-      error_threshold * 100,
-      "Minimum sample size achieved!"))
-    
+  broke_when_m <- if (length(broke_when$m) >= 1) {
+    broke_when$m[[1]]
   } else {
-    message(format(
-      .msg(paste0("   Maximum population sample size evaluated: "),
-           "danger"), width = 3, justify = "left"),
-      m_seq[[i]])
-    message(format(
-      .msg(paste0("   Sampling duration: "),
-           "danger"), width = 3, justify = "left"),
-      round(obj$dur$value, 1), " ", obj$dur$unit)
-    if ("ctsd" %in% set_target) {
+    NA
+  }
+  
+  # browser()
+  # trace <- TRUE
+  
+  if (trace) {
+    cat("\n")
+    .header("Final parameters", 4)
+    
+    if (broke && is.na(broke_when_m)) {
+      
+      n_outside_threshold <- dt_plot %>%
+        dplyr::group_by(.data$type, .data$group) %>%
+        dplyr::filter(.data$m == max(.data$m, na.rm = TRUE)) %>%
+        dplyr::summarise(
+          n_outside_threshold = sum(
+            abs(.data$error) > .data$error_threshold,
+            na.rm = TRUE
+          ),
+          n_replicates = dplyr::n(),
+          .groups = "keep"
+        ) %>%
+        dplyr::pull(n_outside_threshold)
+      
       message(format(
-        .msg(paste0("   Sampling interval: "), 
+        .msg(paste0("   Maximum population sample size evaluated: "),
              "danger"), width = 3, justify = "left"),
-        round(obj$dti$value, 1), " ", obj$dti$unit) 
+        m_seq[[i]])
+      message(format(
+        .msg(paste0("   Sampling duration: "),
+             "success"), width = 3, justify = "left"),
+        round(obj$dur$value, 1), " ", obj$dur$unit)
+      if ("ctsd" %in% set_target) {
+        message(format(
+          .msg(paste0("   Sampling interval: "), 
+               "success"), width = 3, justify = "left"),
+          round(obj$dti$value, 0), " ", 
+          fix_unit(round(obj$dti$value, 0), obj$dti$unit)$unit) }
+      message(sprintf(
+        " \u2713 Mean error below threshold of %.1f%%.",
+        error_threshold * 100))
+      message(sprintf(
+        paste0(" However, with %d individuals, ",
+               .msg("%d replicate%s ", "danger"), 
+               "fell outside the ",
+               .msg("error threshold", "danger"), "."),
+        .max_m,
+        n_outside_threshold,
+        ifelse(n_outside_threshold == 1, "", "s")))
+      
+    } else if (broke) {
+      message(format(
+        .msg(paste0("   Maximum population sample size evaluated: "),
+             "success"), width = 3, justify = "left"),
+        m_seq[[i]])
+      message(format(
+        .msg(paste0("   Minimum population sample size needed: "),
+             "success"), width = 3, justify = "left"),
+        broke_when_m)
+      message(format(
+        .msg(paste0("   Sampling duration: "),
+             "success"), width = 3, justify = "left"),
+        round(obj$dur$value, 1), " ", obj$dur$unit)
+      if ("ctsd" %in% set_target) {
+        message(format(
+          .msg(paste0("   Sampling interval: "), 
+               "success"), width = 3, justify = "left"),
+          round(obj$dti$value, 0), " ", 
+          fix_unit(round(obj$dti$value, 0), obj$dti$unit)$unit) }
+      message(sprintf(
+        " \u2713 Error below threshold of %.1f%%. %s",
+        error_threshold * 100,
+        "Minimum sample size achieved!"))
+      
+    } else {
+      message(format(
+        .msg(paste0("   Maximum population sample size evaluated: "),
+             "danger"), width = 3, justify = "left"),
+        m_seq[[i]])
+      message(format(
+        .msg(paste0("   Sampling duration: "),
+             "danger"), width = 3, justify = "left"),
+        round(obj$dur$value, 1), " ", obj$dur$unit)
+      if ("ctsd" %in% set_target) {
+        message(format(
+          .msg(paste0("   Sampling interval: "), 
+               "danger"), width = 3, justify = "left"),
+          round(obj$dti$value, 0), " ", 
+          fix_unit(round(obj$dti$value, 0), obj$dti$unit)$unit) }
+      
+      if (!is.na(broke_when_m)) {
+       
+        if (has_groups) {
+          current_error <- max(abs(broke_when$error_mean))
+        } else {
+          current_error <- abs(broke_when$error_mean)
+        }
+        
+        if (current_error < error_threshold) {
+          message(sprintf(
+            " \u2713 Error below threshold of %.1f%%.",
+            error_threshold * 100))
+          message(paste0(
+            "   However, more replicates are needed to verify ",
+            .msg("population sample size", "danger"), "."))
+          
+        } else {
+          message(sprintf(
+            " \u2717 Error above threshold of %.1f%%. %s",
+            error_threshold * 100,
+            "More individuals needed!"))
+          message(paste(
+            "   Increase", .msg("number of tags", "danger"),
+            "or", .msg("budget", "danger"),
+            "and try again."))
+        }
+        
+      } else {
+        message(sprintf(
+          " \u2717 Error above threshold of %.1f%%. %s",
+          error_threshold * 100,
+          "More individuals needed!"))
+        message(paste(
+          "   Increase", .msg("number of tags", "danger"),
+          "or", .msg("budget", "danger"),
+          "and try again."))
+      }
     }
-    message(sprintf(
-      " \u2717 Error above threshold of %.1f%%. %s",
-      error_threshold * 100,
-      "More individuals needed!"))
-    message(paste(
-      "   Increase", .msg("maximum population sample size", "danger"),
-      "and try again."))
   }
   
   print(
@@ -4282,8 +4427,6 @@ md_optimize <- function(obj,
   } else {
     merged <- NULL
   }
-  
-  if (!plot) p <- NULL
   
   merged$n_replicates <- n_replicates
   
@@ -4704,7 +4847,7 @@ md_stack <- function(obj, ...) {
       obj[[i]], set_target = obj[[i]]$set_target,
       iter_step = 1,
       subpop = obj[[i]]$grouped,
-      random = FALSE, 
+      randomize = FALSE, 
       trace = FALSE,
       .automate_seq = FALSE)
     outputs[[i]]$sample <- i
@@ -4794,7 +4937,7 @@ md_stack <- function(obj, ...) {
 #'     n_individuals = 5,
 #'     dur = list(value = 1, unit = "month"),
 #'     dti = list(value = 1, unit = "day"),
-#'     add_individual_variation = TRUE,
+#'     add_individual_variation = FALSE,
 #'     grouped = TRUE,
 #'     set_target = "hr",
 #'     which_meta = "mean"
@@ -4856,7 +4999,7 @@ md_compare_preview <- function(objs,
     # Run meta-analysis
     out <- if (resampled) {
       run_meta_resamples(obj, set_target = obj$set_target,
-                         subpop = obj$grouped, random = TRUE,
+                         subpop = obj$grouped, randomize = TRUE,
                          max_draws = n_resamples, trace = TRUE,
                          .automate_seq = TRUE, .seed = .seed)
     } else {
@@ -6095,4 +6238,3 @@ md_compare <- function(objs,
       plots, nrow = length(plots)))
   
 }
-

@@ -472,26 +472,33 @@
 #' 
 plot_meta_resamples <- function(rv,
                                 set_target = c("hr", "ctsd"),
-                                random = FALSE, 
-                                subpop = FALSE, 
+                                randomize = FALSE,
+                                replicate = FALSE,
+                                subpop = FALSE,
                                 colors = NULL) {
-  
-  n <- error <- error_sd <- NULL
   
   stopifnot(!is.null(rv$meta_tbl),
             !is.null(rv$which_m),
             !is.null(rv$which_meta),
             !is.null(rv$which_question),
             !is.null(set_target))
+  
+  n <- error <- error_sd <- error_mean <- NULL
+  type <- top_facet <- NULL
+  
   if (length(rv$simList) <= 1)
     stop("simList must have more than one element.")
-  if (random) {
+  if (randomize) {
     stopifnot(!is.null(rv$meta_tbl_resample),
               !is.null(rv$error_threshold))
   }
   if (rv$which_meta == "compare") {
     stopifnot(!is.null(rv$metaList_groups),
               !is.null(rv$metaList[[set_target]]))
+  }
+  if (replicate) {
+    stopifnot(!is.null(rv$error_threshold),
+              !is.null(rv$n_replicates))
   }
   
   dodge_width <- 0.25
@@ -501,17 +508,202 @@ plot_meta_resamples <- function(rv,
   }
   
   if (is.null(colors)) { pal_values <- c(
-    "Yes" = "#009da0", "No" = "#dd4b39")
-  } else pal_values <- c(
+    "Yes" = "#009da0", "No" = "#A12C3B") # "#dd4b39"
+  } else { pal_values <- c(
     "Yes" = colors[[1]], "No" = colors[[2]])
+  }
   
-  if (random) {
+  if (replicate) {
+    
+    out <- rv$meta_tbl
+    pal_values <- list("TRUE" = pal_values[[1]],
+                       "FALSE" = pal_values[[2]])
+    
+    if (subpop) {
+      out <- out[out$group != "All", ]
+      set_shapes <- c(21, 24)
+      set_shapes_manual <- c(16, 17)
+    } else {
+      out <- out[out$group == "All", ]
+      set_shapes <- c(21, 21)
+      set_shapes_manual <- c(16, 16)
+    }
+    
+    out <- out %>%
+      dplyr::mutate(
+        overlaps = dplyr::between(
+          abs(.data$error), 0, rv$error_threshold))
+    
+    out_mean <- out %>%
+      dplyr::mutate(
+        dplyr::across(
+          "type", ~factor(., levels = c("hr", "ctsd")))) %>%
+      dplyr::select(
+        "type", "m", "group",
+        "error", "error_lci", "error_uci") %>%
+      dplyr::distinct() %>%
+      dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+      dplyr::summarize(
+        n = dplyr::n(),
+        error_sd = stats::sd(.data$error, na.rm = TRUE),
+        error_mean = mean(.data$error, na.rm = TRUE),
+        error_mean_lci = error_mean - stats::qt(
+          0.975, df = n - 1) * error_sd / sqrt(n),
+        error_mean_uci = error_mean + stats::qt(
+          0.975, df = n - 1) * error_sd / sqrt(n),
+        pred_lci = error_mean - stats::qt(
+          0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
+        pred_uci = error_mean + stats::qt(
+          0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
+        .groups = "drop") %>%
+      dplyr::mutate(
+        overlaps = dplyr::between(
+          abs(.data$error_mean), 0, rv$error_threshold),
+        overlaps = factor(.data$overlaps,
+                          levels = c("TRUE", "FALSE")),
+        top_facet = .data$type == "hr") %>%
+      dplyr::ungroup()
+    
+    max_m <- max(unique(out$m))
+    set_target <- unique(out$type)
+    max_replicates <- rv$n_replicates
+    
+    p.optimal <- out_mean %>%
+      ggplot2::ggplot(
+        ggplot2::aes(
+          x = if (subpop && length(unique(out$m)) == 1) {
+            as.factor(.data$m) 
+          } else { 
+            .data$m 
+          },
+          y = .data$error_mean,
+          group = .data$group,
+          shape = .data$group,
+          fill = .data$overlaps)) +
+      
+      { if (length(set_target) > 1)
+        ggplot2::facet_grid(
+          cols = ggplot2::vars(type),
+          scales = "free",
+          labeller = ggplot2::labeller(
+            type = c(
+              "hr" = "Home range estimation", 
+              "ctsd" = "Speed \u0026 distance estimation"))) } +
+      
+      ggplot2::geom_jitter(
+        out,
+        mapping = ggplot2::aes(
+          x = if (subpop && length(unique(out$m)) == 1) {
+            as.factor(.data$m) 
+          } else { 
+            .data$m 
+          },
+          y = .data$error,
+          group = .data$group,
+          shape = .data$group,
+          fill = .data$overlaps),
+        position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+        size = 3, alpha = 0.5, color = "transparent") +
+      
+      ggplot2::geom_hline(
+        yintercept = 0,
+        linewidth = 0.3,
+        linetype = "solid") +
+      ggplot2::geom_hline(
+        data = subset(out_mean, top_facet),
+        ggplot2::aes(yintercept = rv$error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        data = subset(out_mean, top_facet),
+        ggplot2::aes(yintercept = -rv$error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      
+      ggplot2::geom_hline(
+        data = subset(out_mean, !top_facet),
+        ggplot2::aes(yintercept = rv$error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      ggplot2::geom_hline(
+        data = subset(out_mean, !top_facet),
+        ggplot2::aes(yintercept = -rv$error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") +
+      
+      ggplot2::geom_linerange(
+        ggplot2::aes(ymin = .data$error_mean_lci,
+                     ymax = .data$error_mean_uci),
+        show.legend = TRUE,
+        position = ggplot2::position_dodge(width = 0.4),
+        color = "black", linewidth = 1) +
+      ggplot2::geom_linerange(
+        ggplot2::aes(ymin = .data$pred_lci,
+                     ymax = .data$pred_uci),
+        show.legend = TRUE,
+        position = ggplot2::position_dodge(width = 0.4),
+        color = "black", linewidth = 0.4) +
+      
+      ggplot2::geom_point(
+        position = ggplot2::position_dodge(width = 0.4),
+        stroke = 1.05, size = 5) +
+      
+      ggplot2::labs(
+        x = "Population sample size",
+        y = "Relative error (%)") +
+      
+      ggplot2::scale_fill_manual(
+        name = paste0("Within error threshold (\u00B1",
+                      rv$error_threshold * 100, "%)?"),
+        breaks = c("TRUE", "FALSE"),
+        values = pal_values, drop = FALSE,
+        guide = ggplot2::guide_legend(
+          override.aes = list(color = pal_values,
+                              fill = pal_values, size = 3),
+          order = 1,
+          label.vjust = 0.4)) +
+      
+      { if (!subpop) {
+        ggplot2::scale_shape_manual(
+          name = "Groups:",
+          values = set_shapes)
+      } else {
+        ggplot2::scale_shape_manual(
+          name = "Groups:",
+          values = set_shapes,
+          guide = ggplot2::guide_legend(
+            override.aes = list(shape = set_shapes_manual, size = 3)))
+      }
+      } +
+      
+      { if (!subpop || length(unique(out$m)) > 1)
+        ggplot2::scale_x_continuous(
+          breaks = scales::breaks_pretty()) } +
+      ggplot2::scale_y_continuous(
+        labels = scales::percent,
+        breaks = scales::breaks_pretty()) +
+      
+      ggplot2::theme_classic() +
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 13),
+        legend.position = "bottom",
+        strip.text = ggplot2::element_text(size = 16),
+        strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
+        strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
+        plot.margin = ggplot2::unit(
+          c(1, 1, 1, 1), "cm"))
+    
+    if (!subpop) {
+      p.optimal <- p.optimal + ggplot2::guides(shape = "none")
+    }
+    
+  } else if (randomize) {
     req(rv$meta_nresample > 1)
     
-    if (!is.null(rv$meta_nresample))
+    if (!is.null(rv$meta_nresample)) {
       out <- dplyr::filter(rv$meta_tbl_resample,
                            .data$sample <= rv$meta_nresample)
-    else out <- rv$meta_tbl_resample
+    } else { out <- rv$meta_tbl_resample }
     
     out <- out %>% 
       dplyr::mutate(m = as.integer(.data$m)) %>% 
@@ -742,7 +934,7 @@ plot_meta_resamples <- function(rv,
         ggplot2::guides(shape = "none")
     }
     
-  } # end of (!random)
+  }
   
   return(p.optimal)
   
