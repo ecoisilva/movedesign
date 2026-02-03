@@ -32,8 +32,9 @@ app_server <- function(input, output, session) {
   rv <- reactiveValues(
     ctmm = data.frame(cbind(species, species_binom)),
     data_type = NULL,
-    nsims = NULL,
+    n_sims = NULL,
     n_units = NULL,
+    n_replicates = NULL,
     species = NULL,
     id = NULL,
     which_m = "none",
@@ -69,6 +70,7 @@ app_server <- function(input, output, session) {
     is_meta = FALSE,
     is_font = FALSE,
     add_note = FALSE,
+    error_threshold = 0.05,
     err_prev = list("hr" = rep(1, 10), "ctsd" = rep(1, 10)),
     dev_failed = c(),
     tour_active = FALSE,
@@ -171,39 +173,60 @@ app_server <- function(input, output, session) {
       ),
       
       # Tab 5 and 6: Analyses
-      keep_expanded(
-        shinydashboard::menuItem(
-          id = "group_analyses",
-          tabname = "analyses",
-          text = "Analyses",
-          icon = shiny::icon("compass-drafting"),
-          startExpanded = TRUE,
-          if (is.null(rv$which_question) ||
-              "Home range" %in% rv$which_question) {
-            shinydashboard::menuSubItem(
-              tabName = "hr",
-              text = info$hr[["title"]],
-              icon = shiny::icon(info$hr[["icon"]])
-            )
-          },
-          if (is.null(rv$which_question) ||
-              "Speed & distance" %in% rv$which_question) {
-            shinydashboard::menuSubItem(
-              tabName = "ctsd",
-              text = info$ctsd[["title"]],
-              icon = shiny::icon(info$ctsd[["icon"]])
-            )
-          },
-          if (is.null(rv$which_meta) ||
-              req(rv$which_meta) != "none") {
-            shinydashboard::menuSubItem(
-              tabName = "meta",
-              text = info$meta[["title"]],
-              icon = shiny::icon(info$meta[["icon"]])
-            )
-          }
+      if (is.null(rv$which_m) || 
+          rv$which_m != "get_all") {
+        keep_expanded(
+          shinydashboard::menuItem(
+            id = "group_analyses",
+            tabname = "analyses",
+            text = "Analyses",
+            icon = shiny::icon("compass-drafting"),
+            startExpanded = TRUE,
+            if (is.null(rv$which_question) ||
+                "Home range" %in% rv$which_question) {
+              shinydashboard::menuSubItem(
+                tabName = "hr",
+                text = info$hr[["title"]],
+                icon = shiny::icon(info$hr[["icon"]])
+              )
+            },
+            if (is.null(rv$which_question) ||
+                "Speed & distance" %in% rv$which_question) {
+              shinydashboard::menuSubItem(
+                tabName = "ctsd",
+                text = info$ctsd[["title"]],
+                icon = shiny::icon(info$ctsd[["icon"]])
+              )
+            },
+            if (is.null(rv$which_meta) ||
+                req(rv$which_meta) != "none") {
+              shinydashboard::menuSubItem(
+                tabName = "meta",
+                text = info$meta[["title"]],
+                icon = shiny::icon(info$meta[["icon"]])
+              )
+            }
+          )
         )
-      ),
+      } else {
+        keep_expanded(
+          shinydashboard::menuItem(
+            id = "group_analyses",
+            tabname = "analyses",
+            text = "Analyses",
+            icon = shiny::icon("compass-drafting"),
+            startExpanded = TRUE,
+            if (is.null(rv$which_meta) ||
+                req(rv$which_meta) != "none") {
+              shinydashboard::menuSubItem(
+                tabName = "meta",
+                text = info$meta[["title"]],
+                icon = shiny::icon(info$meta[["icon"]])
+              )
+            }
+          )
+        )
+      },
       
       # Tab 8: Report
       shinydashboard::menuItem(

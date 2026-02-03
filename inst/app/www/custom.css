@@ -1542,6 +1542,7 @@ table.dataTable.display tbody td {
 }
 .sweet-alert.alert-size-s {
   width: 423px;
+  z-index: 999999999999999999 !important;
 }
 
 .sweet-alert button {
@@ -1573,6 +1574,13 @@ table.dataTable.display tbody td {
   text-align: center !important;
 }
 
+.modal {
+  z-index: 999999999 !important;
+}
+.modal-backdrop {
+  z-index: 999999998 !important;
+}
+    
 .modal_success.sweet-alert h2 {
   color: var(--sea) !important;
 }
