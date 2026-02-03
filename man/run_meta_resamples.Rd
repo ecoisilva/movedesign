@@ -9,7 +9,7 @@ run_meta_resamples(
   rv,
   set_target = c("hr", "ctsd"),
   subpop = FALSE,
-  random = FALSE,
+  randomize = FALSE,
   max_draws = 100,
   iter_step = 2,
   trace = FALSE,
@@ -28,8 +28,8 @@ speed). Defaults to c("hr", "ctsd").}
 by subpopulations/groups (e.g., males vs. females). Requires group
 assigments in \code{rv}.}
 
-\item{random}{Logical; if TRUE, performs random sampling of individuals
-using different combinations (up to max_draws).}
+\item{randomize}{Logical; if TRUE, performs random sampling of
+individuals using different combinations (up to max_draws).}
 
 \item{max_draws}{Integer; maximum number of random draws per
 combination size when \code{random=TRUE}.

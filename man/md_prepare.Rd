@@ -132,7 +132,6 @@ if(interactive()) {
     n_individuals = 5,
     dur = list(value = 1, unit = "month"),
     dti = list(value = 1, unit = "day"),
-    add_individual_variation = TRUE,
     set_target = "hr",
     which_meta = "mean")
  summary(input)

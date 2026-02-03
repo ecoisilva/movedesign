@@ -8,11 +8,11 @@ md_optimize(
   obj,
   n_replicates = 20,
   error_threshold = 0.05,
+  plot = FALSE,
   verbose = TRUE,
-  trace = TRUE,
   parallel = FALSE,
   ncores = parallel::detectCores(),
-  plot = FALSE,
+  trace = TRUE,
   ...
 )
 }
@@ -26,11 +26,11 @@ candidate sample size.}
 \item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
 used as a reference point.}
 
+\item{plot}{Logical. If TRUE, displays a diagnostic plot of
+the final results.}
+
 \item{verbose}{Logical. If \code{TRUE} (default), prints a summary
 of the convergence check to the console.}
-
-\item{trace}{Logical; if \code{TRUE} (default), prints progress and
-timing messages to the console.}
 
 \item{parallel}{Logical; if \code{TRUE}, enables parallel processing.
 Default is \code{FALSE}.}
@@ -39,8 +39,8 @@ Default is \code{FALSE}.}
 processing. Defaults to all available cores detected by
 \code{parallel::detectCores()}.}
 
-\item{plot}{Logical. If TRUE, displays a diagnostic plot of
-the final results.}
+\item{trace}{Logical; if \code{TRUE} (default), prints progress and
+timing messages to the console.}
 
 \item{...}{Additional arguments used internally.}
 }
