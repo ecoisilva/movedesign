@@ -3717,6 +3717,7 @@ md_optimize <- function(obj,
   
   total_years <- "years" %#% (N * tmp_tau_p_val)
   warn_and_confirm(total_years, error_label)
+  
   optimal_dur <- round(taup * N1)
   if (!is.null(tau_v)) {
     tauv <- tau_v[[1]][2, "value"] %#% tau_v[[1]][2, "unit"]
