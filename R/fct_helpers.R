@@ -433,6 +433,14 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
 } 
 
 
+#' ctmm::mean() but seeded 
+#'  
+#' @noRd 
+mean_seeded <- function(obj, seed) {
+  set.seed(seed) 
+  return(mean(obj)) 
+} 
+
 #' ctmm::emulate() but seeded 
 #'  
 #' @noRd 
