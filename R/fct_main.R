@@ -587,7 +587,13 @@ md_prepare <- function(species = NULL,
   }
   names(fitList) <- names(data)
   
-  meanfitList <- list(mean(fitList))
+  if (is.null(.seed)) {
+    seedInit <- generate_seed()
+  } else {
+    seedInit <- .seed
+  }
+  
+  meanfitList <- list(mean_seeded(fitList, seedInit))
   names(meanfitList) <- "All"
   
   if (add_individual_variation) {
@@ -630,14 +636,13 @@ md_prepare <- function(species = NULL,
     fitB <- fitList[groups[[1]][["B"]]]
     
     meanfitA <- tryCatch(
-      mean(fitA) %>% 
+      mean_seeded(fitA, seedInit) %>% 
         suppressMessages() %>% 
         suppressWarnings() %>% 
         quiet(),
       error = function(e) e)
-    
     meanfitB <- tryCatch(
-      mean(fitB) %>% 
+      mean_seeded(fitB, seedInit) %>% 
         suppressMessages() %>% 
         suppressWarnings() %>% 
         quiet(),
@@ -656,32 +661,26 @@ md_prepare <- function(species = NULL,
     
     mu <- list(mu[[1]], mu[[1]], mu[[1]])
     
-    if (is.null(.seed)) {
-      seed0 <- generate_seed()
-    } else {
-      seed0 <- .seed
-    }
-    
     fitA <- tryCatch({
-      simulate_seeded(meanfitList[["A"]], seed0)
+      simulate_seeded(meanfitList[["A"]], seedInit)
     }, error = function(e) {
       message("A warning occurred:", conditionMessage(e), "\n")
     })
     
     fitB <- tryCatch({
-      simulate_seeded(meanfitList[["B"]], seed0 + 1)
+      simulate_seeded(meanfitList[["B"]], seedInit + 1)
     }, error = function(e) {
       message("A warning occurred:", conditionMessage(e), "\n")
     })
     
     validate_A <- tryCatch({
-      ctmm::simulate(fitA, t = seq(0, 100, by = 1), seed = seed0)
+      ctmm::simulate(fitA, t = seq(0, 100, by = 1), seed = seedInit)
     }, error = function(e) {
       return(NULL)
     })
     
     validate_B <- tryCatch({
-      ctmm::simulate(fitB, t = seq(0, 100, by = 1), seed = seed0 + 1)
+      ctmm::simulate(fitB, t = seq(0, 100, by = 1), seed = seedInit + 1)
     }, error = function(e) {
       return(NULL)
     })
@@ -755,7 +754,7 @@ md_prepare <- function(species = NULL,
     tau_p = tau_p,
     tau_v = tau_v,
     mu = mu,
-    seed = .seed))
+    seed = seedInit))
   
   return(design)
 }
@@ -945,6 +944,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
     tau_v = design$tau_v,
     mu = design$mu,
     simList = design$simList,
+    seedInit = design$seed,
     seedList = design$seedList,
     simfitList = design$simfitList,
     akdeList = design$akdeList,
@@ -1526,7 +1526,7 @@ md_plot_preview <- function(obj,
       "\nPlease provide the output of md_run()."))
   }
   
-  iter_step <- ifelse(length(obj$simList) <= 10, 2, 4)
+  iter_step <- ifelse(length(obj$simList) <= 16, 2, 4)
   
   if (resampled) {
     out <- run_meta_resamples(
@@ -1678,9 +1678,9 @@ md_plot_preview <- function(obj,
         
         ggplot2::theme_classic() +
         ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
+          text = ggplot2::element_text(size = 13),
           legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
+          strip.text = ggplot2::element_text(size = 16),
           strip.background.x = ggplot2::element_rect(
             color = NA, fill = NA),
           strip.background.y = ggplot2::element_rect(
@@ -1794,9 +1794,9 @@ md_plot_preview <- function(obj,
         
         ggplot2::theme_classic() +
         ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
+          text = ggplot2::element_text(size = 13),
           legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
+          strip.text = ggplot2::element_text(size = 16),
           strip.background.x = ggplot2::element_rect(
             color = NA, fill = NA),
           strip.background.y = ggplot2::element_rect(
@@ -1893,9 +1893,9 @@ md_plot_preview <- function(obj,
         
         ggplot2::theme_classic() +
         ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
+          text = ggplot2::element_text(size = 13),
           legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
+          strip.text = ggplot2::element_text(size = 16),
           strip.background.x = ggplot2::element_rect(
             color = NA, fill = NA),
           strip.background.y = ggplot2::element_rect(
@@ -1971,9 +1971,9 @@ md_plot_preview <- function(obj,
         
         ggplot2::theme_classic() +
         ggplot2::theme(
-          text = ggplot2::element_text(size = 18),
+          text = ggplot2::element_text(size = 13),
           legend.position = "bottom",
-          strip.text = ggplot2::element_text(size = 18),
+          strip.text = ggplot2::element_text(size = 16),
           strip.background.x = ggplot2::element_rect(
             color = NA, fill = NA),
           strip.background.y = ggplot2::element_rect(
@@ -3866,6 +3866,8 @@ md_optimize <- function(obj,
         }
       }
       
+      seedInit <- tmpList[[1]]$seedInit
+      
       tmpList <- Map(function(prev, curr) {
         merged <- md_merge(prev, curr, .ignore_mismatch = TRUE)
         merged$n_individuals <- m_current
@@ -4429,6 +4431,7 @@ md_optimize <- function(obj,
   }
   
   merged$n_replicates <- n_replicates
+  merged$seedInit <- seedInit
   
   out <- structure(
     list(data = merged,

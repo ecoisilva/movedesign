@@ -422,7 +422,7 @@ run_meta_resamples <- function(rv,
         if (is.null(.seed)) {
           unit_seed <- NULL
         } else {
-          unit_seed <- .seed + m * 10^4 + i
+          unit_seed <- .seed + ( m * 10^6 ) + i
         }
         
         sets <- .get_sets(x, set_size = m, 
