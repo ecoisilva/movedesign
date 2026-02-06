@@ -3698,26 +3698,6 @@ md_optimize <- function(obj,
   total_years <- "years" %#% (N1 * taup)
   if ("hr" %in% set_target) warn_and_confirm(total_years, error_label)
   
-  } else if (error_threshold <= 0.05) {
-    N <- 150
-    error_label <- "5%"
-  } else if (error_threshold <= 0.1) {
-    N <- 100
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  } else if (error_threshold <= 0.2) {
-    N <- 80
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  } else if (error_threshold <= 0.5) {
-    N <- 40
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  } else if (error_threshold <= 0.5) {
-    N <- 30
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  }
-  
-  total_years <- "years" %#% (N * tmp_tau_p_val)
-  warn_and_confirm(total_years, error_label)
-  
   optimal_dur <- round(taup * N1)
   if (!is.null(tau_v)) {
     tauv <- tau_v[[1]][2, "value"] %#% tau_v[[1]][2, "unit"]
