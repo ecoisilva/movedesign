@@ -1182,16 +1182,6 @@ mod_tab_meta_server <- function(id, rv) {
       } else {
         req(rv$n_units)
         
-        .worker <- function(i) {
-          message(.msg(sprintf("\u2014 Replicate %s of %s", i,
-                               rv$n_replicates), "main"))
-          
-          run_meta_resamples(rv,
-                             set_target = get_analysis,
-                             subpop = rv$grouped,
-                             .m = rv$n_units)
-        }
-        
         m_seq <- .get_sequence(seq_len(rv$n_units),
                                grouped = rv$grouped,
                                .step = 2, .max_m = rv$n_units,
@@ -1204,7 +1194,8 @@ mod_tab_meta_server <- function(id, rv) {
               run_meta_resamples(rv,
                                  set_target = get_analysis,
                                  subpop = rv$grouped,
-                                 .m = m_seq[[i]])
+                                 .m = m_seq[[i]],
+                                 .seed = rv$seedInit + x)
             })
           
           if (length(tmp) > 0) {
@@ -1303,7 +1294,7 @@ mod_tab_meta_server <- function(id, rv) {
         max_draws = rv$n_resamples,
         trace = TRUE,
         .automate_seq = TRUE,
-        .seed = rv$seedInit)
+        .seed = rv$seedList[[1]])
       
       msg_log(
         style = "success",

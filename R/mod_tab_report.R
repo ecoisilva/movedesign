@@ -1578,11 +1578,10 @@ mod_tab_report_server <- function(id, rv) {
             "tags, consider increasing the number of tags to",
             "reduce uncertainty.")
         } else {
-          txt_stable <- span(
-            "Please increase the", 
-            ifelse(rv$which_m == "set_m", "set", "maximum"),
-            "number of tags to reduce uncertainty."
-          )
+          # txt_stable <- span(
+          #   "Please increase the", 
+          #   ifelse(rv$which_m == "set_m", "set", "maximum"),
+          #   "number of tags to reduce uncertainty.")
         }
         
         txt_meta_groups <- NULL
@@ -4549,7 +4548,7 @@ mod_tab_report_server <- function(id, rv) {
       },
       content = function(file) {
         
-        .add_break <- " \n"
+        .add_break <- "\n"
         
         r_code <- paste0(
           "# Load package:\n",
@@ -4652,7 +4651,8 @@ mod_tab_report_server <- function(id, rv) {
               "  print(paste(i, \"out of\", length(data_tel)))\n",
               "  guess <- ctmm.guess(data_tel[[i]], ",
               "interactive = F)\n",
-              "  fits[[i]] <- ctmm.select(data_tel[[i]], guess)\n",
+              "  fits[[i]] <- ctmm.select(data_tel[[i]], guess, ",
+              "trace = 2)\n",
               "}\n",
               "summary(fits)\n",
               " \n")

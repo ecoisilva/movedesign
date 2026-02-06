@@ -865,8 +865,12 @@ mod_tab_data_select_server <- function(id, rv) {
         if (rv$add_ind_var) {
           
           fit0[sapply(fit0, is.null)] <- NULL
+          
+          seedInit <- generate_seed()
+          rv$seedInit <- seedInit
+          
           meanfit0 <- tryCatch(
-            mean(x = fit0, sample = TRUE) %>%
+            mean_seeded(fit0, seedInit) %>%
               suppressMessages() %>%
               suppressWarnings() %>%
               quiet(),
@@ -933,14 +937,14 @@ mod_tab_data_select_server <- function(id, rv) {
           fitB <- rv$fitList[rv$groups[[1]][["B"]]]
           
           meanfitA <- tryCatch(
-            mean(fitA) %>% 
+            mean_seeded(fitA, seedInit) %>% 
               suppressMessages() %>% 
               suppressWarnings() %>% 
               quiet(),
             error = function(e) e)
           
           meanfitB <- tryCatch(
-            mean(fitB) %>% 
+            mean_seeded(fitB, seedInit) %>% 
               suppressMessages() %>% 
               suppressWarnings() %>% 
               quiet(),

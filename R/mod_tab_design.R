@@ -2393,7 +2393,6 @@ mod_tab_design_server <- function(id, rv) {
       
       start <- Sys.time()
       simList <- simulating_data(rv, rv$seed0)
-      rv$seedInit <- rv$seed0
       
       if (!rv$grouped) {
         rv$seedList <- list(rv$seed0)
@@ -2736,7 +2735,8 @@ mod_tab_design_server <- function(id, rv) {
         sigma = rv$sigma,
         tau_p = rv$tau_p,
         tau_v = rv$tau_v,
-        mu = rv$mu))
+        mu = rv$mu,
+        seed = rv$seedInit))
       
       start <- Sys.time()
       msg_log(
@@ -2772,7 +2772,7 @@ mod_tab_design_server <- function(id, rv) {
         rv$dur <- out_optimize$data$dur
         rv$dti <- out_optimize$data$dti
         
-        rv$seedInit <- out_optimize$data$seedList[[1]]
+        rv$seedInit <- out_optimize$data$seedInit
         rv$seedList <- out_optimize$data$seedList
         
         rv$simList <- out_optimize$data$simList
@@ -2844,16 +2844,16 @@ mod_tab_design_server <- function(id, rv) {
               emulate_seeded(rv$meanfitList[[group]], 
                              rv$seedList[[x]]),
               "sigma")[[1]]
-            
+            tau_p <- extract_pars(rv$simfitList, "position")[[1]]
+            tau_v <- extract_pars(rv$simfitList, "velocity")[[1]]
+            sigma <- extract_pars(rv$simfitList, "sigma")[[1]]
           } else {
             tau_p <- rv$tau_p[[group]]
             tau_v <- rv$tau_v[[group]]
             sigma <- rv$sigma[[group]]
           }
           
-          rv$dev$tbl <<- rbind(
-            rv$dev$tbl,
-            .build_tbl(
+          rv$dev$tbl <- .build_tbl(
               device = rv$device_type,
               group = if (rv$grouped) group else NA,
               data = rv$simList[[x]],
@@ -2861,7 +2861,7 @@ mod_tab_design_server <- function(id, rv) {
               obj = rv$simfitList[[x]],
               tau_p = tau_p,
               tau_v = tau_v,
-              sigma = sigma))
+              sigma = sigma)
           
         })
         
@@ -2945,9 +2945,7 @@ mod_tab_design_server <- function(id, rv) {
                   seed = rv$seedList[[i]],
                   lci = NA, est = NA, uci = NA)
               
-              rv$hr$tbl <<- rbind(
-                rv$hr$tbl, 
-                .build_tbl(
+              rv$hr$tbl <- .build_tbl(
                   target = "hr",
                   group = if (rv$grouped) group else NA,
                   data = rv$simList[[i]], 
@@ -2957,7 +2955,7 @@ mod_tab_design_server <- function(id, rv) {
                   tau_v = tau_v,
                   sigma = sigma,
                   area = out_est_df[i, ],
-                  area_error = out_err_df[i, ]))
+                  area_error = out_err_df[i, ])
               next
             }
             
@@ -2978,9 +2976,7 @@ mod_tab_design_server <- function(id, rv) {
                 est = ((tmpsum$CI[2] %#% tmpunit) - hr_truth) / hr_truth, 
                 uci = ((tmpsum$CI[3] %#% tmpunit) - hr_truth) / hr_truth) 
             
-            rv$hr$tbl <<- rbind(
-              rv$hr$tbl, 
-              .build_tbl(
+            rv$hr$tbl <- .build_tbl(
                 target = "hr",
                 group = if (rv$grouped) group else NA,
                 data = rv$simList[[i]], 
@@ -2990,7 +2986,7 @@ mod_tab_design_server <- function(id, rv) {
                 tau_v = tau_v,
                 sigma = sigma,
                 area = out_est_df[i, ],
-                area_error = out_err_df[i, ]))
+                area_error = out_err_df[i, ])
           }
           
           rv$hrEst <<- rbind(rv$hrEst, out_est_df)
@@ -3206,9 +3202,7 @@ mod_tab_design_server <- function(id, rv) {
               sigma <- rv$sigma[[group]]
             }
             
-            rv$sd$tbl <<- rbind(
-              rv$sd$tbl, 
-              .build_tbl(
+            rv$sd$tbl <<- .build_tbl(
                 target = "ctsd",
                 group = if (rv$grouped) group else NA,
                 data = rv$simList[[i]],
@@ -3220,7 +3214,7 @@ mod_tab_design_server <- function(id, rv) {
                 speed = rv$speedEst[i, ],
                 speed_error = rv$speedErr[i, ],
                 distance = rv$distEst[i, ],
-                distance_error = rv$distErr[i, ]))
+                distance_error = rv$distErr[i, ])
           }
           
           rv$sd_completed <- TRUE
@@ -3255,7 +3249,7 @@ mod_tab_design_server <- function(id, rv) {
       
     }) %>% # end of observe,
       bindEvent(input$run_optimization)
-  
+    
     # PLOTS ---------------------------------------------------------------
     ## Plotting GPS battery life: -----------------------------------------
     

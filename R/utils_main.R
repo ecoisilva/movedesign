@@ -212,8 +212,10 @@ summary.movedesign_input <- function(object, ...) {
       length(object$data)) }
   
   if (object$grouped) {
-    width = 3, justify = "left"),
-    ifelse(object$grouped, "TRUE", "FALSE"))
+    # message(format(
+    #   .msg(paste0("   Grouped: "), "main"),
+    #   width = 3, justify = "left"),
+    #   ifelse(object$grouped, "TRUE", "FALSE"))
     message(format(
       .msg(paste0("   Groups: "), "main"),
       width = 3, justify = "left"),
@@ -279,14 +281,19 @@ summary.movedesign_input <- function(object, ...) {
                   "ctsd" = "speed")
   set_target <- target_map[object$set_target]
   
+  # meta_map <- c("none" = "individual estimate",
+  #               "mean" = "mean estimate of sampled population",
+  #               "compare" = "compare estimates of two sampled groups")
+  # which_meta <- meta_map[object$which_meta]
+  
   message(format(
     .msg(paste0("   Research target(s) requested: "), "main"),
     width = 3, justify = "left"),
     paste(set_target, collapse = ", "))
-  message(format(
-    .msg(paste0("   Analytical target(s) requested: "), "main"),
-    width = 3, justify = "left"),
-    paste(object$set_target, collapse = ", "))
+  # message(format(
+  #   .msg(paste0("   Analytical target(s) requested: "), "main"),
+  #   width = 3, justify = "left"),
+  #   paste(which_meta, collapse = ", "))
   
   .header("Workflow requested", 4)
   
