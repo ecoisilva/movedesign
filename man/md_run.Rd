@@ -7,20 +7,20 @@
 md_run(design, .seeds = NULL, trace = TRUE)
 }
 \arguments{
-\item{design}{An object of class \code{movedesign} (and
-\code{movedesign_input}), as returned by \code{\link[=md_prepare]{md_prepare()}}, containing
-all study design parameters and data.}
+\item{design}{An object of class \code{movedesign_input},
+as returned by \code{\link[=md_prepare]{md_prepare()}}, containing all study design
+parameters and data.}
 
-\item{.seeds}{List of set seeds to ensure reproducibility (optional);
-only needed if replicating from Shiny app into R console.}
+\item{.seeds}{(Optional) List of random seeds for reproducibility.
+Required only if reproducing a previous workflow (from the Shiny app
+into R console).}
 
 \item{trace}{Logical. If TRUE (default), print progress and timing
 messages to the console.}
 }
 \value{
-An updated \code{movedesign} object (subclass
-\code{movedesign_preprocess}) containing all simulation and outputs
-components:
+An object of class \code{movedesign_preprocess} containing
+all simulation outputs:
 \itemize{
 \item \code{simList}: List of simulated telemetry datasets,
 one per individual.

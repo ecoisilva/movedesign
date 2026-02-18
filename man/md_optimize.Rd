@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_main.R
 \name{md_optimize}
 \alias{md_optimize}
-\title{Optimize population sample size and sampling parameters}
+\title{Optimize sampling parameters and population sample size}
 \usage{
 md_optimize(
   obj,
@@ -62,12 +62,12 @@ achieving the threshold (or maximum evaluated if
 \description{
 Repeatedly simulates movement datasets across a range of
 candidate population sample sizes to identify the minimal sample size
-and associated sampling parameters (e.g., duration, sampling interval)
-required to achieve a predefined error threshold for key space-use and
-movement metrics (home range area, or speed).
+and associated sampling parameters (i.e., duration, sampling interval)
+required to achieve a predefined error threshold for key space use and
+movement metrics (i.e., home range area, speed).
 
 The function quantifies estimation error for each metric and sample
-size, evaluates which population sample size reliably meets target
+size, evaluating which population sample size reliably meet target
 thresholds, and reports final recommendations.
 }
 \details{
