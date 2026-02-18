@@ -875,16 +875,34 @@ mod_tab_design_server <- function(id, rv) {
     ## Number of tags based on price/budget: ------------------------------
     
     observe({
-      req(rv$active_tab == 'device',
-          rv$which_m)
+      req(rv$active_tab == 'device', rv$which_m)
       
       if (rv$which_m == "get_all") {
-        if (req(input$device_price) &&
-            req(input$device_max_budget)) {
-          
-          gps_price_unit <- input$device_price
-          gps_budget <- input$device_max_budget
-          rv$n_units <- floor(gps_budget/gps_price_unit)
+        req(input$device_price, input$device_max_budget)
+        
+        gps_price_unit <- input$device_price
+        gps_budget <- input$device_max_budget
+        n_units_new <- floor(gps_budget / gps_price_unit)
+        
+        if (!is.null(rv$which_meta) && rv$which_meta == "compare") {
+          n_units_even <- n_units_new - n_units_new %% 2
+          if (n_units_even != n_units_new) {
+            n_units_new <- n_units_even
+            
+            msg_log(
+              style = "danger",
+              message = paste0(
+                "Number of units ", msg_danger("rounded down"), "."))
+            
+            shiny::showNotification(
+              paste("Number of tags rounded down",
+                    "to nearest even number:", rv$n_units),
+              type = "message")
+          }
+        }
+        
+        if (is.null(rv$n_units) || rv$n_units != n_units_new) {
+          rv$n_units <- n_units_new
         }
       }
       
@@ -2714,7 +2732,7 @@ mod_tab_design_server <- function(id, rv) {
       
       dur <- dti <- NULL
       groups <- NULL
-      if (rv$grouped) groups <- rv$group[[1]]
+      if (rv$grouped) groups <- rv$groups
       
       design <- movedesign_input(list(
         data = rv$datList,
@@ -2753,8 +2771,7 @@ mod_tab_design_server <- function(id, rv) {
         md_optimize(design,
                     n_replicates = rv$n_replicates,
                     error_threshold = rv$error_threshold,
-                    plot = FALSE, trace = FALSE,
-                    .console_alert = FALSE)
+                    plot = FALSE, trace = FALSE)
       }, error = function(e) { e })
       
       if (inherits(out_optimize, "error")) {
@@ -2772,7 +2789,6 @@ mod_tab_design_server <- function(id, rv) {
         rv$dur <- out_optimize$data$dur
         rv$dti <- out_optimize$data$dti
         
-        rv$seedInit <- out_optimize$data$seedInit
         rv$seedList <- out_optimize$data$seedList
         
         rv$simList <- out_optimize$data$simList
@@ -2780,6 +2796,10 @@ mod_tab_design_server <- function(id, rv) {
         
         rv$dev$is_valid <- TRUE
         rv$needs_fit <- FALSE
+        
+        rv$dev$tbl <- NULL
+        rv$hr$tbl <- NULL
+        rv$sd$tbl <- NULL
         
         rv$err_prev <- list("hr" = rep(1, 10),
                             "ctsd" = rep(1, 10))
@@ -2833,27 +2853,26 @@ mod_tab_design_server <- function(id, rv) {
           
           if (rv$add_ind_var) {
             tau_p <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
+              emulate_seeded(rv$meanfitList[[group]],
                              rv$seedList[[x]]),
               "position")[[1]]
             tau_v <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
+              emulate_seeded(rv$meanfitList[[group]],
                              rv$seedList[[x]]),
               "velocity")[[1]]
             sigma <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
+              emulate_seeded(rv$meanfitList[[group]],
                              rv$seedList[[x]]),
               "sigma")[[1]]
-            tau_p <- extract_pars(rv$simfitList, "position")[[1]]
-            tau_v <- extract_pars(rv$simfitList, "velocity")[[1]]
-            sigma <- extract_pars(rv$simfitList, "sigma")[[1]]
           } else {
             tau_p <- rv$tau_p[[group]]
             tau_v <- rv$tau_v[[group]]
             sigma <- rv$sigma[[group]]
           }
           
-          rv$dev$tbl <- .build_tbl(
+          rv$dev$tbl <- rbind(
+            rv$dev$tbl,
+            .build_tbl(
               device = rv$device_type,
               group = if (rv$grouped) group else NA,
               data = rv$simList[[x]],
@@ -2861,8 +2880,7 @@ mod_tab_design_server <- function(id, rv) {
               obj = rv$simfitList[[x]],
               tau_p = tau_p,
               tau_v = tau_v,
-              sigma = sigma)
-          
+              sigma = sigma))
         })
         
         rv$report_dev_yn <- TRUE
@@ -2894,8 +2912,6 @@ mod_tab_design_server <- function(id, rv) {
                                    est = numeric(0),
                                    uci = numeric(0))
           
-          i <- 1
-          rv$hr$tbl <- NULL
           for (i in seq_along(rv$akdeList)) {
             
             group <- 1
@@ -2945,7 +2961,9 @@ mod_tab_design_server <- function(id, rv) {
                   seed = rv$seedList[[i]],
                   lci = NA, est = NA, uci = NA)
               
-              rv$hr$tbl <- .build_tbl(
+              rv$hr$tbl <- rbind(
+                rv$hr$tbl,
+                .build_tbl(
                   target = "hr",
                   group = if (rv$grouped) group else NA,
                   data = rv$simList[[i]], 
@@ -2955,7 +2973,7 @@ mod_tab_design_server <- function(id, rv) {
                   tau_v = tau_v,
                   sigma = sigma,
                   area = out_est_df[i, ],
-                  area_error = out_err_df[i, ])
+                  area_error = out_err_df[i, ]))
               next
             }
             
@@ -2976,7 +2994,9 @@ mod_tab_design_server <- function(id, rv) {
                 est = ((tmpsum$CI[2] %#% tmpunit) - hr_truth) / hr_truth, 
                 uci = ((tmpsum$CI[3] %#% tmpunit) - hr_truth) / hr_truth) 
             
-            rv$hr$tbl <- .build_tbl(
+            rv$hr$tbl <- rbind(
+              rv$hr$tbl,
+              .build_tbl(
                 target = "hr",
                 group = if (rv$grouped) group else NA,
                 data = rv$simList[[i]], 
@@ -2986,7 +3006,7 @@ mod_tab_design_server <- function(id, rv) {
                 tau_v = tau_v,
                 sigma = sigma,
                 area = out_est_df[i, ],
-                area_error = out_err_df[i, ])
+                area_error = out_err_df[i, ]))
           }
           
           rv$hrEst <<- rbind(rv$hrEst, out_est_df)
@@ -2997,7 +3017,6 @@ mod_tab_design_server <- function(id, rv) {
         
         if ("ctsd" %in% set_target) {
           
-          # browser()
           rv$sd_completed <- TRUE
           rv$ctsdList <- out_optimize$data$ctsdList
           
@@ -3202,7 +3221,9 @@ mod_tab_design_server <- function(id, rv) {
               sigma <- rv$sigma[[group]]
             }
             
-            rv$sd$tbl <<- .build_tbl(
+            rv$sd$tbl <- rbind(
+              rv$sd$tbl,
+              .build_tbl(
                 target = "ctsd",
                 group = if (rv$grouped) group else NA,
                 data = rv$simList[[i]],
@@ -3214,11 +3235,15 @@ mod_tab_design_server <- function(id, rv) {
                 speed = rv$speedEst[i, ],
                 speed_error = rv$speedErr[i, ],
                 distance = rv$distEst[i, ],
-                distance_error = rv$distErr[i, ])
+                distance_error = rv$distErr[i, ]))
           }
           
           rv$sd_completed <- TRUE
         }
+        
+        rv$dev$tbl <- dplyr::distinct(rv$dev$tbl)
+        if ("hr" %in% set_target) rv$hr$tbl <- dplyr::distinct(rv$hr$tbl)
+        if ("ctsd" %in% set_target) rv$sd$tbl <- dplyr::distinct(rv$sd$tbl)
         
         rv$is_analyses <- TRUE
         rv$is_report <- FALSE
