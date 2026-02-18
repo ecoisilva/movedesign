@@ -430,23 +430,7 @@ run_meta_resamples <- function(rv,
                           .seed = unit_seed,
                           .max_draws = max_draws)
         
-        if (!is.null(.seed)) set.seed(unit_seed)
-        n_randomize <- sample.int(nrow(sets$out_random)) 
-        sets$out_random <- sets$out_random[
-          n_randomize, , drop = FALSE]
-        
         if (sets$sets == 1) return(sets)
-        
-        if (randomize) {
-          
-          if (nrow(sets$out_random) > max_draws) {
-            
-            if (!is.null(.seed)) set.seed(unit_seed)
-            sets$out_random <- sets$out_random[
-              sample(nrow(sets$out_random),
-                     max_draws), , drop = FALSE]
-          }
-        }
         
         return(sets)
         

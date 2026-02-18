@@ -328,7 +328,6 @@
 #' @importFrom utils combn
 #' 
 #' @noRd
-#'
 .get_sets <- function(input,
                       groups = NULL, 
                       set_size = 2,
@@ -353,15 +352,40 @@
     out <- rep(seq_len(num_sets), each = set_size,
                length.out = length(input))
   
-  out_random <- tryCatch({
-    t(combn(length(input), set_size))
-  }, error = function(e) {
+  if (!is.null(.seed)) set.seed(.seed)
+  n_possible <- choose(length(input), set_size)
+  n_draws <- min(.max_draws, n_possible)
+  batch_size <- ceiling(n_draws * 1.2)
+  
+  if (n_possible <= 1e7) {
+    # Safe to enumerate everything:
+    out_random <- t(combn(length(input), set_size))
+    
     if (!is.null(.seed)) set.seed(.seed)
-    tmp <- t(replicate(.max_draws, sort(
-      sample.int(length(input), set_size, replace = FALSE))))
-    tmp <- tmp[do.call(order, as.data.frame(tmp)), ]
-    tmp <- unique(tmp)
-  })
+    n_randomize <- sample.int(nrow(out_random))
+    out_random <- out_random[n_randomize, , drop = FALSE]
+    
+  } else {
+    # Generate bounded number of random unique combinations:
+    if (!is.null(.seed)) set.seed(.seed)
+    out_random <- t(replicate(
+      batch_size, sort(sample.int(
+        length(input), set_size, replace = FALSE))))
+    out_random <- unique(out_random)
+    
+    while (nrow(out_random) < n_draws) {
+      remaining <- n_draws - nrow(out_random)
+      extra_batch <- ceiling(remaining * 1.2)
+      
+      if (!is.null(.seed)) set.seed(.seed)
+      new_draws <- t(replicate(
+        extra_batch, sort(sample.int(
+          length(input), set_size, replace = FALSE))))
+      out_random <- unique(rbind(out_random, new_draws))
+    }
+    
+    out_random <- out_random[seq_len(n_draws), , drop = FALSE]
+  }
   
   return(list(names = names(input),
               labels = group_labels,

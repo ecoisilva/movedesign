@@ -3471,106 +3471,246 @@ md_configure <- function(data, models = NULL) {
 }
 
 
-#' @title Optimize population sample size and sampling parameters
+#' @title Plot meta-analyses outputs
 #'
 #' @description
-#' Repeatedly simulates movement datasets across a range of
-#' candidate population sample sizes to identify the minimal sample size
-#' and associated sampling parameters (e.g., duration, sampling interval)
-#' required to achieve a predefined error threshold for key space-use and
-#' movement metrics (home range area, or speed).
-#'
-#' The function quantifies estimation error for each metric and sample
-#' size, evaluates which population sample size reliably meets target
-#' thresholds, and reports final recommendations.
-#'
-#' @note
-#' Some biologgers inherently involve a trade-off between fix frequency
-#' and battery life. Shorter intervals between location fixes offer higher
-#' temporal resolution but reduce deployment duration due to increased
-#' power consumption. In contrast, longer deployments require less
-#' frequent sampling to conserve battery.
+#' Computes summary statistics and generates a ggplot object visualizing
+#' relative error across population sample sizes for one or more
+#' metrics. Supports both one or two groups.
 #' 
-#' This trade-off makes it challenging to estimate multiple metrics with
-#' differing data needs: high-resolution data (shorter intervals) improve
-#' speed estimation, while extended deployments (longer durations) are
-#' vital for accurate home range area estimates. A sampling design that
-#' minimizes error for one metric may increase error for another.
-#' 
-#' Researchers facing these constraints should consider prioritizing a
-#' single research target (e.g., either home range area *or* speed), or
-#' use stratified designs to balance data needs across individuals.
-#' 
-#' @details
-#' The function iteratively runs movement design simulations for
-#' increasing population sample sizes (`m`), evaluating error for
-#' each replicate and metric via meta-analyses. Convergence is checked
-#' using the error threshold and stability of cumulative mean error.
-#' The function stops when a sample size meets all criteria or the
-#' maximum population sample size is reached. Results can be visualized
-#' using if `plot = TRUE`.
-#' 
-#' @param obj A movement design input object (see [`md_prepare()`]
-#'   or [`md_configure()`]).
-#' @param n_replicates Integer. Number of simulation replicates at each
-#'   candidate sample size.
-#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
-#'   used as a reference point.
-#' @param verbose Logical. If `TRUE` (default), prints a summary
-#'   of the convergence check to the console.
-#' @param trace Logical; if `TRUE` (default), prints progress and
-#'   timing messages to the console.
-#' @param parallel Logical; if `TRUE`, enables parallel processing.
-#'   Default is `FALSE`.
-#' @param ncores Integer; number of CPU cores to use for parallel
-#'   processing. Defaults to all available cores detected by
-#'   `parallel::detectCores()`.
-#' @param plot Logical. If TRUE, displays a diagnostic plot of
-#'   the final results.
-#' @param ... Additional arguments used internally.
-#' 
-#' @return A list of class `movedesign_report` containing:
-#' \itemize{
-#'   \item `summary`: Data frame of summary statistics for each
-#'     replicate, sample size, and metric.
-#'   \item `error_threshold`: Numeric. The error threshold used.
-#'   \item `sampling_duration`: Character string. Final sampling duration.
-#'   \item `sampling_interval`: Character string. Final sampling interval.
-#'   \item `sample_size_achieved`: Logical. Indicates if convergence was
-#'     achieved and the threshold met.
-#'   \item `minimum_population_sample_size`: Integer. Minimum sample size
-#'     achieving the threshold (or maximum evaluated if
-#'     `sample_size_achieved` is `FALSE`).
-#' }
-#' 
-#' @examples
-#' if(interactive()) {
-#'   obj <- md_configure(data = buffalo,
-#'                       models = models)
-#'                       
-#'   out <- md_optimize(tmp,
-#'                      error_threshold = 0.05,
-#'                      plot = TRUE)
-#' }
-#' 
-#' @seealso
-#' [`md_prepare()`], [`md_configure()`]
-#' 
-#' @export
-md_optimize <- function(obj,
-                        n_replicates = 20,
-                        error_threshold = 0.05,
-                        plot = FALSE,
-                        verbose = TRUE,
-                        parallel = FALSE,
-                        ncores = parallel::detectCores(),
-                        trace = TRUE,
-                        ...) {
+#' @keywords internal
+#' @noRd
+.md_plot_meta <- function(x,
+                          error_threshold = NULL,
+                          set_target = c("hr", "ctsd"),
+                          grouped = FALSE) {
   
-  if (n_replicates < 5)
-    stop("`n_replicates` must be set to at least 5.")
+  n <- type <- top_facet <- NULL
+  error_mean <- error_sd <- NULL
   
-  `%||%` <- function(x, y) if (!is.null(x)) x else y
+  pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
+  
+  if (grouped) {
+    dt_plot <- x[x$group != "All", ]
+    set_shapes <- c(21, 24)
+    set_shapes_manual <- c(16, 17)
+  } else {
+    dt_plot <- x[x$group == "All", ]
+    set_shapes <- c(21, 21)
+    set_shapes_manual <- c(16, 16)
+  }
+  
+  if (!is.null(error_threshold)) {
+  dt_plot <- dt_plot %>%
+    dplyr::mutate(
+      error_threshold = error_threshold,
+      overlaps = dplyr::between(
+        abs(.data$error), 0, error_threshold))
+  } else {
+    dt_plot <- dt_plot %>%
+      dplyr::mutate(
+        error_threshold = NA,
+        overlaps = TRUE)
+  }
+  
+  dt_plot_means <- dt_plot %>%
+    dplyr::mutate(type = factor(
+      .data$type, levels = c("hr", "ctsd"))) %>%
+    dplyr::select(
+      "type", "m", "group",
+      "error", "error_lci", "error_uci") %>% 
+    dplyr::distinct() %>%
+    dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+    dplyr::summarize(
+      n = dplyr::n(),
+      error_sd = stats::sd(.data$error, na.rm = TRUE),
+      error_mean = mean(.data$error, na.rm = TRUE),
+      error_mean_lci = error_mean - stats::qt(
+        0.975, df = n - 1) * error_sd / sqrt(n),
+      error_mean_uci = error_mean + stats::qt(
+        0.975, df = n - 1) * error_sd / sqrt(n),
+      pred_lci = error_mean - stats::qt(
+        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
+      pred_uci = error_mean + stats::qt(
+        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
+      .groups = "drop")
+  
+  if (!is.null(error_threshold)) {
+    dt_plot_means <- dt_plot_means %>%
+      dplyr::mutate(
+        overlaps = dplyr::between(
+          abs(.data$error_mean), 0, error_threshold),
+        overlaps = factor(.data$overlaps,
+                          levels = c("TRUE", "FALSE")),
+        top_facet = .data$type == "hr") %>%
+      dplyr::ungroup()
+  } else {
+    dt_plot_means <- dt_plot_means %>%
+      dplyr::mutate(top_facet = .data$type == "hr",
+                    overlaps = TRUE) %>%
+      dplyr::ungroup()
+  }
+  
+  p <- dt_plot_means %>%
+    ggplot2::ggplot(
+      ggplot2::aes(
+        x = if (grouped &&
+                length(unique(.data$m)) == 1) {
+          as.factor(.data$m) 
+        } else { 
+          .data$m 
+        },
+        y = .data$error_mean,
+        group = .data$group,
+        shape = .data$group,
+        fill = .data$overlaps)) +
+    
+    { if (length(set_target) > 1)
+      ggplot2::facet_grid(
+        cols = ggplot2::vars(type),
+        scales = "free",
+        labeller = ggplot2::labeller(
+          type = c(
+            "hr" = "Home range estimation", 
+            "ctsd" = "Speed \u0026 distance estimation"))) } +
+    
+    ggplot2::geom_jitter(
+      dt_plot,
+      mapping = ggplot2::aes(
+        x = if (grouped &&
+                length(unique(.data$m)) == 1) {
+          as.factor(.data$m) 
+        } else { 
+          .data$m 
+        },
+        y = .data$error,
+        group = .data$group,
+        shape = .data$group,
+        fill = .data$overlaps),
+      position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+      size = 3, alpha = 0.5, color = "transparent") +
+    
+    ggplot2::geom_hline(
+      yintercept = 0,
+      linewidth = 0.3,
+      linetype = "solid") +
+    
+    { if (!is.null(error_threshold))
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, top_facet),
+        ggplot2::aes(yintercept = error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") } +
+    { if (!is.null(error_threshold))
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, top_facet),
+        ggplot2::aes(yintercept = -error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") } +
+    { if (!is.null(error_threshold))
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, !top_facet),
+        ggplot2::aes(yintercept = error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") } +
+    { if (!is.null(error_threshold)) 
+      ggplot2::geom_hline(
+        data = subset(dt_plot_means, !top_facet),
+        ggplot2::aes(yintercept = -error_threshold),
+        linewidth = 0.7,
+        linetype = "dotted") } +
+    
+    ggplot2::geom_linerange(
+      ggplot2::aes(ymin = .data$error_mean_lci,
+                   ymax = .data$error_mean_uci),
+      show.legend = TRUE,
+      position = ggplot2::position_dodge(width = 0.4),
+      color = "black", linewidth = 1) +
+    ggplot2::geom_linerange(
+      ggplot2::aes(ymin = .data$pred_lci,
+                   ymax = .data$pred_uci),
+      show.legend = TRUE,
+      position = ggplot2::position_dodge(width = 0.4),
+      color = "black", linewidth = 0.4) +
+    
+    ggplot2::geom_point(
+      position = ggplot2::position_dodge(width = 0.4),
+      stroke = 1.05, size = 5) +
+    
+    ggplot2::labs(
+      x = "Population sample size",
+      y = "Relative error (%)") +
+    
+    { if (!is.null(error_threshold)) {
+      ggplot2::scale_fill_manual(
+        name = paste0("Within error threshold (\u00B1",
+                      error_threshold * 100, "%)?"),
+        breaks = c("TRUE", "FALSE"),
+        values = pal, drop = FALSE,
+        guide = ggplot2::guide_legend(
+          override.aes = list(color = pal, fill = pal, size = 3),
+          order = 1,
+          label.vjust = 0.4))
+    } else {
+      ggplot2::scale_fill_manual(values = pal[1])
+    }} +
+    
+    { if (!grouped) {
+      ggplot2::scale_shape_manual(
+        name = "Groups:",
+        values = set_shapes)
+    } else {
+      ggplot2::scale_shape_manual(
+        name = "Groups:",
+        values = set_shapes,
+        guide = ggplot2::guide_legend(
+          override.aes = list(shape = set_shapes_manual, size = 3)))
+    }
+    } +
+    
+    { if (!grouped || length(unique(dt_plot$m)) > 1)
+      ggplot2::scale_x_continuous(
+        breaks = scales::breaks_pretty()) } +
+    ggplot2::scale_y_continuous(
+      labels = scales::percent, breaks = scales::breaks_pretty()) +
+    
+    ggplot2::theme_classic() +
+    ggplot2::theme(
+      text = ggplot2::element_text(size = 13),
+      legend.position = "bottom",
+      strip.text = ggplot2::element_text(size = 16),
+      strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
+      strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
+      plot.margin = ggplot2::unit(c(1, 1, 1, 1), "cm"))
+  
+  if (!grouped) {
+    p <- p + ggplot2::guides(shape = "none")
+  }
+  
+  if (is.null(error_threshold)) {
+    p <- p + ggplot2::guides(fill = "none")
+  }
+  
+  return(list(plot = p,
+              dt_plot = dt_plot,
+              dt_plot_means = dt_plot_means))
+  
+}
+
+
+#' @title Prepare optimization setup
+#'
+#' @keywords internal
+#' @noRd
+.md_optimize_setup <- function(obj,
+                               n_replicates,
+                               error_threshold,
+                               plot,
+                               verbose,
+                               parallel,
+                               ncores,
+                               trace,
+                               ...) {
   
   dots <- list(...)
   .tol <- dots[[".tol"]] %||% 0.05
@@ -3578,131 +3718,52 @@ md_optimize <- function(obj,
   .n_converge <- dots[[".n_converge"]] %||% 5
   .console_alert <- dots[[".console_alert"]] %||% TRUE
   
-  . <- n <- type <- NULL
-  stopifnot(inherits(obj, "movedesign_input"))
-  stopifnot(is.numeric(error_threshold) &&
-              error_threshold > 0 && error_threshold < 1)
-  stopifnot(is.numeric(n_replicates) && n_replicates > 0)
+  tmp_N_area <- suppressWarnings(
+    extract_dof(obj$meanfitList, "area"))[[1]]
+  tmp_N_speed <- suppressWarnings(
+    extract_dof(obj$meanfitList, "speed"))[[1]]
   
-  if (!is.null(.seeds)) {
-    if (length(.seeds) !=  obj$n_individuals * n_replicates)
-      stop(paste("Length of .seeds should match",
-                 "no. of tags * no. of replicates"))
+  if ("hr" %in% obj$set_target && tmp_N_area < 30) {
+    warning(paste0(
+      "Effective sample size (for area) ",
+      "in the original dataset is low (N = ", 
+      round(tmp_N_area, 1), "). Evaluate outputs with caution."))
   }
   
-  .calc_dti <- function(N, tauv, dur) {
-    
-    .calc_ess <- function(dti, tauv, dur) {
-      n_obs <- floor(dur / dti)
-      r <- dti / tauv
-      return(ifelse(dti > tauv,
-                    ifelse(dti > 3 * tauv, 0,
-                           (n_obs) / (r)^r * r),
-                    (n_obs) / tauv * dti))
-    }
-    
-    fractions <- c(3, 2.5, 2, 1.5, 1, 0.75, 0.5)
-    
-    for (f in fractions) {
-      dti <- round(tauv / f)
-      N2 <- .calc_ess(dti, tauv, dur)
-      if (N2 <= N) return(dti)
-    }
-    
-    dti <- round(tauv / 0.5)
-    N2 <- .calc_ess(dti, tauv, dur)
-    
-    return(dti)
+  if ("ctsd" %in% obj$set_target && tmp_N_speed < 30) {
+    warning(paste0(
+      "Effective sample size (for speed) ",
+      "in the original dataset is low (N = ", 
+      round(tmp_N_speed, 1), "). Evaluate outputs with caution."))
   }
   
-  .worker <- function(r, m) {
-    message(.msg(
-      sprintf("\u2014 Replicate %s of %s", r,
-              n_replicates), "main"))
-    
-    obj$n_individuals <- ifelse(obj$grouped, m * 2, m)
-    if (is.null(.seeds)) {
-      out <- md_run(obj, trace = FALSE)
-    } else {
-      out <- md_run(obj, .seeds = seeds_split[[r]], trace = FALSE)
-    }
-    return(out)
-  }
-  
-  set_target <- obj$set_target
-  has_groups <- obj$grouped
   tau_p <- obj$tau_p
-  tau_v <- obj$tau_v
-  .max_m <- obj$n_individuals
-  
-  if (!is.null(.seeds)) {
-    seeds_split <- split(.seeds, 
-                         ceiling(seq_along(.seeds) / .max_m))
-  }
-  
-  group <- groups <- top_facet <- NULL
-  hr_dur <- hr_dti <- ctsd_dur <- ctsd_dti <- NULL
-  error_mean <- error_sd <- NULL
-  
-  tmp_N_area <- tmp_N_speed <- NA 
-  if (length(set_target) == 1) {
-    err_prev <- setNames(list(rep(1, 10)), set_target)
-    if (set_target == "hr") 
-      tmp_N_area <- suppressWarnings(
-        extract_dof(obj$meanfitList, "area"))[[1]]
-    if (set_target == "ctsd") 
-      tmp_N_speed <- suppressWarnings(
-        extract_dof(obj$meanfitList, "speed"))[[1]]
-  } else if (length(set_target) == 2) {
-    err_prev <- list("hr" = rep(1, 10), "ctsd" = rep(1, 10))
-    tmp_N_area <- suppressWarnings(
-      extract_dof(obj$meanfitList, "area"))[[1]]
-    tmp_N_speed <- suppressWarnings(
-      extract_dof(obj$meanfitList, "speed"))[[1]]
-  }
-  
   if (obj$add_ind_var) {
     taup <- tau_p[[1]][3, "value"] %#% tau_p[[1]][3, "unit"]
   } else {
     taup <- tau_p[[1]][2, "value"] %#% tau_p[[1]][2, "unit"]
   }
   
-  if (error_threshold <= 0.01) {
-    N1 <- 280
-    N1 <- 1000
-    error_label <- "1%"
-  } else if (error_threshold <= 0.05) {
-    N1 <- 150
-    N2 <- 500
-    error_label <- "5%"
-  } else if (error_threshold <= 0.10) {
-    N1 <- 100
-    N2 <- 250
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  } else if (error_threshold <= 0.25) {
-    N1 <- 80
-    N2 <- 40
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  } else if (error_threshold <= 0.50) {
-    N1 <- 40
-    N2 <- 30
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  } else {
-    N1 <- 30
-    N1 <- 30
-    error_label <- paste0(round(error_threshold * 100, 0), "%")
-  }
+  error_label <- paste0(round(error_threshold * 100, 0), "%")
+  thresholdList <- list(
+    "0.01" = c(350, 10000), "0.05" = c(200, 5000),
+    "0.10" = c(80, 1000), "0.25" = c(30, 500),
+    "0.50" = c(10, 200), "default" = c(5, 100)
+  )
+  numeric_keys <- setdiff(names(thresholdList), "default")
+  idx <- which(error_threshold <= as.numeric(numeric_keys))[1]
+  threshold_key <- if (!is.na(idx)) numeric_keys[idx] else "default"
+  N1 <- thresholdList[[threshold_key]][1]
+  N2 <- thresholdList[[threshold_key]][2]
   
-  warn_and_confirm <- function(total_years, error_threshold_label) {
+  .warn <- function(total_years, error_threshold_label) {
     if (total_years > 5) {
+      
       cat('', msg_warning("!"),
           paste0("Error threshold is set to ", 
                  msg_warning(error_threshold_label), ","), "\n",
           ' ', paste0(
-            "This threshold may result in a recommended ",
-            "tracking duration of over ",
-            msg_warning(paste(round(total_years, 0), "years")), ".\n")
-      )
+            "Meeting it may require very long tracking durations."))
       
       # Ask user whether to proceed:
       proceed <- readline(
@@ -3717,71 +3778,315 @@ md_optimize <- function(obj,
   }
   
   total_years <- "years" %#% (N1 * taup)
-  if ("hr" %in% set_target) warn_and_confirm(total_years, error_label)
   
-  optimal_dur <- round(taup * N1)
-  if (!is.null(tau_v)) {
-    tauv <- tau_v[[1]][2, "value"] %#% tau_v[[1]][2, "unit"]
-    optimal_dti <- round(tauv / 3)
+  proceed <- TRUE
+  if ("hr" %in% obj$set_target) .warn(total_years, error_label)
+  
+  return(list(proceed = proceed,
+              obj = obj,
+              n_replicates = n_replicates,
+              error_threshold = error_threshold,
+              N1 = N1,
+              N2 = N2,
+              .tol = .tol,
+              .n_converge = .n_converge,
+              .console_alert = .console_alert,
+              .seeds = .seeds,
+              ncores = ncores,
+              plot = plot,
+              verbose = verbose,
+              parallel = obj$parallel,
+              trace = trace))
+}
+
+#' @title Execute optimization
+#'
+#' @keywords internal
+#' @noRd
+.md_optimize_execute <- function(prep) {
+  
+  if (!prep$proceed) {
+    message("Execution stopped by user.")
+    return(invisible(NULL))
   }
   
-  for (target in set_target) {
-    if (target == "hr") {
-      dti <- 1 %#% "day"
-      dur <- optimal_dur
-      count <- 0
-      repeat {
-        n_obs <- floor(dur / dti)
-        if (n_obs <= 2000 || count > 20) break
-        dti <- dti * 2
-        count <- count + 1
+  .adjust_percent <- function(x, percent) x * (1 + percent / 100)
+  
+  .configure_sampling <- function(obj,
+                                  optimal_dur,
+                                  optimal_dti,
+                                  tauv = NULL,
+                                  max_hr_obs = 2000,
+                                  max_ctsd_obs = 1100,
+                                  max_iter = 20) {
+    
+    set_target <- obj$set_target
+    hr_dur <- hr_dti <- NULL
+    ctsd_dur <- ctsd_dti <- NULL
+    
+    count <- 0
+    for (target in set_target) {
+      
+      if (target == "hr") {
+        
+        dti <- 1 %#% "day"
+        dur <- optimal_dur
+        
+        repeat {
+          n_obs <- floor(dur / dti)
+          if (n_obs <= max_hr_obs || count > max_iter) break
+          dti   <- dti * 2
+          count <- count + 1
+        }
+        
+        hr_dur <- fix_unit(dur, "seconds", convert = TRUE)
+        hr_dti <- fix_unit(dti, "seconds", convert = TRUE)
       }
-      hr_dur <- fix_unit(dur, "seconds", convert = TRUE)
-      hr_dti <- fix_unit(dti, "seconds", convert = TRUE)
+      
+      if (target == "ctsd") {
+        
+        stopifnot(!is.null(tauv))
+        
+        dur <- 8 %#% "days"
+        r <- 3 * ((1 / (1 - error_threshold) - 1)^(1 / 1.1))
+        dti <- r * tauv
+        
+        repeat {
+          n_obs <- floor(dur / dti)
+          if (n_obs <= max_ctsd_obs || count > max_iter) break
+          dur <- dur / 2
+          count <- count + 1
+          if (dur < 2 %#% "days") break
+        }
+        
+        ctsd_dur <- fix_unit(dur, "seconds", convert = TRUE)
+        ctsd_dti <- fix_unit(dti, "seconds", convert = TRUE)
+      }
     }
     
-    if (target == "ctsd") {
-      dur <- 8 %#% "days"
-      dti <- optimal_dti
-      count <- 0
-      
-      dti <- .calc_dti(N2, tauv, dur)
-      
-      repeat {
-        n_obs <- floor(dur / dti)
-        if (n_obs <= 1100 || count > 20) break
-        dur <- dur / 2
-        count <- count + 1
-        if (dur < 2 %#% "days") break
-      }
-      
-      ctsd_dur <- fix_unit(dur, "seconds", convert = TRUE)
-      ctsd_dti <- fix_unit(dti, "seconds", convert = TRUE)
+    has_hr <- "hr" %in% set_target
+    has_ctsd <- "ctsd" %in% set_target
+    
+    if (all(c("hr", "ctsd") %in% set_target)) {
+      obj$dur <- hr_dur
+    } else if ("hr" %in% set_target) {
+      obj$dur <- hr_dur
+    } else if ("ctsd" %in% set_target) {
+      obj$dur <- ctsd_dur
+    }
+    if (all(c("hr", "ctsd") %in% set_target)) {
+      obj$dti <- ctsd_dti
+    } else if ("hr" %in% set_target) {
+      obj$dti <- hr_dti
+    } else if ("ctsd" %in% set_target) {
+      obj$dti <- ctsd_dti
     }
     
-  } # end of [target] loop
-  
-  if (all(c("hr", "ctsd") %in% set_target)) {
-    obj$dur <- hr_dur
-  } else if ("hr" %in% set_target) {
-    obj$dur <- hr_dur
-  } else if ("ctsd" %in% set_target) {
-    obj$dur <- ctsd_dur
-  }
-  if (all(c("hr", "ctsd") %in% set_target)) {
-    obj$dti <- ctsd_dti
-  } else if ("hr" %in% set_target) {
-    obj$dti <- hr_dti
-  } else if ("ctsd" %in% set_target) {
-    obj$dti <- ctsd_dti
+    return(obj)
   }
   
+  .worker <- function(r, m, obj, seeds = NULL) {
+    
+    message(.msg(sprintf("\u2014 Replicate %s of %s", r,
+                         n_replicates), "main"))
+    
+    obj$n_individuals <- ifelse(obj$grouped, m * 2, m)
+    
+    if (is.null(.seeds)) {
+      out <- md_run(obj, trace = FALSE)
+    } else {
+      
+      if (has_groups) {
+        idx_start <- (r - 1) * (m * 2) + 1
+        idx_end <- r * (m * 2)
+      } else {
+        idx_start <- (r - 1) * m + 1
+        idx_end <- r * m
+      }
+      
+      tmp <- seeds[idx_start:idx_end]
+      out <- md_run(obj, .seeds = tmp, trace = FALSE)
+    }
+    
+    return(out)
+  }
+  
+  obj <- prep$obj
+  add_ind_var <- obj$add_ind_var
+  n_replicates <- prep$n_replicates
+  error_threshold <- prep$error_threshold
+  
+  N1 <- prep$N1
+  N2 <- prep$N2
+  
+  .tol <- prep$.tol
+  .n_converge <- prep$.n_converge
+  .console_alert <- prep$.console_alert
+  
+  .seeds <- prep$.seeds
+  ncores <- prep$ncores
+  plot <- prep$plot
+  verbose <- prep$verbose
+  parallel <- prep$parallel
+  trace <- prep$trace
+  
+  if (!is.null(.seeds) &&
+      length(.seeds) != obj$n_individuals * n_replicates) {
+    stop("Length of .seeds must equal no. of tags * replicates.")
+  }
+  
+  . <- n <- m <- type <- NULL
+  group <- groups <- top_facet <- NULL
+  hr_dur <- hr_dti <- ctsd_dur <- ctsd_dti <- NULL
+  error_mean <- error_sd <- NULL
+  tmp_N_area <- tmp_N_speed <- NA
+  
+  set_target <- obj$set_target
+  has_groups <- obj$grouped
+  
+  seedInit <- obj$seed
+  tau_p <- obj$tau_p
+  tau_v <- obj$tau_v
+  
+  .max_m <- obj$n_individuals
   .iter_step <- 2
+  
+  if (obj$add_ind_var) {
+    taup <- tau_p[[1]][3, "value"] %#% tau_p[[1]][3, "unit"]
+  } else {
+    taup <- tau_p[[1]][2, "value"] %#% tau_p[[1]][2, "unit"]
+  }
+  
   m_seq <- .get_sequence(seq_len(.max_m),
                          .step = .iter_step,
                          .max_m = .max_m,
                          .automate_seq = TRUE,
                          grouped = obj$grouped)
+  
+  if (length(m_seq) == 0) 
+    stop("Error generating sequence of sample sizes.")
+  
+  if (!is.null(.seeds)) {
+    # seeds_split <- split(
+    #   .seeds, rep(1:length(m_seq), length.out = length(.seeds)))
+    seeds_split <- split(
+      .seeds, ceiling(seq_along(seedList) / 
+                        (length(seedList) / length(m_seq))))
+  }
+  
+  err_prev <- setNames(
+    replicate(length(set_target), rep(1, 10), simplify = FALSE),
+    set_target)
+  
+  if (set_target == "hr") 
+    tmp_N_area <- suppressWarnings(
+      extract_dof(obj$meanfitList, "area"))[[1]]
+  if (set_target == "ctsd") 
+    tmp_N_speed <- suppressWarnings(
+      extract_dof(obj$meanfitList, "speed"))[[1]]
+  
+  if ("hr" %in% set_target && tmp_N_area < 30) {
+    warning(paste0(
+      "Effective sample size (for area) ",
+      "in the original dataset is low (N = ", 
+      round(tmp_N_area, 1), "). Evaluate outputs with caution."))
+  }
+  
+  if ("ctsd" %in% set_target && tmp_N_speed < 30) {
+    warning(paste0(
+      "Effective sample size (for speed) ",
+      "in the original dataset is low (N = ", 
+      round(tmp_N_speed, 1), "). Evaluate outputs with caution."))
+  }
+  
+  if ("hr" %in% set_target) {
+    N <- N1
+    N_adj <- N1
+  }
+  if ("ctsd" %in% set_target) {
+    N <- N2
+    N_adj <- N2
+  }
+  
+  message("Optimizing parameters...")
+  
+  max_iter <- 5
+  iter_count <- 0
+  target_tol <- 0.35
+  err <- rel_diff <- Inf
+  
+  if ("hr" %in% set_target) {
+    
+    while (abs(rel_diff) > target_tol && iter_count < max_iter) {
+      
+      iter_count <- iter_count + 1
+      
+      if (iter_count > 1) {
+        error <- mean_N - N
+        direction <- ifelse(error > 0, -1, 1)
+        
+        rel_error <- error / N * 100
+        percent_adj <- min(40, max(10, abs(rel_error) * 0.5))
+        N_adj <- .adjust_percent(N_adj, percent = direction * percent_adj)
+      }
+      
+      optimal_dur <- round(taup * N_adj)
+      obj_updated <- .configure_sampling(obj = obj,
+                                         optimal_dur = optimal_dur,
+                                         optimal_dti = optimal_dti)
+      obj_updated$add_ind_var <- FALSE
+      
+      r_tmp <- 1:5
+      m_tmp <- 4
+      
+      if (has_groups) {
+        seeds_tmp <- sapply(seq_len(max(r_tmp) * m_tmp * 2),
+                            function(x) seedInit + x)
+      } else {
+        seeds_tmp <- sapply(seq_len(max(r_tmp) * m_tmp),
+                            function(x) seedInit + x)
+      }
+      
+      sysname <- Sys.info()[["sysname"]]
+      if (sysname != "Windows" && parallel) {
+        tmpList_updated <- suppressMessages(
+          parallel::mclapply(r_tmp, function(r) 
+            .worker(r, m_tmp, obj_updated, seeds_tmp),
+          mc.cores = ncores))
+      } else {
+        tmpList_updated <- suppressMessages(
+          lapply(r_tmp, function(r) 
+            .worker(r, m_tmp, obj_updated, seeds_tmp)))
+      }
+      
+      out_N <- unlist(
+        lapply(tmpList_updated, function(x)
+          extract_dof(x$akdeList, "area")))
+      mean_N <- mean(out_N, na.rm = TRUE)
+      rel_diff <- (mean_N - N) / N
+      
+    } # end of while
+  } # end of hr
+  
+  if ("ctsd" %in% set_target) {
+    
+    
+    tauv <- tau_v[[1]][2, "value"] %#% tau_v[[1]][2, "unit"]
+    optimal_dur <- round(taup * N_adj)
+    optimal_dti <- round(tauv / 3)
+    
+    obj_updated <- .configure_sampling(
+      obj = obj,
+      optimal_dur = optimal_dur,
+      optimal_dti = optimal_dti,
+      tauv = tauv)
+    
+  } # end of ctsd
+  
+  message("...Parameters adjusted.")
+  
+  obj <- obj_updated
+  obj$add_ind_var <- add_ind_var
   
   message(.msg(paste(
     "Running simulations",
@@ -3789,8 +4094,7 @@ md_optimize <- function(obj,
   msg_seq <- format(m_seq, big.mark = ",", trim = TRUE)
   msg_seq <- paste(msg_seq, collapse = ", ")
   msg_seq <- sub(", ([^,]+)$", " and \\1", msg_seq)
-  suffix <- ifelse(!is.null(groups),
-                   " individuals per group", " individuals")
+  suffix <- ifelse(has_groups, " individuals per group", " individuals")
   message(.msg(sprintf("  %s%s (total of %d sets)\n",
                        msg_seq, suffix, length(m_seq)), "success"))
   
@@ -3798,17 +4102,10 @@ md_optimize <- function(obj,
   outList <- vector("list", length(m_seq))
   summaryList <- vector("list", length(m_seq))
   
-  start_total <- Sys.time()
-  print(
-    sprintf(
-      "Start time: %s",
-      format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
-  
   for (i in seq_along(m_seq)) {
     
     m_current <- m_seq[[i]]
-    m_prev <- ifelse(i == 1, 0, m_seq[[i - 1]])
-    m <- m_current - m_prev
+    m <- m_current - ifelse(i == 1, 0, m_seq[[i - 1]])
     
     message(.msg(
       sprintf("Set %s out of %s...", i, length(m_seq)),
@@ -3816,28 +4113,19 @@ md_optimize <- function(obj,
     print(paste(
       "Current sampled population:", 
       if (!is.null(groups)) m_current * 2 else m_current, 
-      "individual(s)"
-    ))
+      "individual(s)"))
     
-    tmpList <- if (parallel) {
-      
-      parallel::mclapply(
-        seq_len(n_replicates), function(r) .worker(r, m),
-        mc.cores = ncores)
-      
+    seeds <- NULL
+    if (!is.null(.seeds)) seeds <- seeds_split[[i]]
+    
+    sysname <- Sys.info()[["sysname"]]
+    if (sysname != "Windows" && parallel) {
+      tmpList <- parallel::mclapply(
+        seq_len(n_replicates), function(r) 
+          .worker(r, m, obj, seeds), mc.cores = ncores)
     } else {
-      # if (trace) pb <- txtProgressBar(
-      #   min = 0, max = n_replicates, style = 3)
-      
-      res <- vector("list", n_replicates)
-      for (r in seq_len(n_replicates)) {
-        res[[r]] <- .worker(r, m)
-        # if (trace) setTxtProgressBar(pb, r)
-      }
-      
-      # if (trace) close(pb)
-      res
-      
+      tmpList <- lapply(seq_len(n_replicates), function(r)
+        .worker(r, m, obj, seeds))
     }
     
     if (i == 1) {
@@ -3851,7 +4139,7 @@ md_optimize <- function(obj,
       if (has_groups) {
         
         group_keys <- c("A", "B")
-        common_names <- tmpList[[1]]$groups[[1]]
+        init_names <- tmpList[[1]]$groups[[1]]
         
         for (x in seq_along(tmpList)) {
           ids_tmp <- tmpList[[x]]$groups[[2]]
@@ -3862,13 +4150,11 @@ md_optimize <- function(obj,
               c(ids_tmp[[gr]], ids_out[[gr]])
             }), group_keys)
           
-          nms[[x]] <- list(common_names, merged_ids)
+          nms[[x]] <- list(init_names, merged_ids)
           tmpList[[x]]$groups <- nms[[x]]
           outList[[i - 1]][[x]]$groups <- nms[[x]]
         }
       }
-      
-      seedInit <- tmpList[[1]]$seedInit
       
       tmpList <- Map(function(prev, curr) {
         merged <- md_merge(prev, curr, .ignore_mismatch = TRUE)
@@ -4061,185 +4347,110 @@ md_optimize <- function(obj,
   has_converged <- TRUE
   if (any(!diag$has_converged)) {
     
-    # if (trace) {
-      warning(sprintf(
-        "Failing to converge with %s replicates. %s",
-        n_replicates, "Consider increasing 'n_replicates'."
-      ), call. = FALSE)
-    # }
-    
     has_converged <- FALSE
+    warning(sprintf(
+      "Failing to converge with %s replicates. %s",
+      n_replicates, "Consider increasing 'n_replicates'."
+    ), call. = FALSE)
+    
   }
   
-  summary_full <- data.table::rbindlist(summaryList, fill = TRUE)
-  
-  if (has_groups) {
-    dt_plot <- summary_full[summary_full$group != "All", ]
-    set_shapes <- c(21, 24)
-    set_shapes_manual <- c(16, 17)
-  } else {
-    dt_plot <- summary_full[summary_full$group == "All", ]
-    set_shapes <- c(21, 21)
-    set_shapes_manual <- c(16, 16)
-  }
-  
-  dt_plot <- dt_plot %>%
-    dplyr::mutate(
-      error_threshold = error_threshold,
-      overlaps = dplyr::between(
-        abs(.data$error), 0, error_threshold))
-  
-  dt_plot_means <- dt_plot %>%
-    dplyr::mutate(type = factor(
-      .data$type, levels = c("hr", "ctsd"))) %>%
-    dplyr::select(
-      "type", "m", "group",
-      "error", "error_lci", "error_uci") %>% 
-    dplyr::distinct() %>%
-    dplyr::group_by(.data$type, .data$group, .data$m) %>% 
-    dplyr::summarize(
-      n = dplyr::n(),
-      error_sd = stats::sd(.data$error, na.rm = TRUE),
-      error_mean = mean(.data$error, na.rm = TRUE),
-      error_mean_lci = error_mean - stats::qt(
-        0.975, df = n - 1) * error_sd / sqrt(n),
-      error_mean_uci = error_mean + stats::qt(
-        0.975, df = n - 1) * error_sd / sqrt(n),
-      pred_lci = error_mean - stats::qt(
-        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
-      pred_uci = error_mean + stats::qt(
-        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
-      .groups = "drop") %>%
-    dplyr::mutate(
-      overlaps = dplyr::between(
-        abs(.data$error_mean), 0, error_threshold),
-      overlaps = factor(.data$overlaps,
-                        levels = c("TRUE", "FALSE")),
-      top_facet = .data$type == "hr") %>%
-    dplyr::ungroup()
-  
-  pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
-  
-  p <- dt_plot_means %>%
-    ggplot2::ggplot(
-      ggplot2::aes(x = .data$m,
-                   y = .data$error_mean,
-                   group = .data$group,
-                   shape = .data$group,
-                   fill = .data$overlaps)) +
+  if (obj$grouped) {
+    group_keys <- c("A", "B")
+    init_names <- tmpList[[1]]$groups[[1]]
+    merged_ids <- lapply(tmpList, function(x) x$groups[[2]])
+    merged_ids <- Reduce(function(x, y) Map(c, x, y), merged_ids)
     
-    { if (length(set_target) > 1)
-      ggplot2::facet_wrap(
-        ggplot2::vars(type),
-        scales = "free") } +
-    
-    ggplot2::geom_jitter(
-      dt_plot,
-      mapping = ggplot2::aes(
-        x = .data$m,
-        y = .data$error,
-        group = .data$group,
-        shape = .data$group,
-        fill = .data$overlaps),
-      position = ggplot2::position_jitterdodge(dodge.width = 0.4),
-      size = 3, alpha = 0.5, color = "transparent") +
-    
-    ggplot2::geom_hline(
-      yintercept = 0,
-      linewidth = 0.3,
-      linetype = "solid") +
-    ggplot2::geom_hline(
-      data = subset(dt_plot_means, top_facet),
-      ggplot2::aes(yintercept = error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
-    ggplot2::geom_hline(
-      data = subset(dt_plot_means, top_facet),
-      ggplot2::aes(yintercept = -error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
-    
-    ggplot2::geom_hline(
-      data = subset(dt_plot_means, !top_facet),
-      ggplot2::aes(yintercept = error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
-    ggplot2::geom_hline(
-      data = subset(dt_plot_means, !top_facet),
-      ggplot2::aes(yintercept = -error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
-    
-    ggplot2::geom_linerange(
-      ggplot2::aes(ymin = .data$error_mean_lci,
-                   ymax = .data$error_mean_uci),
-      show.legend = TRUE,
-      position = ggplot2::position_dodge(width = 0.4),
-      color = "black", linewidth = 1) +
-    ggplot2::geom_linerange(
-      ggplot2::aes(ymin = .data$pred_lci,
-                   ymax = .data$pred_uci),
-      show.legend = TRUE,
-      position = ggplot2::position_dodge(width = 0.4),
-      color = "black", linewidth = 0.4) +
-    
-    ggplot2::geom_point(
-      position = ggplot2::position_dodge(width = 0.4),
-      stroke = 1.05, size = 5) +
-    
-    ggplot2::labs(
-      x = "Population sample size",
-      y = "Relative error (%)") +
-    
-    ggplot2::scale_fill_manual(
-      name = paste0("Within error threshold (\u00B1",
-                    error_threshold * 100, "%)?"),
-      breaks = c("TRUE", "FALSE"),
-      values = pal, drop = FALSE,
-      guide = ggplot2::guide_legend(
-        override.aes = list(color = pal, fill = pal, size = 3),
-        order = 1,
-        label.vjust = 0.4)) +
-    
-    { if (!has_groups) {
-      ggplot2::scale_shape_manual(
-        name = "Groups:",
-        values = set_shapes)
-    } else {
-      ggplot2::scale_shape_manual(
-        name = "Groups:",
-        values = set_shapes,
-        guide = ggplot2::guide_legend(
-          override.aes = list(shape = set_shapes_manual, size = 3)))
+    for (x in seq_along(tmpList)) {
+      tmpList[[x]]$groups <- list(init_names, merged_ids)
     }
-    } +
-    
-    ggplot2::scale_x_continuous(
-      breaks = scales::breaks_pretty()) +
-    ggplot2::scale_y_continuous(
-      labels = scales::percent,
-      breaks = scales::breaks_pretty()) +
-    
-    ggplot2::theme_classic() +
-    ggplot2::theme(
-      text = ggplot2::element_text(size = 13),
-      legend.position = "bottom",
-      strip.text = ggplot2::element_text(size = 16),
-      strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
-      strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
-      plot.margin = ggplot2::unit(
-        c(1, 1, 1, 1), "cm"))
-  
-  if (!has_groups) {
-    p <- p +
-      ggplot2::guides(shape = "none")
   }
   
-  if (plot) print(p)
+  merged <- md_merge(tmpList)
+  class(merged) <- unique(c("movedesign_output", class(merged)))
   
-  broke_when <- dt_plot_means %>%
+  names(merged$seedList) <- unlist(merged$seedList)
+  merged$n_replicates <- n_replicates
+  merged$seedInit <- seedInit
+  
+  if (!is.null(.seeds)) {
+    target_names <- as.character(.seeds)
+    
+    if (!setequal(target_names, names(merged$seedList))) {
+      stop("Seed mismatch detected.\n",
+           "Only in merged: ",
+           paste(setdiff(names(merged$seedList),
+                         target_names), collapse = ", "),
+           "\nOnly in target: ",
+           paste(setdiff(target_names, 
+                         names(merged$seedList)), collapse = ", "))
+    }
+    
+    if (anyDuplicated(names(merged$seedList)) ||
+        anyDuplicated(target_names)) {
+      stop("Duplicate seeds detected")
+    }
+    
+    merged$seedList <- merged$seedList[target_names]
+    merged$simList <- merged$simList[target_names]
+    merged$simfitList <- merged$simfitList[target_names]
+    merged$akdeList <- merged$akdeList[target_names]
+    merged$ctsdList <- merged$ctsdList[target_names]
+  }
+  
+  message(.msg(paste(
+    "Running meta-analyses",
+    "for the following population sample sizes:"), "success"))
+  msg_seq <- format(m_seq, big.mark = ",", trim = TRUE)
+  msg_seq <- paste(msg_seq, collapse = ", ")
+  msg_seq <- sub(", ([^,]+)$", " and \\1", msg_seq)
+  suffix <- ifelse(has_groups, " individuals per group", " individuals")
+  message(.msg(sprintf("  %s%s (total of %d sets)\n",
+                       msg_seq, suffix, length(m_seq)), "success"))
+  
+  start_meta_total <- Sys.time()
+  print(sprintf("Start time: %s",
+                format(start_meta_total, "%Y-%m-%d %H:%M:%S %Z")))
+  
+  metaList <- list()
+  for (i in seq_along(m_seq)) {
+    message(.msg(
+      sprintf("Set %s out of %s...", i, length(m_seq)),
+      "success"))
+    
+    tmp <- lapply(
+      seq_len(n_replicates), function(x) {
+        
+        run_meta_resamples(merged,
+                           set_target = merged$set_target,
+                           subpop = merged$grouped,
+                           .m = m_seq[[i]],
+                           .seed = seedInit + x)
+      })
+    
+    if (length(tmp) > 0) {
+      metaList[[i]] <- data.table::rbindlist(
+        tmp, fill = TRUE, idcol = "replicate")
+    } else {
+      metaList[[i]] <- data.table::data.table()
+    }
+    
+    message(.msg("...done.", "success"))
+    
+    message("Elapsed time:")
+    print(difftime(Sys.time(), start_meta_total))
+  }
+  
+  summary_full <- data.table::rbindlist(metaList, fill = TRUE)
+  out_plot <- .md_plot_meta(summary_full,
+                            # error_threshold,
+                            set_target = set_target,
+                            grouped = has_groups)
+  if (plot) print(out_plot$plot)
+  
+  broke_when <- out_plot$dt_plot_means %>%
     dplyr::inner_join(
-      dt_plot %>%
+      out_plot$dt_plot %>%
         dplyr::group_by(.data$type, .data$group, .data$m) %>%
         dplyr::summarize(
           all_within_threshold =
@@ -4262,32 +4473,27 @@ md_optimize <- function(obj,
     NA
   }
   
-  # browser()
-  # trace <- TRUE
-  
   if (trace) {
     cat("\n")
     .header("Final parameters", 4)
     
     if (broke && is.na(broke_when_m)) {
       
-      n_outside_threshold <- dt_plot %>%
+      n_outside_threshold <- out_plot$dt_plot %>%
         dplyr::group_by(.data$type, .data$group) %>%
         dplyr::filter(.data$m == max(.data$m, na.rm = TRUE)) %>%
         dplyr::summarise(
           n_outside_threshold = sum(
             abs(.data$error) > .data$error_threshold,
-            na.rm = TRUE
-          ),
+            na.rm = TRUE),
           n_replicates = dplyr::n(),
-          .groups = "keep"
-        ) %>%
+          .groups = "keep") %>%
         dplyr::pull(n_outside_threshold)
       
       message(format(
         .msg(paste0("   Maximum population sample size evaluated: "),
              "danger"), width = 3, justify = "left"),
-        m_seq[[i]])
+        .max_m)
       message(format(
         .msg(paste0("   Sampling duration: "),
              "success"), width = 3, justify = "left"),
@@ -4314,7 +4520,7 @@ md_optimize <- function(obj,
       message(format(
         .msg(paste0("   Maximum population sample size evaluated: "),
              "success"), width = 3, justify = "left"),
-        m_seq[[i]])
+        .max_m)
       message(format(
         .msg(paste0("   Minimum population sample size needed: "),
              "success"), width = 3, justify = "left"),
@@ -4338,7 +4544,10 @@ md_optimize <- function(obj,
       message(format(
         .msg(paste0("   Maximum population sample size evaluated: "),
              "danger"), width = 3, justify = "left"),
-        m_seq[[i]])
+        .max_m)
+      if (has_groups)
+        message(paste0(
+          "   With ", .max_m/2, " individuals per group."))
       message(format(
         .msg(paste0("   Sampling duration: "),
              "danger"), width = 3, justify = "left"),
@@ -4351,7 +4560,6 @@ md_optimize <- function(obj,
           fix_unit(round(obj$dti$value, 0), obj$dti$unit)$unit) }
       
       if (!is.na(broke_when_m)) {
-       
         if (has_groups) {
           current_error <- max(abs(broke_when$error_mean))
         } else {
@@ -4395,9 +4603,6 @@ md_optimize <- function(obj,
       "End time: %s",
       format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")))
   
-  message("Total elapsed time:")
-  print(difftime(Sys.time(), start_total))
-  
   if (has_groups) {
     out_summary <- summary_full %>%
       dplyr::select(
@@ -4412,36 +4617,13 @@ md_optimize <- function(obj,
         "is_grouped", "group", "error", "error_lci", "error_uci")
   }
   
-  if (length(tmpList) > 0) {
-    
-    if (obj$grouped) {
-      group_keys <- c("A", "B")
-      common_names <- tmpList[[1]]$groups[[1]]
-      merged_ids <- lapply(tmpList, function(x) x$groups[[2]])
-      merged_ids <- Reduce(
-        function(x, y) Map(c, x, y), merged_ids)
-      
-      for (x in seq_along(tmpList)) {
-        tmpList[[x]]$groups <- list(common_names, merged_ids)
-      }
-    }
-    
-    merged <- md_merge(tmpList)
-    class(merged) <- unique(c("movedesign_output", class(merged)))
-  } else {
-    merged <- NULL
-  }
-  
-  merged$n_replicates <- n_replicates
-  merged$seedInit <- seedInit
-  
   out <- structure(
     list(data = merged,
          summary = summary_full,
          verbose = verbose,
          diagnostics_table = diag,
-         plot_data = dt_plot,
-         plot = p,
+         plot_data = out_plot$dt_plot,
+         plot = out_plot$plot,
          error_threshold = error_threshold,
          sampling_duration = paste0(
            round(obj$dur$value, 1), " ", obj$dur$unit),
@@ -4451,6 +4633,147 @@ md_optimize <- function(obj,
          minimum_population_sample_size = m_seq[[i]]
     ), class = "movedesign")
   class(out) <- unique(c("movedesign_report", class(out)))
+  
+  return(out)
+  
+}
+
+
+#' @title Optimize sampling parameters and population sample size
+#'
+#' @description
+#' Repeatedly simulates movement datasets across a range of
+#' candidate population sample sizes to identify the minimal sample size
+#' and associated sampling parameters (i.e., duration, sampling interval)
+#' required to achieve a predefined error threshold for key space use and
+#' movement metrics (i.e., home range area, speed).
+#'
+#' The function quantifies estimation error for each metric and sample
+#' size, evaluating which population sample size reliably meet target
+#' thresholds, and reports final recommendations.
+#'
+#' @note
+#' Some biologgers inherently involve a trade-off between fix frequency
+#' and battery life. Shorter intervals between location fixes offer higher
+#' temporal resolution but reduce deployment duration due to increased
+#' power consumption. In contrast, longer deployments require less
+#' frequent sampling to conserve battery.
+#' 
+#' This trade-off makes it challenging to estimate multiple metrics with
+#' differing data needs: high-resolution data (shorter intervals) improve
+#' speed estimation, while extended deployments (longer durations) are
+#' vital for accurate home range area estimates. A sampling design that
+#' minimizes error for one metric may increase error for another.
+#' 
+#' Researchers facing these constraints should consider prioritizing a
+#' single research target (e.g., either home range area *or* speed), or
+#' use stratified designs to balance data needs across individuals.
+#' 
+#' @details
+#' The function iteratively runs movement design simulations for
+#' increasing population sample sizes (`m`), evaluating error for
+#' each replicate and metric via meta-analyses. Convergence is checked
+#' using the error threshold and stability of cumulative mean error.
+#' The function stops when a sample size meets all criteria or the
+#' maximum population sample size is reached. Results can be visualized
+#' using if `plot = TRUE`.
+#' 
+#' @param obj A movement design input object (see [`md_prepare()`]
+#'   or [`md_configure()`]).
+#' @param n_replicates Integer. Number of simulation replicates at each
+#'   candidate sample size.
+#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
+#'   used as a reference point.
+#' @param verbose Logical. If `TRUE` (default), prints a summary
+#'   of the convergence check to the console.
+#' @param trace Logical; if `TRUE` (default), prints progress and
+#'   timing messages to the console.
+#' @param parallel Logical; if `TRUE`, enables parallel processing.
+#'   Default is `FALSE`.
+#' @param ncores Integer; number of CPU cores to use for parallel
+#'   processing. Defaults to all available cores detected by
+#'   `parallel::detectCores()`.
+#' @param plot Logical. If TRUE, displays a diagnostic plot of
+#'   the final results.
+#' @param ... Additional arguments used internally.
+#' 
+#' @return A list of class `movedesign_report` containing:
+#' \itemize{
+#'   \item `summary`: Data frame of summary statistics for each
+#'     replicate, sample size, and metric.
+#'   \item `error_threshold`: Numeric. The error threshold used.
+#'   \item `sampling_duration`: Character string. Final sampling duration.
+#'   \item `sampling_interval`: Character string. Final sampling interval.
+#'   \item `sample_size_achieved`: Logical. Indicates if convergence was
+#'     achieved and the threshold met.
+#'   \item `minimum_population_sample_size`: Integer. Minimum sample size
+#'     achieving the threshold (or maximum evaluated if
+#'     `sample_size_achieved` is `FALSE`).
+#' }
+#' 
+#' @examples
+#' if(interactive()) {
+#'   obj <- md_configure(data = buffalo,
+#'                       models = models)
+#'                       
+#'   out <- md_optimize(tmp,
+#'                      error_threshold = 0.05,
+#'                      plot = TRUE)
+#' }
+#' 
+#' @seealso
+#' [`md_prepare()`], [`md_configure()`]
+#' 
+#' @export
+md_optimize <- function(obj,
+                        n_replicates = 20,
+                        error_threshold = 0.05,
+                        plot = FALSE,
+                        verbose = TRUE,
+                        parallel = FALSE,
+                        ncores = parallel::detectCores(),
+                        trace = TRUE,
+                        ...) {
+  
+  if (!inherits(obj, c("movedesign_input", "movedesign"))) {
+    stop("Input must have class 'movedesign_input'.")
+  }
+  
+  .check_numeric(error_threshold, lower = 0, upper = 1)
+  .check_integer(ncores)
+  .check_logical(plot)
+  .check_logical(verbose)
+  .check_logical(parallel)
+  .check_logical(trace)
+  stopifnot(is.numeric(n_replicates) && n_replicates > 0)
+  
+  # if (n_replicates < 5)
+  #   stop("`n_replicates` must be set to at least 5.")
+  
+  start_total <- Sys.time()
+  print(sprintf("Start time: %s",
+                format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
+  
+  init <- .md_optimize_setup(obj = obj,
+                             n_replicates = n_replicates,
+                             error_threshold = error_threshold,
+                             plot,
+                             verbose,
+                             parallel,
+                             ncores,
+                             trace,
+                             ...)
+  
+  if (!init$proceed) {
+    message(
+      "`md_optimize()` execution halted by user at warning stage.")
+    return(invisible(NULL))
+  }
+  
+  out <- .md_optimize_execute(init)
+  
+  message("Total elapsed time:")
+  print(difftime(Sys.time(), start_total))
   
   return(out)
   
