@@ -463,6 +463,7 @@ md_prepare <- function(species = NULL,
     }
     invisible(TRUE)
   }
+  
   set_target <- .validate_target(set_target)
   .validate_meta(which_meta, data)
   
@@ -597,9 +598,9 @@ md_prepare <- function(species = NULL,
   names(meanfitList) <- "All"
   
   if (add_individual_variation) {
-    sigma <- extract_pars(meanfitList, "sigma")
-    tau_p <- extract_pars(meanfitList, "position")
-    tau_v <- extract_pars(meanfitList, "velocity")
+    sigma <- suppressWarnings(extract_pars(meanfitList, "sigma"))
+    tau_p <- suppressWarnings(extract_pars(meanfitList, "position"))
+    tau_v <- suppressWarnings(extract_pars(meanfitList, "velocity"))
   } else {
     sigma <- extract_pars(fitList, "sigma", meta = TRUE)
     tau_p <- extract_pars(fitList, "position", meta = TRUE)
@@ -768,17 +769,17 @@ md_prepare <- function(species = NULL,
 #' and/or movement speeds, and stores all results in the returned object.
 #' Progress and timing messages are printed by default.
 #' 
-#' @param design An object of class `movedesign` (and
-#'   `movedesign_input`), as returned by [md_prepare()], containing
-#'   all study design parameters and data.
+#' @param design An object of class `movedesign_input`,
+#'   as returned by [md_prepare()], containing all study design
+#'   parameters and data.
 #' @param trace Logical. If TRUE (default), print progress and timing
 #'   messages to the console.
-#' @param .seeds List of set seeds to ensure reproducibility (optional);
-#'   only needed if replicating from Shiny app into R console.
+#' @param .seeds (Optional) List of random seeds for reproducibility.
+#'   Required only if reproducing a previous workflow (from the Shiny app
+#'   into R console).
 #'
-#' @return An updated `movedesign` object (subclass
-#'   `movedesign_preprocess`) containing all simulation and outputs
-#'   components:
+#' @return An object of class `movedesign_preprocess` containing
+#'   all simulation outputs:
 #'   \itemize{
 #'     \item `simList`: List of simulated telemetry datasets,
 #'       one per individual.
@@ -860,6 +861,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
       if (i %% 2 == 0) next
       
       tmp <- simulating_data(design, seed0)
+      
       design$simList[[i]] <- tmp[[1]]
       design$simList[[i + 1]] <- tmp[[2]]
       
@@ -876,6 +878,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
       nms[[i]] <- seed0
     }
   }
+  
   design$seedList <- nms
   names(design$simList) <- nms
   if (trace) print(Sys.time() - start)
@@ -902,8 +905,24 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
     if (trace) print(Sys.time() - start)
   }
   
+  elapsed_sec <- as.numeric(difftime(
+    Sys.time(), start_total, units = "secs"))
+  
+  if (elapsed_sec < 60) {
+    value <- round(elapsed_sec, 1)
+    unit <- "second"
+  } else if (elapsed_sec < 3600) {
+    value <- round(elapsed_sec / 60, 1)
+    unit <- "minute"
+  } else {
+    value <- round(elapsed_sec / 3600, 2)
+    unit <- "hour"
+  }
+  
   message("------------------- Elapsed time:")
-  print(difftime(Sys.time(), start_total))
+  message("Time difference of ", value, " ",
+          unit, ifelse(value == 1, "", "s"))
+  
   
   if ("ctsd" %in% design$set_target) {
     
@@ -1313,7 +1332,9 @@ md_replicate <- function(obj,
       format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
   
   tryCatch({
-    if (parallel) {
+    
+    sysname <- Sys.info()[["sysname"]]
+    if (sysname != "Windows" && parallel) {
       
       tmp <- parallel::mclapply(
         seq_len(n_replicates), 

@@ -995,7 +995,7 @@ mod_tab_report_server <- function(id, rv) {
         }
         
         txt_meta_no_ci <- span(
-          "The number of simulations was insufficient so credible",
+          "The number of tags was insufficient so credible",
           "intervals (CIs) could", span("not", class = "cl-dgr"),
           "be calculated.",
           txt_meta_more)
@@ -1441,7 +1441,7 @@ mod_tab_report_server <- function(id, rv) {
           }
           
           out_extra <- span(
-            "The number of simulations was insufficient so credible",
+            "The number of tags was insufficient so credible",
             "intervals (CIs) could", span("not", class = "cl-dgr"),
             "be calculated.", 
             out_extra_more)
@@ -3214,7 +3214,7 @@ mod_tab_report_server <- function(id, rv) {
             "(", fontawesome::fa("circle", prefer_type = "solid"),
             " and ", fontawesome::fa("diamond"), " in darker colors)"),
           "do not show lines, then the credible intervals (CIs) were",
-          "too large or the number of simulations",
+          "too large or the number of tags",
           wrap_none("insufficient", color = pal$dgr, end = "."),
           "Run more simulations to obtain valid CIs.")
         

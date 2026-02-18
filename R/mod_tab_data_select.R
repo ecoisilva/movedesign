@@ -885,10 +885,14 @@ mod_tab_data_select_server <- function(id, rv) {
             
             fit0 <- rv$fitList[rv$id]
             get_meta <- ifelse(length(rv$id) == 1, FALSE, TRUE)
-            rv$sigma <- extract_pars(fit0, "sigma", meta = get_meta)
-            rv$tau_p <- extract_pars(fit0, "position", meta = get_meta)
-            rv$tau_v <- extract_pars(fit0, "velocity", meta = get_meta)
-            rv$speed <- extract_pars(fit0, "speed", meta = get_meta)
+            rv$sigma <- suppressWarnings(
+              extract_pars(fit0, "sigma", meta = get_meta))
+            rv$tau_p <- suppressWarnings(
+              extract_pars(fit0, "position", meta = get_meta))
+            rv$tau_v <- suppressWarnings(
+              extract_pars(fit0, "velocity", meta = get_meta))
+            rv$speed <- suppressWarnings(
+              extract_pars(fit0, "speed", meta = get_meta))
             rv$add_ind_var <- FALSE
             
           } else {
@@ -905,10 +909,14 @@ mod_tab_data_select_server <- function(id, rv) {
           
           fit0 <- rv$fitList[rv$id]
           get_meta <- ifelse(length(rv$id) == 1, FALSE, TRUE)
-          rv$sigma <- extract_pars(fit0, "sigma", meta = get_meta)
-          rv$tau_p <- extract_pars(fit0, "position", meta = get_meta)
-          rv$tau_v <- extract_pars(fit0, "velocity", meta = get_meta)
-          rv$speed <- extract_pars(fit0, "speed", meta = get_meta)
+          rv$sigma <- suppressWarnings(
+            extract_pars(fit0, "sigma", meta = get_meta))
+          rv$tau_p <- suppressWarnings(
+            extract_pars(fit0, "position", meta = get_meta))
+          rv$tau_v <- suppressWarnings(
+            extract_pars(fit0, "velocity", meta = get_meta))
+          rv$speed <- suppressWarnings(
+            extract_pars(fit0, "speed", meta = get_meta))
           
           if (n_OUf >= 1)
             msg_log(

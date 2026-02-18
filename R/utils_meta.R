@@ -266,7 +266,7 @@
 }
 
 
-#' @title Get sequence for meta-analyses
+#' @title Generate sequence
 #'
 #' @description Get sequence for a iterately larger population sample size.
 #' @keywords internal
@@ -300,7 +300,7 @@
   if (!.automate_seq) return(seq(start_value, n, by = .step))
   
   out_seq <- seq(start_value, n, by = .step)
-  if (grouped && 1 %in% out_seq) {
+  if (1 %in% out_seq) {
     out_seq <- out_seq[out_seq != 1]
   }
   
@@ -316,11 +316,15 @@
 }
 
 
-#' @title Get sets for meta-analyses
+#' @title Generate index sets
 #'
-#' @description Get sets for a iterately larger population sample size.
+#' @description
+#' Creates sequential group assignments and generates combinations of a
+#' given size. Enumerates all combinations when feasible; otherwise
+#' generates up to `.max_draws` random combinations to limit
+#' computational cost.
 #' @keywords internal
-#'
+#' 
 #' @importFrom utils combn
 #' 
 #' @noRd
@@ -342,6 +346,7 @@
   }
   
   num_sets <- ceiling(length(input) / set_size)
+  
   if (length(input) %% set_size != 0)
     out <- rep(seq_len(num_sets), each = set_size)[seq_along(input)]
   else
@@ -680,8 +685,7 @@ plot_meta_resamples <- function(rv,
         ggplot2::scale_x_continuous(
           breaks = scales::breaks_pretty()) } +
       ggplot2::scale_y_continuous(
-        labels = scales::percent,
-        breaks = scales::breaks_pretty()) +
+        labels = scales::percent, breaks = scales::breaks_pretty()) +
       
       ggplot2::theme_classic() +
       ggplot2::theme(
@@ -690,8 +694,7 @@ plot_meta_resamples <- function(rv,
         strip.text = ggplot2::element_text(size = 16),
         strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
         strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
-        plot.margin = ggplot2::unit(
-          c(1, 1, 1, 1), "cm"))
+        plot.margin = ggplot2::unit(c(1, 1, 1, 1), "cm"))
     
     if (!subpop) {
       p.optimal <- p.optimal + ggplot2::guides(shape = "none")

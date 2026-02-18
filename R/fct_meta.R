@@ -425,7 +425,8 @@ run_meta_resamples <- function(rv,
           unit_seed <- .seed + ( m * 10^6 ) + i
         }
         
-        sets <- .get_sets(x, set_size = m, 
+        sets <- .get_sets(x,
+                          set_size = m, 
                           .seed = unit_seed,
                           .max_draws = max_draws)
         

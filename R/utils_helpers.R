@@ -1,5 +1,5 @@
 
-#' Quiet functions
+#' Suppress printed outputs
 #' 
 #' @noRd
 quiet <- function(x) {
@@ -13,11 +13,46 @@ quiet <- function(x) {
 #' @noRd
 `%!in%` <- Negate(`%in%`) 
 
-
 #' Null coalescing
 #' 
 #' @noRd
 `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+#' Check single numeric within bounds
+#' 
+#' @noRd
+.check_numeric <- function(x,
+                           lower = -Inf,
+                           upper = Inf,
+                           name = deparse(substitute(x))) {
+  
+  if (!is.numeric(x) || length(x) != 1 ||
+      x < lower || x > upper) {
+    stop(sprintf("%s must be a single numeric between %s and %s",
+                 name, lower, upper))
+  }
+}
+
+#' Check single logical (TRUE/FALSE)
+#' 
+#' @noRd
+.check_logical <- function(x,
+                           name = deparse(substitute(x))) {
+  
+  if (!is.logical(x) || length(x) != 1) {
+    stop(sprintf("%s must be TRUE or FALSE", name))
+  }
+}
+
+#' Check positive integer
+#' 
+#' @noRd
+.check_integer <- function(x, name = deparse(substitute(x))) {
+  
+  if (!is.numeric(x) || length(x) != 1 || x < 1 || x %% 1 != 0) {
+    stop(sprintf("%s must be a positive integer", name))
+  }
+}
 
 #' Unicode names
 #' 
