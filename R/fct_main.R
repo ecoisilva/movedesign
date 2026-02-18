@@ -3967,11 +3967,9 @@ md_configure <- function(data, models = NULL) {
     stop("Error generating sequence of sample sizes.")
   
   if (!is.null(.seeds)) {
-    # seeds_split <- split(
-    #   .seeds, rep(1:length(m_seq), length.out = length(.seeds)))
     seeds_split <- split(
-      .seeds, ceiling(seq_along(seedList) / 
-                        (length(seedList) / length(m_seq))))
+      .seeds, ceiling(seq_along(.seeds) / 
+                        (length(.seeds) / length(m_seq))))
   }
   
   err_prev <- setNames(
