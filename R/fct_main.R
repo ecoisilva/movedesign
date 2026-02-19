@@ -245,7 +245,7 @@ md_simulate <- function(n_individuals = NULL,
                      as.character(seed0 + 1))
   }
   
-  fitList <- fitting_model(data, .parallel = parallel)
+  fitList <- fitting_models(data, parallel = parallel)
   names(fitList) <- names(data)
   
   meanfitList <- list(NULL)
@@ -579,7 +579,7 @@ md_prepare <- function(species = NULL,
     stop("'n_individuals' must be even when 'groups' is not NULL.")
   
   fitList <- if (is.null(models)) {
-    fitting_model(data, .parallel = parallel)
+    fitting_models(data, parallel = parallel)
   } else {
     if (!all(sapply(models, function(m) 
       inherits(m, c("ctmm", "ctmm.select")))))
@@ -885,8 +885,8 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
   
   if (trace) message("Fitting movement models...")
   if (trace) start <- Sys.time()
-  design$simfitList <- fitting_model(
-    design$simList, .parallel = design$parallel)
+  design$simfitList <- fitting_models(
+    design$simList, parallel = design$parallel)
   names(design$simfitList) <- names(design$simList)
   if (trace) print(Sys.time() - start)
   gc()
@@ -3072,13 +3072,13 @@ md_check <- function(obj,
 #' The argument `models` is optional, and if omitted, models will be
 #' fitted automatically.
 #'
-#' @param data A named list of telemetry objects (from
-#'   `ctmm::as.telemetry()`) to be used as the empirical basis for the
-#'   simulations. Each telemetry object must contain valid metadata
-#'   and timestamped locations.
+#' @param data A named list of simulated movement datasets, each a
+#'   `telemetry` object compatible with `ctmm` `R` package. Each object
+#'   must contain valid metadata and timestamped locations.
 #' @param models (Optional) Named list of fitted ctmm models (from
 #'   `ctmm::ctmm.fit()` or `ctmm::ctmm.select()`). If not supplied,
 #'   models are fitted automatically.
+#' @param parallel Logical. If `TRUE`, enables parallel processing.
 #' 
 #' @return
 #' An object of class `movedesign_input` (and `movedesign`). This is
@@ -3095,7 +3095,7 @@ md_check <- function(obj,
 #' 
 #' @importFrom ctmm %#%
 #' @export
-md_configure <- function(data, models = NULL) {
+md_configure <- function(data, models = NULL, parallel = FALSE) {
   
   if (is.null(data)) stop(
     "'data' is a required argument and must not be NULL.")
@@ -3174,7 +3174,7 @@ md_configure <- function(data, models = NULL) {
   # Fit models automatically (if not provided):
   if (is.null(models)) {
     cat("\nNo models provided. Fitting models automatically...\n")
-    models <- fitting_model(data, .parallel = FALSE)
+    models <- fitting_models(data, parallel = FALSE)
     cat("Models fitted successfully!\n")
   } else {
     if (!all(sapply(models, function(m) 
@@ -4985,7 +4985,7 @@ md_plot_replicates <- function(obj,
       strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
       strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
       plot.margin = ggplot2::unit(
-        c(1, 1, 1, 1), "cm"))
+        c(0.3, 0.3, 0.3, 0.3), "cm"))
   if (!has_groups) p <- p + ggplot2::guides(shape = "none")
   
   p.replicates <- dt_plot_means %>%
@@ -5100,7 +5100,7 @@ md_plot_replicates <- function(obj,
       strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
       strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
       plot.margin = ggplot2::unit(
-        c(1, 1, 1, 1), "cm"))
+        c(0.3, 0.3, 0.3, 0.3), "cm"))
   
   if (!has_groups) {
     p.replicates <- p.replicates + ggplot2::guides(shape = "none")
@@ -5112,7 +5112,7 @@ md_plot_replicates <- function(obj,
     p <- p + ggplot2::guides(color = "none")
   
   plots <- list(p, p.replicates)
-  
+
   return(suppressWarnings(
     patchwork::wrap_plots(
       plots,

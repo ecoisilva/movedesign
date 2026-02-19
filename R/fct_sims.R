@@ -154,71 +154,34 @@ simulating_data <- function(rv, seed) {
 #' @description
 #' This function fits continuous-time movement models to simulated location
 #' data using the `ctmm` package. It estimates movement parameters for each
-#' simulated trajectory, optionally running in parallel for efficiency. It
+#' simulated trajectory, allowing for parallel execution. It currently
 #' supports both home range and speed estimation workflows.
 #'
-#' @param obj A list of simulated movement datasets, each formatted as a 
-#'   `telemetry` object compatible with `ctmm`.
-#' @param set_target A character vector specifying the research goals.
-#'   Options include:
-#'   \itemize{
-#'     \item `"hr"` — Home range estimation.
-#'     \item `"ctsd"` — Speed and distance estimation.
+#' @param obj A list of simulated movement datasets, each a `telemetry`
+#'   object compatible with `ctmm` `R` package.
+#' @param set_target A character vector specifying the research targets.
+#'   Current options:
+#'   \describe{
+#'     \item{"hr"}{Home range estimation.}
+#'     \item{"ctsd"}{Speed & distance estimation.}
 #'   }
-#' @param ... Optional control parameters passed via `...`. These include
-#'   `.dur`, `.dti`, `.tau_p`, `.tau_v`, `.error_m`, `.check_sampling`, 
-#'   `.rerun`, `.parallel`, and `.trace`. See **Details** for their
-#'   descriptions.
+#' @param parallel Logical. If `TRUE`, enables parallel processing.
+#' @param ncores Integer. Number of CPU cores to use for parallel
+#'   processing. Defaults to all available cores minus one.
+#' @param trace Logical. If `TRUE` (default), prints progress and
+#'   timing messages to the console.
+#' @param ... Additional arguments used internally.
 #' 
 #' @return
-#' A list of fitted movement models (class `ctmm`), one per simulation. 
-#' Each model is recentered to the origin (`x = 0`, `y = 0`).
+#' A list of fitted movement models, all recentered to the origin.
 #' 
 #' @details
 #' The function generates initial parameter estimates for each dataset
 #' using `ctmm::ctmm.guess()`. If the data includes simulated location
-#' error, it uses an error model accordingly. When `.check_sampling` is
-#' `TRUE`, it compares the sampling duration and interval against optimal
-#' thresholds derived from the provided autocorrelation timescales.
-#' Models are fitted using `ctmm::ctmm.select()`, which performs model
-#' selection to find the best-fit movement process. If `.rerun` is
-#' enabled, the function identifies simulations with effective 
-#' sample sizes below 0.1 and attempts to reselect models for those.
-#' Finally, all fitted models are recentered to (`0, 0`) for downstream
-#' consistency.
-#' 
-#' The following arguments can be supplied via `...`:
-#'
-#' - `.dur`: A list with elements `value` (numeric) and `unit` (string),
-#'   specifying the maximum study duration. Example:
-#'   `list(value = 2, unit = "months")`.
-#'
-#' - `.dti`: A list with elements `value` (numeric) and `unit` (string),
-#'   specifying the intended sampling interval. Example:
-#'   `list(value = 1, unit = "day")`.
-#'
-#' - `.tau_p`: A list of position autocorrelation timescales. Optional,
-#'   but required if `.check_sampling = TRUE`.
-#'
-#' - `.tau_v`: A list of velocity autocorrelation timescales. Optional,
-#'   but required if `.check_sampling = TRUE`.
-#'
-#' - `.error_m`: A numeric value specifying location error in meters
-#'   (used for simulation).
-#'
-#' - `.check_sampling`: Logical; if `TRUE`, checks whether the sampling
-#'   schedule meets minimum requirements for reliable model fitting via
-#'   `ctmm::ctmm.fit()`. This feature is experimental and may change
-#'    in future versions.
-#'
-#' - `.rerun`: Logical; if `TRUE`, re-runs model selection when
-#'   simulations result in very low effective sample sizes, to
-#'   avoid convergence issues.
-#'
-#' - `.parallel`: Logical; if `TRUE`, enables parallel computation.
-#'
-#' - `.trace`: Logical; if `TRUE`, print progress and timing
-#'   messages to the console.
+#' error, it adds an error model accordingly. Models are fitted using
+#' `ctmm::ctmm.select()`, which performs model selection to find the
+#' best-fit movement process. Finally, all fitted models are recentered
+#' to (`0, 0`) for downstream consistency.
 #'
 #' @note
 #' This function is intended for internal use and may assume inputs
@@ -227,11 +190,23 @@ simulating_data <- function(rv, seed) {
 #' @seealso
 #' `ctmm::ctmm.guess()`, `ctmm::ctmm.select()`
 #' 
-#' @keywords internal
-#' @importFrom ctmm ctmm.guess
-fitting_model <- function(obj,
-                          set_target = c("hr", "ctsd"),
-                          ...) {
+#' @importFrom ctmm ctmm.guess ctmm.select
+#' @export
+fitting_models <- function(obj,
+                           set_target = c("hr", "ctsd"),
+                           parallel = FALSE,
+                           trace = FALSE,
+                           ncores = parallel::detectCores(),
+                           ...) {
+  
+  stopifnot(is.list(obj), length(obj) >= 1)
+  
+  if (class(obj)[1] != "list" && class(obj[[1]])[1] != "ctmm")
+    obj <- list(obj)
+  
+  if (!inherits(obj[[1]], "telemetry")) {
+    stop(paste("'obj' must be a list of 'telemetry' objects."))
+  }
   
   dots <- list(...)
   
@@ -239,69 +214,32 @@ fitting_model <- function(obj,
   .dti <- dots[[".dti"]] %||% NULL
   .tau_p <- dots[[".tau_p"]] %||% NULL
   .tau_v <- dots[[".tau_v"]] %||% NULL
-  .error_m <- dots[[".error_m"]] %||% NULL
-  
-  .check_sampling <- dots[[".check_sampling"]] %||% FALSE
   .rerun <- dots[[".rerun"]] %||% FALSE
-  .parallel <- dots[[".parallel"]] %||% TRUE
-  .trace <- dots[[".trace"]] %||% FALSE
+  .error_m <- dots[[".error_m"]] %||% NULL
+  .check_sampling <- dots[[".check_sampling"]] %||% FALSE
   
   n_obj <- length(obj)
-  error <- any(grepl("error", names(obj[[1]])))
+  has_error <- any(grepl("error", names(obj[[1]])))
   
-  if (.check_sampling) {
-    stopifnot(!is.null(.dur), !is.null(.dti),
-              !is.null(.tau_p), !is.null(.tau_v))
-    
-    dur <- .dur$value %#% .dur$unit
-    optimal_dur <- (.tau_p[[1]]$value[2] %#% .tau_p[[1]]$unit[2]) * 30
-    
-    dti <- .dti$value %#% .dti$unit
-    optimal_dti <- (.tau_v[[1]]$value[2] %#% .tau_v[[1]]$unit[2]) / 3
-    
-    is_fit <- logical()
-    N <- character()
-    if ("hr" %in% set_target) {
-      is_fit <- c(is_fit, optimal_dur <= dur)
-      N <- c(N, "area")
-    }
-    if ("ctsd" %in% set_target) {
-      is_fit <- c(is_fit, dti <= optimal_dti)
-      N <- c(N, "speed")
-    }
-  } else {
-    stopifnot(is.null(.dur), is.null(.dti))
-    is_fit <- rep(TRUE, length(set_target))
-  }
-  
-  if (error && is.null(.error_m)) 
+  if (has_error && is.null(.error_m)) 
     stop("No location error provided!")
   
   guessList <- lapply(obj, function(x) {
-    if (error) {
-      ctmm::ctmm.guess(x, CTMM = ctmm::ctmm(error = TRUE),
-                       interactive = FALSE)
-    } else {
-      ctmm::ctmm.guess(x, interactive = FALSE)
-    }
+    if (has_error) {
+      ctmm::ctmm.guess(
+        x, ctmm::ctmm(error = TRUE), interactive = FALSE)
+    } else { ctmm::ctmm.guess(x, interactive = FALSE) }
   })
   
-  # out <- tryCatch(
-  #   if (all(to_fit))
-  #     par.ctmm.fit(obj, guessList, parallel = .parallel)
-  #   else par.ctmm.select(obj, guessList, parallel = .parallel)
-  #   , error = function(e) e)
-  
   out <- tryCatch(
-    par.ctmm.select(obj, guessList, parallel = .parallel),
+    par.ctmm.select(obj, guessList, parallel = parallel, trace = trace),
     error = function(e) e)
   
   if (inherits(out, "error")) return(NULL)
   if (n_obj == 1) out <- list(out)
   
   if (.rerun) {
-    N <- setNames(lapply(N, function(x) 
-      extract_dof(out, x)), set_target)
+    N <- setNames(lapply(N, function(x) extract_dof(out, x)), set_target)
     
     lapply(set_target, function(target) {
       to_rerun <- which(N[[target]] < 0.1)
@@ -311,7 +249,9 @@ fitting_model <- function(obj,
           out[[z]] <- par.ctmm.select(
             obj[to_rerun[[z]]], 
             guessList[to_rerun[[z]]],
-            parallel = .parallel)
+            parallel = parallel,
+            cores = cores,
+            trace = trace)
         }
       }
       
@@ -320,10 +260,10 @@ fitting_model <- function(obj,
   } # end of if (.rerun)
   
   # Recenter to 0,0:
-  
-  lapply(seq_along(out), function (x) {
-    out[[x]]$mu[[1, "x"]] <- 0
-    out[[x]]$mu[[1, "y"]] <- 0 
+  out <- lapply(out, function(m) {
+    m$mu[[1, "x"]] <- 0
+    m$mu[[1, "y"]] <- 0
+    return(m)
   })
   
   return(out)
