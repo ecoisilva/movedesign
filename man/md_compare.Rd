@@ -5,16 +5,17 @@
 \title{Visualize study design outputs}
 \usage{
 md_compare(
-  objs,
+  x,
   stat = c("mean", "median"),
   ci = 0.95,
   method = "HDI",
   pal = c("#007d80", "#A12C3B"),
-  m = NULL
+  m = NULL,
+  show_text = TRUE
 )
 }
 \arguments{
-\item{objs}{A list of \code{movedesign_output} objects, as returned by
+\item{x}{A list of \code{movedesign_output} objects, as returned by
 \code{\link[=md_replicate]{md_replicate()}}.}
 
 \item{stat}{Character string specifying which summary statistic to
@@ -36,6 +37,9 @@ and mean line. If a single group, supply one color (default:
 results for a specific population sample size (\code{m}).
 Defaults to \code{NULL}, which checks up to the maximum population
 sample size.}
+
+\item{show_text}{Logical. If TRUE, displays the mean values as
+text within the plots.}
 }
 \value{
 A \code{ggplot} object showing:

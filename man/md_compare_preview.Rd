@@ -5,7 +5,7 @@
 \title{Preview plot for movedesign workflow outputs (single replicate)}
 \usage{
 md_compare_preview(
-  objs,
+  x,
   n_resamples = NULL,
   error_threshold = 0.05,
   pal = c("#007d80", "#A12C3B"),
@@ -13,7 +13,7 @@ md_compare_preview(
 )
 }
 \arguments{
-\item{objs}{A list of object of class \code{movedesign_preprocess}
+\item{x}{A list of objects of class \code{movedesign_preprocess}
 (outputs of \code{\link[=md_run]{md_run()}}).}
 
 \item{n_resamples}{Numeric. Must be a positive value. Defines how many

@@ -4,17 +4,18 @@
 \alias{md_configure}
 \title{Interactively configure movement design setup}
 \usage{
-md_configure(data, models = NULL)
+md_configure(data, models = NULL, parallel = FALSE)
 }
 \arguments{
-\item{data}{A named list of telemetry objects (from
-\code{ctmm::as.telemetry()}) to be used as the empirical basis for the
-simulations. Each telemetry object must contain valid metadata
-and timestamped locations.}
+\item{data}{A named list of simulated movement datasets, each a
+\code{telemetry} object compatible with \code{ctmm} \code{R} package. Each object
+must contain valid metadata and timestamped locations.}
 
 \item{models}{(Optional) Named list of fitted ctmm models (from
 \code{ctmm::ctmm.fit()} or \code{ctmm::ctmm.select()}). If not supplied,
 models are fitted automatically.}
+
+\item{parallel}{Logical. If \code{TRUE}, enables parallel processing.}
 }
 \value{
 An object of class \code{movedesign_input} (and \code{movedesign}). This is
