@@ -2340,14 +2340,15 @@ mod_tab_design_server <- function(id, rv) {
     fit_model <- reactive({
       
       simList <- rv$simList
-      simfitList <- fitting_model(simList,
+      simfitList <- fitting_models(simList,
                                   .dur = rv$dur,
                                   .dti = rv$dti,
                                   .tau_p = rv$tau_p,
                                   .tau_v = rv$tau_v,
                                   .error_m = rv$error,
                                   .check_sampling = TRUE,
-                                  .rerun = TRUE)
+                                  .rerun = TRUE,
+                                  parallel = rv$parallel)
       
       if (is.null(simfitList)) {
         msg_log(

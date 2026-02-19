@@ -643,7 +643,7 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                            msg_warning("in progress"), ","),
           detail = "This may take a while...")
         
-        simfitList <- fitting_model(simList,
+        simfitList <- fitting_models(simList,
                                     set_target = rv$set_analysis,
                                     .dur = rv$dur,
                                     .dti = rv$dti,
@@ -651,7 +651,8 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                                     .tau_v = rv$tau_v,
                                     .error_m = rv$error,
                                     .check_sampling = TRUE,
-                                    .rerun = TRUE)
+                                    .rerun = TRUE,
+                                    parallel = rv$parallel)
         
         rv$dev$N1 <- c(rv$dev$N1, extract_dof(simfitList, "area"))
         rv$dev$N2 <- c(rv$dev$N2, extract_dof(simfitList, "speed"))

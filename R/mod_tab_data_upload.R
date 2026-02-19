@@ -954,7 +954,7 @@ mod_tab_data_upload_server <- function(id, rv) {
         return(NULL)
       }
       
-      out <- fitting_model(datList)
+      out <- fitting_models(datList, parallel = rv$parallel)
       
       if (is.null(out)) {
         msg_log(
