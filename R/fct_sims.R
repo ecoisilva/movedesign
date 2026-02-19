@@ -250,7 +250,7 @@ fitting_models <- function(obj,
             obj[to_rerun[[z]]], 
             guessList[to_rerun[[z]]],
             parallel = parallel,
-            cores = cores,
+            cores = ncores,
             trace = trace)
         }
       }
