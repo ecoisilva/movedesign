@@ -11,7 +11,8 @@ md_replicate(
   trace = TRUE,
   parallel = FALSE,
   error_threshold = 0.05,
-  ncores = parallel::detectCores()
+  ncores = parallel::detectCores(),
+  ...
 )
 }
 \arguments{
@@ -24,7 +25,7 @@ simulation replicates to run.}
 
 \item{verbose}{Logical; if \code{TRUE}, runs population-level inferences
 iteratively for increasing population sample sizes, saving results
-at each step. Defaults to \code{FALSE}, which runs only once for the
+at each step. Defaults to \code{FALSE}, which runs it only once for the
 maximum sample size defined by \code{n_individuals} in \code{\link[=md_prepare]{md_prepare()}}.}
 
 \item{trace}{Logical; if \code{TRUE} (default), prints progress and
@@ -39,6 +40,8 @@ to display as a reference in the plot.}
 \item{ncores}{Integer; number of CPU cores to use for parallel
 processing. Defaults to all available cores detected by
 \code{parallel::detectCores()}.}
+
+\item{...}{Additional arguments used internally.}
 }
 \value{
 A list of class \code{movedesign_output} with two elements:
