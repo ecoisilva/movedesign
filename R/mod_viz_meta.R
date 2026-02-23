@@ -42,19 +42,19 @@ mod_viz_meta_server <- function(id, rv) {
         req(rv$metaList[[rv$set_analysis]]) }
       
       is_replicates <- FALSE
-      if (rv$which_m == "get_all") {
+      if (rv$which_m == "get_all" ||
+          !(is.null(rv$meta_tbl_replicates))) {
         req(rv$error_threshold)
         is_replicates <- TRUE
       }
       
-      p.optimal <- plot_meta_resamples(
+      p.optimal <- .plot_meta(
         rv,
         set_target = rv$set_analysis,
         randomize = rv$random, 
         replicate = is_replicates,
         subpop = rv$grouped, 
-        colors = c(pal$sea, 
-                   pal$dgr))
+        colors = c(pal$sea, pal$dgr))
       
       p.optimal <- p.optimal +
         theme_movedesign(font_available = rv$is_font) +
@@ -85,9 +85,10 @@ mod_viz_meta_server <- function(id, rv) {
       
     }) %>% # end of renderGirafe, "metaPlot_m_optimal"
       bindEvent(list(rv$run_meta,
-                     rv$run_meta_resample,
+                     rv$run_meta_replicate,
                      rv$set_analysis,
-                     rv$meta_nresample))
+                     rv$meta_nresample,
+                     rv$meta_nreplicate))
     
   }) # end of moduleServer
 }

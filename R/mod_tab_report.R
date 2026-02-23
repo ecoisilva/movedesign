@@ -1489,6 +1489,8 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$active_tab == "report",
           rv$which_m, rv$which_meta != "none")
       
+      n <- group <- error_sd <- NULL
+      
       rv$report$meta <- out_meta <- span("")
       
       req(!is.null(rv$add_ind_var), rv$metaList)
@@ -1524,41 +1526,87 @@ mod_tab_report_server <- function(id, rv) {
       for (target in out_targets) {
         i <- i + 1
         
-        meta <- as.data.frame(rv$metaList[[target]]$meta)
-        tmpunit <- extract_units(rownames(
-          meta[grep("mean", rownames(meta)), ]))
-        truth <- tmpunit %#% out_truth[[target]]
+        if (is.null(rv$meta_tbl_replicates)) {
+          
+          meta <- as.data.frame(rv$metaList[[target]]$meta)
+          tmpunit <- extract_units(rownames(
+            meta[grep("mean", rownames(meta)), ]))
+          truth <- tmpunit %#% out_truth[[target]]
+          
+          meta_dt <- meta[1, ] %>%
+            dplyr::mutate(
+              err = (.data$est - truth)/truth,
+              err_lci = (.data$low - truth)/truth,
+              err_uci = (.data$high - truth)/truth) %>% 
+            dplyr::select(.data$err,
+                          .data$err_lci,
+                          .data$err_uci) %>% 
+            dplyr::rowwise() %>%
+            dplyr::mutate(
+              within_threshold = 
+                abs(.data$err) <= rv$error_threshold,
+              overlaps_with_threshold = 
+                max(.data$err_lci, -rv$error_threshold) <=
+                min(.data$err_uci, rv$error_threshold),
+              status = dplyr::case_when(
+                within_threshold ~ "Yes",
+                TRUE ~ "No"))
+          
+          is_stable <- all(abs(
+            tail(rv$err_prev[[target]], 5)) <= rv$error_threshold)
+          
+        } else {
+          req(rv$meta_tbl_replicates)
+          
+          meta_dt <- rv$meta_tbl_replicates %>%
+            dplyr::filter(type == target) %>%
+            dplyr::filter(group == "All") %>%
+            dplyr::mutate(
+              dplyr::across(
+                "type", ~factor(., levels = c("hr", "ctsd")))) %>%
+            dplyr::select(
+              "type", "m", "group",
+              "error", "error_lci", "error_uci") %>%
+            dplyr::distinct() %>%
+            dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+            dplyr::summarize(
+              n = dplyr::n(),
+              error_sd = stats::sd(.data$error, na.rm = TRUE),
+              err = mean(.data$error, na.rm = TRUE),
+              err_lci = err - stats::qt(
+                0.975, df = n - 1) * error_sd / sqrt(n),
+              err_uci = err + stats::qt(
+                0.975, df = n - 1) * error_sd / sqrt(n),
+              .groups = "drop") %>%
+            dplyr::filter(m == max(.data$m)) %>%
+            dplyr::select("err", "err_lci", "err_uci") %>%
+            dplyr::mutate(
+              within_threshold = 
+                abs(.data$err) <= rv$error_threshold,
+              overlaps_with_threshold = 
+                max(.data$err_lci, -rv$error_threshold) <=
+                min(.data$err_uci, rv$error_threshold),
+              status = dplyr::case_when(
+                within_threshold ~ "Yes",
+                TRUE ~ "No"))
+          
+          is_stable <- (function(x) 
+            all(abs(x) <= rv$error_threshold))(
+              rv$meta_tbl_replicates %>%
+                dplyr::filter(.data$type == target,
+                              .data$m == max(.data$m)) %>%
+                dplyr::pull(.data$error))
+        }
         
-        meta_dt <- meta[1, ] %>%
-          dplyr::mutate(
-            err = (.data$est - truth)/truth,
-            err_lci = (.data$low - truth)/truth,
-            err_uci = (.data$high - truth)/truth) %>% 
-          dplyr::select(.data$err,
-                        .data$err_lci,
-                        .data$err_uci) %>% 
-          dplyr::rowwise() %>%
-          dplyr::mutate(
-            within_threshold = 
-              abs(.data$err) <= rv$error_threshold,
-            overlaps_with_threshold = 
-              max(.data$err_lci, -rv$error_threshold) <=
-              min(.data$err_uci, rv$error_threshold),
-            status = dplyr::case_when(
-              within_threshold ~ "Yes",
-              !within_threshold & overlaps_with_threshold ~ "Near",
-              TRUE ~ "No"))
-        
-        is_stable <- all(abs(
-          tail(rv$err_prev[[target]], 5)) <= rv$error_threshold)
-        
-        if (rv$which_m == "set_m" && !is.null(rv$meta_tbl_resample)) {
+        if (rv$which_m == "set_m" &&
+            !is.null(rv$meta_tbl_resample)) {
           is_stable <- (function(x) 
             all(abs(x) <= rv$error_threshold))(
               rv$meta_tbl_resample %>%
                 dplyr::filter(.data$type == target,
                               .data$m == max(.data$m)) %>%
                 dplyr::pull(.data$error))
+          
         }
         
         if (rv$which_m == "get_all") {
@@ -2282,7 +2330,21 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$which_question, rv$which_meta, input$ci)
       req(rv$tau_p[[1]], rv$tau_v[[1]], rv$dur, rv$dti)
       
-      m <- ifelse(rv$which_meta == "none", 400, length(rv$simList))
+      if (rv$which_meta == "none") {
+        m <- 400
+        txt_m <- paste("of", m, "simulations")
+      } else {
+        if (is.null(rv$meta_tbl_replicates)) {
+          m <- length(rv$simList)
+          txt_m <- paste("of", m, "tags")
+        } else {
+          req(rv$meta_tbl_replicates)
+          m <- nrow(rv$dev$tbl)
+          txt_m <- paste0("of ", m, " simulations ",
+                          "(", rv$n_replicates, " replicates \u00D7 ",
+                          rv$n_sims, " tags)")
+        }
+      }
       
       taup_unit <- ifelse(rv$which_meta == "none", 
                           "days", rv$tau_p[[1]]$unit[2])
@@ -2395,9 +2457,8 @@ mod_tab_report_server <- function(id, rv) {
           span("Note:", class = "help-block-note"), 
           "These plots show the probability density of",
           span("individual", style =  "font-weight: bold;"),
-          "estimate errors",
-          "based on ", m, " simulations, with the medians",
-          wrap_none(
+          "estimate errors", wrap_none(txt_m, ","),
+          "with the medians", wrap_none(
             "(", fontawesome::fa("diamond"), " in lighter colors),"),
           "and the", wrap_none(input$ci, "%"),
           interval_type, "(shaded areas + lines).",
@@ -2436,8 +2497,7 @@ mod_tab_report_server <- function(id, rv) {
               span("Note:", class = "help-block-note"), 
               "This plot shows the probability density of",
               span("individual", style =  "font-weight: bold;"),
-              "estimate errors based on", m, "simulations for",
-              sim_details,
+              "estimate errors", txt_m, "for", sim_details, 
               "and for a sampling duration of", 
               dur_for_hr, "with the mean",
               wrap_none(
@@ -2475,9 +2535,8 @@ mod_tab_report_server <- function(id, rv) {
               span("Note:", class = "help-block-note"), 
               "This plot shows the probability density of",
               span("individual", style =  "font-weight: bold;"),
-              "estimate errors based on", m, "simulations for",
-              sim_details,
-              "and", 
+              "estimate errors", txt_m, "for", 
+              sim_details, "and", 
               wrap_none(dti_for_sd, ","), "with the median",
               wrap_none(
                 "(", fontawesome::fa("diamond", fill = pal$sea),
@@ -4484,13 +4543,9 @@ mod_tab_report_server <- function(id, rv) {
     observe({
       req(!is.null(rv$simList), rv$hrErr, 
           rv$which_meta, rv$which_m)
-      req(nrow(rv$hrErr) == length(rv$simList))
-      
-      if ("Home range" %in% rv$which_question) {
-        shinyjs::show(id = "repBox_hr_err") 
-      } else { shinyjs::hide(id = "repBox_hr_err") }
       
       if (rv$which_meta == "none") {
+        req(nrow(rv$hrErr) == length(rv$simList))
         mod_blocks_server(
           id = "repBlock_hrErr",
           rv = rv, type = "hr", name = "hrErr")
@@ -4501,17 +4556,17 @@ mod_tab_report_server <- function(id, rv) {
           rv = rv, type = "hr", name = "metaErr")
       }
       
+      if ("Home range" %in% rv$which_question) {
+        shinyjs::show(id = "repBox_hr_err") 
+      } else { shinyjs::hide(id = "repBox_hr_err") }
+      
     }) # end of observe
     
     observe({
       req(rv$simList, rv$speedErr, rv$which_meta)
-      req(nrow(rv$speedErr) == length(rv$simList))
-      
-      if ("Speed & distance" %in% rv$which_question)
-        shinyjs::show(id = "repBox_speed_err") else
-          shinyjs::hide(id = "repBox_speed_err")
       
       if (rv$which_meta == "none") {
+        req(nrow(rv$speedErr) == length(rv$simList))
         mod_blocks_server(
           id = "repBlock_speedErr",
           rv = rv, type = "ctsd", name = "speedErr")
@@ -4522,6 +4577,10 @@ mod_tab_report_server <- function(id, rv) {
           id = "repBlock_speedErr",
           rv = rv, type = "ctsd", name = "metaErr")
       }
+      
+      if ("Speed & distance" %in% rv$which_question)
+        shinyjs::show(id = "repBox_speed_err") else
+          shinyjs::hide(id = "repBox_speed_err")
       
     }) # end of observe
     
