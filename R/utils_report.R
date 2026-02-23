@@ -60,11 +60,20 @@
       .err_to_txt(rv[[err_name]]$est), "%."))
   }
   
-  meta <- rv$meta_tbl[
-    rv$meta_tbl$group == "All" &
-      rv$meta_tbl$type == set_target, , drop = FALSE]
+  if (is.null(rv$meta_tbl_replicates)) {
+    meta <- rv$meta_tbl[
+      rv$meta_tbl$group == "All" &
+        rv$meta_tbl$type == set_target, , drop = FALSE]
+    
+  } else {
+    meta <- rv$meta_tbl_replicates[
+      rv$meta_tbl_replicates$group == "All" &
+        rv$meta_tbl_replicates$type == set_target, , drop = FALSE]
+    
+    txt_replicates <- paste(" and", rv$n_replicates, "replicates")
+  }
   
-  if (rv$which_m != "get_all") {
+  if (rv$which_m != "get_all" && is.null(rv$meta_tbl_replicates)) {
     err <- meta[which.max(meta$m), , drop = FALSE]
     
   } else {
@@ -93,13 +102,21 @@
                        hr = "home range area",
                        ctsd = "speed")
   
-  return(paste0(
-    "The mean ", txt_target, " based on ", txt_n_tags,
-    " was ", txt_direction, " by ",
-    .err_to_txt(err$error), "% [",
-    .err_to_txt(err$error_lci), ", ",
-    .err_to_txt(err$error_uci), "]."))
-  
+  if (is.null(rv$meta_tbl_replicates)) {
+    return(paste0(
+      "The mean ", txt_target, " based on ", txt_n_tags,
+      " was ", txt_direction, " by ",
+      .err_to_txt(err$error), "% [",
+      .err_to_txt(err$error_lci), ", ",
+      .err_to_txt(err$error_uci), "]."))
+  } else {
+    return(paste0(
+      "The mean ", txt_target, " based on ", txt_n_tags,
+      txt_replicates, " was ", txt_direction, " by ",
+      .err_to_txt(err$error), "% [",
+      .err_to_txt(err$error_lci), ", ",
+      .err_to_txt(err$error_uci), "]."))
+  }
 }
 
 

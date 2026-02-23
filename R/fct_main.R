@@ -880,7 +880,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
   }
   
   design$seedList <- nms
-  names(design$simList) <- nms
+  names(design$simList) <- names(design$seedList) <- nms
   if (trace) print(Sys.time() - start)
   
   if (trace) message("Fitting movement models...")
@@ -1206,16 +1206,9 @@ md_merge <- function(..., .ignore_mismatch = FALSE) {
 #'   defining the movement study.
 #' @param n_replicates Integer specifying how many independent
 #'   simulation replicates to run.
-#' @param verbose Logical. If `TRUE`, the function performs
-#'   population-level inference iteratively, increasing the population
-#'   sample size and saving the results at each increment. This allows
-#'   users to observe how parameter estimates and uncertainty change as
-#'   more individuals are included. If `FALSE` (default), the inference
-#'   runs only once using the maximum sample size specified by
-#'   `n_individuals` in [`md_prepare()`].
 #' @param verbose Logical; if `TRUE`, runs population-level inferences
 #'   iteratively for increasing population sample sizes, saving results
-#'   at each step. Defaults to `FALSE`, which runs only once for the
+#'   at each step. Defaults to `FALSE`, which runs it only once for the
 #'   maximum sample size defined by `n_individuals` in [`md_prepare()`].
 #' @param trace Logical; if `TRUE` (default), prints progress and
 #'   timing messages to the console.
@@ -1226,6 +1219,7 @@ md_merge <- function(..., .ignore_mismatch = FALSE) {
 #' @param ncores Integer; number of CPU cores to use for parallel
 #'   processing. Defaults to all available cores detected by
 #'   `parallel::detectCores()`.
+#' @param ... Additional arguments used internally.
 #'
 #' @return
 #' A list of class `movedesign_output` with two elements:
@@ -1275,12 +1269,16 @@ md_replicate <- function(obj,
                          trace = TRUE,
                          parallel = FALSE,
                          error_threshold = 0.05,
-                         ncores = parallel::detectCores()) {
+                         ncores = parallel::detectCores(),
+                         ...) {
   
   stopifnot(is.numeric(n_replicates) && n_replicates > 0)
   
   is_input <- inherits(obj, "movedesign_input")
   is_output <- inherits(obj, "movedesign_output")
+  
+  dots <- list(...)
+  .override <- dots[[".override"]] %||% FALSE
   
   if (!is_input && !is_output) {
     stop("`obj` must be a `movedesign_input` ",
@@ -1294,7 +1292,7 @@ md_replicate <- function(obj,
     offset <- obj$data$n_replicates
     
   } else {
-    if (n_replicates < 5)
+    if (!.override && n_replicates < 5)
       stop("`n_replicates` must be set to at least 5.")
     
     base_input <- obj
@@ -1340,7 +1338,7 @@ md_replicate <- function(obj,
         seq_len(n_replicates), 
         function(i) .worker(i), mc.cores = ncores)
       
-      for (i in seq_along(n_replicates)) {
+      for (i in seq_len(n_replicates)) {
         outList[[i]] <- tmp[[i]]$out
         metaList[[i]] <- tmp[[i]]$meta
         completed <- i
@@ -1404,14 +1402,15 @@ md_replicate <- function(obj,
   if (length(outList) > 0) {
     
     if (base_input$grouped) {
+      
       group_keys <- c("A", "B")
-      common_names <- outList[[1]]$groups[[1]]
+      init_names <- outList[[1]]$groups[[1]]
       merged_ids <- lapply(outList, function(x) x$groups[[2]])
       merged_ids <- Reduce(
         function(x, y) Map(c, x, y), merged_ids)
       
       for (x in seq_along(outList)) {
-        outList[[x]]$groups <- list(common_names, merged_ids)
+        outList[[x]]$groups <- list(init_names, merged_ids)
       }
     }
     

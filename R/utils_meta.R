@@ -49,7 +49,7 @@
     x[[1]][sapply(x[[1]], is.null)] <- NULL
     x[[2]][sapply(x[[2]], is.null)] <- NULL
     
-    # x <- lapply(x, fuunction(y) y[sapply(y, is.null)] <- NULL)
+    # x <- lapply(x, function(y) y[sapply(y, is.null)] <- NULL)
   }
   
   out <- tryCatch({
@@ -495,16 +495,17 @@
 }
 
 
-#' @title Plot meta (resamples)
+#' @title Plot meta-analyses outputs
 #'
 #' @noRd 
 #' 
-plot_meta_resamples <- function(rv,
-                                set_target = c("hr", "ctsd"),
-                                randomize = FALSE,
-                                replicate = FALSE,
-                                subpop = FALSE,
-                                colors = NULL) {
+.plot_meta <- function(rv,
+                      set_target = c("hr", "ctsd"),
+                      randomize = FALSE,
+                      replicate = FALSE,
+                      subpop = FALSE,
+                      colors = NULL,
+                      filter_to = NULL) {
   
   stopifnot(!is.null(rv$meta_tbl),
             !is.null(rv$which_m),
@@ -530,6 +531,7 @@ plot_meta_resamples <- function(rv,
               !is.null(rv$n_replicates))
   }
   
+  global_y_range <- c(-Inf, Inf)
   dodge_width <- 0.25
   txt_title <- if (length(rv$which_question) > 1) {
     ifelse(set_target == "hr", 
@@ -537,14 +539,21 @@ plot_meta_resamples <- function(rv,
   }
   
   if (is.null(colors)) { pal_values <- c(
-    "Yes" = "#009da0", "No" = "#A12C3B") # "#dd4b39"
+    "Yes" = "#009da0", "No" = "#A12C3B")
   } else { pal_values <- c(
     "Yes" = colors[[1]], "No" = colors[[2]])
   }
   
   if (replicate) {
     
-    out <- rv$meta_tbl
+    if (is.null(rv$meta_tbl_replicates)) {
+      out <- rv$meta_tbl %>%
+        dplyr::filter(.data$type == set_target)
+    } else {
+      out <- rv$meta_tbl_replicates %>%
+        dplyr::filter(.data$type == set_target)
+    }
+    
     pal_values <- list("TRUE" = pal_values[[1]],
                        "FALSE" = pal_values[[2]])
     
@@ -595,7 +604,6 @@ plot_meta_resamples <- function(rv,
     
     max_m <- max(unique(out$m))
     set_target <- unique(out$type)
-    max_replicates <- rv$n_replicates
     
     p.optimal <- out_mean %>%
       ggplot2::ggplot(
@@ -678,6 +686,7 @@ plot_meta_resamples <- function(rv,
         stroke = 1.05, size = 5) +
       
       ggplot2::labs(
+        title = txt_title,
         x = "Population sample size",
         y = "Relative error (%)") +
       
@@ -705,11 +714,18 @@ plot_meta_resamples <- function(rv,
       }
       } +
       
-      { if (!subpop || length(unique(out$m)) > 1)
+      { if (length(unique(out$m)) == 2) {
         ggplot2::scale_x_continuous(
-          breaks = scales::breaks_pretty()) } +
+          breaks = unique(out$m))
+      } else if (length(unique(out$m)) > 1) {
+        ggplot2::scale_x_continuous(
+          breaks = scales::breaks_pretty())
+      }
+      } +
+      
       ggplot2::scale_y_continuous(
-        labels = scales::percent, breaks = scales::breaks_pretty()) +
+        labels = scales::percent,
+        breaks = scales::breaks_pretty()) +
       
       ggplot2::theme_classic() +
       ggplot2::theme(
@@ -847,7 +863,17 @@ plot_meta_resamples <- function(rv,
     
   } else {
     
-    out <- out_all <- dplyr::distinct(rv$meta_tbl) %>% 
+    if (is.null(rv$meta_tbl_replicates)) {
+      out <- rv$meta_tbl
+    } else {
+      out <- rv$meta_tbl_replicates %>%
+        dplyr::filter(replicate <= filter_to) %>%
+        dplyr::mutate(
+          overlaps = dplyr::between(
+            abs(.data$error), 0, rv$error_threshold))
+    }
+    
+    out <- out_all <- dplyr::distinct(out) %>% 
       dplyr::select(-c(.data$est, .data$lci, .data$uci)) %>%
       dplyr::filter(.data$type == set_target)
     
@@ -966,3 +992,447 @@ plot_meta_resamples <- function(rv,
   return(p.optimal)
   
 }
+
+
+#' @title Process replicates
+#'
+#' @noRd 
+#' 
+.process_replicates <- function(rv,
+                                out_replicate,
+                                start = Sys.time()) {
+  
+  n <- m <- NULL
+  groups <- NULL
+  
+  rv$metaEst <- NULL
+  rv$metaErr <- NULL
+  rv$metaEst_groups <- NULL
+  rv$metaErr_groups <- NULL
+  
+  data <- out_replicate$data
+  if (rv$grouped) groups <- out_replicate$data$groups
+  
+  est <- error_sd <- NULL
+  tmpsumm <- out_replicate$summary %>%
+    dplyr::select(
+      "type", "m", "group",
+      "error", "error_lci", "error_uci") %>%
+    dplyr::distinct() %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::filter(m == max(.data$m)) %>%
+    dplyr::summarize(
+      n = dplyr::n(),
+      error_sd = stats::sd(.data$error, na.rm = TRUE),
+      est = mean(.data$error, na.rm = TRUE),
+      lci = est - stats::qt(0.975, df = n - 1) * error_sd / sqrt(n),
+      uci = est + stats::qt(0.975, df = n - 1) * error_sd / sqrt(n),
+      .groups = "drop") %>%
+    dplyr::ungroup()
+  
+  rv$metaErr <- tmpsumm %>%
+    dplyr::filter(group == "All") %>%
+    dplyr::select("type", "group", "lci", "est", "uci")
+  
+  if (rv$grouped) {
+    rv$metaErr_groups <- tmpsumm %>%
+      dplyr::filter(group != "All") %>%
+      dplyr::select("type", "group", "lci", "est", "uci")
+  }
+  
+  seedList <- out_replicate$data$seedList
+  simList <- out_replicate$data$simList
+  simfitList <- out_replicate$data$simfitList
+  
+  rv$seedList_replicates <- c(rv$seedList_replicates, seedList)
+  
+  .get_group <- function(seed, groups) {
+    if (as.character(seed) %in% groups[["A"]]) "A" else "B"
+  }
+  
+  for (i in seq_along(simfitList)) {
+    
+    group <- 1
+    if (rv$grouped) {
+      group <- .get_group(seedList[[i]], groups[[2]])
+    }
+    
+    if (rv$add_ind_var) {
+      tau_p <- extract_pars(
+        emulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
+        "position")[[1]]
+      tau_v <- extract_pars(
+        emulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
+        "velocity")[[1]]
+      sigma <- extract_pars(
+        emulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
+        "sigma")[[1]]
+    } else {
+      tau_p <- rv$tau_p[[group]]
+      tau_v <- rv$tau_v[[group]]
+      sigma <- rv$sigma[[group]]
+    }
+    
+    rv$dev$tbl <- rbind(
+      rv$dev$tbl,
+      .build_tbl(
+        device = rv$device_type,
+        group = if (rv$grouped) group else NA,
+        data = simList[[i]],
+        seed = seedList[[i]],
+        obj = simfitList[[i]],
+        tau_p = tau_p,
+        tau_v = tau_v,
+        sigma = sigma
+      )
+    )
+  }
+  
+  if ("hr" %in% rv$set_target) {
+    
+    akdeList <- out_replicate$data$akdeList
+    truthList <- get_true_hr(
+      data = simList,
+      seed = seedList,
+      sigma = rv$sigma,
+      
+      ind_var = rv$add_ind_var,
+      fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+      
+      grouped = rv$grouped,
+      groups = if (rv$grouped) groups[[2]] else NULL)
+    
+    out_est_df <- data.frame(seed = numeric(0),
+                             lci = numeric(0),
+                             est = numeric(0),
+                             uci = numeric(0),
+                             unit = character(0))
+    out_err_df <- data.frame(seed = numeric(0),
+                             lci = numeric(0),
+                             est = numeric(0),
+                             uci = numeric(0))
+    
+    for (i in seq_along(akdeList)) {
+      
+      group <- 1
+      if (rv$grouped) {
+        nm <- names(simList)[[i]]
+        group <- ifelse(nm %in% groups[[2]]$A, "A", "B")
+      }
+      
+      if (rv$add_ind_var) {
+        tau_p <- extract_pars(
+          emulate_seeded(rv$meanfitList[[group]],
+                         seedList[[i]]),
+          "position")[[1]]
+        tau_v <- extract_pars(
+          emulate_seeded(rv$meanfitList[[group]],
+                         seedList[[i]]),
+          "velocity")[[1]]
+        sigma <- extract_pars(
+          emulate_seeded(rv$meanfitList[[group]],
+                         seedList[[i]]),
+          "sigma")[[1]]
+      } else {
+        tau_p <- rv$tau_p[[group]]
+        tau_v <- rv$tau_v[[group]]
+        sigma <- rv$sigma[[group]]
+      }
+      
+      seed <- as.character(seedList[[i]])
+      hr_truth <- truthList[[seed]]$area
+      N1 <- extract_dof(simfitList[[i]], "area")[[1]]
+      
+      tmpsum <- tryCatch(
+        summary(akdeList[[i]]),
+        error = function(e) e)
+      
+      if (is.null(akdeList[[i]]) ||
+          is.null(tmpsum) || length(tmpsum) == 0 ||
+          any(tmpsum[[1]] == 0) ||
+          inherits(tmpsum, "error") || N1 < 0.001) {
+        
+        out_est_df <- out_est_df %>%
+          dplyr::add_row(
+            seed = seedList[[i]],
+            lci = NA, est = NA, uci = NA, unit = NA)
+        out_err_df <- out_err_df %>%
+          dplyr::add_row(
+            seed = seedList[[i]],
+            lci = NA, est = NA, uci = NA)
+        
+        rv$hr$tbl <- rbind(
+          rv$hr$tbl,
+          .build_tbl(
+            target = "hr",
+            group = if (rv$grouped) group else NA,
+            data = simList[[i]],
+            seed = names(simList)[[i]],
+            obj = akdeList[[i]],
+            tau_p = tau_p,
+            tau_v = tau_v,
+            sigma = sigma,
+            area = out_est_df[i, ],
+            area_error = out_err_df[i, ]))
+        next
+      }
+      
+      tmpname <- rownames(summary(akdeList[[i]])$CI)
+      tmpunit <- extract_units(tmpname[grep('^area', tmpname)])
+      
+      out_est_df <- out_est_df %>%
+        dplyr::add_row(
+          seed = seedList[[i]],
+          lci = tmpsum$CI[1],
+          est = tmpsum$CI[2],
+          uci = tmpsum$CI[3],
+          unit = tmpunit)
+      out_err_df <- out_err_df %>%
+        dplyr::add_row(
+          seed = seedList[[i]],
+          lci = ((tmpsum$CI[1] %#% tmpunit) - hr_truth) / hr_truth,
+          est = ((tmpsum$CI[2] %#% tmpunit) - hr_truth) / hr_truth,
+          uci = ((tmpsum$CI[3] %#% tmpunit) - hr_truth) / hr_truth)
+      
+      rv$hr$tbl <- rbind(
+        rv$hr$tbl,
+        .build_tbl(
+          target = "hr",
+          group = if (rv$grouped) group else NA,
+          data = simList[[i]],
+          seed = seedList[[i]],
+          obj = akdeList[[i]],
+          tau_p = tau_p,
+          tau_v = tau_v,
+          sigma = sigma,
+          area = out_est_df[i, ],
+          area_error = out_err_df[i, ]))
+    }
+    
+    rv$hrEst <- rbind(rv$hrEst, out_est_df)
+    rv$hrErr <- rbind(rv$hrErr, out_err_df)
+    
+    rv$hr_completed <- TRUE
+  }
+  
+  if ("ctsd" %in% rv$set_target) {
+    
+    rv$sd_completed <- TRUE
+    ctsdList <- out_replicate$data$ctsdList
+    
+    truthList <- get_true_speed(
+      data = simList,
+      seed = seedList,
+      
+      tau_p = rv$tau_p,
+      tau_v = rv$tau_v,
+      sigma = rv$sigma,
+      
+      ind_var = rv$add_ind_var,
+      fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+      
+      grouped = rv$grouped,
+      groups = if (rv$grouped) groups[[2]] else NULL)
+    
+    out_est_df <- data.frame(seed = numeric(0),
+                             lci = numeric(0),
+                             est = numeric(0),
+                             uci = numeric(0),
+                             unit = character(0))
+    out_err_df <- data.frame(seed = numeric(0),
+                             lci = numeric(0),
+                             est = numeric(0),
+                             uci = numeric(0))
+    
+    for (i in seq_along(ctsdList)) {
+      
+      sdList <- ctsdList[[i]]
+      
+      if (is.null(sdList)) {
+        out_est_df <- out_est_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA, unit = NA)
+        out_err_df <- out_err_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA)
+        next
+      }
+      
+      if ("CI" %in% names(sdList)) sdList <- sdList$CI
+      to_check <- sdList[1, "est"]
+      
+      if (is.infinite(to_check)) {
+        out_est_df <- out_est_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA, unit = NA)
+        out_err_df <- out_err_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA)
+        next
+      }
+      
+      tmpname <- rownames(sdList)
+      tmpunit <- extract_units(tmpname[grep("speed", tmpname)])
+      
+      group <- 1
+      if (rv$grouped) {
+        nm <- names(simList)[[i]]
+        group <- ifelse(nm %in% groups[[2]]$A, "A", "B")
+      }
+      
+      seed <- as.character(seedList[[i]])
+      sd_truth <- truthList[[seed]]
+      
+      out_est_df <- out_est_df %>%
+        dplyr::add_row(seed = seedList[[i]],
+                       lci = sdList[1],
+                       est = sdList[2],
+                       uci = sdList[3],
+                       unit = tmpunit)
+      
+      out_err_df <- out_err_df %>%
+        dplyr::add_row(
+          seed = seedList[[i]],
+          lci = ((sdList[[1]] %#% tmpunit) - sd_truth) / sd_truth,
+          est = ((sdList[[2]] %#% tmpunit) - sd_truth) / sd_truth,
+          uci = ((sdList[[3]] %#% tmpunit) - sd_truth) / sd_truth)
+    }
+    
+    rv$speedEst <- rbind(rv$speedEst, out_est_df)
+    rv$speedErr <- rbind(rv$speedErr, out_err_df)
+    
+    out_dist_est_df <- data.frame(seed = numeric(0),
+                                  lci = numeric(0),
+                                  est = numeric(0),
+                                  uci = numeric(0),
+                                  unit = character(0))
+    out_dist_err_df <- data.frame(seed = numeric(0),
+                                  lci = numeric(0),
+                                  est = numeric(0),
+                                  uci = numeric(0))
+    
+    dur_days <- "days" %#% rv$dur$value %#% rv$dur$unit
+    unit_new <- "kilometers/day"
+    
+    pathList <- list()
+    for (i in seq_along(ctsdList)) {
+      
+      sdList <- ctsdList[[i]]
+      pathList[[i]] <- estimate_trajectory(
+        data = simList[i],
+        fit = simfitList[i],
+        groups = if (rv$grouped) groups[[2]] else NULL,
+        dur = rv$dur,
+        tau_v = rv$tau_v,
+        seed = seedList[i])[[1]]
+      
+      if (is.null(sdList) ||
+          is.null(pathList[[i]])) {
+        out_dist_est_df <- out_dist_est_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA, unit = NA)
+        out_dist_err_df <- out_dist_err_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA)
+        next
+      }
+      
+      truth <- sum(pathList[[i]]$dist, na.rm = TRUE)
+      unit_old <- rv$speedEst$unit[i]
+      
+      if (!is.na(rv$speedEst$est[i])) {
+        
+        dist_lci <- (unit_new %#% rv$speedEst$lci[i]
+                     %#% unit_old) * dur_days
+        dist_est <- (unit_new %#% rv$speedEst$est[i]
+                     %#% unit_old) * dur_days
+        dist_uci <- (unit_new %#% rv$speedEst$uci[i]
+                     %#% unit_old) * dur_days
+        
+        dist_unit <- "kilometers"
+        truth <- dist_unit %#% truth
+        
+        out_dist_est_df <- out_dist_est_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = dist_lci,
+                         est = dist_est,
+                         uci = dist_uci,
+                         unit = dist_unit)
+        
+        out_dist_err_df <- out_dist_err_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = (dist_lci - truth) / truth,
+                         est = (dist_est - truth) / truth,
+                         uci = (dist_uci - truth) / truth)
+      } else {
+        out_dist_est_df <- out_dist_est_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA, unit = NA)
+        out_dist_err_df <- out_dist_err_df %>%
+          dplyr::add_row(seed = seedList[[i]],
+                         lci = NA, est = NA, uci = NA)
+      }
+    }
+    
+    rv$distEst <- rbind(rv$distEst, out_dist_est_df)
+    rv$distErr <- rbind(rv$distErr, out_dist_err_df)
+    
+    for (i in seq_along(ctsdList)) {
+      
+      group <- 1
+      if (rv$grouped) {
+        group <- ifelse(
+          names(simList)[[i]] %in% groups[[2]]$A,
+          "A", "B")
+      }
+      
+      if (rv$add_ind_var) {
+        tau_p <- extract_pars(
+          emulate_seeded(rv$meanfitList[[group]],
+                         seedList[[i]]),
+          "position")[[1]]
+        tau_v <- extract_pars(
+          emulate_seeded(rv$meanfitList[[group]],
+                         seedList[[i]]),
+          "velocity")[[1]]
+        sigma <- extract_pars(
+          emulate_seeded(rv$meanfitList[[group]],
+                         seedList[[i]]),
+          "sigma")[[1]]
+      } else {
+        tau_p <- rv$tau_p[[group]]
+        tau_v <- rv$tau_v[[group]]
+        sigma <- rv$sigma[[group]]
+      }
+      
+      rv$sd$tbl <- rbind(
+        rv$sd$tbl,
+        .build_tbl(
+          target = "ctsd",
+          group = if (rv$grouped) group else NA,
+          data = simList[[i]],
+          seed = names(simList)[[i]],
+          obj = ctsdList[[i]],
+          tau_p = tau_p,
+          tau_v = tau_v,
+          sigma = sigma,
+          speed = rv$speedEst[i, ],
+          speed_error = rv$speedErr[i, ],
+          distance = rv$distEst[i, ],
+          distance_error = rv$distErr[i, ]))
+    }
+    
+    rv$sd_completed <- TRUE
+  }
+  
+  rv$dev$tbl <- dplyr::distinct(rv$dev$tbl)
+  if ("hr" %in% rv$set_target)
+    rv$hr$tbl <- dplyr::distinct(rv$hr$tbl)
+  if ("ctsd" %in% rv$set_target)
+    rv$sd$tbl <- dplyr::distinct(rv$sd$tbl)
+  
+  return(out_replicate$summary)
+  
+}
+
+

@@ -221,6 +221,15 @@ fitting_models <- function(obj,
   n_obj <- length(obj)
   has_error <- any(grepl("error", names(obj[[1]])))
   
+  if (.check_sampling) {
+    stopifnot(!is.null(.dur), !is.null(.dti),
+              !is.null(.tau_p), !is.null(.tau_v))
+    
+    N <- character()
+    if ("hr" %in% set_target) N <- c(N, "area")
+    if ("ctsd" %in% set_target) N <- c(N, "speed")
+  }
+  
   if (has_error && is.null(.error_m)) 
     stop("No location error provided!")
   

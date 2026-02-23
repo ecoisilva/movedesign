@@ -374,6 +374,7 @@ run_meta_resamples <- function(rv,
     
     if (subpop) {
       input_groups <- datList[["groups"]][[target]]
+      
       nms_group_A <- names(input[["All"]][rv$groups[[2]][["A"]]])
       nms_group_B <- names(input[["All"]][rv$groups[[2]][["B"]]])
       input <- c(input, input_groups)
