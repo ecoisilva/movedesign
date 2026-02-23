@@ -254,12 +254,7 @@ mod_tab_meta_ui <- function(id) {
                 reactable::reactableOutput(
                   ns("metaTable_m_optimal")),
                 p(style = "margin-top: 30px;"),
-                uiOutput(ns("metaUI_legend_dev_failed")),
-                div(class = "sims-irs",
-                    shinyWidgets::sliderTextInput(
-                      inputId = ns("meta_nresample"),
-                      label = "Show resamples up to:",
-                      choices = seq(1, 100, by = 1)))
+                uiOutput(ns("metaUI_legend_dev_failed"))
                 ),
             
             footer = uiOutput(ns("metaUI_summary_footer"))
@@ -296,11 +291,11 @@ mod_tab_meta_server <- function(id, rv) {
     }) %>% bindEvent(input$run_meta)
     
     observe({
-      rv$run_meta_resample <- input$run_meta_resample
-    }) %>% bindEvent(input$run_meta_resample)
+      rv$run_meta_replicate <- input$run_meta_replicate
+    }) %>% bindEvent(input$run_meta_replicate)
     
     to_run_meta <- reactive({
-      list(input$run_meta, input$run_meta_resample)
+      list(input$run_meta, input$run_meta_replicate)
     })
     
     ## Switch if both research targets are available: ---------------------
@@ -329,7 +324,7 @@ mod_tab_meta_server <- function(id, rv) {
     n_resamples_debounced <- reactive({
       req(!is.null(input$n_resamples))
       input$n_resamples
-    }) %>% 
+    }) %>%
       debounce(250)
     
     observe({
@@ -416,6 +411,22 @@ mod_tab_meta_server <- function(id, rv) {
     # 
     # }) %>% # end of observe,
     #   bindEvent(rv$simList)
+
+    ## Update number of replicates: ---------------------------------------
+    
+    n_replicates_debounced <- reactive({
+      req(!is.null(input$n_replicates))
+      input$n_replicates
+    }) %>%
+      debounce(250)
+    
+    observe({
+      req(rv$active_tab == 'meta')
+      req(!is.null(rv$grouped), rv$set_analysis)
+      rv$n_replicates <- n_replicates_debounced()
+      
+    }) %>% # end of observe,
+      bindEvent(n_replicates_debounced())
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at the start: ----------------------------------------
@@ -568,7 +579,7 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) # end of renderText, "txt_sd_ratio"
     
-    ## Show/hide summary table: -------------------------------------------
+    ## Show/update resampled outputs: -------------------------------------
     
     observe({
       req(rv$active_tab == 'meta')
@@ -578,8 +589,6 @@ mod_tab_meta_server <- function(id, rv) {
       else shinyjs::show(id = "meta_nresample")
       
     }) # end of observe
-    
-    ## Update meta_nresample based on outputs: --------------------------
     
     observe({
       req(rv$active_tab == 'meta',
@@ -606,6 +615,43 @@ mod_tab_meta_server <- function(id, rv) {
     observe({
       rv$meta_nresample <- input$meta_nresample
     }) %>% bindEvent(input$meta_nresample)
+    
+    ## Show/update replicate outputs: -------------------------------------
+    
+    observe({
+      req(rv$active_tab == 'meta')
+      
+      if (is.null(rv$meta_tbl_replicates))
+        shinyjs::hide(id = "meta_nreplicate")
+      else shinyjs::show(id = "meta_nreplicate")
+      
+    }) # end of observe
+    
+    observe({
+      req(rv$active_tab == 'meta',
+          rv$meta_tbl_replicates)
+      
+      rv$meta_nreplicate <- max(rv$meta_tbl_replicates$replicate)
+      
+      if (rv$meta_nreplicate <= 1) {
+        shinyjs::hide(id = "meta_nreplicate")
+      } else {
+        shinyjs::show(id = "meta_nreplicate")
+        div(class = "sims-irs",
+            shinyWidgets::updateSliderTextInput(
+              session = session,
+              inputId = "meta_nreplicate",
+              label = "Show replicates up to:",
+              choices = seq(1, rv$meta_nreplicate, by = 1),
+              selected = rv$meta_nreplicate))
+      }
+      
+    }) %>% # end of observer,
+      bindEvent(rv$meta_tbl_replicates)
+    
+    observe({
+      rv$meta_nreplicate <- input$meta_nreplicate
+    }) %>% bindEvent(input$meta_nreplicate)
     
     ## Add notes explaining table outputs: --------------------------------
     
@@ -801,28 +847,29 @@ mod_tab_meta_server <- function(id, rv) {
             cellArgs = list(style = "align: center;"),
             
             shiny::actionButton(
-              inputId = ns("metaHelp_resample"),
+              inputId = ns("metaHelp_replicate"),
               label = NULL,
               width = "100%",
               icon = icon("circle-question"),
               class = "btn-warning"),
             br(),
             shiny::actionButton(
-              inputId = ns("run_meta_resample"),
-              label = span("Resample"),
+              inputId = ns("run_meta_replicate"),
+              label = span("Replicate"),
               icon =  icon("wand-sparkles"),
               width = "100%",
               class = "btn-sims"),
             br(),
             shinyWidgets::autonumericInput(
-              inputId = ns("n_resamples"),
+              inputId = ns("n_replicates"),
               label = NULL,
-              currencySymbol = " resamples(s)",
+              currencySymbol = " replicate(s)",
               currencySymbolPlacement = "s",
               decimalPlaces = 0,
-              minimumValue = 1,
+              minimumValue = 5,
               maximumValue = 1000,
-              value = 5, wheelStep = 5)
+              value = 5,
+              wheelStep = 1)
           )))
       }
       
@@ -1122,7 +1169,7 @@ mod_tab_meta_server <- function(id, rv) {
       bindEvent(input$run_meta)
     
     ## Run meta-analyses (for each set of simulations): -------------------
-
+    
     get_meta_outputs <- reactive({
       
       start <- Sys.time()
@@ -1225,7 +1272,6 @@ mod_tab_meta_server <- function(id, rv) {
         rv$simList, 
         rv$simfitList))
     
-    
     observe({
       req(rv$active_tab == 'meta')
       req(rv$which_question,
@@ -1245,6 +1291,7 @@ mod_tab_meta_server <- function(id, rv) {
     }) %>% # end of observe,
       bindEvent(input$run_meta)
     
+    ### Resample: ---------------------------------------------------------
     
     get_meta_resampled_outputs <- reactive({
       
@@ -1348,12 +1395,685 @@ mod_tab_meta_server <- function(id, rv) {
       rv$meta_tbl_resample <<- dplyr::bind_rows(
         rv$meta_tbl_resample, dplyr::distinct(tmp))
       
-      # rv$meta_tbl_resample <- NULL
-      # tmp <- get_meta_resampled_outputs()
-      # rv$meta_tbl_resample <- dplyr::distinct(tmp)
-      
     }) %>% # end of observe,
       bindEvent(input$run_meta_resample)
+    
+    ### Replicate: --------------------------------------------------------
+    
+    get_meta_replicated_outputs <- reactive({
+      
+      n <- type <- group <- NULL
+      est <- error_sd <- speedEst <- NULL
+      
+      start <- Sys.time()
+      shinybusy::show_modal_spinner(
+        spin = "fading-circle",
+        color = "var(--sea)",
+        text = tagList(span(
+          style = "font-size: 18px;",
+          span("Replicating population sample size \n",
+               "for", style = "color: #797979;"),
+          wrap_none(span("meta-analyses", class = "cl-sea"),
+                    span("...", style = "color: #797979;")))))
+      
+      msg_log(
+        style = "warning",
+        message = paste0("Replication ",
+                         msg_warning("in progress"), "..."))
+      
+      if ("Home range" %in% rv$which_question) {
+        req(rv$akdeList)
+        req(length(rv$akdeList) > 0)
+        req(length(rv$simList) == length(rv$akdeList))
+      }
+      
+      if ("Speed & distance" %in% rv$which_question) {
+        req(rv$ctsdList)
+        req(length(rv$ctsdList) > 0)
+        req(length(rv$simList) == length(rv$ctsdList))
+      }
+      
+      req(rv$n_replicates > 0)
+      
+      groups <- NULL
+      if (rv$grouped) {
+        groups <- rv$groups
+        groups[[2]] <- list(A = c(), B = c())
+      }
+      
+      design <- movedesign_input(list(
+        data = rv$datList,
+        data_type = rv$data_type,
+        get_species = rv$species,
+        n_individuals = rv$n_sims,
+        dur = rv$dur,
+        dti = rv$dti,
+        add_ind_var = rv$add_ind_var,
+        grouped = rv$grouped,
+        groups = groups,
+        set_target = rv$set_target,
+        which_meta = rv$which_meta,
+        which_m = rv$which_m,
+        parallel = rv$parallel,
+        fitList = rv$fitList,
+        meanfitList = rv$meanfitList,
+        sigma = rv$sigma,
+        tau_p = rv$tau_p,
+        tau_v = rv$tau_v,
+        mu = rv$mu,
+        seed = rv$seedInit))
+      
+      out_replicate <- tryCatch({
+        md_replicate(design,
+                     n_replicates = rv$n_replicates, # - 1,
+                     parallel = rv$parallel,
+                     error_threshold = rv$error_threshold,
+                     .override = TRUE)
+      }, error = function(e) { e })
+
+      if (inherits(out_replicate, "error")) {
+
+        msg_log(
+          style = "danger",
+          message = paste0(
+            "Replication ", msg_danger("failed"), "."))
+        print(out_replicate)
+        return_obj <- NULL
+        
+      } else {
+        
+        data <- out_replicate$data
+        if (rv$grouped) {
+          groups <- out_replicate$data$groups
+        }
+        
+        rv$metaEst <- NULL
+        rv$metaErr <- NULL
+        rv$metaEst_groups <- NULL
+        rv$metaErr_groups <- NULL
+        
+        tmpsumm <- out_replicate$summary %>%
+          dplyr::select(
+            "type", "m", "group",
+            "error", "error_lci", "error_uci") %>%
+          dplyr::distinct() %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::filter(m == max(.data$m)) %>%
+          dplyr::summarize(
+            n = dplyr::n(),
+            error_sd = stats::sd(.data$error, na.rm = TRUE),
+            est = mean(.data$error, na.rm = TRUE),
+            lci = est - stats::qt(
+              0.975, df = n - 1) * error_sd / sqrt(n),
+            uci = est + stats::qt(
+              0.975, df = n - 1) * error_sd / sqrt(n),
+            .groups = "drop") %>%
+          dplyr::ungroup()
+        
+        rv$metaErr <- tmpsumm %>%
+          dplyr::filter(group == "All") %>%
+          dplyr::select("type", "group", "lci", "est", "uci")
+        
+        if (rv$grouped) {
+          rv$metaErr_groups <- tmpsumm %>%
+            dplyr::filter(group != "All") %>%
+            dplyr::select("type", "group", "lci", "est", "uci")
+        }
+        
+        rv$seedList_replicates <<- c(
+          rv$seedList_replicates, out_replicate$data$seedList)
+        
+        seedList <- out_replicate$data$seedList
+        simList <- out_replicate$data$simList
+        simfitList <- out_replicate$data$simfitList
+        
+        rv$dev$tbl <- NULL
+        rv$hr$tbl <- NULL
+        rv$sd$tbl <- NULL
+        
+        rv$hrEst <- NULL
+        rv$hrErr <- NULL
+        
+        lapply(seq_along(simfitList), function(x) {
+          
+          group <- 1
+          if (rv$grouped) {
+            
+            get_group <- function(seed, groups) {
+              if (as.character(seed) %in% groups[["A"]]) {
+                return("A") } else { return("B") }
+            }
+            
+            group <- get_group(seedList[[x]], groups[[2]])
+          }
+          
+          if (rv$add_ind_var) {
+            tau_p <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]],
+                             seedList[[x]]),
+              "position")[[1]]
+            tau_v <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]],
+                             seedList[[x]]),
+              "velocity")[[1]]
+            sigma <- extract_pars(
+              emulate_seeded(rv$meanfitList[[group]],
+                             seedList[[x]]),
+              "sigma")[[1]]
+          } else {
+            tau_p <- rv$tau_p[[group]]
+            tau_v <- rv$tau_v[[group]]
+            sigma <- rv$sigma[[group]]
+          }
+          
+          rv$dev$tbl <- rbind(
+            rv$dev$tbl,
+            .build_tbl(
+              device = rv$device_type,
+              group = if (rv$grouped) group else NA,
+              data = simList[[x]],
+              seed = seedList[[x]],
+              obj = simfitList[[x]],
+              tau_p = tau_p,
+              tau_v = tau_v,
+              sigma = sigma))
+        })
+        
+        rv$report_dev_yn <- TRUE
+        
+        if ("hr" %in% rv$set_target) {
+          
+          akdeList <- out_replicate$data$akdeList
+          truthList <- get_true_hr(
+            data = simList,
+            seed = seedList,
+            sigma = rv$sigma,
+            
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) groups[[2]] else NULL)
+          
+          out_est_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0),
+                                   est = numeric(0),
+                                   uci = numeric(0),
+                                   unit = character(0))
+          out_err_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0),
+                                   est = numeric(0),
+                                   uci = numeric(0))
+          
+          for (i in seq_along(akdeList)) {
+            
+            group <- 1
+            if (rv$grouped) {
+              nm <- names(simList)[[i]]
+              group <- ifelse(nm %in% groups[[2]]$A, "A", "B")
+            }
+            
+            if (rv$add_ind_var) {
+              tau_p <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               seedList[[i]]),
+                "position")[[1]]
+              tau_v <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               seedList[[i]]),
+                "velocity")[[1]]
+              sigma <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               seedList[[i]]),
+                "sigma")[[1]]
+            } else {
+              tau_p <- rv$tau_p[[group]]
+              tau_v <- rv$tau_v[[group]]
+              sigma <- rv$sigma[[group]]
+            }
+            
+            seed <- as.character(seedList[[i]])
+            hr_truth <- truthList[[seed]]$area
+            N1 <- extract_dof(simfitList[[i]], "area")[[1]]
+            
+            tmpsum <- tryCatch(
+              summary(akdeList[[i]]),
+              error = function(e) e)
+            
+            if (is.null(akdeList[[i]]) ||
+                is.null(tmpsum) || length(tmpsum) == 0 ||
+                any(tmpsum[[1]] == 0) ||
+                inherits(tmpsum, "error") || N1 < 0.001) {
+              
+              out_est_df <- out_est_df %>%
+                dplyr::add_row(
+                  seed = seedList[[i]],
+                  lci = NA, est = NA, uci = NA, unit = NA)
+              out_err_df <- out_err_df %>%
+                dplyr::add_row(
+                  seed = seedList[[i]],
+                  lci = NA, est = NA, uci = NA)
+              
+              rv$hr$tbl <- rbind(
+                rv$hr$tbl,
+                .build_tbl(
+                  target = "hr",
+                  group = if (rv$grouped) group else NA,
+                  data = simList[[i]],
+                  seed = names(simList)[[i]],
+                  obj = akdeList[[i]],
+                  tau_p = tau_p,
+                  tau_v = tau_v,
+                  sigma = sigma,
+                  area = out_est_df[i, ],
+                  area_error = out_err_df[i, ]))
+              next
+            }
+            
+            tmpname <- rownames(summary(akdeList[[i]])$CI)
+            tmpunit <- extract_units(tmpname[grep('^area', tmpname)])
+            
+            out_est_df <- out_est_df %>%
+              dplyr::add_row(
+                seed = seedList[[i]],
+                lci = tmpsum$CI[1],
+                est = tmpsum$CI[2],
+                uci = tmpsum$CI[3],
+                unit = tmpunit)
+            out_err_df <- out_err_df %>%
+              dplyr::add_row(
+                seed = seedList[[i]],
+                lci = ((tmpsum$CI[1] %#% tmpunit) - hr_truth) / hr_truth,
+                est = ((tmpsum$CI[2] %#% tmpunit) - hr_truth) / hr_truth,
+                uci = ((tmpsum$CI[3] %#% tmpunit) - hr_truth) / hr_truth)
+            
+            rv$hr$tbl <- rbind(
+              rv$hr$tbl,
+              .build_tbl(
+                target = "hr",
+                group = if (rv$grouped) group else NA,
+                data = simList[[i]],
+                seed = seedList[[i]],
+                obj = akdeList[[i]],
+                tau_p = tau_p,
+                tau_v = tau_v,
+                sigma = sigma,
+                area = out_est_df[i, ],
+                area_error = out_err_df[i, ]))
+          }
+          
+          rv$hrEst <<- rbind(rv$hrEst, out_est_df)
+          rv$hrErr <<- rbind(rv$hrErr, out_err_df)
+          
+          rv$hr_completed <- TRUE
+        }
+        
+        if ("ctsd" %in% rv$set_target) {
+          
+          rv$sd_completed <- TRUE
+          ctsdList <- out_replicate$data$ctsdList
+          
+          truthList <- get_true_speed(
+            data = simList,
+            seed = seedList,
+            
+            tau_p = rv$tau_p,
+            tau_v = rv$tau_v,
+            sigma = rv$sigma,
+            
+            ind_var = rv$add_ind_var,
+            fit = if (rv$add_ind_var) rv$meanfitList else NULL,
+            
+            grouped = rv$grouped,
+            groups = if (rv$grouped) groups[[2]] else NULL)
+          
+          out_est_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0),
+                                   est = numeric(0),
+                                   uci = numeric(0),
+                                   unit = character(0))
+          out_err_df <- data.frame(seed = numeric(0),
+                                   lci = numeric(0),
+                                   est = numeric(0),
+                                   uci = numeric(0))
+          
+          for (i in seq_along(ctsdList)) {
+            
+            sdList <- ctsdList[[i]]
+            
+            # If speed() returns NULL (multiple simulation)
+            if (is.null(sdList)) {
+              out_est_df <- out_est_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_err_df <- out_err_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+              next
+            }
+            
+            if ("CI" %in% names(sdList))
+              sdList <- sdList$CI
+            
+            # If speed() returns Inf
+            to_check <- sdList[1, "est"]
+            
+            if (is.infinite(to_check)) {
+              out_est_df <- out_est_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_err_df <- out_err_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+              next
+            }
+            
+            tmpname <- rownames(sdList)
+            tmpunit <- extract_units(tmpname[grep("speed", tmpname)])
+            
+            group <- 1
+            if (rv$grouped) {
+              nm <- names(simList)[[i]]
+              group <- ifelse(nm %in% groups[[2]]$A, "A", "B")
+            }
+            
+            seed <- as.character(seedList[[i]])
+            sd_truth <- truthList[[seed]]
+            
+            out_est_df <- out_est_df %>%
+              dplyr::add_row(seed = seedList[[i]],
+                             lci = sdList[1],
+                             est = sdList[2],
+                             uci = sdList[3],
+                             unit = tmpunit)
+            
+            out_err_df <- out_err_df %>%
+              dplyr::add_row(
+                seed = seedList[[i]],
+                lci = ((sdList[[1]] %#% tmpunit) - sd_truth) / sd_truth,
+                est = ((sdList[[2]] %#% tmpunit) - sd_truth) / sd_truth,
+                uci = ((sdList[[3]] %#% tmpunit) - sd_truth) / sd_truth)
+          }
+          
+          rv$speedEst <- out_est_df
+          rv$speedErr <- out_err_df
+          
+          out_dist_est_df <- data.frame(seed = numeric(0),
+                                        lci = numeric(0),
+                                        est = numeric(0),
+                                        uci = numeric(0),
+                                        unit = character(0))
+          out_dist_err_df <- data.frame(seed = numeric(0),
+                                        lci = numeric(0),
+                                        est = numeric(0),
+                                        uci = numeric(0))
+          
+          dur_days <- "days" %#% rv$dur$value %#% rv$dur$unit
+          unit_new <- "kilometers/day"
+          
+          pathList <- list()
+          for (i in seq_along(ctsdList)) {
+            
+            sdList <- ctsdList[[i]]
+            pathList[[i]] <- estimate_trajectory(
+              data = simList[i],
+              fit = simfitList[i],
+              groups = if (rv$grouped) groups[[2]] else NULL,
+              dur = rv$dur,
+              tau_v = rv$tau_v,
+              seed = seedList[i])[[1]]
+            
+            if (is.null(sdList) ||
+                is.null(pathList[[i]])) {
+              out_dist_est_df <- out_dist_est_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_dist_err_df <- out_dist_err_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+              next
+            }
+            
+            truth <- sum(pathList[[i]]$dist, na.rm = TRUE)
+            unit_old <- rv$speedEst$unit[i]
+            
+            if (!is.na(rv$speedEst$est[i])) {
+              
+              dist_lci <- (unit_new %#% rv$speedEst$lci[i]
+                           %#% unit_old) * dur_days
+              dist_est <- (unit_new %#% rv$speedEst$est[i]
+                           %#% unit_old) * dur_days
+              dist_uci <- (unit_new %#% rv$speedEst$uci[i]
+                           %#% unit_old) * dur_days
+              
+              dist_unit <- "kilometers"
+              truth <- dist_unit %#% truth
+              
+              out_dist_est_df <- out_dist_est_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = dist_lci,
+                               est = dist_est,
+                               uci = dist_uci,
+                               unit = dist_unit)
+              
+              out_dist_err_df <- out_dist_err_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = (dist_lci - truth) / truth,
+                               est = (dist_est - truth) / truth,
+                               uci = (dist_uci - truth) / truth)
+            } else {
+              out_dist_est_df <- out_dist_est_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA, unit = NA)
+              out_dist_err_df <- out_dist_err_df %>%
+                dplyr::add_row(seed = seedList[[i]],
+                               lci = NA, est = NA, uci = NA)
+            }
+          }
+          
+          rv$distEst <- out_dist_est_df
+          rv$distErr <- out_dist_err_df
+          
+          rv$sd$tbl <- NULL
+          for (i in seq_along(ctsdList)) {
+            
+            group <- 1
+            if (rv$grouped) {
+              group <- ifelse(
+                names(simList)[[i]] %in% groups[[2]]$A,
+                "A", "B")
+            }
+            
+            if (rv$add_ind_var) {
+              tau_p <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               seedList[[i]]),
+                "position")[[1]]
+              tau_v <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               seedList[[i]]),
+                "velocity")[[1]]
+              sigma <- extract_pars(
+                emulate_seeded(rv$meanfitList[[group]],
+                               seedList[[i]]),
+                "sigma")[[1]]
+            } else {
+              tau_p <- rv$tau_p[[group]]
+              tau_v <- rv$tau_v[[group]]
+              sigma <- rv$sigma[[group]]
+            }
+            
+            rv$sd$tbl <- rbind(
+              rv$sd$tbl,
+              .build_tbl(
+                target = "ctsd",
+                group = if (rv$grouped) group else NA,
+                data = simList[[i]],
+                seed = names(simList)[[i]],
+                obj = ctsdList[[i]],
+                tau_p = tau_p,
+                tau_v = tau_v,
+                sigma = sigma,
+                speed = rv$speedEst[i, ],
+                speed_error = rv$speedErr[i, ],
+                distance = rv$distEst[i, ],
+                distance_error = rv$distErr[i, ]))
+          }
+          
+          rv$sd_completed <- TRUE
+        }
+        
+        rv$dev$tbl <- dplyr::distinct(rv$dev$tbl)
+        if ("hr" %in% rv$set_target)
+          rv$hr$tbl <- dplyr::distinct(rv$hr$tbl)
+        if ("ctsd" %in% rv$set_target)
+          rv$sd$tbl <- dplyr::distinct(rv$sd$tbl)
+        
+        
+        shinyjs::hide(id = "metaBox_outputs")
+        
+        msg_log(
+          style = "success",
+          message = paste0("Replication ",
+                           msg_success("completed"), "."),
+          run_time = difftime(Sys.time(), start, units = "sec"))
+        
+        shinyFeedback::showToast(
+          type = "success",
+          message = paste("Resampling completed!"),
+          .options = list(
+            timeOut = 3000,
+            extendedTimeOut = 3500,
+            progressBar = FALSE,
+            closeButton = TRUE,
+            preventDuplicates = TRUE,
+            positionClass = "toast-bottom-right"))
+        
+        return_obj <- out_replicate$summary
+      }
+      
+      shinybusy::remove_modal_spinner()
+      return(return_obj)
+      
+    }) %>% # end of reactive, "get_meta_replicated_outputs",
+      bindCache(c(
+        rv$which_question, 
+        rv$simList, 
+        rv$simfitList,
+        rv$n_replicates))
+    
+    observe({
+      req(rv$active_tab == 'meta')
+      req(rv$which_question,
+          !is.null(rv$grouped),
+          rv$set_analysis,
+          rv$meta_tbl,
+          rv$n_replicates)
+      
+      if (!is.null(rv$meta_tbl_replicates)) {
+        
+        max_n_replicates <- max(rv$meta_tbl_replicates$replicate)
+        n_replicates <- rv$n_replicates - max_n_replicates
+        req(n_replicates > 0)
+
+        groups <- NULL
+        if (rv$grouped) groups <- rv$groups
+        
+        design <- movedesign_input(list(
+          data = rv$datList,
+          data_type = rv$data_type,
+          get_species = rv$species,
+          n_individuals = rv$n_sims,
+          dur = rv$dur,
+          dti = rv$dti,
+          add_ind_var = rv$add_ind_var,
+          grouped = rv$grouped,
+          groups = groups,
+          set_target = rv$set_target,
+          which_meta = rv$which_meta,
+          which_m = rv$which_m,
+          parallel = rv$parallel,
+          fitList = rv$fitList,
+          meanfitList = rv$meanfitList,
+          sigma = rv$sigma,
+          tau_p = rv$tau_p,
+          tau_v = rv$tau_v,
+          mu = rv$mu,
+          seed = rv$seedInit))
+        
+        start <- Sys.time()
+        shinybusy::show_modal_spinner(
+          spin = "fading-circle",
+          color = "var(--sea)",
+          text = tagList(span(
+            style = "font-size: 18px;",
+            span("Replicating population sample size \n",
+                 "for", style = "color: #797979;"),
+            wrap_none(span("meta-analyses", class = "cl-sea"),
+                      span("...", style = "color: #797979;")))))
+        
+        msg_log(
+          style = "warning",
+          message = paste0("Replication ",
+                           msg_warning("in progress"), "..."))
+ 
+        out_replicate <- tryCatch({
+          md_replicate(design,
+                       n_replicates = n_replicates,
+                       parallel = rv$parallel,
+                       error_threshold = rv$error_threshold,
+                       .override = TRUE)
+          
+        }, error = function(e) { e })
+        
+        if (inherits(out_replicate, "error")) {
+          
+          msg_log(
+            style = "danger",
+            message = paste0(
+              "Replication ", msg_danger("failed"), "."))
+          print(out_replicate)
+          return_obj <- NULL
+          
+        } else {
+          
+          tmp <- .process_replicates(
+            rv, out_replicate = out_replicate,
+            start = Sys.time())
+          
+          tmp <- dplyr::mutate(
+            tmp, replicate = replicate + max_n_replicates)
+          rv$n_replicates <- max(tmp$replicate)
+          
+          msg_log(
+            style = "success",
+            message = paste0("Replication ",
+                             msg_success("completed"), "."),
+            run_time = difftime(Sys.time(), start, units = "sec"))
+          
+          shinyFeedback::showToast(
+            type = "success",
+            message = paste("Resampling completed!"),
+            .options = list(
+              timeOut = 3000,
+              extendedTimeOut = 3500,
+              progressBar = FALSE,
+              closeButton = TRUE,
+              preventDuplicates = TRUE,
+              positionClass = "toast-bottom-right"))
+        }
+        
+        shinybusy::remove_modal_spinner()
+        
+      } else {
+        tmp <- get_meta_replicated_outputs()
+      }
+      
+      rv$meta_tbl_replicates <<- dplyr::bind_rows(
+        rv$meta_tbl_replicates, dplyr::distinct(tmp))
+      
+    }) %>% # end of observe,
+      bindEvent(input$run_meta_replicate)
     
     # PLOTS ---------------------------------------------------------------
     ## Rendering meta plot at the individual-level: -----------------------
@@ -1988,7 +2708,7 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) %>% # end of renderGirafe, "metaPlot_m_ratio_optimal"
       bindEvent(list(input$run_meta,
-                     input$run_meta_resample,
+                     input$run_meta_replicate,
                      rv$set_analysis))
     
     ## Rendering error plot of optimal search outputs (LOOCV): -----------
@@ -2086,7 +2806,7 @@ mod_tab_meta_server <- function(id, rv) {
       
     }) %>% # end of renderGirafe, "metaPlot_m_loocv"
       bindEvent(list(input$run_meta,
-                     input$run_meta_resample,
+                     input$run_meta_replicate,
                      rv$set_analysis))
     
     # TABLES --------------------------------------------------------------
@@ -2296,13 +3016,19 @@ mod_tab_meta_server <- function(id, rv) {
     #   
     # }) # end of renderReactable, "metaTable_m"
     
-    ## Rendering meta-analyses outputs (combinations): --------------------
+    ## Rendering meta-analyses outputs: -----------------------------------
     
     output$metaTable_m_optimal <- reactable::renderReactable({
       req(rv$which_question, rv$meta_tbl, rv$set_analysis)
       
       n_digits <- 1
-      dt_meta <- rv$meta_tbl
+      
+      if (is.null(rv$meta_tbl_replicates)) {
+        dt_meta <- rv$meta_tbl
+      } else {
+        req(rv$meta_tbl_replicates)
+        dt_meta <- rv$meta_tbl_replicates
+      }
       
       if (rv$grouped) {
         dt_meta <- dt_meta %>%
@@ -2390,6 +3116,7 @@ mod_tab_meta_server <- function(id, rv) {
                      rv$ctsdList,
                      rv$akdeList,
                      rv$meta_tbl,
+                     rv$meta_tbl_replicates,
                      rv$set_analysis))
     
     # BLOCKS --------------------------------------------------------------
@@ -2399,9 +3126,9 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$which_m, rv$metaErr,
           "Home range" %in% rv$which_question)
       
-        mod_blocks_server(
-          id = "metaBlock_hr",
-          rv = rv, type = "hr", name = "metaErr")
+      mod_blocks_server(
+        id = "metaBlock_hr",
+        rv = rv, type = "hr", name = "metaErr")
       
     }) # end of observe
     
@@ -2465,7 +3192,7 @@ mod_tab_meta_server <- function(id, rv) {
     }) # end of renderUI, "metaBlock_speed_ratio"
     
     # HELP MODALS ---------------------------------------------------------
-    ## Help modal (resample): ---------------------------------------------
+    ## Help modal: --------------------------------------------------------
     
     observe({
 

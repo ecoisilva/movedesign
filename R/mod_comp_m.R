@@ -11,7 +11,7 @@ mod_comp_m_ui <- function(id) {
   ns <- NS(id)
   tagList(
     
-    # Number of simulations: --------------------------------------------
+    # Number of simulations: ----------------------------------------------
     
     shinydashboardPlus::box(
       title = span("Simulations", class = "ttl-box_solid"),
@@ -63,14 +63,7 @@ mod_comp_m_ui <- function(id) {
             )),
           br(),
           
-          shinyWidgets::numericInputIcon(
-            inputId = ns("error_threshold"),
-            label = "Error threshold:",
-            min = 1,
-            max = 50,
-            value = 5,
-            step = 1,
-            icon = list(NULL, icon("percent"))),
+          uiOutput(ns("error_threshold_for_m")),
           
           fluidRow(
             column(width = 12,
@@ -106,7 +99,9 @@ mod_comp_m_ui <- function(id) {
 #' comp_m Server Functions
 #'
 #' @noRd 
-mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
+mod_comp_m_server <- function(id, rv,
+                              error_threshold,
+                              set_analysis = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     pal <- load_pal()
@@ -117,10 +112,9 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
                            needs_fit = NULL, 
                            tmpList = NULL)
     
-    observe({
-      req(input$error_threshold)
+    observeEvent(input$error_threshold, {
       rv$error_threshold <- input$error_threshold/100
-    })
+    }, priority = 1, ignoreInit = TRUE)
     
     ## Estimating time: ---------------------------------------------------
     
@@ -353,6 +347,30 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
       
     }) %>% # end of renderText, "txt_m_groups",
       bindEvent(input$nsims)
+    
+    ## Rendering (and updating) error threshold: --------------------------
+    
+    output$error_threshold_for_m <- renderUI({
+      shinyWidgets::numericInputIcon(
+        inputId = ns("error_threshold"),
+        label = "Error threshold:",
+        min = 1, max = 50, step = 1,
+        value = rv$error_threshold * 100,
+        icon = list(NULL, icon("percent")))
+    })
+    
+    observe({
+      req(rv$active_tab == 'hr' || rv$active_tab == 'ctsd')
+      
+      new_value <- error_threshold * 100
+      
+      shinyWidgets::updateNumericInputIcon(
+        session = session,
+        input = "error_threshold",
+        value = new_value)
+      
+    }, priority = 2) %>% # end of observe,
+      bindEvent(rv$error_threshold)
     
     # SIMULATIONS ---------------------------------------------------------
     ## Run multiple simulations (set number of tags): ---------------------
@@ -695,7 +713,6 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
               device = rv$device_type,
               group = if (rv$grouped) group else NA,
               data = simList[[x]],
-              # seed = rv$seedList[[(rv$n_sims - num_sims) + x]],
               seed = names(simList)[[x]],
               obj = simfitList[[x]],
               tau_p = tau_p,
@@ -1293,98 +1310,10 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
             
           } # end of if (is.null(out_meta[["All"]]))
           
-          # (Not currently using ratio error for threshold)
-          # if (subpop) {
-          #   
-          #   if (is.null(out_meta[["groups"]])) {
-          #     for (group in seq_len(n_groups)) {
-          #       
-          #       dt_meta <- rbind(
-          #         dt_meta,
-          #         data.frame(
-          #           type = target,
-          #           m = m,
-          #           sample = sample,
-          #           truth = NA,
-          #           est = NA,
-          #           lci = NA,
-          #           uci = NA,
-          #           error = NA,
-          #           error_lci = NA,
-          #           error_uci = NA,
-          #           ratio_truth = NA,
-          #           ratio_est = NA,
-          #           ratio_lci = NA,
-          #           ratio_uci = NA,
-          #           overlaps = NA,
-          #           is_grouped = subpop,
-          #           group = nm_groups[group],
-          #           subpop_detected = NA))
-          #       
-          #     } # end of [group] loop
-          #     
-          #   } else {
-          #     
-          #     truth_ratio <- true_ratio[[target]]
-          #     ratios <- .get_ratios(out_meta[["groups"]])
-          #     
-          #     out_ratio <- c(
-          #       "lci" = .get_ratios(out_meta[["groups"]])$lci,
-          #       "est" = .get_ratios(out_meta[["groups"]])$est,
-          #       "uci" = .get_ratios(out_meta[["groups"]])$uci)
-          #     
-          #     # out_ratio_err <- c(
-          #     #   "lci" = (ratio_lci - truth_ratio) / truth_ratio,
-          #     #   "est" = (ratio_est - truth_ratio) / truth_ratio,
-          #     #   "uci" = (ratio_uci - truth_ratio) / truth_ratio)
-          #     
-          #     truth[["A"]] <- true_estimate[[paste0(target, "_A")]]
-          #     truth[["B"]] <- true_estimate[[paste0(target, "_B")]]
-          #     
-          #     out_est[["A"]] <- .get_estimates(out_meta[["groups"]]$meta$A)
-          #     out_err[["A"]] <- sapply(out_est[["A"]], .get_errors,
-          #                              truth = truth[["A"]])
-          #     
-          #     out_est[["B"]] <- .get_estimates(out_meta[["groups"]]$meta$B)
-          #     out_err[["B"]] <- sapply(out_est[["B"]], .get_errors,
-          #                              truth = truth[["B"]])
-          #     
-          #     subpop_detected[["A"]] <- subpop_detected[["B"]] <- 
-          #       out_meta[["groups"]]$logs$subpop_detected
-          #     
-          #     for (group in seq_len(n_groups)) {
-          #       
-          #       dt_meta <- rbind(
-          #         dt_meta,
-          #         data.frame(
-          #           type = target,
-          #           m = m,
-          #           sample = sample,
-          #           truth = truth[[nm_groups[group]]],
-          #           est = out_est[[nm_groups[group]]][["est"]],
-          #           lci = out_est[[nm_groups[group]]][["lci"]],
-          #           uci = out_est[[nm_groups[group]]][["uci"]],
-          #           error = out_err[[nm_groups[group]]][["est"]],
-          #           error_lci = out_err[[nm_groups[group]]][["lci"]],
-          #           error_uci = out_err[[nm_groups[group]]][["uci"]],
-          #           ratio_truth = truth_ratio,
-          #           ratio_est = out_ratio[["est"]],
-          #           ratio_lci = out_ratio[["lci"]],
-          #           ratio_uci = out_ratio[["uci"]],
-          #           overlaps = NA,
-          #           is_grouped = subpop,
-          #           group = nm_groups[group],
-          #           subpop_detected = as.character(
-          #             subpop_detected[[nm_groups[group]]])))
-          #       
-          #     } # end of [group] loop
-          #     
-          #   } # end of if (is.null(out_meta[["groups"]]))
-          # } # end of if (subpop)
-          
           rv$err_prev[[target]] <- c(rv$err_prev[[target]], abs(err))
           last_values[[target]] <- 
-            (length(rv$err_prev[[target]])-4):length(rv$err_prev[[target]])
+            (length(rv$err_prev[[
+              target]]) - 4) : length(rv$err_prev[[target]])
           
         } # end of [target] loop
         
@@ -1561,16 +1490,20 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
           } else {
             tmpsum <- rv$ctsdList[[i]]
             tmpname <- rownames(tmpsum$CI)
-            tmpunit_speed <- extract_units(tmpname[grep("speed", tmpname)])
+            tmpunit_speed <- extract_units(
+              tmpname[grep("speed", tmpname)])
             
             out_est <- c(
               "lci" = tmpsum$CI[1], 
               "est" = tmpsum$CI[2], 
               "uci" = tmpsum$CI[3]) 
             out_err <- c( 
-              "lci" = ((out_est[[1]] %#% tmpunit_speed) - truth) / truth, 
-              "est" = ((out_est[[2]] %#% tmpunit_speed) - truth) / truth, 
-              "uci" = ((out_est[[3]] %#% tmpunit_speed) - truth) / truth) 
+              "lci" = ((out_est[[1]] %#%
+                          tmpunit_speed) - truth) / truth, 
+              "est" = ((out_est[[2]] %#%
+                          tmpunit_speed) - truth) / truth, 
+              "uci" = ((out_est[[3]] %#%
+                          tmpunit_speed) - truth) / truth) 
             
             if (is.null(rv$pathList[[i]])) {
               out_dist_est <- rep(NA, 3)
@@ -1627,13 +1560,16 @@ mod_comp_m_server <- function(id, rv, set_analysis = NULL) {
         
         if (rv$add_ind_var) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[i]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[i]]),
             "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[i]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[i]]),
             "velocity")[[1]]
           sigma <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]], rv$seedList[[i]]),
+            emulate_seeded(rv$meanfitList[[group]],
+                           rv$seedList[[i]]),
             "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]

@@ -58,6 +58,7 @@ app_server <- function(input, output, session) {
     set_analysis = NULL,
     seedInit = NA_integer_,
     seedList = list(),
+    seedList_replicates = list(),
     ctsdList = list(),
     akdeList = list(),
     pathList = list(),
@@ -272,8 +273,13 @@ app_server <- function(input, output, session) {
   # Misc: -----------------------------------------------------------------
   
   # Number of tags to deploy:
-  mod_comp_m_server("comp_m_in_hr", rv = rv, set_analysis = "hr")
-  mod_comp_m_server("comp_m_in_ctsd", rv = rv, set_analysis = "ctsd")
+  
+  mod_comp_m_server("comp_m_in_hr", rv = rv,
+                    error_threshold = rv$error_threshold,
+                    set_analysis = "hr")
+  mod_comp_m_server("comp_m_in_ctsd", rv = rv,
+                    error_threshold = rv$error_threshold,
+                    set_analysis = "ctsd")
   
   # Parameters:
   mod_comp_pars_server("comp_pars_uploaded", rv = rv, set_type = "upload")
@@ -306,10 +312,10 @@ app_server <- function(input, output, session) {
         backgroundColor = "#eee",
         boxShadow = "inset 2px 0 0 0 #009da0")))
   
-  onStop(function() {
-    cat(paste0("\u2014 Thank you for using ",
-               msg_success("movedesign"), "!"), "\n")
-    
-  }) # end of onStop
+  # onStop(function() {
+  #   cat(paste0("\u2014 Thank you for using ",
+  #              msg_success("movedesign"), "!"), "\n")
+  #   
+  # }) # end of onStop
   
 }
