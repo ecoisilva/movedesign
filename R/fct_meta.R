@@ -433,6 +433,12 @@ run_meta_resamples <- function(rv,
         
         if (sets$sets == 1) return(sets)
         
+        if (randomize) {
+          if (nrow(sets$out_random) > max_draws) {
+            sets$out_random <- sets$out_random[1:max_draws, ]
+          }
+        }
+        
         return(sets)
         
       }), names(input))
