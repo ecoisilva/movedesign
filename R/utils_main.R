@@ -212,10 +212,6 @@ summary.movedesign_input <- function(object, ...) {
       length(object$data)) }
   
   if (object$grouped) {
-    # message(format(
-    #   .msg(paste0("   Grouped: "), "main"),
-    #   width = 3, justify = "left"),
-    #   ifelse(object$grouped, "TRUE", "FALSE"))
     message(format(
       .msg(paste0("   Groups: "), "main"),
       width = 3, justify = "left"),
@@ -252,21 +248,22 @@ summary.movedesign_input <- function(object, ...) {
     width = 3, justify = "left"),
     round(object$tau_v[["All"]]$value[2], 1), " ",
     fix_unit(object$tau_v[["All"]][2, ])$unit) }
+  
+  sig <- fix_unit(
+    object$sigma[["All"]]$value[2],
+    unit = object$sigma[["All"]]$unit[2],
+    convert = TRUE, ui = TRUE)
+  
   message(format(
     .msg(paste0("   Location variance: "), "main"),
     width = 3, justify = "left"),
-    round(object$sigma[["All"]]$value[2], 1), " ",
-    object$sigma[["All"]]$unit[2])
+    sig$value, " ", sig$unit)
   
   .header("Study design parameters", 4)
   message(format(
     .msg(paste0("   Number of individuals requested: "), "main"),
     width = 3, justify = "left"), object$n_individuals)
   if (object$which_m == "set_m") {
-    # message(format(
-    #   .msg(paste0("   Population sample size requested: "), "main"),
-    #   width = 3, justify = "left"),
-    #   object$n_individuals) 
     message(format(
       .msg(paste0("   Sampling duration requested: "), "main"),
       width = 3, justify = "left"),
@@ -277,8 +274,8 @@ summary.movedesign_input <- function(object, ...) {
       round(object$dti$value, 1), " ", object$dti$unit)
   }
   
-  target_map <- c("hr" = "home range",
-                  "ctsd" = "speed")
+  target_map <- c("hr" = "home range area",
+                  "ctsd" = "movement speed")
   set_target <- target_map[object$set_target]
   
   # meta_map <- c("none" = "individual estimate",
@@ -373,10 +370,12 @@ summary.movedesign_preprocess <- function(object, ...) {
     .msg("   Number of replicates: ", "main"),
     width = 3, justify = "left"), 1)
   message(paste(
-    "   This object contains outputs from a single replicate.\n",
-    "  Use `md_plot_preview()` to inspect individual performance",
-    "and convergence.\n    To assess uncertainty, run multiple",
-    "replicates with `md_replicate()`."))
+    "   This object contains preliminary outputs",
+    "from a single replicate.\n",
+    "  Inspect performance and convergence with",
+    "`md_plot_preview()`.\n",
+    "  For more robust inferences, run additional replicates",
+    "using `md_replicate()`."))
   
   invisible(object)
 }

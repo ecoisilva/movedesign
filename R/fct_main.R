@@ -1305,8 +1305,8 @@ md_replicate <- function(obj,
     rep_id <- offset + i
     
     if (trace)
-      message(.msg(sprintf("\u2014 Replicate %s of %s", rep_id,
-                           offset + n_replicates), "main"))
+      message(.msg(sprintf("\u2014 Replicate %s of %s",
+                           rep_id, offset + n_replicates), "main"))
     
     out <- md_run(base_input, trace = trace)
     set_m <- if (verbose) NULL else base_input$n_individuals
@@ -1324,10 +1324,9 @@ md_replicate <- function(obj,
   completed <- 0
   
   start_total <- Sys.time()
-  print(
-    sprintf(
-      "Start time: %s",
-      format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
+  print(sprintf(
+    "Start time: %s", 
+    format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
   
   tryCatch({
     
@@ -1336,7 +1335,7 @@ md_replicate <- function(obj,
       
       tmp <- parallel::mclapply(
         seq_len(n_replicates), 
-        function(i) .worker(i), mc.cores = ncores)
+        .worker, mc.cores = ncores)
       
       for (i in seq_len(n_replicates)) {
         outList[[i]] <- tmp[[i]]$out
@@ -1447,17 +1446,18 @@ md_replicate <- function(obj,
                 length(merged$simList) else 0), "success"))
   }
   
-  merged$n_replicates <- offset + completed
+  if (!is.null(merged))
+    merged$n_replicates <- offset + completed
   
   print(
     sprintf(
       "End time: %s",
       format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")))
   
-  time <- difftime(Sys.time(), start_total)
+  elapsed <- difftime(Sys.time(), start_total)
   message("Total elapsed time: ",
-          paste(round(as.numeric(time[[1]]), 1),
-                attr(time, "units")))
+          paste(round(as.numeric(elapsed[[1]]), 1),
+                attr(elapsed, "units")))
   
   out <- structure(
     list(input = base_input,
@@ -1681,7 +1681,7 @@ md_plot_preview <- function(obj,
           caption = paste(
             "This plot displays preliminary outputs from a",
             "single replicate.\n",
-            "For more robust inferences, run multiple replicates",
+            "For more robust inferences, run additional replicates",
             "using `md_replicate()`.")) +
         
         { if (!only_one_m)
@@ -2039,7 +2039,7 @@ md_plot_preview <- function(obj,
 #' @param stat Character string specifying which summary statistic to
 #'   display. Must be `"mean"` or `"median"`. Defaults to `"mean"`.
 #' @param ci Numeric scalar between 0 and 1. The probability of the
-#'   credible interval (CI) to be estimated. Default to `0.95` (95%).
+#'   credible interval (CI) to be estimated. Default to `0.80` (80%).
 #' @param method Character. Credible interval estimation method (passed
 #'   to `bayestestR::ci()`; default: `"HDI"`). See `?bayestestR::ci()`
 #'   for more details.
@@ -2117,10 +2117,12 @@ md_plot_preview <- function(obj,
 #' @export
 md_plot <- function(obj,
                     stat = c("mean", "median"),
-                    ci = 0.95,
+                    ci = 0.8,
                     method = "HDI",
                     pal = c("#007d80", "#A12C3B"),
                     m = NULL) {
+  
+  stopifnot(is.numeric(ci), length(ci) == 1, ci > 0, ci < 1)
   
   if (!is.null(m) && !obj$verbose) {
     stop(paste("`md_replicate()` must be run with",
@@ -2203,7 +2205,6 @@ md_plot <- function(obj,
   if (!all(c("error", "error_lci", "error_uci") %in% names(data))) {
     stop("Input data must have columns: error, error_lci, error_uci")
   }
-  stopifnot(is.numeric(ci), length(ci) == 1, ci > 0, ci < 1)
   
   if (!is.null(m)) {
     if (m %!in% unique(data$m)) {
@@ -5299,6 +5300,7 @@ md_compare_preview <- function(x,
   
   dots <- list(...)
   .seed <- dots[[".seed"]] %||% NULL
+  
   n <- group <- error <- error_sd <- NULL
   single_obj <- FALSE
   
@@ -5326,12 +5328,14 @@ md_compare_preview <- function(x,
     
     # Run meta-analysis
     out <- if (resampled) {
-      run_meta_resamples(obj, set_target = obj$set_target,
+      run_meta_resamples(obj, 
+                         set_target = obj$set_target,
                          subpop = obj$grouped, randomize = TRUE,
                          max_draws = n_resamples, trace = TRUE,
                          .automate_seq = TRUE, .seed = .seed)
     } else {
-      run_meta(obj, set_target = obj$set_target,
+      run_meta(obj, 
+               set_target = obj$set_target,
                subpop = obj$grouped, iter_step = iter_step,
                trace = TRUE, .seed = .seed)
     }
@@ -5844,17 +5848,15 @@ md_compare_preview <- function(x,
   caption <- paste(
     "This plot displays preliminary outputs from a",
     "single replicate.\n",
-    "For more robust inferences, run multiple replicates",
+    "For more robust inferences, run additional replicates",
     "using `md_replicate()`.")
   
-  return(suppressWarnings(
-    patchwork::wrap_plots(
-      plots,
-      ncol = length(plots),
-      guides = "collect") +
+  return(patchwork::wrap_plots(
+    plots, ncol = length(plots),
+    guides = "collect") +
       patchwork::plot_annotation(
         caption = caption,
-        theme = ggplot2::theme(legend.position = "bottom"))))
+        theme = ggplot2::theme(legend.position = "bottom")))
   
 }
 
@@ -5876,7 +5878,7 @@ md_compare_preview <- function(x,
 #' @param stat Character string specifying which summary statistic to
 #'   display. Must be `"mean"` or `"median"`. Defaults to `"mean"`.
 #' @param ci Numeric scalar between 0 and 1. The probability of the
-#'   credible interval (CI) to be estimated. Default to `0.95` (95%).
+#'   credible interval (CI) to be estimated. Default to `0.80` (80%).
 #' @param method Character. Credible interval estimation method (passed
 #'   to `bayestestR::ci()`; default: `"HDI"`). See `?bayestestR::ci()`
 #'   for more details.
@@ -5969,7 +5971,7 @@ md_compare_preview <- function(x,
 #' @export
 md_compare <- function(x,
                        stat = c("mean", "median"),
-                       ci = 0.95,
+                       ci = 0.8,
                        method = "HDI",
                        pal = c("#007d80", "#A12C3B"),
                        m = NULL,
@@ -6175,8 +6177,9 @@ md_compare <- function(x,
       max(data$m, na.rm = TRUE), " inds, tracked for ",
       paste(input$data$dur$value, input$data$dur$unit),
       " every ", paste(input$data$dti$value, input$data$dti$unit))
-    caption <- paste0(as.integer(ci * 100),
-                      "% credible interval; dotted line = ", stat)
+    caption <- paste0(
+      "Shaded region: ", as.integer(ci * 100),
+      "% credible interval; dotted line = ", stat)
     
     p <- ggplot2::ggplot(data) +
       ggplot2::geom_jitter(
@@ -6244,25 +6247,25 @@ md_compare <- function(x,
         data = text,
         ggplot2::aes(
           x = .data$stat_value + .data$x_adjust,
-          y = .data$max_y * 1.05,
+          y = .data$max_y * 1.2,
           label = sprintf("%s = %s", 
                           stat_text,
                           scales::percent(.data$stat_value, 0.1)),
           color = .data$group),
-        size = 4.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
+        size = 3.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
         show.legend = FALSE)
     } else if (has_groups && show_text) {
       p <- p + ggplot2::geom_text(
         data = text,
         ggplot2::aes(
           x = .data$stat_value + .data$x_adjust,
-          y = .data$max_y * 1.05,
+          y = .data$max_y * 1.2,
           label = sprintf("%s %s = %s", 
                           stat_text,
                           .data$group,
                           scales::percent(.data$stat_value, 0.1)),
           color = .data$group),
-        size = 4.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
+        size = 3.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
         show.legend = FALSE)
     }
     

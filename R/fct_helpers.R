@@ -326,7 +326,7 @@ fix_unit <- function(input,
     if (convert) { 
       y[i] <- x_new %#% y[i] 
       x[i] <- x_new 
-    }    
+    }
     
     if (digits == 1) {
       # Round value:
@@ -360,7 +360,7 @@ fix_unit <- function(input,
     
     out_unit <- out[max_index, 2] 
     for (i in seq_len(nrow(out))) 
-      out[i,1] <- out_unit %#% out[i,1] %#% out[i,2]  
+      out[i, 1] <- out_unit %#% out[i, 1] %#% out[i, 2]  
     out[, 2] <- rep(out_unit, nrow(out)) 
   } 
   
