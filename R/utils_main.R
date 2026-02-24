@@ -592,11 +592,11 @@ print.movedesign_check <- function(x, ...) {
 }
 
 
-#' Summary method for `movedesign_report` objects
-#' @param object An object of class `movedesign_report`
+#' Summary method for `movedesign_optimized` objects
+#' @param object An object of class `movedesign_optimized`
 #' @param ... Unused
 #' @export
-summary.movedesign_report <- function(object, ...) {
+summary.movedesign_optimized <- function(object, ...) {
   
   type <- NULL
   has_groups <- object$data$grouped
@@ -655,11 +655,11 @@ summary.movedesign_report <- function(object, ...) {
 }
 
 
-#' Print method for `movedesign_report` objects
-#' @param x An object of class `movedesign_report`
+#' Print method for `movedesign_optimized` objects
+#' @param x An object of class `movedesign_optimized`
 #' @param ... Unused
 #' @export
-print.movedesign_report <- function(x, ...) {
+print.movedesign_optimized <- function(x, ...) {
   summary(x) # invisible(x)
 }
 
@@ -667,21 +667,121 @@ print.movedesign_report <- function(x, ...) {
 #' Plot movedesign report outputs
 #'
 #' @description
-#' S3 method for plotting a `movedesign_report` object.
+#' S3 method for plotting a `movedesign_optimized` object.
 #' Returns the precomputed ggplot stored in the object.
 #'
-#' @param x A `movedesign_report` object returned by
-#'   `md_optimize()` or similar.
+#' @param x A `movedesign_optimized` object returned by
+#'   `md_optimized()` or similar.
 #' @param ... Unused
 #'
 #' @export
-plot.movedesign_report <- function(x, ...) {
+plot.movedesign_optimized <- function(x, ...) {
   
   if (is.null(x$plot)) {
-    stop("No plot stored in this `movedesign_report` object.")
+    stop("No plot stored in this `movedesign_optimized` object.")
   }
   
   return(x$plot)
+}
+
+
+#' Summary method for `movedesign_report` objects
+#' @param object An object of class `movedesign_report`
+#' @param ... Unused
+#' @export
+summary.movedesign_report <- function(object, ...) {
+  
+  ranking <- object$ranking
+  joint_winners <- object$winners
+  has_groups <- object$data$grouped
+  target_map <- c("hr" = "home range area", "ctsd" = "movement speed")
+  
+  .header("Design comparison", 5)
+  
+  if (nrow(joint_winners) == 0) {
+    message(
+      .msg("   No single design is optimal for all groups.", "warning"))
+    message("   Different designs perform best in different groups.")
+  } else {
+    for (i in seq_len(nrow(joint_winners))) {
+      jw <- joint_winners[i, ]
+      
+      message(format(
+        .msg("   Target: ", "main"), 
+        width = 3, justify = "left"),
+        target_map[jw$type])
+      message(format(
+        .msg("   Best study design: ", "success"), 
+        width = 3, justify = "left"),
+        jw$design)
+      
+      if ("groups_won" %in% names(jw)) {
+        message(format(.msg("   Wins for groups: ", "success"),
+                       width = 3, justify = "left"),
+                jw$groups_won)
+      }
+      
+      est_row <- ranking %>% 
+        dplyr::filter(design == jw$design & type == jw$type)
+      
+      for (r in seq_len(nrow(est_row))) {
+        w <- est_row[r, ]
+        
+        m <- w$m
+        if (has_groups) m <- paste0(m, " (", m / 2, " per group)")
+        
+        .header("Parameters of best study design", 5)
+        message(format(
+          .msg("   Number of tags: ", "success"),
+          width = 3, justify = "left"),
+          m)
+        message(format(
+          .msg("   Sampling duration: ", "success"),
+          width = 3, justify = "left"),
+          paste(round(w$dur, 1), w$dur_unit))
+        message(format(
+          .msg("   Sampling interval: ", "success"),
+          width = 3, justify = "left"),
+          paste(round(w$dti, 1), w$dti_unit))
+        
+        if (has_groups) {
+          message(format(
+            .msg(paste0("   Group: "), "main"),
+            width = 3, justify = "left"),
+            w$group)
+        } else {
+          message(format(
+            .msg(paste0(""), "main")))
+        }
+        message(format(
+          .msg("       Relative error: ", "success"),
+          width = 3, justify = "left"),
+          paste0(.err_to_txt(w$error), "%"))
+        message(format(
+          .msg("       CI: ", "success"),
+          width = 3, justify = "left"),
+          paste0("[", .err_to_txt(w$error_lci), ", ", 
+                 .err_to_txt(w$error_uci), "%]"))
+        
+        reason <- if (w$overlaps_with_zero) {
+          "Credible interval overlaps 0."
+        } else { "Smallest distance of CI to 0." }
+        
+        cat(paste0("       Reason: ", reason, "\n"))
+      }
+    }
+  }
+  
+  invisible(object)
+}
+
+
+#' Print method for `movedesign_report` objects
+#' @param x An object of class `movedesign_report`
+#' @param ... Unused
+#' @export
+print.movedesign_report <- function(x, ...) {
+  summary(x) # invisible(x)
 }
 
 
@@ -696,6 +796,7 @@ plot.movedesign_report <- function(x, ...) {
   cat(crayon::bold(header_line))
   
 }
+
 
 # Internal utility for styled message output.
 #' @noRd

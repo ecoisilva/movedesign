@@ -698,24 +698,24 @@ md_prepare <- function(species = NULL,
     fit <- list(A = fitA, B = fitB)
     
     sigma <- c(sigma, lapply(1:2, function(x) {
-      extract_pars(
+      suppressWarnings(extract_pars(
         obj = fit[[x]],
-        name = "sigma", meta = TRUE)[[1]]
+        name = "sigma", meta = TRUE)[[1]])
     }))
     names(sigma) <- c("All", "A", "B") 
     
     tau_p <- c(tau_p, lapply(1:2, function(x) {
-      extract_pars(
+      suppressWarnings(extract_pars(
         obj = fit[[x]], 
-        name = "position", meta = TRUE)[[1]]
+        name = "position", meta = TRUE)[[1]])
     }))
     names(tau_p) <- c("All", "A", "B") 
     
     if (!is.null(tau_v)) {
       tau_v <- c(tau_v, lapply(1:2, function(x) {
-        extract_pars(
+        suppressWarnings(extract_pars(
           obj = fit[[x]], 
-          name = "velocity", meta = TRUE)[[1]]
+          name = "velocity", meta = TRUE)[[1]])
       }))
       names(tau_v) <- c("All", "A", "B") 
     }
@@ -2027,7 +2027,7 @@ md_plot_preview <- function(obj,
 #' This function is typically used after running [`md_replicate()`],
 #' providing a visual diagnostic of simulation results.
 #'
-#' @param obj A `movedesign_output` object, as returned by
+#' @param x A `movedesign_output` object, as returned by
 #'   [`md_replicate()`]. The object must contain a
 #'   `summary` data frame with, at a minimum, the following columns:
 #'   \describe{
@@ -2051,6 +2051,7 @@ md_plot_preview <- function(obj,
 #'   results for a specific population sample size (`m`).
 #'   Defaults to `NULL`, which checks up to the maximum population
 #'   sample size.
+#' @param ... Additional arguments used internally.
 #'
 #' @return
 #' A `ggplot` object showing:
@@ -2115,522 +2116,370 @@ md_plot_preview <- function(obj,
 #' @importFrom dplyr filter mutate across
 #' @importFrom bayestestR ci
 #' @export
-md_plot <- function(obj,
+md_plot <- function(x,
                     stat = c("mean", "median"),
                     ci = 0.8,
                     method = "HDI",
                     pal = c("#007d80", "#A12C3B"),
-                    m = NULL) {
+                    m = NULL,
+                    show_text = TRUE,
+                    ...) {
   
   stopifnot(is.numeric(ci), length(ci) == 1, ci > 0, ci < 1)
+  stat <- match.arg(stat)
   
-  if (!is.null(m) && !obj$verbose) {
-    stop(paste("`md_replicate()` must be run with",
-               "`verbose = TRUE` to use the `m` argument."))
+  dots <- list(...)
+  .verbose <- dots[[".verbose"]] %||% FALSE
+  
+  warnings_list <- character(0)
+  safe_extract_cri <- function(x, method, ci) {
+    cri <- withCallingHandlers({
+      .extract_cri(x, method = method, ci = ci)
+    }, warning = function(w) {
+      warnings_list <<- unique(c(warnings_list, conditionMessage(w)))
+      invokeRestart("muffleWarning")
+    })
+    
+    if (is.na(cri$lci) || is.na(cri$uci)) {
+      msg <- "CI could not be calculated (returned NA)."
+      warnings_list <<- unique(c(warnings_list, msg))
+    }
+    
+    return(cri)
   }
   
-  stat <- match.arg(stat)
+  if (inherits(x, "movedesign_output") ||
+      inherits(x, "movedesign_preprocess")) {
+    x <- list(x)
+  }
   
   .get_stat <- function(x) {
     if (stat == "mean") {
-      mean(x, na.rm = TRUE) }
-    else { median(x, na.rm = TRUE) }
+      mean(x, na.rm = TRUE) 
+    } else { median(x, na.rm = TRUE) }
   }
   
-  .get_density_data <- function(d, tp, gr = NULL) {
+  stat_text <- tools::toTitleCase(stat)
+  
+  .validate_input <- function(input) {
+    if (!inherits(input, "movedesign") ||
+        !("summary" %in% names(input))) {
+      stop("Input must be a 'movedesign_output' from md_replicate().")
+    }
+    
+    data <- input$summary
+    stopifnot(is.data.frame(data))
+    
+    if (!all(c("error", "error_lci", "error_uci") %in% names(data))) {
+      stop(paste("Input data must contain columns:", 
+                 "error, error_lci, error_uci."))
+    }
+    
+    return(data)
+  }
+  
+  .filter_m <- function(data, input) {
+    if (!is.null(m)) {
+      
+      if (!input$verbose) {
+        stop(paste("`md_replicate()` must be run with",
+                   "`verbose = TRUE` to use the `m` argument."))
+      }
+      
+      if (!m %in% unique(data$m)) {
+        stop(paste0("Population sample size '", m,
+                    "' not found in data. Valid `m` values: ",
+                    paste(sort(unique(data$m)), collapse = ", ")))
+      }
+      
+      return(dplyr::filter(data, m == !!m))
+    } else {
+      return(data[data$m == max(
+        data$m, na.rm = TRUE), , drop = FALSE])
+    }
+  }
+  
+  .build_density <- function(d, tp, gr = "All", subset = TRUE) {
     if (nrow(d) == 0) return(NULL)
-    
     dens <- stats::density(d$error, na.rm = TRUE)
-    cri <- suppressMessages(
-      quiet(.extract_cri(d$error, method = method, ci = ci)))
+    df <- data.frame(x = dens$x, y = dens$y, type = tp, group = gr)
     
-    df <- data.frame(
-      x = dens$x,
-      y = dens$y,
-      type = rep(tp, length(dens$x)),
-      group = if (is.null(gr)) NA else rep(gr, length(dens$x)))
-    
-    if (!is.na(cri$lci) && !is.na(cri$uci)) {
-      df <- df[df$x >= cri$lci & df$x <= cri$uci, , drop = FALSE]
+    if (subset) {
+      cri <- suppressMessages(
+        safe_extract_cri(d$error, method = method, ci = ci))
+      if (!is.na(cri$lci) && !is.na(cri$uci)) {
+        df <- subset(df, x >= cri$lci & x <= cri$uci)
+        if (nrow(df) > 0) df$shaded <- TRUE
+      }
     }
     
     if (nrow(df) == 0) return(NULL)
     return(df)
   }
   
-  .get_text_data <- function(d, tp, gr = NULL) {
+  .build_text <- function(d, tp, gr = "All", x_range) {
     if (nrow(d) == 0) return(NULL)
-    
     cri <- suppressMessages(
-      quiet(.extract_cri(d$error, method = method, ci = ci)))
+      safe_extract_cri(d$error, method = method, ci = ci))
     dens <- stats::density(d$error, na.rm = TRUE)
-    
-    max_y <- max(dens$y)
-    x_range <- diff(range(d$error_lci, d$error_uci, na.rm = TRUE))
-    x_adjust <- x_range * 0.005
-    
     stat_value <- .get_stat(d$error)
     
-    # Check if cri contains NAs
-    has_na_cri <- any(is.na(cri$lci)) || any(is.na(cri$uci))
-    note_msg <- ifelse(has_na_cri,
-                       "CI contains NA values", NA_character_)
+    x_adj <- (diff(x_range) * 0.01)
+    direction <- ifelse(stat_value > mean(x_range), -x_adj, x_adj)
     
-    return(data.frame(
-      group = if (is.null(gr)) NA else gr,
-      type = tp,
-      stat_value = stat_value,
-      lci = cri$lci,
-      uci = cri$uci,
-      max_y = max_y,
-      x_adjust = x_adjust,
-      note = note_msg,
-      stringsAsFactors = FALSE))
+    return(data.frame(group = gr,
+                      type = tp,
+                      stat_value = stat_value,
+                      lci = cri$lci,
+                      uci = cri$uci,
+                      max_y = max(dens$y),
+                      min_y = min(dens$y),
+                      x_adjust = direction,
+                      stringsAsFactors = FALSE))
   }
   
-  x <- y <- type <- caption <- group <- NULL
-  lci <- uci <- stat_value <- NULL
-  stat <- match.arg(stat)
+  plots <- list()
+  processed <- lapply(x, function(input) {
+    
+    data <- .validate_input(input)
+    data <- .filter_m(data, input)
+    data$type <- factor(data$type, levels = c("hr", "ctsd"))
+    has_groups <- "group" %in% names(data) &&
+      all(c("A", "B") %in% unique(as.character(data$group)))
+    
+    return(list(data = data,
+                input = input,
+                has_groups = has_groups,
+                facet_by_type = length(input$data$set_target) == 2))
+  })
   
-  if (!inherits(obj, "movedesign") ||
-      !("summary" %in% names(obj))) {
-    stop(paste(
-      "Input does not appear to be a 'movedesign_output' object.\n",
-      "Please provide the output of md_replicate()."))
-  }
-  
-  data <- obj$summary
-  
-  stopifnot(is.data.frame(data))
-  if (!all(c("error", "error_lci", "error_uci") %in% names(data))) {
-    stop("Input data must have columns: error, error_lci, error_uci")
-  }
-  
-  if (!is.null(m)) {
-    if (m %!in% unique(data$m)) {
-      stop(paste0("Population sample size '", m, 
-                  "' not found in data. Valid values: ", 
-                  paste(sort(unique(data$m)), collapse = ", ")))
+  all_x <- unlist(lapply(processed, function(p) {
+    data <- p$data
+    types <- unique(data$type)
+    groups <- if ("group" %in% names(data))
+      unique(data$group) else "All"
+    x_vals <- c()
+    
+    for (gr in groups) {
+      for (tp in types) {
+        d_sub <- data[data$type == tp &
+                        data$group == gr, , drop = FALSE]
+        if (nrow(d_sub) > 0) 
+          x_vals <- c(
+            x_vals, stats::density(d_sub$error, na.rm = TRUE)$x)
+      }
     }
-    data <- dplyr::filter(data, m == !!m)
-  } else {
-    data <- subset(data, m == max(m))
-  }
+    return(x_vals)
+  }))
   
-  data <- dplyr::mutate(
-    data, type = factor(type, levels = c("hr", "ctsd")))
-  set_target <- obj$data$set_target
-  facet_by_type <- length(set_target) == 2
+  global_x_range <- range(all_x, na.rm = TRUE)
+  if (!all(is.finite(global_x_range))) 
+    global_x_range <- c(-Inf, Inf)
   
-  has_groups <- "group" %in% names(data) &&
-    all(c("A", "B") %in% unique(as.character(data$group)))
-  
-  if (has_groups || facet_by_type) stopifnot(length(pal) == 2)
-  
-  # Single group plotting:
-  if (!has_groups) {
+  for (i in seq_along(processed)) {
     
-    data <- data[data$group == "All", ]
-    dens <- dplyr::bind_rows(
-      lapply(unique(data$type),
-             \(tp) .get_density_data(data[data$type == tp, ], tp)))
+    data <- processed[[i]]$data
+    input <- processed[[i]]$input
+    has_groups <- processed[[i]]$has_groups
+    facet_by_type <- processed[[i]]$facet_by_type
     
-    if (is.null(dens)) {
-      warning(paste(
-        "`ci` may be too large",
-        "or the input data contains too few replicates,",
-        "returning NAs."))
-      caption <- paste0("No credible intervals (CI) available; ",
-                        "dotted line: ", stat, " of all replicates")
+    types <- unique(data$type)
+    groups <- if (has_groups) c("A", "B") else "All"
+    if (!has_groups) {
+      data <- data[data$group == "All", ] 
     } else {
-      caption <- paste0("Shaded region: ", as.integer(ci * 100),
-                        "% credible interval (CI); ",
-                        "dotted line: ", stat, " of all replicates")
+      data <- data[data$group != "All", ]
     }
+    
+    dens_full <- dplyr::bind_rows(
+      lapply(groups, function(gr) {
+        lapply(types, function(tp) {
+          .build_density(data[data$type == tp &
+                                data$group == gr, ],
+                         tp, gr, subset = FALSE)
+        })
+      })
+    )
+    
+    dens_shaded <- dplyr::bind_rows(
+      lapply(groups, function(gr) {
+        lapply(types, function(tp) {
+          .build_density(data[data$type == tp &
+                                data$group == gr, ],
+                         tp, gr, subset = TRUE)
+        })
+      })
+    )
     
     text <- dplyr::bind_rows(
-      lapply(unique(data$type),
-             \(tp) .get_text_data(data[data$type == tp, ], tp)))
+      lapply(groups, function(gr) {
+        lapply(types, function(tp) {
+          .build_text(data[data$type == tp &
+                             data$group == gr, ],
+                      tp, gr, x_range = global_x_range)
+        })
+      })
+    )
     
-    keep_segment <- TRUE
-    if (any(is.na(text$lci))) {
-      warning(paste(
-        "The credible intervals (`ci`) may be too large",
-        "or the input data contains too few replicates,",
-        "returning NAs."))
-      caption <- paste0("No credible intervals (CI) available; ",
-                        "dotted line: ", stat, " of all replicates")
-      keep_segment <- FALSE
+    set_title <- paste("Design", i)
+    
+    if (has_groups) {
+      set_subtitle <- paste0(
+        input$data$n_replicates, " replicates\n",
+        max(data$m, na.rm = TRUE) * 2, " tags",
+        " (", max(data$m, na.rm = TRUE), " per group), tracked for ",
+        paste(input$data$dur$value, input$data$dur$unit),
+        " every ", paste(input$data$dti$value, input$data$dti$unit))      
+    } else {
+      set_subtitle <- paste0(
+        input$data$n_replicates, " replicates\n",
+        max(data$m, na.rm = TRUE), " tags, tracked for ",
+        paste(input$data$dur$value, input$data$dur$unit),
+        " every ", paste(input$data$dti$value, input$data$dti$unit))
     }
+
+    caption <- paste0(
+      "Shaded region: ", as.integer(ci * 100),
+      "% credible interval; dotted line = ", stat)
     
-    overlap_zero <- text %>%
-      dplyr::filter(
-        !is.na(lci) & !is.na(uci) & lci <= 0 & uci >= 0) %>%
-      dplyr::mutate(xintercept = 0)
-    
-    p <- ggplot2::ggplot(data = data) +
-      ggplot2::geom_vline(
-        data = overlap_zero,
-        mapping = ggplot2::aes(
-          xintercept = .data$xintercept,
-          group = interaction(.data$group, .data$type)),
-        color = "grey40",
-        linetype = "solid",
-        linewidth = 0.8) +
+    p <- ggplot2::ggplot(data) +
+      ggplot2::geom_jitter(
+        ggplot2::aes(x = .data$error,
+                     y = 0,
+                     color = .data$group),
+        height = 0, width = 0.001,
+        shape = "|", size = 8, alpha = 0.8) +
       
       ggplot2::geom_line(
-        data = dplyr::bind_rows(
-          lapply(unique(data$type), function(tp) {
-            d <- data[data$type == tp, ]
-            if (nrow(d) == 0) return(NULL)
-            dens <- stats::density(d$error, na.rm = TRUE)
-            data.frame(x = dens$x, y = dens$y, type = tp)
-          })),
-        mapping = ggplot2::aes(x = .data$x,
-                               y = .data$y,
-                               color = .data$type),
+        data = dens_full,
+        ggplot2::aes(x = .data$x,
+                     y = .data$y,
+                     color = .data$group),
         alpha = 0.3, linewidth = 1) +
       
-      ggplot2::geom_jitter(
-        mapping = ggplot2::aes(x = .data$error, y = 0),
-        height = 0, width = 0.001,
-        shape = "|", size = 8, alpha = 0.8,
-        inherit.aes = FALSE) +
-      
-      { if (!is.null(dens) && nrow(dens) > 0 && keep_segment)
+      { if (!is.null(dens_shaded))
         ggplot2::geom_area(
-          data = dens,
-          mapping = ggplot2::aes(
-            x = .data$x,
-            y = .data$y, 
-            fill = .data$type),
-          alpha = 0.2, position = "identity") } +
+          data = dens_shaded,
+          ggplot2::aes(x = .data$x,
+                       y = .data$y,
+                       fill = .data$group),
+          alpha = 0.18, position = "identity") } +
       
       ggplot2::geom_vline(
-        data = data.frame(
-          type = unique(data$type),
-          stat_value = tapply(data$error, data$type, .get_stat)),
-        ggplot2::aes(xintercept = .data$stat_value,
-                     color = .data$type),
-        linetype = "dotted", linewidth = 1
-      ) +
-      
-      ggplot2::geom_text(
         data = text,
-        ggplot2::aes(x = .data$stat_value + .data$x_adjust,
-                     y = .data$max_y * 1.05,
-                     label = sprintf(
-                       "%s = %s",
-                       tools::toTitleCase(stat),
-                       scales::percent(stat_value, 0.1)),
-                     color = .data$type),
-        size = 6, 
-        hjust = -0.05, 
-        show.legend = FALSE) +
+        ggplot2::aes(xintercept = .data$stat_value,
+                     color = .data$group),
+        linetype = "dotted") +
       
-      { if (!is.null(dens) && nrow(dens) > 0)
-        if (!any(is.na(text$lci))) {
-          ggplot2::geom_text(
-            data = text,
-            ggplot2::aes(
-              x = .data$lci - .data$x_adjust, y = 0,
-              label = sprintf(
-                "LCI = %s", scales::percent(.data$lci, 0.1)),
-              color = .data$type),
-            size = 6, 
-            vjust = -3, hjust = 1, 
-            show.legend = FALSE) }
-      } +
-      
-      { if (!is.null(dens) && nrow(dens) > 0) 
-        if (!any(is.na(text$lci))) {
-          ggplot2::geom_text(
-            data = text,
-            ggplot2::aes(
-              x = .data$uci + .data$x_adjust, y = 0,
-              label = sprintf(
-                "UCI = %s", scales::percent(.data$uci, 0.1)),
-              color = .data$type),
-            size = 6,
-            vjust = -3, hjust = 0, 
-            show.legend = FALSE) }
-      } +
-      
-      { if (length(set_target) > 1)
+      { if (facet_by_type)
         ggplot2::facet_wrap(
           . ~ .data$type, scales = "free",
           labeller = ggplot2::labeller(
-            type = c(
-              "hr" = "Home range estimation", 
-              "ctsd" = "Speed \u0026 distance estimation"))) } +
+            type = c("hr" = "Home range estimation",
+                     "ctsd" = "Speed & distance estimation")))
+      } +
       
-      ggplot2::scale_color_manual(values = pal, drop = FALSE) +
-      ggplot2::scale_fill_manual(values = pal, drop = FALSE) +
-      ggplot2::scale_x_continuous(
-        labels = scales::percent_format(accuracy = 1),
-        breaks = scales::breaks_pretty()) +
-      
+      ggplot2::scale_color_manual(values = pal, drop = TRUE) +
+      ggplot2::scale_fill_manual(values = pal, drop = TRUE) +
       ggplot2::scale_y_continuous(
         expand = ggplot2::expansion(mult = c(0, 0.05)),
         limits = c(0, NA)) +
       
       ggplot2::labs(
-        title = paste0(
-          "Number of replicates: ", obj$data$n_replicates, "\n",
-          "Number of individuals: ",
-          max(obj$summary$m, na.rm = TRUE)),
+        title = set_title,
+        subtitle = set_subtitle,
         caption = caption,
         x = "Relative error (%)", y = NULL) +
       
       ggplot2::theme_classic() +
       ggplot2::theme(
-        text = ggplot2::element_text(size = 13),
         axis.text.y = ggplot2::element_blank(),
         axis.line.y = ggplot2::element_blank(),
         axis.ticks.y = ggplot2::element_blank(),
-        strip.text = ggplot2::element_text(size = 16),
+        strip.text = ggplot2::element_text(size = 13),
         strip.background.x = ggplot2::element_rect(
           color = NA, fill = NA),
         strip.background.y = ggplot2::element_rect(
           color = NA, fill = NA),
-        plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
-      ggplot2::guides(color = "none", fill = "none", shape = "none")
+        plot.margin = ggplot2::unit(c(0.3, 0.3, 0.3, 0.3), "cm"))
     
-    return(p)
-  }
-  
-  # Two groups plotting:
-  if (has_groups) {
-    
-    groups <- c("A", "B")
-    
-    data <- data[data$group != "All", ]
-    types <- unique(data$type)
-    
-    dens <- do.call(
-      rbind,
-      lapply(groups, function(gr) {
-        lapply(types, function(tp) {
-          d <- data[data$group == gr & data$type == tp, ]
-          if (nrow(d) == 0) return(NULL)
-          dens <- stats::density(d$error, na.rm = TRUE)
-          df <- data.frame(x = dens$x, 
-                           y = dens$y,
-                           group = gr,
-                           type = tp)
-          cri <- suppressMessages(quiet(
-            .extract_cri(d$error, method = method, ci = ci)))
-          if (!is.na(cri$lci) && !is.na(cri$uci)) {
-            df_cri <- subset(df, x >= cri$lci & x <= cri$uci)
-            if (nrow(df_cri) > 0) {
-              df_cri$shaded <- TRUE
-              return(df_cri)
-            }
-          }
-        })
-      })
-    )
-    if (length(dens) > 0) dens <- do.call(rbind, dens)
-    
-    if (is.null(dens)) {
-      warning(paste(
-        "`ci` may be too large",
-        "or the input data contains too few replicates,",
-        "returning NAs."))
-      caption <- paste0("No credible intervals (CI) available; ",
-                        "A = blue, B = red; dotted lines: means")
-    } else {
-      caption <- paste0(
-        "Shaded region: ", as.integer(ci * 100), "% CI; ",
-        "A = blue, B = red; dotted lines: means")
-    }
-    
-    text <- do.call(
-      rbind,
-      lapply(groups, function(gr) {
-        lapply(types, function(tp) {
-          d <- data[data$group == gr & data$type == tp, ]
-          if (nrow(d) == 0) return(NULL)
-          cri <- suppressMessages(quiet(
-            .extract_cri(d$error, method = method, ci = ci)))
-          dens <- stats::density(d$error, na.rm = TRUE)
-          max_y <- max(dens$y)
-          min_y <- min(dens$y)
-          x_range <- max(d$error_uci, na.rm = TRUE) - 
-            min(d$error_lci, na.rm = TRUE)
-          x_adjust <- x_range * 0.005
-          data.frame(
-            group = gr,
-            type = tp,
-            mean = mean(d$error, na.rm = TRUE),
-            lci = cri$lci,
-            uci = cri$uci,
-            max_y = max_y,
-            min_y = min_y,
-            x_adjust = x_adjust
-          )
-        })
-      })
-    )
-    if (length(text) > 0) text <- do.call(rbind, text)
-    
-    group_id <- as.numeric(factor(text$group))
-    text$y_offset_top <- 0.4 * (text$max_y - text$min_y)
-    text$y_offset_bottom <- 0.4 * (text$max_y - text$min_y)
-    
-    keep_segment <- TRUE
-    if (any(is.na(text$lci))) {
-      warning(paste(
-        "The credible intervals (`ci`) may be too large",
-        "or the input data contains too few replicates,",
-        "returning NAs."))
-      caption <- paste0("No credible intervals (CI) available; ",
-                        "dotted line: ", stat, " of all replicates")
-      keep_segment <- FALSE
-    }
-    
-    overlap_zero <- text %>%
-      dplyr::filter(
-        !is.na(lci) & !is.na(uci) & lci <= 0 & uci >= 0) %>%
-      dplyr::mutate(xintercept = 0)
-    
-    p <- ggplot2::ggplot(data = data) +
-      ggplot2::geom_vline(
-        data = overlap_zero,
-        mapping = ggplot2::aes(
-          xintercept = .data$xintercept,
-          group = interaction(.data$group, .data$type)),
-        color = "grey40",
-        linetype = "solid",
-        linewidth = 0.8) +
-      
-      ggplot2::geom_line(
-        data = do.call(
-          rbind,
-          Filter(
-            Negate(is.null),
-            unlist(lapply(groups, function(gr) {
-              lapply(types, function(tp) {
-                d <- data[data$group == gr & data$type == tp, ]
-                if (nrow(d) == 0) return(NULL)
-                
-                dens <- stats::density(d$error, na.rm = TRUE)
-                data.frame(x = dens$x,
-                           y = dens$y,
-                           group = gr,
-                           type = tp)
-              })
-            }), recursive = FALSE)
-          )
-        ),
-        mapping = ggplot2::aes(x = .data$x,
-                               y = .data$y,
-                               color = .data$group),
-        alpha = 0.3, linewidth = 1.1) +
-      
-      ggplot2::geom_jitter(
-        mapping = ggplot2::aes(
-          x = .data$error, y = 0,
-          color = .data$group),
-        height = 0, width = 0.001,
-        shape = "|", size = 8, alpha = 0.8,
-        inherit.aes = FALSE) +
-      
-      { if (!is.null(dens) && nrow(dens) > 0)
-        ggplot2::geom_area(
-          data = dens,
-          mapping = ggplot2::aes(x = .data$x,
-                                 y = .data$y, 
-                                 fill = .data$group),
-          alpha = 0.18, position = "identity") } +
-      
-      ggplot2::geom_vline(
-        data = text,
-        mapping = ggplot2::aes(xintercept = mean, color = group),
-        linetype = "dotted", linewidth = 1) +
-      
-      ggplot2::geom_text(
+    if (!has_groups && show_text) {
+      p <- p + ggplot2::geom_text(
         data = text,
         ggplot2::aes(
-          x = .data$mean + .data$x_adjust,
-          y = .data$max_y * 1.05 + .data$y_offset_top,
-          label = sprintf(
-            "Mean %s = %s",
-            .data$group, scales::percent(.data$mean, 0.1)),
+          x = .data$stat_value + .data$x_adjust,
+          y = .data$max_y * 1.2,
+          label = sprintf("%s = %s", 
+                          stat_text,
+                          scales::percent(.data$stat_value, 0.1)),
           color = .data$group),
-        size = 4.5,
-        hjust = -0.05,
-        show.legend = FALSE) +
-      
-      { if (!any(is.na(text$lci)))
-        ggplot2::geom_text(
-          data = text,
-          ggplot2::aes(
-            x = .data$lci - .data$x_adjust,
-            y = .data$y_offset_bottom,
-            label = sprintf(
-              "LCI %s = %s",
-              .data$group, scales::percent(.data$lci, 0.1)),
-            color = .data$group),
-          size = 4.5,
-          vjust = -5, hjust = 1,
-          show.legend = FALSE) } +
-      
-      { if (!any(is.na(text$uci)))
-        ggplot2::geom_text(
-          data = text,
-          ggplot2::aes(
-            x = .data$uci + .data$x_adjust,
-            y = .data$y_offset_bottom,
-            label = sprintf(
-              "UCI %s = %s",
-              .data$group, scales::percent(.data$uci, 0.1)),
-            color = .data$group),
-          size = 4.5,
-          vjust = -5, hjust = 0,
-          show.legend = FALSE)  } +
-      
-      { if (length(set_target) > 1)
-        ggplot2::facet_wrap(
-          . ~ .data$type, scales = "free",
-          labeller = ggplot2::labeller(
-            type = c(
-              "hr" = "Home range estimation", 
-              "ctsd" = "Speed \u0026 distance estimation"))) } +
-      
-      ggplot2::scale_color_manual(
-        values = pal, drop = FALSE, guide = "none") +
-      ggplot2::scale_fill_manual(
-        values = pal, drop = FALSE, guide = "none") +
-      ggplot2::scale_x_continuous(
-        labels = scales::percent_format(accuracy = 1),
-        breaks = scales::breaks_pretty()
-      ) +
-      ggplot2::scale_y_continuous(
-        expand = ggplot2::expansion(mult = c(0, 0.05)),
-        limits = c(0, NA)
-      ) +
-      ggplot2::labs(
-        title = if (!is.null(obj$data$n_replicates))
-          paste0(
-            "Number of replicates: ", obj$data$n_replicates, "\n",
-            "Number of individuals: ",
-            max(obj$summary$m, na.rm = TRUE))
-        else NULL,
-        caption = caption,
-        x = "Relative error (%)", y = NULL) +
-      ggplot2::theme_classic() +
-      ggplot2::theme(
-        text = ggplot2::element_text(size = 13),
-        axis.text.y = ggplot2::element_blank(),
-        axis.line.y = ggplot2::element_blank(),
-        axis.ticks.y = ggplot2::element_blank(),
-        plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
-      ggplot2::guides(color = "none", fill = "none", shape = "none")
+        size = 3.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
+        show.legend = FALSE)
+    } else if (has_groups && show_text) {
+      p <- p + ggplot2::geom_text(
+        data = text,
+        ggplot2::aes(
+          x = .data$stat_value + .data$x_adjust,
+          y = .data$max_y * 1.2,
+          label = sprintf("%s %s = %s", 
+                          stat_text,
+                          .data$group,
+                          scales::percent(.data$stat_value, 0.1)),
+          color = .data$group),
+        size = 3.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
+        show.legend = FALSE)
+    }
     
-    return(p)
+    p <- p + ggplot2::guides(color = "none", fill = "none")
+    plots[[i]] <- p
+  }
+  
+  plots <- lapply(plots, function(p) {
+    p + ggplot2::scale_x_continuous(
+      labels = scales::percent_format(accuracy = 1),
+      breaks = scales::breaks_pretty(),
+      limits = global_x_range)
+  })
+  
+  if (length(warnings_list) > 0) {
+    warning(paste(
+      "`ci` may be too large",
+      "or data contains too few replicates,",
+      "returning NAs."))
+  }
+  
+  if (.verbose) {
+    
+    out <- lapply(processed, function(x) {
+      
+      data <- x$data
+      cri <- dplyr::bind_rows(
+        lapply(groups, function(gr) {
+          lapply(types, function(tp) {
+            d <- data[data$type == tp & data$group == gr, ]
+            dens <- stats::density(d$error, na.rm = TRUE)
+            df <- data.frame(x = dens$x, y = dens$y,
+                             type = tp, group = gr)
+            
+            tmp <- safe_extract_cri(
+              d$error, method = method, ci = ci)
+            tmp$type <- tp
+            tmp$group <- gr
+          
+            return(tmp)
+          })
+        })
+      )
+    })
+    
+    return(list(
+      outputs = out,
+      plots = patchwork::wrap_plots(plots, nrow = length(plots))))
     
   }
+  
+  return(patchwork::wrap_plots(plots, nrow = length(plots)))
+  
 }
 
 
@@ -3330,9 +3179,9 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   names(meanfitList) <- "All"
   
   if (add_individual_variation) {
-    sigma <- extract_pars(meanfitList, "sigma")
-    tau_p <- extract_pars(meanfitList, "position")
-    tau_v <- extract_pars(meanfitList, "velocity")
+    sigma <- suppressWarnings(extract_pars(meanfitList, "sigma"))
+    tau_p <- suppressWarnings(extract_pars(meanfitList, "position"))
+    tau_v <- suppressWarnings(extract_pars(meanfitList, "velocity"))
   } else {
     sigma <- extract_pars(models, "sigma", meta = TRUE)
     tau_p <- extract_pars(models, "position", meta = TRUE)
@@ -3417,23 +3266,23 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     fit <- list(A = fitA, B = fitB)
     
     sigma <- c(sigma, lapply(1:2, function(x) {
-      extract_pars(
+      suppressWarnings(extract_pars(
         obj = fit[[x]],
-        name = "sigma", meta = TRUE)[[1]]
+        name = "sigma", meta = TRUE)[[1]])
     }))
     names(sigma) <- c("All", "A", "B") 
     
     tau_p <- c(tau_p, lapply(1:2, function(x) {
-      extract_pars(
+      suppressWarnings(extract_pars(
         obj = fit[[x]], 
-        name = "position", meta = TRUE)[[1]]
+        name = "position", meta = TRUE)[[1]])
     }))
     names(tau_p) <- c("All", "A", "B") 
     
     tau_v <- c(tau_v, lapply(1:2, function(x) {
-      extract_pars(
+      suppressWarnings(extract_pars(
         obj = fit[[x]], 
-        name = "velocity", meta = TRUE)[[1]]
+        name = "velocity", meta = TRUE)[[1]])
     }))
     names(tau_v) <- c("All", "A", "B") 
     
@@ -4633,7 +4482,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
          sample_size_achieved = broke,
          minimum_population_sample_size = m_seq[[i]]
     ), class = "movedesign")
-  class(out) <- unique(c("movedesign_report", class(out)))
+  class(out) <- unique(c("movedesign_optimized", class(out)))
   
   return(out)
   
@@ -5356,7 +5205,7 @@ md_compare_preview <- function(x,
   }
   
   processed_outs <- lapply(seq_along(x), function(i) {
-    print(paste("Design", i))
+    .header(paste("Design", i), 3)
     .worker(x[[i]], paste0("Obj", i))
   })
   
@@ -5376,7 +5225,7 @@ md_compare_preview <- function(x,
     set_titles <- c(set_titles, paste("Design", id))
     set_subtitles <- c(
       set_subtitles, paste0(
-        max_m, " inds, tracked for ",
+        max_m, " tags, tracked for ",
         paste(x[[id]]$dur$value, x[[id]]$dur$unit), " every ",
         paste(x[[id]]$dti$value, x[[id]]$dti$unit)))
     
@@ -5515,7 +5364,8 @@ md_compare_preview <- function(x,
                 color = NA, fill = NA),
               strip.background.y = ggplot2::element_rect(
                 color = NA, fill = NA),
-              plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
+              plot.margin = ggplot2::unit(
+                c(0.2, 0.2, 0.3, 0.2), "cm")) +
             ggplot2::guides())
         
       } else {
@@ -5628,7 +5478,8 @@ md_compare_preview <- function(x,
               color = NA, fill = NA),
             strip.background.y = ggplot2::element_rect(
               color = NA, fill = NA),
-            plot.margin = ggplot2::unit(c(0.2, 0.2, 0.3, 0.2), "cm")) +
+            plot.margin = ggplot2::unit(
+              c(0.2, 0.2, 0.3, 0.2), "cm")) +
           ggplot2::guides(shape = "none")
       }
       
@@ -5860,69 +5711,50 @@ md_compare_preview <- function(x,
   
 }
 
-#' @title Visualize study design outputs
+#' @title Compare study design outputs
 #'
 #' @description
-#' Produces a publication-ready density plot showing the distribution of
-#' relative error estimates from study design simulations. The plot
-#' highlights the mean and a shaded credible interval (CI) region,
-#' following the computation of credible intervals as implemented in
-#' `bayestestR::ci()`. If groups are present, density curves for each
-#' group are overlaid for comparison, using customizable colors.
-#'
-#' This function is typically used after running [`md_replicate()`],
-#' providing a visual diagnostic of simulation results.
+#' The `md_compare()` function evaluates multiple study designs based
+#' on the estimated relative error of a target metric (e.g., home range
+#' area or movement speed) and the uncertainty around these estimates.
+#' It summarizes the performance of each design per type and per group
+#' (if present), ranks them according to how close their estimates are
+#' to optimal (zero error), and identifies designs that perform best
+#' across all groups.
+#' 
+#' It also produces a publication-ready density plot showing the
+#' distribution of relative error estimates for all replicates. The plot
+#' highlights the mean (or median) and a shaded credible interval (CI)
+#' region, following the computation of credible intervals. If groups
+#' are present, density curves for each group are overlaid for
+#' comparison, using customizable colors.
 #'
 #' @param x A list of `movedesign_output` objects, as returned by
 #'   [`md_replicate()`].
-#' @param stat Character string specifying which summary statistic to
+#' @param stat Character vector specifying which summary statistic to
 #'   display. Must be `"mean"` or `"median"`. Defaults to `"mean"`.
-#' @param ci Numeric scalar between 0 and 1. The probability of the
+#' @param ci Numeric value between 0 and 1. The probability of the
 #'   credible interval (CI) to be estimated. Default to `0.80` (80%).
 #' @param method Character. Credible interval estimation method (passed
-#'   to `bayestestR::ci()`; default: `"HDI"`). See `?bayestestR::ci()`
-#'   for more details.
+#'   to `bayestestR::ci()`). See `?bayestestR::ci()`
+#'   for more details. Default is `"HDI"` (Highest Density Interval).
 #' @param pal Character vector of color(s) for the density, CI shading,
-#'   and mean line. If a single group, supply one color (default:
+#'   and mean line. If no groups, supply one color (default:
 #'   `"#007d80"`). If groups are present, supply two colors (default:
 #'   `c("#007d80", "#A12C3B")`).
 #' @param m Numeric (optional). If provided, restricts the
 #'   results for a specific population sample size (`m`).
 #'   Defaults to `NULL`, which checks up to the maximum population
 #'   sample size.
-#' @param show_text Logical. If TRUE, displays the mean values as
-#'   text within the plots.
+#' @param show_text Logical, whether to display text annotations in
+#'   the plots. Default is `TRUE`.
 #'
-#' @return
-#' A `ggplot` object showing:
-#'   \itemize{
-#'     \item Density curve(s) of the relative error distribution.
-#'     \item Shaded region for the central credible interval.
-#'     \item Vertical dashed lines at mean(s).
-#'     \item Overlaid densities if multiple groups are present.
-#'     \item Percent-formatted x-axis for interpretation.
-#'   }
+#' @return A list with two elements:
+#' - `ranking`: Data frame containing all designs with computed metrics,
+#'   CI, distance to zero error, and ranking by type and group.
+#' - `winners`: Data frame of designs that are joint winners across all
+#'   groups (or the single winner if no groups are present).
 #'
-#' This object can be further customized with additional `ggplot2`
-#' layers if needed.
-#'
-#' @details
-#' This plot helps users assess the reliability of simulation outputs
-#' by visualizing the distribution of relative errors. When multiple
-#' groups are simulated, the plot enables direct visual comparison
-#' of performance across groups. If credible intervals cannot be
-#' calculated, a warning is issued and only the density curves
-#' are displayed.
-#' 
-#' **It is strongly recommended to use [`md_check()`] to assess whether
-#' the distributions shown here have stabilized.** Checking for
-#' convergence ensures that the summary statistics and uncertainty
-#' estimates depicted in the plot are reliable and not unduly
-#' influenced by too few replicates or ongoing variability.
-#' Running [`md_check()`] helps you determine if additional simulation
-#' replicates are needed to achieve stable inference in your design
-#' evaluation.
-#' 
 #' @seealso
 #' [`md_replicate()`],
 #' [`md_check()`] for convergence diagnostics,
@@ -5977,316 +5809,187 @@ md_compare <- function(x,
                        m = NULL,
                        show_text = TRUE) {
   
-  stopifnot(is.numeric(ci), length(ci) == 1, ci > 0, ci < 1)
+  out_verbose <- md_plot(x,
+                         stat = stat,
+                         ci = ci,
+                         method = method,
+                         pal = pal,
+                         m = m,
+                         show_text = show_text,
+                         .verbose = TRUE)
+  print(out_verbose$plots)
   
-  stat <- match.arg(stat)
+  out_long <- NULL
+  out <- out_verbose$out
   
-  warnings_list <- character(0)
-  safe_extract_cri <- function(x, method, ci) {
-    cri <- withCallingHandlers({
-      .extract_cri(x, method = method, ci = ci)
-    }, warning = function(w) {
-      warnings_list <<- unique(c(warnings_list, conditionMessage(w)))
-      invokeRestart("muffleWarning")
-    })
+  for (i in seq_along(out)) {
+    tmp <- out[[i]]
+    tmp$design <- i
     
-    if (is.na(cri$lci) || is.na(cri$uci)) {
-      msg <- "CI could not be calculated (returned NA)."
-      warnings_list <<- unique(c(warnings_list, msg))
-    }
+    tmp$m <- x[[i]]$input$n_individuals
+    tmp$dur <- x[[i]]$data$dur$value
+    tmp$dur_unit <- x[[i]]$data$dur$unit
+    tmp$dti <- x[[i]]$data$dti$value
+    tmp$dti_unit <- x[[i]]$data$dti$unit
     
-    return(cri)
+    out_long <- dplyr::bind_rows(out_long, tmp)
   }
   
-  if (inherits(x, "movedesign_output") ||
-      inherits(x, "movedesign_preprocess")) {
-    x <- list(x)
+  has_groups <- x[[1]]$input$grouped
+  set_target <- x[[1]]$input$set_target
+  
+  # Compute evaluation metrics:
+  
+  diag <- out_long %>%
+    dplyr::mutate(
+      overlaps_with_zero = lci <= 0 & uci >= 0,
+      dist_to_zero = dplyr::case_when(
+        overlaps_with_zero ~ 0,
+        TRUE ~ pmin(abs(lci), abs(uci))),
+      abs_est = abs(est),
+      ci_width = uci - lci)
+  
+  # Rank designs:
+  
+  ranking <- diag %>%
+    dplyr::group_by(type, group) %>%
+    dplyr::arrange(
+      dplyr::desc(overlaps_with_zero),
+      dist_to_zero,
+      abs_est,
+      ci_width) %>%
+    dplyr::mutate(rank = dplyr::row_number()) %>%
+    dplyr::ungroup()
+  
+  # Identify preliminary winners:
+  
+  winners <- ranking %>%
+    dplyr::filter(rank == 1)
+  
+  target_map <- c("hr" = "home range area",
+                  "ctsd" = "movement speed")
+  
+  # Determine conditional/joint winners:
+  
+  all_groups <- unique(ranking$group)
+  if (length(all_groups) == 1) {
+    # No groups ("All"):
+    joint_winners <- winners
+  } else {
+    # Multiple groups ("A" and "B"):
+    joint_winners <- winners %>%
+      dplyr::group_by(type, design) %>%
+      dplyr::summarise(
+        n_groups_won = dplyr::n_distinct(group),
+        groups_won = paste(sort(unique(group)), collapse = ", "),
+        .groups = "drop") %>%
+      dplyr::filter(n_groups_won == length(all_groups))
   }
   
-  .get_stat <- function(x) {
-    if (stat == "mean") {
-      mean(x, na.rm = TRUE) 
-    } else { median(x, na.rm = TRUE) }
-  }
+  .header("Design comparison", 5)
   
-  stat_text <- tools::toTitleCase(stat)
-  
-  .validate_input <- function(input) {
-    if (!inherits(input, "movedesign") ||
-        !("summary" %in% names(input))) {
-      stop("Input must be a 'movedesign_output' from md_replicate().")
-    }
-    
-    data <- input$summary
-    stopifnot(is.data.frame(data))
-    
-    if (!all(c("error", "error_lci", "error_uci") %in% names(data))) {
-      stop(paste("Input data must contain columns:", 
-                 "error, error_lci, error_uci."))
-    }
-    
-    return(data)
-  }
-  
-  .filter_m <- function(data, input) {
-    if (!is.null(m)) {
+  if (nrow(joint_winners) == 0) {
+    message(
+      .msg("   No single design is optimal for all groups.", "warning"))
+    message("   Different designs perform best in different groups.")
+  } else {
+    for (i in seq_len(nrow(joint_winners))) {
+      jw <- joint_winners[i, ]
       
-      if (!input$verbose) {
-        stop(paste("`md_replicate()` must be run with",
-                   "`verbose = TRUE` to use the `m` argument."))
+      message(format(
+        .msg(paste0("   Target: "), "main"),
+        width = 3, justify = "left"),
+        target_map[jw$type])
+      
+      message(format(
+        .msg(paste0("   Best study design: "), "success"),
+        width = 3, justify = "left"),
+        jw$design)
+      
+      if ("groups_won" %in% names(jw)) {
+        message(format(
+          .msg(paste0("   Wins for groups: "), "success"),
+          width = 3, justify = "left"),
+          jw$groups_won)
       }
       
-      if (!m %in% unique(data$m)) {
-        stop(paste0("Population sample size '", m,
-                    "' not found in data. Valid `m` values: ",
-                    paste(sort(unique(data$m)), collapse = ", ")))
+      # Study design parameters:
+      obj <- x[[jw$design]]$data
+      m <- x[[jw$design]]$input$n_individuals
+      if (has_groups) {
+        m <- paste0(m, " (", m / 2, " per group)")
       }
       
-      return(dplyr::filter(data, m == !!m))
-    } else {
-      return(data[data$m == max(
-        data$m, na.rm = TRUE), , drop = FALSE])
-    }
-  }
-  
-  .build_density <- function(d, tp, gr = "All", subset = TRUE) {
-    if (nrow(d) == 0) return(NULL)
-    dens <- stats::density(d$error, na.rm = TRUE)
-    df <- data.frame(x = dens$x, y = dens$y, type = tp, group = gr)
-    
-    if (subset) {
-      cri <- suppressMessages(
-        safe_extract_cri(d$error, method = method, ci = ci))
-      if (!is.na(cri$lci) && !is.na(cri$uci)) {
-        df <- subset(df, x >= cri$lci & x <= cri$uci)
-        if (nrow(df) > 0) df$shaded <- TRUE
+      .header("Parameters of best study design", 5)
+      message(format(
+        .msg(paste0("   Number of tags: "), "success"),
+        width = 3, justify = "left"), m)
+      message(format(
+        .msg(paste0("   Sampling duration: "), "success"),
+        width = 3, justify = "left"),
+        round(obj$dur$value, 1), " ", obj$dur$unit)
+      message(format(
+        .msg(paste0("   Sampling interval: "), "success"),
+        width = 3, justify = "left"),
+        round(obj$dti$value, 1), " ", obj$dti$unit)
+      
+      # Error and CI:
+      est_row <- ranking %>%
+        dplyr::filter(design == jw$design & type == jw$type)
+      
+      for (r in seq_len(nrow(est_row))) {
+        w <- est_row[r, ]
+        
+        if (has_groups) {
+        message(format(
+          .msg(paste0("   Group: "), "main"),
+          width = 3, justify = "left"),
+          w$group)
+        } else {
+          message(format(
+            .msg(paste0(""), "main")))
+        }
+        message(format(
+          .msg(paste0("       Relative error: "), "success"),
+          width = 3, justify = "left"),
+          paste0(.err_to_txt(w$est), "%"))
+        message(format(
+          .msg(paste0("       CI: "), "success"),
+          width = 3, justify = "left"),
+          paste0("[",
+                 .err_to_txt(w$lci), ", ",
+                 .err_to_txt(w$uci), "%]"))
+        
+        if (w$overlaps_with_zero) {
+          cat("       Reason: Credible interval overlaps 0.\n")
+        } else {
+          cat("       Reason: Smallest distance of CI to 0.\n")
+        }
       }
     }
-    
-    if (nrow(df) == 0) return(NULL)
-    return(df)
   }
   
-  .build_text <- function(d, tp, gr = "All", x_range) {
-    if (nrow(d) == 0) return(NULL)
-    cri <- suppressMessages(
-      safe_extract_cri(d$error, method = method, ci = ci))
-    dens <- stats::density(d$error, na.rm = TRUE)
-    stat_value <- .get_stat(d$error)
-    
-    x_adj <- (diff(x_range) * 0.01)
-    direction <- ifelse(stat_value > mean(x_range), -x_adj, x_adj)
-    
-    return(data.frame(group = gr,
-                      type = tp,
-                      stat_value = stat_value,
-                      lci = cri$lci,
-                      uci = cri$uci,
-                      max_y = max(dens$y),
-                      min_y = min(dens$y),
-                      x_adjust = direction,
-                      stringsAsFactors = FALSE))
-  }
+  ranking <- ranking %>%
+    dplyr::rename(error_lci = lci,
+                  error = est,
+                  error_uci = uci) %>%
+    dplyr::select("type", "group", "error",
+                  "ci", "error_lci", "error_uci", "ci_width",
+                  "design", "m",
+                  "dur", "dur_unit",
+                  "dti", "dti_unit",
+                  "overlaps_with_zero", "dist_to_zero", "rank")
   
-  plots <- list()
-  processed <- lapply(x, function(input) {
-    
-    data <- .validate_input(input)
-    data <- .filter_m(data, input)
-    data$type <- factor(data$type, levels = c("hr", "ctsd"))
-    has_groups <- "group" %in% names(data) &&
-      all(c("A", "B") %in% unique(as.character(data$group)))
-    
-    return(list(data = data,
-                input = input,
-                has_groups = has_groups,
-                facet_by_type = length(input$data$set_target) == 2))
-  })
+  # invisible(list(ranking = ranking,
+  #                winners = joint_winners))
   
-  all_x <- unlist(lapply(processed, function(p) {
-    data <- p$data
-    types <- unique(data$type)
-    groups <- if ("group" %in% names(data))
-      unique(data$group) else "All"
-    x_vals <- c()
-    
-    for (gr in groups) {
-      for (tp in types) {
-        d_sub <- data[data$type == tp &
-                        data$group == gr, , drop = FALSE]
-        if (nrow(d_sub) > 0) 
-          x_vals <- c(
-            x_vals, stats::density(d_sub$error, na.rm = TRUE)$x)
-      }
-    }
-    return(x_vals)
-  }))
-  
-  global_x_range <- range(all_x, na.rm = TRUE)
-  if (!all(is.finite(global_x_range))) 
-    global_x_range <- c(-Inf, Inf)
-  
-  for (i in seq_along(processed)) {
-    
-    data <- processed[[i]]$data
-    input <- processed[[i]]$input
-    has_groups <- processed[[i]]$has_groups
-    facet_by_type <- processed[[i]]$facet_by_type
-    
-    types <- unique(data$type)
-    groups <- if (has_groups) c("A", "B") else "All"
-    if (!has_groups) {
-      data <- data[data$group == "All", ] 
-    } else {
-      data <- data[data$group != "All", ]
-    }
-    
-    dens_full <- dplyr::bind_rows(
-      lapply(groups, function(gr) {
-        lapply(types, function(tp) {
-          .build_density(data[data$type == tp &
-                                data$group == gr, ],
-                         tp, gr, subset = FALSE)
-        })
-      })
-    )
-    
-    dens_shaded <- dplyr::bind_rows(
-      lapply(groups, function(gr) {
-        lapply(types, function(tp) {
-          .build_density(data[data$type == tp &
-                                data$group == gr, ],
-                         tp, gr, subset = TRUE)
-        })
-      })
-    )
-    
-    text <- dplyr::bind_rows(
-      lapply(groups, function(gr) {
-        lapply(types, function(tp) {
-          .build_text(data[data$type == tp &
-                             data$group == gr, ],
-                      tp, gr, x_range = global_x_range)
-        })
-      })
-    )
-    
-    set_title <- paste("Design", i)
-    set_subtitle <- paste0(
-      input$data$n_replicates, " replicates\n",
-      max(data$m, na.rm = TRUE), " inds, tracked for ",
-      paste(input$data$dur$value, input$data$dur$unit),
-      " every ", paste(input$data$dti$value, input$data$dti$unit))
-    caption <- paste0(
-      "Shaded region: ", as.integer(ci * 100),
-      "% credible interval; dotted line = ", stat)
-    
-    p <- ggplot2::ggplot(data) +
-      ggplot2::geom_jitter(
-        ggplot2::aes(x = .data$error,
-                     y = 0,
-                     color = .data$group),
-        height = 0, width = 0.001,
-        shape = "|", size = 8, alpha = 0.8) +
-      
-      ggplot2::geom_line(
-        data = dens_full,
-        ggplot2::aes(x = .data$x,
-                     y = .data$y,
-                     color = .data$group),
-        alpha = 0.3, linewidth = 1) +
-      
-      { if (!is.null(dens_shaded))
-        ggplot2::geom_area(
-          data = dens_shaded,
-          ggplot2::aes(x = .data$x,
-                       y = .data$y,
-                       fill = .data$group),
-          alpha = 0.18, position = "identity") } +
-      
-      ggplot2::geom_vline(
-        data = text,
-        ggplot2::aes(xintercept = .data$stat_value,
-                     color = .data$group),
-        linetype = "dotted") +
-      
-      { if (facet_by_type)
-        ggplot2::facet_wrap(
-          . ~ .data$type, scales = "free",
-          labeller = ggplot2::labeller(
-            type = c("hr" = "Home range estimation",
-                     "ctsd" = "Speed & distance estimation")))
-      } +
-      
-      ggplot2::scale_color_manual(values = pal, drop = TRUE) +
-      ggplot2::scale_fill_manual(values = pal, drop = TRUE) +
-      ggplot2::scale_y_continuous(
-        expand = ggplot2::expansion(mult = c(0, 0.05)),
-        limits = c(0, NA)) +
-      
-      ggplot2::labs(
-        title = set_title,
-        subtitle = set_subtitle,
-        caption = caption,
-        x = "Relative error (%)", y = NULL) +
-      
-      ggplot2::theme_classic() +
-      ggplot2::theme(
-        axis.text.y = ggplot2::element_blank(),
-        axis.line.y = ggplot2::element_blank(),
-        axis.ticks.y = ggplot2::element_blank(),
-        strip.text = ggplot2::element_text(size = 13),
-        strip.background.x = ggplot2::element_rect(
-          color = NA, fill = NA),
-        strip.background.y = ggplot2::element_rect(
-          color = NA, fill = NA),
-        plot.margin = ggplot2::unit(c(0.3, 0.3, 0.3, 0.3), "cm"))
-    
-    if (!has_groups && show_text) {
-      p <- p + ggplot2::geom_text(
-        data = text,
-        ggplot2::aes(
-          x = .data$stat_value + .data$x_adjust,
-          y = .data$max_y * 1.2,
-          label = sprintf("%s = %s", 
-                          stat_text,
-                          scales::percent(.data$stat_value, 0.1)),
-          color = .data$group),
-        size = 3.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
-        show.legend = FALSE)
-    } else if (has_groups && show_text) {
-      p <- p + ggplot2::geom_text(
-        data = text,
-        ggplot2::aes(
-          x = .data$stat_value + .data$x_adjust,
-          y = .data$max_y * 1.2,
-          label = sprintf("%s %s = %s", 
-                          stat_text,
-                          .data$group,
-                          scales::percent(.data$stat_value, 0.1)),
-          color = .data$group),
-        size = 3.5, hjust = ifelse(text$x_adjust < 0, 1, 0),
-        show.legend = FALSE)
-    }
-    
-    p <- p + ggplot2::guides(color = "none", fill = "none")
-    plots[[i]] <- p
-  }
-  
-  plots <- lapply(plots, function(p) {
-    p + ggplot2::scale_x_continuous(
-      labels = scales::percent_format(accuracy = 1),
-      breaks = scales::breaks_pretty(),
-      limits = global_x_range)
-  })
-  
-  if (length(warnings_list) > 0) {
-    warning(paste(
-      "`ci` may be too large",
-      "or data contains too few replicates,",
-      "returning NAs."))
-  }
-  
-  return(patchwork::wrap_plots(plots, nrow = length(plots)))
+  report <- structure(
+    list(data = list(grouped = has_groups,
+                     set_target = set_target),
+         ranking = ranking,
+         winners = joint_winners), class = "movedesign")
+  class(report) <- unique(c("movedesign_report", class(report)))
+  return(invisible(report))
   
 }
+

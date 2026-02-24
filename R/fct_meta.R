@@ -340,9 +340,10 @@ run_meta_resamples <- function(rv,
   
   out <- lapply(set_target, function(target) {
     
-    if (trace) message(
-      sprintf("-- Running for %s:",
-              ifelse(target == "hr", "home range", "speed")))
+    if (trace) message(format(
+      .msg("Target: ", "success"), 
+      width = 3, justify = "left"),
+      ifelse(target == "hr", "home range area", "movement speed"))
     
     if (target == "hr") {
       true_estimate[[target]] <- truthList[["hr"]][["All"]]$area
@@ -409,12 +410,13 @@ run_meta_resamples <- function(rv,
       
     }
     
+    start_total <- Sys.time()
+    
     for (m in m_seq) {
       if (m == 1) next
       
       if (trace) {
-        message("---- Combinations of ", m, " individuals:")
-        start_t <- Sys.time()
+        .header(paste0("Combinations of ", m, " individuals"), 6)
       }
       
       arg <- setNames(lapply(seq_along(input), function(i) {
@@ -655,9 +657,23 @@ run_meta_resamples <- function(rv,
       } # end of [sample] loop [based on the number of samples]
       
       if (trace) {
-        message("Elapsed time:")
-        elapsed <- Sys.time() - start_t
-        cat(format(elapsed), "\n")
+        
+        elapsed_sec <- as.numeric(difftime(
+          Sys.time(), start_total, units = "secs"))
+        
+        if (elapsed_sec < 60) {
+          value <- round(elapsed_sec, 1)
+          unit <- "second"
+        } else if (elapsed_sec < 3600) {
+          value <- round(elapsed_sec / 60, 1)
+          unit <- "minute"
+        } else {
+          value <- round(elapsed_sec / 3600, 2)
+          unit <- "hour"
+        }
+        
+        message("  Elapsed time: ", value, " ",
+                unit, ifelse(value == 1, "", "s"))
       }
       
     } # end of [m] loop [based on the number of individuals]
