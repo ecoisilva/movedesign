@@ -4643,14 +4643,17 @@ md_optimize <- function(obj,
 #'   or [`md_stack()`]).
 #' @param ci Numeric scalar between 0 and 1. The probability of the
 #'   credible interval (CI) to be estimated. Default to `0.95` (95%).
+#' @param view Character string indicating whether to return the
+#'   complete two-panel layout (`"both"`) or only the aggregated
+#'   summary plot with all replicates (`"summary_only"`).
 #' 
 #' @return A list of class `movedesign_report` containing:
 #' A list with two elements:
 #' \itemize{
 #'   \item `p`: A `ggplot` object displaying the results from a single
-#'     replicate, showing individual error estimates and their confidence
-#'     intervals.
-#'   \item `p.replicates`: A `ggplot` object summarizing mean errors
+#'     randomly selected replicate, showing individual error estimates
+#'     and their confidence intervals.
+#'   \item `p.replicates`: A `ggplot` object summarizing mean relative error
 #'     across all replicates, with aggregated estimates in the foreground
 #'     and individual replicates shown in lighter tones in the background.
 #' }
@@ -4670,7 +4673,11 @@ md_optimize <- function(obj,
 #' 
 #' @export
 md_plot_replicates <- function(obj,
-                               ci = 0.95) {
+                               ci = 0.95,
+                               view = c("both",
+                                        "summary_only")) {
+  
+  view <- match.arg(view)
   
   pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
   
@@ -4753,6 +4760,11 @@ md_plot_replicates <- function(obj,
     dt_plot_means <- dplyr::filter(dt_plot_means, .data$m %% 2 == 0)
   }
   
+  dt_plot <- dt_plot %>%
+    dplyr::mutate(
+      overlaps = factor(.data$overlaps,
+                        levels = c("TRUE", "FALSE")))
+  
   # facet_labels <- c(
   #   "resampled" = paste0("<b>Resampling</b>"),
   #   "original" = paste0(
@@ -4817,6 +4829,8 @@ md_plot_replicates <- function(obj,
         label.vjust = 0.4)) +
     
     ggplot2::labs(
+      title = expression("Estimation error (for a single " *
+                           italic("random") * " replicate)"),
       x = "Population sample size",
       y = "Relative error (%)") +
     
@@ -4894,33 +4908,24 @@ md_plot_replicates <- function(obj,
     ggplot2::geom_linerange(
       ggplot2::aes(ymin = .data$error_mean_lci,
                    ymax = .data$error_mean_uci),
-      show.legend = TRUE,
       position = ggplot2::position_dodge(width = 0.4),
+      show.legend = TRUE,
       color = "black", linewidth = 1) +
     ggplot2::geom_linerange(
       ggplot2::aes(ymin = .data$pred_lci,
                    ymax = .data$pred_uci),
-      show.legend = TRUE,
       position = ggplot2::position_dodge(width = 0.4),
       color = "black", linewidth = 0.4) +
     
     ggplot2::geom_point(
       position = ggplot2::position_dodge(width = 0.4),
+      show.legend = TRUE,
       stroke = 1.05, size = 5) +
     
     ggplot2::labs(
+      title = "Mean estimation error across all replicates",
       x = "Population sample size",
       y = "Relative error (%)") +
-    
-    ggplot2::scale_fill_manual(
-      name = paste0("Within error threshold (\u00B1",
-                    error_threshold * 100, "%)?"),
-      breaks = c("TRUE", "FALSE"),
-      values = pal, drop = FALSE,
-      guide = ggplot2::guide_legend(
-        override.aes = list(color = pal, fill = pal, size = 3),
-        order = 1,
-        label.vjust = 0.4)) +
     
     { if (!has_groups) {
       ggplot2::scale_shape_manual(
@@ -4934,6 +4939,16 @@ md_plot_replicates <- function(obj,
           override.aes = list(shape = set_shapes_manual, size = 3)))
     }
     } +
+    
+    ggplot2::scale_fill_manual(
+      name = paste0("Within error threshold (\u00B1",
+                    error_threshold * 100, "%)?"),
+      breaks = c("TRUE", "FALSE"),
+      values = pal, drop = FALSE,
+      guide = ggplot2::guide_legend(
+        override.aes = list(color = pal, fill = pal, size = 3),
+        order = 1,
+        label.vjust = 0.4)) +
     
     ggplot2::scale_x_continuous(
       breaks = scales::breaks_pretty()) +
@@ -4960,15 +4975,24 @@ md_plot_replicates <- function(obj,
   if (length(obj$data$set_target) == 2)
     p <- p + ggplot2::guides(color = "none")
   
-  plots <- list(p, p.replicates)
-
-  return(suppressWarnings(
-    patchwork::wrap_plots(
-      plots,
-      nrow = length(plots),
-      guides = "collect") +
-      patchwork::plot_annotation(
-        theme = ggplot2::theme(legend.position = "bottom"))))
+  if (view == "both") {
+    
+    p.replicates <- p.replicates +
+      ggplot2::theme(legend.position = "none")
+    
+    plots <- list(p, p.replicates)
+    
+    return(suppressWarnings(
+      patchwork::wrap_plots(
+        plots,
+        nrow = length(plots),
+        guides = "collect") +
+        patchwork::plot_annotation(
+          theme = ggplot2::theme(legend.position = "bottom"))))
+    
+  } else {
+    return(p.replicates)
+  }
   
 }
 
@@ -5984,7 +6008,7 @@ md_compare <- function(x,
   #                winners = joint_winners))
   
   report <- structure(
-    list(data = list(grouped = has_groups,
+    list(info = list(grouped = has_groups,
                      set_target = set_target),
          ranking = ranking,
          winners = joint_winners), class = "movedesign")

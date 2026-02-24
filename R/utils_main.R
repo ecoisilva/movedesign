@@ -693,7 +693,7 @@ summary.movedesign_report <- function(object, ...) {
   
   ranking <- object$ranking
   joint_winners <- object$winners
-  has_groups <- object$data$grouped
+  has_groups <- object$info$grouped
   target_map <- c("hr" = "home range area", "ctsd" = "movement speed")
   
   .header("Design comparison", 5)
