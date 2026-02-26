@@ -662,15 +662,15 @@ mod_comp_m_server <- function(id, rv,
           detail = "This may take a while...")
         
         simfitList <- fitting_models(simList,
-                                    set_target = rv$set_analysis,
-                                    .dur = rv$dur,
-                                    .dti = rv$dti,
-                                    .tau_p = rv$tau_p,
-                                    .tau_v = rv$tau_v,
-                                    .error_m = rv$error,
-                                    .check_sampling = TRUE,
-                                    .rerun = TRUE,
-                                    parallel = rv$parallel)
+                                     set_target = rv$set_analysis,
+                                     .dur = rv$dur,
+                                     .dti = rv$dti,
+                                     .tau_p = rv$tau_p,
+                                     .tau_v = rv$tau_v,
+                                     .error_m = rv$error,
+                                     .check_sampling = TRUE,
+                                     .rerun = TRUE,
+                                     parallel = rv$parallel)
         
         rv$dev$N1 <- c(rv$dev$N1, extract_dof(simfitList, "area"))
         rv$dev$N2 <- c(rv$dev$N2, extract_dof(simfitList, "speed"))
@@ -688,18 +688,21 @@ mod_comp_m_server <- function(id, rv,
           }
           
           if (rv$add_ind_var) {
-            tau_p <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
-              "position")[[1]]
-            tau_v <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
-              "velocity")[[1]]
-            sigma <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
-              "sigma")[[1]]
+            tau_p <- suppressWarnings(extract_pars(
+              emulate_seeded(
+                rv$meanfitList[[group]], 
+                rv$seedList[[(rv$n_sims - num_sims) + x]]),
+              "position"))[[1]]
+            tau_v <- suppressWarnings(extract_pars(
+              emulate_seeded(
+                rv$meanfitList[[group]], 
+                rv$seedList[[(rv$n_sims - num_sims) + x]]),
+              "velocity"))[[1]]
+            sigma <- suppressWarnings(extract_pars(
+              emulate_seeded(
+                rv$meanfitList[[group]], 
+                rv$seedList[[(rv$n_sims - num_sims) + x]]),
+              "sigma"))[[1]]
             
           } else {
             tau_p <- rv$tau_p[[group]]
@@ -745,18 +748,21 @@ mod_comp_m_server <- function(id, rv,
           }
           
           if (rv$add_ind_var) {
-            tau_p <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
-              "position")[[1]]
-            tau_v <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
-              "velocity")[[1]]
-            sigma <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[(rv$n_sims - num_sims) + x]]),
-              "sigma")[[1]]
+            tau_p <- suppressWarnings(extract_pars(
+              emulate_seeded(
+                rv$meanfitList[[group]], 
+                rv$seedList[[(rv$n_sims - num_sims) + x]]),
+              "position"))[[1]]
+            tau_v <- suppressWarnings(extract_pars(
+              emulate_seeded(
+                rv$meanfitList[[group]], 
+                rv$seedList[[(rv$n_sims - num_sims) + x]]),
+              "velocity"))[[1]]
+            sigma <- suppressWarnings(extract_pars(
+              emulate_seeded(
+                rv$meanfitList[[group]], 
+                rv$seedList[[(rv$n_sims - num_sims) + x]]),
+              "sigma"))[[1]]
             
           } else {
             tau_p <- rv$tau_p[[group]]
@@ -1559,18 +1565,18 @@ mod_comp_m_server <- function(id, rv,
         } # end of if (ctsd)
         
         if (rv$add_ind_var) {
-          tau_p <- extract_pars(
+          tau_p <- suppressWarnings(extract_pars(
             emulate_seeded(rv$meanfitList[[group]],
                            rv$seedList[[i]]),
-            "position")[[1]]
-          tau_v <- extract_pars(
+            "position"))[[1]]
+          tau_v <- suppressWarnings(extract_pars(
             emulate_seeded(rv$meanfitList[[group]],
                            rv$seedList[[i]]),
-            "velocity")[[1]]
-          sigma <- extract_pars(
+            "velocity"))[[1]]
+          sigma <- suppressWarnings(extract_pars(
             emulate_seeded(rv$meanfitList[[group]],
                            rv$seedList[[i]]),
-            "sigma")[[1]]
+            "sigma"))[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]
           tau_v <- rv$tau_v[[group]]

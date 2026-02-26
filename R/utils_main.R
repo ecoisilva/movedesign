@@ -593,10 +593,6 @@ summary.movedesign_check <- function(object, ...) {
         .msg("\u2717 Did not converge: ", "danger"),
         paste(fail_reasons, collapse = "; "),
         ".")
-      
-      # message(
-      #   .msg("\u2717 Did not converge: ", "danger"),
-      #   "at least one step exceeded tolerance.")
     }
     
     # message("")

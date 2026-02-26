@@ -1503,6 +1503,8 @@ mod_tab_ctsd_server <- function(id, rv) {
       
       ### Calculating total and mean distance: ----------------------------
       
+      start_path <- Sys.time()
+      
       out_dist_est_df <- data.frame(seed = numeric(0),
                                     lci = numeric(0),
                                     est = numeric(0),
@@ -1577,11 +1579,11 @@ mod_tab_ctsd_server <- function(id, rv) {
        }
       }
       
-      msg_log(
-        style = 'success',
-        message = paste0("Path estimation ",
-                         msg_success("completed"), "."),
-        run_time = difftime(Sys.time(), start, units = "sec"))
+      # msg_log(
+      #   style = 'success',
+      #   message = paste0("Path estimation ",
+      #                    msg_success("completed"), "."),
+      #   run_time = difftime(Sys.time(), start_path, units = "sec"))
       
       rv$distEst <<- rbind(rv$distEst, out_dist_est_df)
       rv$distErr <<- rbind(rv$distErr, out_dist_err_df)
@@ -1639,11 +1641,11 @@ mod_tab_ctsd_server <- function(id, rv) {
       time_sd <- difftime(Sys.time(), start, units = "sec")
       rv$time[["ctsd"]][[1]] <- rv$time[["ctsd"]][[1]] + time_sd[[1]]
       
-      msg_log(
-        style = "success",
-        message = paste0(
-          "Estimation ", msg_success("completed"), "."),
-        run_time = time_sd)
+      # msg_log(
+      #   style = "success",
+      #   message = paste0(
+      #     "Estimation ", msg_success("completed"), "."),
+      #   run_time = time_sd)
       
       shinyFeedback::showToast(
         type = "success",
