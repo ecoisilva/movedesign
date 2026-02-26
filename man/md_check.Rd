@@ -8,7 +8,7 @@ md_check(
   obj,
   m = NULL,
   tol = 0.01,
-  n_converge = 20,
+  n_converge = 5,
   plot = TRUE,
   pal = c("#007d80", "#A12C3B")
 )

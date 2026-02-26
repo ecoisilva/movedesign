@@ -5,16 +5,18 @@
 \title{Visualize study design outputs}
 \usage{
 md_plot(
-  obj,
+  x,
   stat = c("mean", "median"),
-  ci = 0.95,
+  ci = 0.8,
   method = "HDI",
   pal = c("#007d80", "#A12C3B"),
-  m = NULL
+  m = NULL,
+  show_text = TRUE,
+  ...
 )
 }
 \arguments{
-\item{obj}{A \code{movedesign_output} object, as returned by
+\item{x}{A \code{movedesign_output} object, as returned by
 \code{\link[=md_replicate]{md_replicate()}}. The object must contain a
 \code{summary} data frame with, at a minimum, the following columns:
 \describe{
@@ -28,7 +30,7 @@ md_plot(
 display. Must be \code{"mean"} or \code{"median"}. Defaults to \code{"mean"}.}
 
 \item{ci}{Numeric scalar between 0 and 1. The probability of the
-credible interval (CI) to be estimated. Default to \code{0.95} (95\%).}
+credible interval (CI) to be estimated. Default to \code{0.80} (80\%).}
 
 \item{method}{Character. Credible interval estimation method (passed
 to \code{bayestestR::ci()}; default: \code{"HDI"}). See \code{?bayestestR::ci()}
@@ -43,6 +45,11 @@ and mean line. If a single group, supply one color (default:
 results for a specific population sample size (\code{m}).
 Defaults to \code{NULL}, which checks up to the maximum population
 sample size.}
+
+\item{show_text}{Logical, whether to display text annotations in
+the plots. Default is \code{TRUE}.}
+
+\item{...}{Additional arguments used internally.}
 }
 \value{
 A \code{ggplot} object showing:

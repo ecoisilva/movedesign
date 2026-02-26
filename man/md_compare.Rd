@@ -2,12 +2,12 @@
 % Please edit documentation in R/fct_main.R
 \name{md_compare}
 \alias{md_compare}
-\title{Visualize study design outputs}
+\title{Compare study design outputs}
 \usage{
 md_compare(
   x,
   stat = c("mean", "median"),
-  ci = 0.95,
+  ci = 0.8,
   method = "HDI",
   pal = c("#007d80", "#A12C3B"),
   m = NULL,
@@ -18,18 +18,18 @@ md_compare(
 \item{x}{A list of \code{movedesign_output} objects, as returned by
 \code{\link[=md_replicate]{md_replicate()}}.}
 
-\item{stat}{Character string specifying which summary statistic to
+\item{stat}{Character vector specifying which summary statistic to
 display. Must be \code{"mean"} or \code{"median"}. Defaults to \code{"mean"}.}
 
-\item{ci}{Numeric scalar between 0 and 1. The probability of the
-credible interval (CI) to be estimated. Default to \code{0.95} (95\%).}
+\item{ci}{Numeric value between 0 and 1. The probability of the
+credible interval (CI) to be estimated. Default to \code{0.80} (80\%).}
 
 \item{method}{Character. Credible interval estimation method (passed
-to \code{bayestestR::ci()}; default: \code{"HDI"}). See \code{?bayestestR::ci()}
-for more details.}
+to \code{bayestestR::ci()}). See \code{?bayestestR::ci()}
+for more details. Default is \code{"HDI"} (Highest Density Interval).}
 
 \item{pal}{Character vector of color(s) for the density, CI shading,
-and mean line. If a single group, supply one color (default:
+and mean line. If no groups, supply one color (default:
 \code{"#007d80"}). If groups are present, supply two colors (default:
 \code{c("#007d80", "#A12C3B")}).}
 
@@ -38,49 +38,33 @@ results for a specific population sample size (\code{m}).
 Defaults to \code{NULL}, which checks up to the maximum population
 sample size.}
 
-\item{show_text}{Logical. If TRUE, displays the mean values as
-text within the plots.}
+\item{show_text}{Logical, whether to display text annotations in
+the plots. Default is \code{TRUE}.}
 }
 \value{
-A \code{ggplot} object showing:
+A list with two elements:
 \itemize{
-\item Density curve(s) of the relative error distribution.
-\item Shaded region for the central credible interval.
-\item Vertical dashed lines at mean(s).
-\item Overlaid densities if multiple groups are present.
-\item Percent-formatted x-axis for interpretation.
+\item \code{ranking}: Data frame containing all designs with computed metrics,
+CI, distance to zero error, and ranking by type and group.
+\item \code{winners}: Data frame of designs that are joint winners across all
+groups (or the single winner if no groups are present).
 }
-
-This object can be further customized with additional \code{ggplot2}
-layers if needed.
 }
 \description{
-Produces a publication-ready density plot showing the distribution of
-relative error estimates from study design simulations. The plot
-highlights the mean and a shaded credible interval (CI) region,
-following the computation of credible intervals as implemented in
-\code{bayestestR::ci()}. If groups are present, density curves for each
-group are overlaid for comparison, using customizable colors.
+The \code{md_compare()} function evaluates multiple study designs based
+on the estimated relative error of a target metric (e.g., home range
+area or movement speed) and the uncertainty around these estimates.
+It summarizes the performance of each design per type and per group
+(if present), ranks them according to how close their estimates are
+to optimal (zero error), and identifies designs that perform best
+across all groups.
 
-This function is typically used after running \code{\link[=md_replicate]{md_replicate()}},
-providing a visual diagnostic of simulation results.
-}
-\details{
-This plot helps users assess the reliability of simulation outputs
-by visualizing the distribution of relative errors. When multiple
-groups are simulated, the plot enables direct visual comparison
-of performance across groups. If credible intervals cannot be
-calculated, a warning is issued and only the density curves
-are displayed.
-
-\strong{It is strongly recommended to use \code{\link[=md_check]{md_check()}} to assess whether
-the distributions shown here have stabilized.} Checking for
-convergence ensures that the summary statistics and uncertainty
-estimates depicted in the plot are reliable and not unduly
-influenced by too few replicates or ongoing variability.
-Running \code{\link[=md_check]{md_check()}} helps you determine if additional simulation
-replicates are needed to achieve stable inference in your design
-evaluation.
+It also produces a publication-ready density plot showing the
+distribution of relative error estimates for all replicates. The plot
+highlights the mean (or median) and a shaded credible interval (CI)
+region, following the computation of credible intervals. If groups
+are present, density curves for each group are overlaid for
+comparison, using customizable colors.
 }
 \examples{
 if (interactive()) {

@@ -4,7 +4,7 @@
 \alias{estimate_speed}
 \title{Estimate movement speed for simulated movement data}
 \usage{
-estimate_speed(rv)
+estimate_speed(rv, stop_on_error = FALSE)
 }
 \arguments{
 \item{rv}{A \code{reactiveValues} list containing, at a minimum:

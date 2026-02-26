@@ -4,7 +4,7 @@
 \alias{md_plot_replicates}
 \title{Plot replicate error estimates and confidence intervals}
 \usage{
-md_plot_replicates(obj, ci = 0.95)
+md_plot_replicates(obj, ci = 0.95, view = c("both", "summary_only"))
 }
 \arguments{
 \item{obj}{A movement design output object (see \code{\link[=md_replicate]{md_replicate()}}
@@ -12,15 +12,19 @@ or \code{\link[=md_stack]{md_stack()}}).}
 
 \item{ci}{Numeric scalar between 0 and 1. The probability of the
 credible interval (CI) to be estimated. Default to \code{0.95} (95\%).}
+
+\item{view}{Character string indicating whether to return the
+complete two-panel layout (\code{"both"}) or only the aggregated
+summary plot with all replicates (\code{"summary_only"}).}
 }
 \value{
 A list of class \code{movedesign_report} containing:
 A list with two elements:
 \itemize{
 \item \code{p}: A \code{ggplot} object displaying the results from a single
-replicate, showing individual error estimates and their confidence
-intervals.
-\item \code{p.replicates}: A \code{ggplot} object summarizing mean errors
+randomly selected replicate, showing individual error estimates
+and their confidence intervals.
+\item \code{p.replicates}: A \code{ggplot} object summarizing mean relative error
 across all replicates, with aggregated estimates in the foreground
 and individual replicates shown in lighter tones in the background.
 }
