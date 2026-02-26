@@ -500,12 +500,12 @@
 #' @noRd 
 #' 
 .plot_meta <- function(rv,
-                      set_target = c("hr", "ctsd"),
-                      randomize = FALSE,
-                      replicate = FALSE,
-                      subpop = FALSE,
-                      colors = NULL,
-                      filter_to = NULL) {
+                       set_target = c("hr", "ctsd"),
+                       randomize = FALSE,
+                       replicate = FALSE,
+                       subpop = FALSE,
+                       colors = NULL,
+                       filter_to = NULL) {
   
   stopifnot(!is.null(rv$meta_tbl),
             !is.null(rv$which_m),

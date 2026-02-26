@@ -613,6 +613,149 @@ theme_movedesign <- function(ft_size = 13,
 }
 
 
+#' @title movedesign report custom theme
+#' @encoding UTF-8
+#'
+#' @description Custom ggplot2 theme for movedesign reports.
+#' @author Inu00EAs Silva \email{i.simoes-silva@@hzdr.de}
+#' @keywords internal
+#' 
+#' @importFrom ggplot2 %+replace%
+#' @importFrom dplyr %>%
+#'
+#' @param ft_size Base font size.
+#' @noRd
+.theme_movedesign_report <- function(base_size = 13) {
+  
+  ggplot2::theme_classic(base_size = base_size) +
+    ggplot2::theme(
+      
+      # Canvas
+      # plot.background = ggplot2::element_rect(
+      #   fill = "grey98", color = NA),
+      # panel.background = ggplot2::element_rect(
+      #   fill = "white", color = NA),
+      panel.grid.major = ggplot2::element_line(
+        color = "grey92", linewidth = 0.4),
+      panel.grid.minor = ggplot2::element_blank(),
+      
+      # Axes
+      axis.title = ggplot2::element_text(
+        color = "grey30", size = 11),
+      axis.title.x = ggplot2::element_text(face = "bold", hjust = 1),
+      axis.title.y = ggplot2::element_text(face = "bold", hjust = 1),
+      axis.text = ggplot2::element_text(
+        color = "grey40", size = 10),
+      axis.ticks = ggplot2::element_line(
+        color = "grey80", linewidth = 0.3),
+      
+      # Facet strips
+      strip.text = ggplot2::element_text(
+        color = "grey20", size = 13, face = "bold",
+        margin = ggplot2::margin(b = 6)),
+      # strip.text = ggplot2::element_text(size = 16),
+      strip.background.x = ggplot2::element_rect(
+        color = NA, fill = NA),
+      strip.background.y = ggplot2::element_rect(
+        color = NA, fill = NA),
+      
+      # Titles and captions
+      plot.title = ggplot2::element_text(
+        face = "bold", size = 15,
+        margin = ggplot2::margin(b = 4)),
+      plot.subtitle = ggplot2::element_text(
+        color = "grey45", size = 10,
+        margin = ggplot2::margin(b = 10)),
+      plot.caption = ggplot2::element_text(
+        color = "grey60", size = 9, hjust = 0.5,
+        margin = ggplot2::margin(t = 8)),
+      
+      # Legend
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.title = ggplot2::element_text(
+        color = "grey25", size = 10, face = "bold"),
+      legend.text = ggplot2::element_text(
+        color = "grey35", size = 10),
+      legend.key.size = ggplot2::unit(0.9, "lines"),
+      legend.margin = ggplot2::margin(t = 6),
+      legend.box.spacing = ggplot2::unit(0.2, "cm"),
+      
+      plot.margin = ggplot2::unit(
+        c(0.5, 0.5, 0.5, 0.5), "cm"))
+}
+
+
+#' @title movedesign density custom theme
+#' @encoding UTF-8
+#'
+#' @description Custom ggplot2 theme for movedesign density plots.
+#' @author Inu00EAs Silva \email{i.simoes-silva@@hzdr.de}
+#' @keywords internal
+#' 
+#' @importFrom ggplot2 %+replace%
+#' @importFrom dplyr %>%
+#'
+#' @param ft_size Base font size.
+#' @noRd
+.theme_movedesign_density <- function() {
+  
+  ggplot2::theme_minimal(base_size = 13) +
+    ggplot2::theme(
+      
+      # Canvas
+      panel.grid.major.x = ggplot2::element_line(
+        color = "grey92", linewidth = 0.4),
+      panel.grid.minor.x = ggplot2::element_blank(),
+      panel.grid.major.y = ggplot2::element_blank(),
+      panel.grid.minor.y = ggplot2::element_blank(),
+      panel.spacing = ggplot2::unit(0.5, "cm"),
+      
+      # Axes
+      axis.text.x = ggplot2::element_text(
+        color = "grey30", size = 10,
+        margin = ggplot2::margin(t = 5)),
+      axis.title.x = ggplot2::element_text(
+        face = "bold", margin = ggplot2::margin(t = 10)),
+      
+      axis.text.y = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      
+      axis.line.x = ggplot2::element_line(linewidth = 0.5),
+      
+      axis.ticks.x = ggplot2::element_line(
+        color = "#C8CDD8", linewidth = 0.4),
+      axis.ticks.y = ggplot2::element_blank(),
+      
+      axis.ticks.length = ggplot2::unit(4, "pt"),
+      
+      # Facet strips
+      strip.text = ggplot2::element_text(
+        color = "grey20", size = 13, face = "bold",
+        margin = ggplot2::margin(b = 6)),
+      strip.background.x = ggplot2::element_rect(
+        color = NA, fill = NA),
+      strip.background.y = ggplot2::element_rect(
+        color = NA, fill = NA),
+      strip.clip = "off",
+      
+      # Titles and captions
+      plot.title = ggplot2::element_text(
+        face = "bold", size = 15,
+        margin = ggplot2::margin(b = 4)),
+      plot.subtitle = ggplot2::element_text(
+        color = "grey45", size = 10,
+        margin = ggplot2::margin(b = 10)),
+      plot.caption = ggplot2::element_text(
+        color = "grey60", size = 9, hjust = 0.5,
+        margin = ggplot2::margin(t = 8)),
+      
+      plot.margin = ggplot2::unit(
+        c(0.5, 0.5, 0.5, 0.5), "cm"))
+}
+
+
 #' Plot home range
 #'
 #' @description Plotting home range output from ctmm
@@ -2277,7 +2420,6 @@ ellipse <- function(x, scale = c(1, 1),
 ellipke <- function(m, tol = .Machine$double.eps) {
   
   isempty <- function (x) length(x) == 0
-  
   finds <- function (v) which(if (is.logical(v)) v else v != 0)
   
   ones <- function (n, m = n) {
@@ -2319,3 +2461,95 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   }
   return(list(k = k, e = e))
 }
+
+#' Summarize error metrics with confidence and prediction intervals
+#'
+#' @noRd
+.summarize_error <- function(data,
+                             error_col = "error",
+                             group_vars = c("type", "group", "m"),
+                             error_threshold = 0.05,
+                             conf_level = 0.95) {
+  
+  if (!is.data.frame(data)) {
+    stop("`data` must be a data.frame.")
+  }
+  
+  if (!is.character(error_col) || length(error_col) != 1L) {
+    stop("`error_col` must be a single character string.")
+  }
+  
+  if (!all(group_vars %in% names(data))) {
+    stop("All `group_vars` must exist in `data`.")
+  }
+  
+  if (!error_col %in% names(data)) {
+    stop("`error_col` must exist in `data`.")
+  }
+  
+  if (!is.numeric(error_threshold) ||
+      length(error_threshold) != 1L) {
+    stop("`error_threshold` must be a single numeric value.")
+  }
+  
+  if (!is.numeric(conf_level) ||
+      conf_level <= 0 ||
+      conf_level >= 1) {
+    stop("`conf_level` must lie strictly between 0 and 1.")
+  }
+  
+  alpha <- 1 - conf_level
+  t_prob <- 1 - alpha / 2
+  
+  out <- suppressWarnings(
+    suppressMessages(
+      data %>%
+        dplyr::group_by(
+          dplyr::across(dplyr::all_of(group_vars))) %>%
+        dplyr::summarize(
+          n = dplyr::n(),
+          sd_error = stats::sd(.data[[error_col]], na.rm = TRUE),
+          error = base::mean(.data[[error_col]], na.rm = TRUE),
+          .groups = "drop")))
+  
+  df <- out$n - 1L
+  t_crit <- suppressWarnings(
+    ifelse(df > 0, stats::qt(t_prob, df = df), NA_real_))
+  se <- out$sd_error / base::sqrt(out$n)
+  
+  # Confidence intervals:
+  error_lci <- out$error - t_crit * se
+  error_uci <- out$error + t_crit * se
+  
+  # Prediction intervals:
+  pred_scale <- base::sqrt(1 + 1 / out$n)
+  pred_lci <- out$error - t_crit * out$sd_error * pred_scale
+  pred_uci <- out$error + t_crit * out$sd_error * pred_scale
+  
+  within_threshold <-
+    out$error >= -error_threshold &
+    out$error <=  error_threshold
+  
+  overlaps_with_threshold <-
+    error_lci <=  error_threshold &
+    error_uci >= -error_threshold
+  
+  overlaps <- factor(
+    ifelse(within_threshold, TRUE, FALSE),
+    levels = c(TRUE, FALSE),
+    labels = c("TRUE", "FALSE"))
+  
+  return(dplyr::bind_cols(
+    out, dplyr::tibble(
+      error_lci = error_lci,
+      error_uci = error_uci,
+      pred_lci = pred_lci,
+      pred_uci = pred_uci,
+      ci = conf_level,
+      within_threshold = within_threshold,
+      overlaps_with_threshold = overlaps_with_threshold,
+      overlaps = overlaps)))
+  
+}
+
+

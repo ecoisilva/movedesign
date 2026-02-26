@@ -518,7 +518,10 @@ summary.movedesign_check <- function(object, ...) {
     type_i <- diag$type[i]
     mean_error_i <- diag$last_cummean[i]
     recent_cummean_i <- diag$recent_cummean[[i]]
-    has_converged_i <- diag$has_converged[i]
+    has_converged_i <- all(
+      abs(unlist(diag$recent_delta_cummean)) <= tol &
+        unlist(diag$recent_roll_sd) <= tol,
+      na.rm = TRUE)
     
     n_eval <- length(recent_cummean_i)
     type_i <- diag$type[i]
@@ -567,9 +570,33 @@ summary.movedesign_check <- function(object, ...) {
       message(sprintf(
         "    Stabilized at replicate %d.", stabilized_at_i))
     } else {
+      
+      # Identify which criteria failed:
+      
+      failed_delta <- any(sapply(
+        diag$recent_delta_cummean,
+        function(x) any(abs(x) > tol, na.rm = TRUE)))
+      
+      failed_sd <- any(sapply(
+        diag$recent_roll_sd,
+        function(x) any(x > tol, na.rm = TRUE)))
+      
+      # Construct informative message:
+      
+      fail_reasons <- c()
+      if (failed_delta) fail_reasons <- c(
+        fail_reasons, "stepwise change exceeded tolerance")
+      if (failed_sd)    fail_reasons <- c(
+        fail_reasons, "recent variability exceeded tolerance")
+      
       message(
         .msg("\u2717 Did not converge: ", "danger"),
-        "at least one step exceeded tolerance.")
+        paste(fail_reasons, collapse = "; "),
+        ".")
+      
+      # message(
+      #   .msg("\u2717 Did not converge: ", "danger"),
+      #   "at least one step exceeded tolerance.")
     }
     
     # message("")
@@ -694,15 +721,16 @@ summary.movedesign_report <- function(object, ...) {
   ranking <- object$ranking
   joint_winners <- object$winners
   has_groups <- object$info$grouped
-  target_map <- c("hr" = "home range area", "ctsd" = "movement speed")
+  target_map <- c(hr = "home range area", ctsd = "movement speed")
   
   .header("Design comparison", 5)
   
   if (nrow(joint_winners) == 0) {
     message(
-      .msg("   No single design is optimal for all groups.", "warning"))
-    message("   Different designs perform best in different groups.")
+      .msg("   No single design is optimal for all groups.", "danger"))
+    
   } else {
+    
     for (i in seq_len(nrow(joint_winners))) {
       jw <- joint_winners[i, ]
       
@@ -715,17 +743,18 @@ summary.movedesign_report <- function(object, ...) {
         width = 3, justify = "left"),
         jw$design)
       
-      if ("groups_won" %in% names(jw)) {
-        message(format(.msg("   Wins for groups: ", "success"),
-                       width = 3, justify = "left"),
-                jw$groups_won)
-      }
+      if (has_groups)
+        if ("groups_won" %in% names(jw)) {
+          message(format(.msg("   Wins for groups: ", "success"),
+                         width = 3, justify = "left"),
+                  jw$groups_won)
+        }
       
-      est_row <- ranking %>% 
-        dplyr::filter(design == jw$design & type == jw$type)
+      est_rows <- ranking[ranking$design_id == jw$design &
+                            ranking$type == jw$type, ]
       
-      for (r in seq_len(nrow(est_row))) {
-        w <- est_row[r, ]
+      for (r in seq_len(nrow(est_rows))) {
+        w <- est_rows[r, ]
         
         m <- w$m
         if (has_groups) m <- paste0(m, " (", m / 2, " per group)")

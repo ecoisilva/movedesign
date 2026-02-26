@@ -92,28 +92,67 @@ estimate_hr <- function(rv) {
 #' @importFrom ctmm speed
 #' 
 #' @keywords internal
-estimate_speed <- function(rv) {
+estimate_speed <- function(rv, stop_on_error = FALSE) {
   
-  ctsdList <- lapply(seq_along(rv$simList), function(x) {
-    tryCatch(
-      ctmm::speed(rv$simList[[x]],
-                  rv$simfitList[[x]],
-                  units = FALSE,
-                  trace = 0),
-      warning = function(w) {
-        msg <- "Movement model is fractal"
-        if (grepl(msg, w)) warning(msg)
-        return(NULL)
-      },
+  n <- length(rv$simList)
+  if (n != length(rv$simfitList)) 
+    stop("simList and simfitList must have the same length.")
+  if (n == 0L) stop("simList is empty.")
+  
+  nms <- names(rv$simList)
+  if (is.null(nms)) nms <- as.character(seq_len(n))
+  
+  # Preallocate output and diagnostics:
+  
+  out <- vector("list", n)
+  warnings_vec <- character(n)
+  errors_vec <- character(n)
+  success <- logical(n)
+  
+  # Estimate speed:
+  
+  for (i in seq_len(n)) {
+    
+    warn_msg <- NULL
+    speed_result <- tryCatch(
+      withCallingHandlers(
+        ctmm::speed(rv$simList[[i]],
+                    rv$simfitList[[i]],
+                    units = FALSE,
+                    trace = 0),
+        warning = function(w) {
+          warn_msg <<- conditionMessage(w)
+          invokeRestart("muffleWarning")
+        }
+      ),
       error = function(e) {
-        warning(paste("ctmm::speed() failed for simulation no.", x))
+        if (stop_on_error) stop(e)
+        errors_vec[i] <<- conditionMessage(e)
+        warning(sprintf("%s", errors_vec[i]))
         return(NULL)
       }
     )
-  }) # end of lapply
+    
+    out[[i]] <- speed_result
+    success[i] <- !is.null(speed_result)
+    
+    if (!is.null(warn_msg)) {
+      warnings_vec[i] <- warn_msg
+      warning(sprintf("%s", warn_msg))
+    } else {
+      warnings_vec[i] <- NA_character_
+    }
+  }
   
-  names(ctsdList) <- names(rv$simList)
-  ctsdList[sapply(ctsdList, is.null)] <- NULL
-  return(ctsdList)
+  attr(out, "diagnostics") <- list(
+    n_total = n,
+    successful_count = sum(success),
+    failed_count = length(success) - sum(success),
+    per_simulation_success = success,
+    per_simulation_warning = warnings_vec,
+    per_simulation_error = errors_vec)
+  names(out) <- nms
+  
+  return(out)
   
 } # end of function, estimate_speed()
