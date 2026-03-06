@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_main.R
 \name{md_replicate}
 \alias{md_replicate}
-\title{Replicate study design and aggregate simulation outputs}
+\title{Replicate study design workflow and aggregate outputs}
 \usage{
 md_replicate(
   obj,
@@ -16,63 +16,98 @@ md_replicate(
 )
 }
 \arguments{
-\item{obj}{An object of class \code{movedesign} created by
-\code{\link[=md_prepare]{md_prepare()}}. It contains all parameters and input data
-defining the movement study.}
+\item{obj}{An object of class \code{movedesign_input}, as returned by
+\code{\link[=md_prepare]{md_prepare()}} or \code{\link[=md_simulate]{md_simulate()}}, or a \code{movedesign_output}
+object from a previous call of this function. Passing a
+\code{movedesign_output} appends \code{n_replicates} to
+the existing results.}
 
-\item{n_replicates}{Integer specifying how many independent
-simulation replicates to run.}
+\item{n_replicates}{A single positive integer. The number of
+independent replicates to run. Must be at least \code{5}. Start with
+a modest number (\emph{e.g.}, \code{20}), then use \code{\link[=md_check]{md_check()}} to assess
+convergence. If convergence has not been reached, pass the
+output back to this function to append more replicates.}
 
-\item{verbose}{Logical; if \code{TRUE}, runs population-level inferences
-iteratively for increasing population sample sizes, saving results
-at each step. Defaults to \code{FALSE}, which runs it only once for the
-maximum sample size defined by \code{n_individuals} in \code{\link[=md_prepare]{md_prepare()}}.}
+\item{verbose}{Logical. If \code{TRUE} (default), evaluates
+population-level inference at every \emph{population} sample size
+up to \code{n_individuals}, saving results at each step. This shows how
+estimation performance changes as sample size grows. If \code{FALSE},
+inference is run only once at the maximum sample size defined
+by \code{n_individuals} in \code{\link[=md_prepare]{md_prepare()}}.}
 
-\item{trace}{Logical; if \code{TRUE} (default), prints progress and
-timing messages to the console.}
+\item{trace}{Logical. If \code{TRUE} (default), prints progress and
+timing messages to the console for each replicate. Set to \code{FALSE}
+for silent execution.}
 
-\item{parallel}{Logical; if \code{TRUE}, enables parallel processing.
-Default is \code{FALSE}.}
+\item{parallel}{Logical. If \code{TRUE}, runs replicates in parallel.
+Defaults to \code{FALSE}. Not supported on Windows, where execution
+falls back to sequential automatically.}
 
-\item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
-to display as a reference in the plot.}
+\item{error_threshold}{Numeric. The acceptable error
+threshold used when summarising estimation performance across
+replicates (e.g. \code{0.05} for 5\%).}
 
-\item{ncores}{Integer; number of CPU cores to use for parallel
-processing. Defaults to all available cores detected by
-\code{parallel::detectCores()}.}
+\item{ncores}{Integer. Number of CPU cores to use when
+\code{parallel = TRUE}. Defaults to all available cores via
+\code{\link[parallel:detectCores]{parallel::detectCores()}}. Ignored when \code{parallel = FALSE} or
+on Windows.}
 
-\item{...}{Additional arguments used internally.}
+\item{...}{Reserved for internal use.}
 }
 \value{
-A list of class \code{movedesign_output} with two elements:
-\itemize{
-\item \code{data}: A list containing
-merged simulation outputs from all replicates.
-\item \code{summary}: A \code{data.table} summarizing key
-statistics for each replicate.
-}
+An object of class \code{movedesign_output}, accepted by \code{\link[=md_check]{md_check()}},
+\code{\link[=md_plot]{md_plot()}}, and \code{\link[=md_plot_replicates]{md_plot_replicates()}}.
 }
 \description{
-Runs the specified movement study design multiple times and aggregates
-outputs and summary statistics across independent replicates. This
-enables sensitivity analyses and quantifies variability arising from
-random sampling, especially when individual-level variation is enabled
-(i.e., \code{add_individual_variation = TRUE} in \code{\link[=md_prepare]{md_prepare()}}).
-Replication helps assess how stochasticity and design choices impact
-simulation inference.
+Runs the full \code{movedesign} workflow multiple times and aggregates
+outputs across independent replicates. Use this function after
+\code{\link[=md_run]{md_run()}} to quantify how stochasticity and design choices affect
+estimation performance, and to produce the robust, replicated
+results needed for a reliable design evaluation. Use \code{\link[=md_check]{md_check()}}
+afterwards to assess whether enough replicates have been run for
+stable inference.
+
+Can also extend a previous run of \code{\link[=md_replicate]{md_replicate()}}: passing an
+existing \code{movedesign_output} object appends new replicates to the
+existing outputs rather than starting over.
 }
 \details{
-Each replicate runs independently using the same study design object
-but with a unique random seed to ensure independence. Results from all
-replicates are merged using \code{\link[=md_merge]{md_merge()}}, and summary statistics
-combine into a single \code{data.table} for convenient downstream analyses
-and evaluation. Parallel processing can significantly reduce runtime
-when running many replicates; use \code{ncores} to specify the number of CPU
-cores used. If function is interrupted (e.g., Ctrl+C), it returns
-results from all completed replicates up to that point.
+Each replicate calls \code{\link[=md_run]{md_run()}} with a unique random seed,
+ensuring results are statistically independent. If the function is
+interrupted, it returns all results completed up to that point
+rather than discarding them. This makes it safe to stop a long run
+early and still retrieve partial results.
+\subsection{Parallel processing}{
+
+Setting \code{parallel = TRUE} can substantially reduce runtime for
+large replication runs. Parallelisation relies on
+\code{\link[parallel:mcdummies]{parallel::mclapply()}} and is not available on Windows; in that
+case, execution falls back to sequential with no error.
+}
+
+\subsection{Appending replicates}{
+
+Passing a \code{movedesign_output} object as \code{obj} adds new
+replicates to the existing results. This is useful when an
+initial run needs more replicates for stable inference without
+discarding completed work.
+}
+
+\subsection{Assessing convergence}{
+
+There is no universal rule for how many replicates are sufficient.
+After an initial run, use \code{\link[=md_check]{md_check()}} to evaluate whether the
+cumulative mean of the tracked error metric has stabilised across
+replicates. If convergence has not been reached, pass the returned
+\code{movedesign_output} object back to \code{\link[=md_replicate]{md_replicate()}} to append
+more replicates without discarding completed work. Repeat until
+\code{\link[=md_check]{md_check()}} confirms convergence.
+}
 }
 \examples{
 if (interactive()) {
+
+  data(buffalo)
   input <- md_prepare(
     data = buffalo,
     models = models,
@@ -83,13 +118,22 @@ if (interactive()) {
     add_individual_variation = TRUE,
     grouped = FALSE,
     set_target = "hr",
-    which_meta = "mean"
-  )
-
+    which_meta = "mean")
+  
   output <- md_replicate(input, n_replicates = 5)
+  md_check(output)
+  
+  # Append more replicates to an existing result:
+  output <- md_replicate(output, n_replicates = 10)
 }
 
 }
 \seealso{
-\code{\link[=md_prepare]{md_prepare()}}, \code{\link[=md_run]{md_run()}}, \code{\link[=md_merge]{md_merge()}}
+\code{\link[=md_prepare]{md_prepare()}} and \code{\link[=md_simulate]{md_simulate()}} to build the input object.
+\code{\link[=md_run]{md_run()}} for a single exploratory run before committing to
+full replication.
+\code{\link[=md_check]{md_check()}} to assess whether cumulative estimation error has
+stabilised across replicates (the recommended criterion for
+deciding when enough replicates have been run).
+\code{\link[=md_plot]{md_plot()}} and \code{\link[=md_plot_replicates]{md_plot_replicates()}} to visualize outputs.
 }

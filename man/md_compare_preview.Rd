@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_main.R
 \name{md_compare_preview}
 \alias{md_compare_preview}
-\title{Preview plot for movedesign workflow outputs (single replicate)}
+\title{Compare estimation error across designs (single replicate)}
 \usage{
 md_compare_preview(
   x,
@@ -13,47 +13,60 @@ md_compare_preview(
 )
 }
 \arguments{
-\item{x}{A list of objects of class \code{movedesign_preprocess}
-(outputs of \code{\link[=md_run]{md_run()}}).}
+\item{x}{A list of at least two \code{movedesign_preprocess} objects,
+each returned by \code{\link[=md_run]{md_run()}}. Each element represents one study
+design to compare. Designs typically differ in sampling
+parameters such as \code{dur}, \code{dti}, or \code{n_individuals}, but any
+valid \code{\link[=md_prepare]{md_prepare()}} or \code{\link[=md_simulate]{md_simulate()}} inputs can be compared.}
 
-\item{n_resamples}{Numeric. Must be a positive value. Defines how many
-combinations are generated for each population sample size,
-with each combination producing a new population-level estimate.}
+\item{n_resamples}{A single positive integer. The number of
+random combinations of individuals generated at each population
+sample size per design. Each combination produces one
+population-level estimate. Set to \code{NULL} to plot
+raw estimates without resampling.}
 
-\item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
-to display as a reference in the plot.}
+\item{error_threshold}{Numeric. Relative error threshold shown
+as a horizontal reference line in the plot (e.g. \code{0.05} for 5\%).}
 
-\item{pal}{Character vector of two colors for within/outside threshold
-(default: c("#007d80", "#A12C3B")).}
+\item{pal}{A character vector of two colours, used for estimates
+within and outside the error threshold respectively.
+Defaults to \code{c("#007d80", "#A12C3B")}.}
 
-\item{...}{Additional arguments used internally.}
+\item{...}{Reserved for internal use.}
 }
 \value{
-A ggplot object displaying relative error by population sample size,
-with point estimate and confidence intervals for mean estimates,
-and horizontal error threshold lines.
+A \code{ggplot} object. Displays relative error as a function of
+population sample size, with one panel (or two if two target)
+per design. Point estimates, confidence intervals, and a horizontal
+reference line at \code{error_threshold}.
 }
 \description{
-Generates a quick visualization of relative error for home range or
-movement speed estimation from a single replicate of a movedesign
-workflow.
-The plot can display either the estimates from that replicate for a
-random combination of individuals, or, when resampling is enabled,
-summaries derived from repeated draws of individuals at each population
-sample size (based on the specified number of resamples).
+Plots estimation error of the chosen targets for two or more
+study designs, each represented by a single \code{\link[=md_run]{md_run()}} output.
+Use this function to quickly compare how design choices
+affect estimation performance before committing to a full
+replication with \code{\link[=md_replicate]{md_replicate()}}.
 
-This functions shows preliminary outputs only based on the output of
-\code{\link[=md_run]{md_run()}} (a \code{movedesign_preprocess} object) and should not be used to
-evaluate study design by itself. Instead, users should run
-\code{\link[=md_replicate]{md_replicate()}} and check for convergence with \code{\link[=md_check]{md_check()}}.
+Because each design is represented by a single stochastic run,
+results are preliminary. For robust, publication-ready
+comparisons, run \code{\link[=md_replicate]{md_replicate()}} for each design and compare
+with \code{\link[=md_compare]{md_compare()}}.
 }
 \details{
-This plot summarizes a single replicate. Credible intervals and robust
-study design conclusions generally require multiple replicates generated
-with \code{\link[=md_replicate]{md_replicate()}}.
+If \code{n_resamples} is not \code{NULL}, the function draws \code{n_resamples}
+random combinations of individuals at each population sample size
+and computes a population-level estimate for each. This step
+
+Each design is represented by a single stochastic run. Apparent
+differences between designs may reflect random variation rather
+than genuine performance differences. Use \code{\link[=md_replicate]{md_replicate()}} to
+generate robust, replicated results for each design, and
+\code{\link[=md_compare]{md_compare()}} to compare multiple designs.
 }
 \examples{
 if (interactive()) {
+
+  data(buffalo)
   inputA <- md_prepare(
     data = buffalo,
     models = models,
@@ -64,8 +77,8 @@ if (interactive()) {
     add_individual_variation = FALSE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
+    which_meta = "mean")
+  
   inputB <- md_prepare(
     data = buffalo,
     models = models,
@@ -76,9 +89,8 @@ if (interactive()) {
     add_individual_variation = TRUE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
-
+    which_meta = "mean")
+  
   outputA <- md_run(inputA)
   outputB <- md_run(inputB)
   md_compare_preview(list(outputA,
@@ -87,5 +99,8 @@ if (interactive()) {
 
 }
 \seealso{
-\code{\link[=md_run]{md_run()}}, \code{\link[=md_replicate]{md_replicate()}}
+\code{\link[=md_run]{md_run()}} to generate each input object.
+\code{\link[=md_plot_preview]{md_plot_preview()}} for a single-design equivalent.
+\code{\link[=md_replicate]{md_replicate()}} for robust multi-replicate outputs per design.
+\code{\link[=md_check]{md_check()}} to assess convergence across replicates.
 }

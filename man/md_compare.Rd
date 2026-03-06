@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_main.R
 \name{md_compare}
 \alias{md_compare}
-\title{Compare study design outputs}
+\title{Compare estimation error across study design workflows}
 \usage{
 md_compare(
   x,
@@ -15,59 +15,106 @@ md_compare(
 )
 }
 \arguments{
-\item{x}{A list of \code{movedesign_output} objects, as returned by
-\code{\link[=md_replicate]{md_replicate()}}.}
+\item{x}{A list of at least two \code{movedesign_output} objects, each
+returned by \code{\link[=md_replicate]{md_replicate()}}. All designs must share the same
+\code{set_target}. Designs typically differ in sampling parameters
+such as \code{dur}, \code{dti}, or \code{n_individuals}.}
 
-\item{stat}{Character vector specifying which summary statistic to
-display. Must be \code{"mean"} or \code{"median"}. Defaults to \code{"mean"}.}
+\item{stat}{Character. Summary statistic used to represent the
+centre of the error distribution in the plot and ranking.
+Must be \code{"mean"} (default) or \code{"median"}.}
 
-\item{ci}{Numeric value between 0 and 1. The probability of the
-credible interval (CI) to be estimated. Default to \code{0.80} (80\%).}
+\item{ci}{Numeric. Coverage probability of the credible interval
+computed over the distribution of relative error across
+replicates. Must be strictly between 0 and 1. Defaults to
+\code{0.80} (80\% CI).}
 
-\item{method}{Character. Credible interval estimation method (passed
-to \code{bayestestR::ci()}). See \code{?bayestestR::ci()}
-for more details. Default is \code{"HDI"} (Highest Density Interval).}
+\item{method}{Character. Method used to compute the credible
+interval, passed to \code{\link[bayestestR:ci]{bayestestR::ci()}}. Defaults to \code{"HDI"}
+(Highest Density Interval), which is generally preferred for
+asymmetric or skewed error distributions. See
+\code{?bayestestR::ci} for all available options.}
 
-\item{pal}{Character vector of color(s) for the density, CI shading,
-and mean line. If no groups, supply one color (default:
-\code{"#007d80"}). If groups are present, supply two colors (default:
-\code{c("#007d80", "#A12C3B")}).}
+\item{pal}{A character vector of colours for the density curves,
+CI shading, and centre line. Defaults to \code{c("#007d80", "#A12C3B")}.}
 
-\item{m}{Numeric (optional). If provided, restricts the
-results for a specific population sample size (\code{m}).
-Defaults to \code{NULL}, which checks up to the maximum population
-sample size.}
+\item{m}{(Optional) Numeric. If provided, restricts all results
+and ranking to a specific \emph{population} sample size. Defaults to
+\code{NULL}, which uses the maximum sample size defined by
+\code{n_individuals}.}
 
-\item{show_text}{Logical, whether to display text annotations in
-the plots. Default is \code{TRUE}.}
+\item{show_text}{Logical. Whether to display annotation text in
+the plot with the mean (or median) relative errors.
+Defaults to \code{TRUE}.}
 }
 \value{
-A list with two elements:
-\itemize{
-\item \code{ranking}: Data frame containing all designs with computed metrics,
-CI, distance to zero error, and ranking by type and group.
-\item \code{winners}: Data frame of designs that are joint winners across all
-groups (or the single winner if no groups are present).
+An object of class \code{movedesign_report}.
+A density plot of relative error is printed as a side effect;
+to reproduce it later, call \code{\link[=md_plot]{md_plot()}} on any of the input
+designs.
+
+This object contains:
+\describe{
+\item{ranking}{
+Data frame with one row per design per target
+(and per group if grouping is used). Columns include
+the centre error statistic (\code{error}), credible
+interval bounds (\code{error_lci}, \code{error_uci}), CI width,
+distance from zero error, and rank. Lower rank
+indicates better performance.
+}
+
+\item{winners}{
+Data frame identifying designs that rank first across
+all groups for each target. A design is a winner when
+it has the lowest absolute error and the credible
+interval closest to zero across every group.
+Returns empty if no single design dominates.
+}
 }
 }
 \description{
-The \code{md_compare()} function evaluates multiple study designs based
-on the estimated relative error of a target metric (e.g., home range
-area or movement speed) and the uncertainty around these estimates.
-It summarizes the performance of each design per type and per group
-(if present), ranks them according to how close their estimates are
-to optimal (zero error), and identifies designs that perform best
-across all groups.
+The final step in the \code{movedesign} workflow. Takes replicated
+outputs from two or more study designs, ranks them by estimation
+performance, identifies the best-performing design, and produces
+a density plot of relative error across replicates.
 
-It also produces a publication-ready density plot showing the
-distribution of relative error estimates for all replicates. The plot
-highlights the mean (or median) and a shaded credible interval (CI)
-region, following the computation of credible intervals. If groups
-are present, density curves for each group are overlaid for
-comparison, using customizable colors.
+Use this function after running \code{\link[=md_replicate]{md_replicate()}} for each design
+and confirming convergence with \code{\link[=md_check]{md_check()}}. For a quick visual
+comparison before full replication, use \code{\link[=md_compare_preview]{md_compare_preview()}}
+instead.
+}
+\details{
+Designs are ranked separately for each target metric (home
+range, speed) and group (if present). The ranking criterion
+combines absolute relative error and distance of the credible
+interval from zero: designs with lower error and tighter
+intervals closer to zero rank higher. A design is
+identified as the overall winner only if it ranks first across
+all groups for a given target.
+
+The function prints a density plot showing the full
+distribution of relative error across replicates for each
+design. The centre statistic (\code{stat}) and credible interval
+(\code{ci}) are overlaid. When groups are present, density curves
+for each group are shown side by side using the colours in
+\code{pal}.
+\subsection{Recommended workflow}{
+
+This function is designed to be called at the end of the
+\code{movedesign} workflow:
+\enumerate{
+\item Build each design with \code{\link[=md_prepare]{md_prepare()}}.
+\item Run \code{\link[=md_replicate]{md_replicate()}} for each design.
+\item Confirm convergence with \code{\link[=md_check]{md_check()}}.
+\item Compare and rank designs with \code{\link[=md_compare]{md_compare()}}.
+}
+}
 }
 \examples{
 if (interactive()) {
+
+  data(buffalo)
   inputA <- md_prepare(
     data = buffalo,
     models = models,
@@ -78,8 +125,8 @@ if (interactive()) {
     add_individual_variation = TRUE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
+    which_meta = "mean")
+  
   inputB <- md_prepare(
     data = buffalo,
     models = models,
@@ -90,14 +137,14 @@ if (interactive()) {
     add_individual_variation = TRUE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
-
+    which_meta = "mean")
+  
   outputA <- md_replicate(inputA, n_replicates = 20)
   outputB <- md_replicate(inputB, n_replicates = 20)
-
+  
   # Plot with 80\% credible intervals:
   md_compare(list(outputA, outputB), ci = 0.80, method = "HDI")
+  
 }
 
 }

@@ -13,25 +13,28 @@ md_plot_preview(
 )
 }
 \arguments{
-\item{obj}{An object of class \code{movedesign_preprocess}
-(output of \code{\link[=md_run]{md_run()}}).}
+\item{obj}{An object of class \code{movedesign_preprocess}, as returned
+by \code{\link[=md_run]{md_run()}}.}
 
-\item{n_resamples}{Numeric. Must be a positive value. Defines how many
-combinations are generated for each population sample size,
-with each combination producing a new population-level estimate.}
+\item{n_resamples}{A single positive integer. The number of
+random combinations of individuals generated at each population
+sample size. Each combination produces one population-level
+estimate. Set to \code{NULL} to plot raw estimates without
+resampling.}
 
-\item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
-to display as a reference in the plot.}
+\item{error_threshold}{Numeric. Relative error threshold shown as
+a reference line in the plot (e.g. \code{0.05} for 5\%).}
 
-\item{pal}{Character vector of two colors for within/outside threshold
-(default: c("#007d80", "#A12C3B")).}
+\item{pal}{A character vector of two colours, used for estimates
+within and outside the error threshold respectively.
+Defaults to \code{c("#007d80", "#A12C3B")}.}
 
-\item{...}{Additional arguments used internally.}
+\item{...}{Reserved for internal use.}
 }
 \value{
-A ggplot object displaying relative error by population sample size,
-with point estimate and confidence intervals for mean estimates,
-and horizontal error threshold lines.
+A \code{ggplot} object. Displays relative error as a function of
+population sample size, with point estimates, confidence
+intervals, and a horizontal reference line at \code{error_threshold}.
 }
 \description{
 Generates a quick visualization of relative error for home range or
@@ -42,18 +45,22 @@ random combination of individuals, or, when resampling is enabled,
 summaries derived from repeated draws of individuals at each population
 sample size (based on the specified number of resamples).
 
-This functions shows preliminary outputs only based on the output of
-\code{\link[=md_run]{md_run()}} (a \code{movedesign_preprocess} object) and should not be used to
-evaluate study design by itself. Instead, users should run
+This functions shows preliminary outputs for a single stochastic run
+from \code{\link[=md_run]{md_run()}} (a \code{movedesign_preprocess} object) and should not be
+used to evaluate study design by itself. Instead, users should run
 \code{\link[=md_replicate]{md_replicate()}} and check for convergence with \code{\link[=md_check]{md_check()}}.
 }
 \details{
-This plot summarizes a single replicate. Credible intervals and robust
-study design conclusions generally require multiple replicates generated
-with \code{\link[=md_replicate]{md_replicate()}}.
+This plot summarizes a single replicate, so it is subject to
+stochastic variation. The plot shown here may look very
+different with another run of the same design. Use \code{\link[=md_replicate]{md_replicate()}}
+to aggregate results across many independent runs, and \code{\link[=md_check]{md_check()}}
+to confirm that estimates have stabilised before drawing conclusions.
 }
 \examples{
 if (interactive()) {
+  
+  data(buffalo)
   input <- md_prepare(
     data = buffalo,
     models = models,
@@ -64,14 +71,15 @@ if (interactive()) {
     add_individual_variation = FALSE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
-
+    which_meta = "mean")
+  
   output <- md_run(input)
   md_plot_preview(output, error_threshold = 0.05)
 }
 
 }
 \seealso{
-\code{\link[=md_run]{md_run()}}, \code{\link[=md_replicate]{md_replicate()}}
+\code{\link[=md_run]{md_run()}} to generate the input object.
+\code{\link[=md_replicate]{md_replicate()}} for robust outputs based on multiple replicates.
+\code{\link[=md_check]{md_check()}} to assess convergence across replicates.
 }

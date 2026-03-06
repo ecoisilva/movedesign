@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_main.R
 \name{md_simulate}
 \alias{md_simulate}
-\title{Simulate movement data from species-level parameters}
+\title{Simulate movement data from species parameters}
 \usage{
 md_simulate(
   n_individuals = NULL,
@@ -14,95 +14,172 @@ md_simulate(
   set_target = c("hr", "ctsd"),
   which_meta = "mean",
   grouped = FALSE,
-  seed = NULL,
-  parallel = FALSE
+  parallel = FALSE,
+  seed = NULL
 )
 }
 \arguments{
 \item{n_individuals}{Integer. Number of tracked individuals (tags)
-in the simulated study. This defines the target population-level
-sample size used in downstream inference.}
+to simulate. Defines the target population sample size. When
+\code{grouped = TRUE}, this number is currently split evenly between
+the two groups, so it must be even.}
 
-\item{tau_p}{Position autocorrelation timescale(s). Either a single
-list with elements \code{value} and \code{unit}, or (when \code{grouped = TRUE})
-a named list of such lists, one per group.}
+\item{tau_p}{Position autocorrelation timescale, corresponding to
+the average \emph{home range crossing time}.
 
-\item{tau_v}{Velocity autocorrelation timescale(s). Same structure
-as \code{tau_p}.}
+Provide a list with two elements:
+\itemize{
+\item \code{value} — a numeric value (e.g. \code{6})
+\item \code{unit}  — a character string: one of \code{"second"},
+\code{"minute"}, \code{"hour"}, \code{"day"}, \code{"month"}, or \code{"year"}
+}
 
-\item{sigma}{Location variance parameter(s). Either a single
-list with elements \code{value} and \code{unit}, or (when \code{grouped = TRUE})
-a named list of such lists, one per group.}
+\strong{Example:} \code{list(value = 6, unit = "hours")}
 
-\item{dur}{A list with elements \code{value} and \code{unit}
-specifying the study duration (e.g.
-\code{list(value = 2, unit = "months")}). Valid units are
-\code{second}, \code{minute}, \code{hour}, \code{day}, \code{month}, or \code{year}.}
+When \code{grouped = TRUE}, provide a named list with two entries,
+one per group:
 
-\item{dti}{A list with elements \code{value} and \code{unit}
-specifying the intended sampling interval between relocations
-(e.g. \code{list(value = 1, unit = "day")}). Valid units are the
-same as for \code{dur}.}
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{list(
+  A = list(value = 6,  unit = "hours"),
+  B = list(value = 12, unit = "hours")
+)
+}\if{html}{\out{</div>}}}
 
-\item{set_target}{Character vector specifying which target metrics
-are evaluated in the study design workflow. Must include one or
-both of \code{hr} (home range estimation) and \code{ctsd}
-(continuous-time speed and distance).}
+\item{tau_v}{Velocity autocorrelation timescale, corresponding to
+directional persistence (how long does an animal maintains a
+consistent direction and speed before changing course).
+
+Same format as \code{tau_p}.}
+
+\item{sigma}{Location variance parameter. Captures the overall
+spatial extent of movement.
+
+Same format as \code{tau_p}.}
+
+\item{dur}{Sampling duration. A list with elements \code{value}
+(numeric) and \code{unit} (character).
+
+\strong{Example:} \code{list(value = 3, unit = "months")}}
+
+\item{dti}{Sampling interval between relocations.
+A list with elements \code{value} (numeric) and \code{unit} (character).
+
+\strong{Example:} \code{list(value = 2, unit = "hours")}}
+
+\item{set_target}{Character vector specifying the target metrics
+to be evaluated in the study design workflow. Choose one or
+both:
+\itemize{
+\item \code{"hr"}   — home range area
+\item \code{"ctsd"} — continuous-time speed and distance
+}
+Defaults to \code{c("hr", "ctsd")}.}
 
 \item{which_meta}{Character specifying the population-level
-analytical target. Use \code{mean} (default) to evaluate
-population means, \code{ratio} to compare group means
-(requires \code{grouped = TRUE}), or \code{NULL} for
-single-individual inference.}
+analytical target. Choose one:
+\itemize{
+\item \code{"mean"} (default) — estimates the average value
+across all individuals.
+\item \code{"ratio"} — compares the mean between groups A and B.
+Requires \code{grouped = TRUE}.
+}}
 
-\item{grouped}{Logical. If \code{FALSE}, movement parameters
-(\code{tau_p}, \code{tau_v}, \code{sigma}) must be provided as
-single lists. If \code{TRUE}, each must be a named list of
-group-specific parameter lists, and \code{n_individuals} must be
-even.}
+\item{grouped}{Logical. Set to \code{TRUE} to simulate two distinct
+groups (e.g. males and females) with different movement
+parameters. When \code{TRUE}, all three parameter arguments
+(\code{tau_p}, \code{tau_v}, \code{sigma}) must be named lists for both groups,
+and \code{n_individuals} must be even. Defaults to \code{FALSE}.}
 
-\item{seed}{Optional integer. Random seed used for simulation.
-If \code{NULL}, a seed is generated internally.}
+\item{parallel}{Logical. Whether to use parallel processing
+during model fitting. Defaults to \code{FALSE}.}
 
-\item{parallel}{Logical. Passed to downstream fitting routines.
-Currently reserved for future parallelization.}
+\item{seed}{Optional integer. Random seed for reproducibility.
+If \code{NULL} (default), a seed is chosen automatically and stored
+in the returned object so results can be reproduced later.}
 }
 \value{
-An object of class \code{movedesign_input} containing simulated
-tracking data, fitted movement models, and all metadata required
-for downstream study design evaluation.
+An object of class \code{movedesign_input}. This is the standard input
+object for the \code{movedesign} workflow and can be passed directly
+to downstream functions such as \code{md_run()} or \code{md_replicate()}.
+It contains the simulated trajectories, fitted movement models,
+and all metadata needed for study design evaluation.
 }
 \description{
 Simulates continuous-time movement trajectories based on
-ad hoc movement parameters. The function is designed to support
-study design workflows by generating synthetic tracking data under
-specified movement, sampling, and analytical assumptions.
+user-specified movement parameters. The function is designed to
+support study design workflows by generating synthetic tracking data
+under specified the movement, sampling, and analytical assumptions.
 
-Movement parameters can be specified globally (single group)
-or for two groups (e.g. males vs. females). Simulated data
-are subsequently passed through the standard \code{movedesign} workflow
-(model fitting, aggregation, and target-metric evaluation).
+Use this function when you do not have empirical data available.
+For workflows grounded in real data, use \code{\link[=md_prepare]{md_prepare()}} instead,
+which extracts movement parameters directly from fitted models.
 }
 \details{
-When \code{grouped = TRUE}, simulations are generated independently
-for each group using group-specific movement parameters, but share
-the same sampling parameters. Group structure only affects
-downstream inference when \code{which_meta = "ratio"}.
+Each simulated trajectory represents a single continuously-tracked
+animal, generated from a continuous-time movement model with the
+parameters you supply. The time vector is constructed from \code{dur}
+and \code{dti}, and then one trajectory per individual is drawn from
+that model.
+
+Simulated data are immediately passed through the full
+\code{movedesign} workflow — model fitting, aggregation, and
+estimation of the target metrics — so the returned object is
+ready for study design evaluation without further steps.
+
+When \code{grouped = TRUE}, simulations are generated independently for
+each using their own movement parameters but currently share the
+same sampling parameters (\code{dur} and \code{dti}).  Group structure
+only affects downstream inference when \code{which_meta = "ratio"}.
 }
 \note{
-The realism and interpretability of simulated data critically depend
-on the choice of movement parameters.
-Users are therefore encouraged to inform parameters with empirical
-data whenever possible. In the intended workflow, this is done via
-\code{\link[=md_prepare]{md_prepare()}}, which derives parameters from fitted movement
-models from provided empirical tracking datasets.
+Results are only as informative as the parameters you provide.
+Where possible, derive parameters from real tracking data using
+\code{\link[=md_prepare]{md_prepare()}}. Simulations based on arbitrary or weakly justified
+parametersvalues may be useful for exploration purposes, but should
+be interpreted with caution in any design or inference context.
+}
+\examples{
+if(interactive()) {
 
-Simulations based on hypothetical or weakly justified parameters may
-still be useful for exploratory or pedagogical purposes, but require
-caution when evaluating sampling designs, estimator performance, or
-ecological inference.
+# Single group:
+# (simulate 10 individuals over 3 months with fixes every 2 hours)
+
+input <- md_simulate(
+  n_individuals = 4,
+  tau_p = list(value = 6, unit = "hours"),
+  tau_v = list(value = 30, unit = "minutes"),
+  sigma = list(value = 1, unit = "km^2"),
+  dur = list(value = 1, unit = "month"),
+  dti = list(value = 2, unit = "hours"))
+
+# Two groups with different parameters:
+
+input_grouped <- md_simulate(
+  n_individuals = 10,
+  tau_p  = list(
+    A = list(value = 6,  unit = "hours"),
+    B = list(value = 12, unit = "hours")
+  ),
+  tau_v  = list(
+    A = list(value = 0.5, unit = "hours"),
+    B = list(value = 1,   unit = "hours")
+  ),
+  sigma  = list(
+    A = list(value = 1, unit = "km^2"),
+    B = list(value = 2, unit = "km^2")
+  ),
+  dur = list(value = 3, unit = "months"),
+  dti = list(value = 2, unit = "hours"),
+  grouped = TRUE,
+  which_meta = "ratio")
+  
+}
+
 }
 \seealso{
+\code{\link[=md_prepare]{md_prepare()}} to derive parameters from real tracking
+data.
+
 Other workflow_steps: 
 \code{\link{md_prepare}()}
 }

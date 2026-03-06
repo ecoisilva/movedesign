@@ -2,51 +2,94 @@
 % Please edit documentation in R/fct_main.R
 \name{md_plot_replicates}
 \alias{md_plot_replicates}
-\title{Plot replicate error estimates and confidence intervals}
+\title{Plot estimation error, replicates and confidence intervals}
 \usage{
-md_plot_replicates(obj, ci = 0.95, view = c("both", "summary_only"))
+md_plot_replicates(
+  obj,
+  ci = 0.95,
+  view = c("both", "summary_only"),
+  pal = c("#007d80", "#A12C3B"),
+  ...
+)
 }
 \arguments{
-\item{obj}{A movement design output object (see \code{\link[=md_replicate]{md_replicate()}}
-or \code{\link[=md_stack]{md_stack()}}).}
+\item{obj}{A movement design output object (returned by
+either \code{\link[=md_replicate]{md_replicate()}} or \code{\link[=md_optimize]{md_optimize()}}).}
 
-\item{ci}{Numeric scalar between 0 and 1. The probability of the
-credible interval (CI) to be estimated. Default to \code{0.95} (95\%).}
+\item{ci}{Confidence level for the intervals. Applied to both
+the narrow confidence bars and wide prediction bands. Must be
+between \code{0} and \code{1}. Default: \code{0.95} (95\%).}
 
-\item{view}{Character string indicating whether to return the
+\item{view}{Layout selector. Indicate whether to return the
 complete two-panel layout (\code{"both"}) or only the aggregated
 summary plot with all replicates (\code{"summary_only"}).}
+
+\item{pal}{Character vector of two valis hex color code for
+within and for outside the threshold
+(default: \verb{c("#007d80", "#A12C3B"))}.}
+
+\item{...}{Reserved for internal use.}
 }
 \value{
-A list of class \code{movedesign_report} containing:
-A list with two elements:
+A \code{patchwork} / \code{ggplot} object containing:
 \itemize{
-\item \code{p}: A \code{ggplot} object displaying the results from a single
-randomly selected replicate, showing individual error estimates
-and their confidence intervals.
-\item \code{p.replicates}: A \code{ggplot} object summarizing mean relative error
-across all replicates, with aggregated estimates in the foreground
-and individual replicates shown in lighter tones in the background.
+\item Top plot: A \code{ggplot} object displaying the results from a
+single randomly selected replicate, showing individual error
+estimates and their confidence intervals.
+\item Bottom plot: A \code{ggplot} object summarizing mean relative
+error across all replicates, with aggregated estimates in the
+foreground and individual replicates shown in lighter tones in
+the background.
 }
 }
 \description{
-This function generates two complementary visualizations of replicate
-performance across different population sample sizes. It summarizes and
-plots relative estimation errors for each type of analysis (e.g., home
-range or speed estimation), distinguishing results that fall within or
-outside a user-defined error threshold.
+This function produces two complementary visualizations of replicate
+performance across a range of population sample sizes \eqn{m}, up to
+the maximum number of individuals requested. It
+summarizes and plots relative errors regarding the estimation of a
+set target (\emph{e.g.}, home range or speed estimation), and classified by
+whether the error falls within a user-defined acceptable threshold.
+
+\describe{
+\item{"Estimation error (for a single random replicate)"}{
+Error for one randomly-selected replicate, rendered as
+point estimates with confidence interval bars. Reflects
+the outcome a researcher would observe from a \emph{single}
+empirical study.
+}
+\item{"Mean estimation error across all replicates"}{
+Mean error collapsed across \strong{all} replicates (with confidence
+intervals as a narrow bar, and prediction intervals as a wide
+shaded band), with per-replicate jitter in the background.
+Conveys the full distribution of outcomes with the set
+sampling parameters and population sample size.
+}
+}
+
+Both panels share a common colour palette (within/outside the
+acceptable error threshold) and, when two groups are present,
+a common shape scale.
 }
 \examples{
 if(interactive()) {
+  
   obj <- md_replicate(...)
   
-  plots <- md_plot_replicates(obj)
-  # Display the plots:
-  plots[[1]]
-  plots[[2]]
+  # Default: both panels
+  md_plot_replicates(obj)
+  
+  # Summary panel, custom palette, 80\% CI:
+  md_plot_replicates(
+    obj,
+    ci = 0.90,
+    view = "summary_only",
+    pal = c("#1e2a38", "#9e3419"))
+
 }
 
 }
 \seealso{
-\code{\link[=md_plot]{md_plot()}}
+\code{\link[=md_plot]{md_plot()}} for the density plot for the maximum \eqn{m}. \cr
+\code{\link[=md_replicate]{md_replicate()}} to produce a \code{movedesign_output}. \cr
+\code{\link[=md_optimize]{md_optimize()}} to produce a \code{movedesign_optimized}.
 }

@@ -20,110 +20,134 @@ md_prepare(
 )
 }
 \arguments{
-\item{species}{Character. Scientific or common name of the focal
-species used as a workflow label.}
+\item{species}{Character. A label for the focal species
+(scientific or common name). Used for display and
+bookkeeping only; does not affect results.}
 
-\item{data}{A named list of telemetry objects (from
-\code{ctmm::as.telemetry()}) to be used as the empirical basis for the
+\item{data}{A named list of telemetry objects, created with
+\code{\link[ctmm:as.telemetry]{ctmm::as.telemetry()}}, to be used as the empirical basis for the
 simulations. Each telemetry object must contain valid metadata
 and timestamped locations.}
 
-\item{models}{(Optional) Named list of fitted ctmm models (from
-\code{ctmm::ctmm.fit()} or \code{ctmm::ctmm.select()}). If not supplied,
-models are fitted automatically.}
+\item{models}{(Optional) Named list of fitted movement
+models, one per individual, created with \code{ctmm::ctmm.select()}.
+Names must match those in \code{data}. If not supplied, models are
+fitted automatically.}
 
-\item{n_individuals}{Integer. Number of animals (tags) to include
-in the study design; defines the target \emph{population} sample size.}
+\item{n_individuals}{A single positive integer. The target number
+of animals in the study design (equivalent to number of tags to
+be deployed in the field). This defines the \emph{population} sample
+size used in downstream analyses, and does not need to match the
+number of individuals in \code{data}.}
 
-\item{dur}{A list with elements \code{value} and \code{unit} (e.g.,
-\code{list(value = 2, unit = "months")}), for the study's maximum
-duration. \code{unit} must be either \code{"second"}, \code{"minute"}, \code{"hour"},
-\code{"day"}, \code{"month"}, or \code{"year"}.}
+\item{dur}{Study duration. A list with elements \code{value}
+(numeric) and \code{unit} (character).
 
-\item{dti}{A list with elements \code{value} and \code{unit} (e.g.,
-\code{list(value = 1, unit = "day")}), specifying the intended
-sampling interval between relocations. \code{unit} must be either
-\code{"second"}, \code{"minute"}, \code{"hour"}, \code{"day"}, \code{"month"}, or \code{"year"}.}
+\strong{Example:} \code{list(value = 2, unit = "months")}
 
-\item{set_target}{Character. Specifies the primary research target(s):
-must be either \code{hr} (home range estimation), \code{ctsd}
-(movement speed), or a character vector including both. This
-argument controls which target metrics are processed, analyzed,
-and reported in the study design workflow.}
+Valid units: \code{"second"}, \code{"minute"}, \code{"hour"},
+\code{"day"}, \code{"month"}, \code{"year"}.}
+
+\item{dti}{Sampling interval between consecutive GPS fixes.
+A list with elements \code{value} (numeric) and \code{unit} (character).
+Same valid units as \code{dur}.
+
+\strong{Example:} \code{list(value = 1, unit = "day")}}
+
+\item{set_target}{Character vector specifying the target metrics
+to be evaluated in the study design workflow. Choose one or
+both:
+\itemize{
+\item \code{"hr"}   — home range area
+\item \code{"ctsd"} — continuous-time speed and distance
+}
+Defaults to \code{c("hr", "ctsd")}.}
 
 \item{which_meta}{Character. Specifies the analytical target for
-population-level inference: \code{NULL}, \code{"mean"} (default), or
-\code{"ratio"}. Use \code{NULL} for a single individual, \code{"mean"} for
-population means, or \code{"ratio"} to compare group means
-(requires \code{groups}).}
+population-level inference. Choose one:
+\itemize{
+\item \code{"mean"} (default) — estimates the average
+across all individuals.
+\item \code{"ratio"} — compares the mean between groups
+\code{"A"} and \code{"B"}. Requires \code{groups} to be specified.
+\item \code{NULL} — single-individual inference. Requires
+\code{data} to be a single telemetry object rather than
+a list.
+}}
 
 \item{add_individual_variation}{Logical. If \code{TRUE}, simulates
 variation by drawing movement parameters from the population
-distribution.}
+distribution. This produces more realistic
+between-individual variability. Defaults to \code{FALSE}.}
 
-\item{groups}{(Optional) A named list for group assignments.
+\item{groups}{(Optional) A named list assigning individuals
+to two groups, required when \code{which_meta = "ratio"}.
 Each element is a character vector of individual names
-(matching \code{data}). For example,
-\code{list(A = c("id1", "id2"), B = c("id3", "id4"))} for groups
-"A" and "B".Required when \verb{which_meta = \\"ratio\\"}.}
+(matching \code{data}).
 
-\item{parallel}{Logical. If \code{TRUE}, enables parallel processing
-for model fitting, which speeds up analyses.}
+\strong{Example:}
 
-\item{.seed}{Set seeds to ensure reproducibility (optional);
-only needed if replicating from Shiny app into R console.}
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{list(
+  A = c("Animal_01", "Animal_02"),
+  B = c("Animal_03", "Animal_04")
+)
+}\if{html}{\out{</div>}}}
+
+\item{parallel}{Logical. Whether to use parallel processing
+during model fitting. Defaults to \code{FALSE}.}
+
+\item{.seed}{(Optional) Integer. Random seed for reproducibility.
+If \code{NULL} (default), a seed is chosen automatically and stored
+in the returned object so results can be reproduced later.
+Only needed to be specifiedwhen reproducing Shiny app analyses
+in the R console.}
 }
 \value{
-An object of class \code{movedesign_input} (and \code{movedesign}). This is
-a structured S3 list containing all validated inputs, model fits,
-and derived parameters for the study design workflow.
-
-The returned object includes:
-\itemize{
-\item \code{design}:
-A \code{movedesign} object with all study settings and metadata.
-\item \code{data}:
-The original or validated list of telemetry objects.
-\item \code{fitList}:
-List of fitted movement models for each individual.
-\item \code{meanfitList}:
-List of population or group-level mean models.
-\item \code{sigma}, \code{tau_p}, \code{tau_v}:
-Movement parameters extracted from data provided for
-downstream simulations.
-\item \code{mu}: List of mean locations.
-\item \code{groups}: Group structure if specified, otherwise \code{NULL}.
-\item Other slots describing \emph{population} sample size, sampling
-duration, sampling interval, targets, and workflow options.
-}
-
-This object is ready for use in downstream \code{movedesign} output
-and diagnostic functions.
+An object of class \code{movedesign_input}, accepted by all
+downstream functions such as \code{\link[=md_run]{md_run()}} and
+\code{\link[=md_replicate]{md_replicate()}}. Contains the validated inputs, fitted
+models, extracted movement parameters, and all metadata
+needed for study design evaluation.
 }
 \description{
-Prepares, validates, and organizes all required inputs and parameters
-for evaluating the study design of animal movement projects. This
-function checks data inputs, fits or verifies movement models,
-extracts key parameters, and consolidates all settings in a
-structured object for easy and reproducible downstream use.
+Prepares and validates all inputs needed to evaluate the study design
+of animal movement projects using parameters derived from empirical
+tracking data. The function checks data integrity, fits or verifies
+movement models, extracts key parameters, and consolidates all
+settings into a structured object for reproducible and streamlined
+downstream analyses.
+
+If you do not have empirical data, use \code{\link[=md_simulate]{md_simulate()}}
+instead, which builds inputs from user-specified parameters.
 }
 \details{
-This function is designed to streamline and standardize the preparation
-of input data and study design parameters for simulation-based movement
-ecology analyses. It performs the following key steps:
+This function is designed to streamline and standardize the
+preparation of input data and study design parameters for
+simulation-based movement ecology analyses. It performs the
+following key steps:
+
 \itemize{
 \item Validates that \code{data} is a non-empty list of telemetry
-objects with metadata and location records.
+objects.
 \item Fits movement models to each individual if not supplied.
 \item Checks supplied movement models for validity.
-\item Extracts parameters (e.g., \code{sigma}, \code{tau_p}, \code{tau_v})
-for simulation.
-\item Gathers settings (sample size, duration, sampling, grouping)
-into a single object.
+\item Extracts parameters (\code{tau_p}, \code{tau_v}, \code{sigma}) from fitted
+models for use in downstream simulations.
+\item Consolidates all settings, parameters, and model objects
+into a single structured object.
 }
+
+By default (\code{add_individual_variation = FALSE}), all
+simulated animals share the same movement parameters,
+estimated from the population mean. Setting
+\code{add_individual_variation = TRUE} instead randomly draws parameters
+from the population distribution for each individual, which
+better reflects natural variability but increases
+uncertainty in downstream estimates.
 }
 \examples{
 if(interactive()) {
+  
   data(buffalo)
   input <- md_prepare(
     data = buffalo,
@@ -134,11 +158,17 @@ if(interactive()) {
     dti = list(value = 1, unit = "day"),
     set_target = "hr",
     which_meta = "mean")
+    
  summary(input)
 }
 
 }
 \seealso{
+\code{\link[=md_simulate]{md_simulate()}} to build inputs from directly specified
+parameters rather than empirical data,
+\code{\link[=md_run]{md_run()}},
+\code{\link[=md_replicate]{md_replicate()}}.
+
 Other workflow_steps: 
 \code{\link{md_simulate}()}
 }

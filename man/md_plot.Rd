@@ -41,15 +41,14 @@ and mean line. If a single group, supply one color (default:
 \code{"#007d80"}). If groups are present, supply two colors (default:
 \code{c("#007d80", "#A12C3B")}).}
 
-\item{m}{Numeric (optional). If provided, restricts the
-results for a specific population sample size (\code{m}).
-Defaults to \code{NULL}, which checks up to the maximum population
-sample size.}
+\item{m}{Numeric (Optional). If provided, restricts the results to a
+specific population sample size (\code{m}). Defaults to \code{NULL}, which
+checks up to the maximum population sample size.}
 
 \item{show_text}{Logical, whether to display text annotations in
 the plots. Default is \code{TRUE}.}
 
-\item{...}{Additional arguments used internally.}
+\item{...}{Reserved for internal use.}
 }
 \value{
 A \code{ggplot} object showing:

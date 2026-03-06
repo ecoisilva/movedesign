@@ -4,31 +4,38 @@
 \alias{md_stack}
 \title{Stack simulation outputs as replicates}
 \usage{
-md_stack(obj, ...)
+md_stack(obj, error_threshold = 0.05, ...)
 }
 \arguments{
-\item{obj}{A list of replicate objects, typically the output of
-\code{\link[=md_replicate]{md_replicate()}}.}
+\item{obj}{A list of \code{movedesign_preprocess} objects, each
+returned by \code{\link[=md_run]{md_run()}}. All objects must share the same
+\code{set_target}, \code{dur}, and \code{dti}.}
 
-\item{...}{Additional arguments passed to internal functions.}
+\item{error_threshold}{Numeric. The acceptable error
+threshold used when summarising estimation performance across
+replicates (e.g. \code{0.05} for 5\%).}
+
+\item{...}{Reserved for internal use.}
 }
 \value{
-A list of class \code{movedesign_output} containing:
-\describe{
-\item{data}{
-A merged \code{moveoutput} object combining all replicate-level data.}
-\item{summary}{
-A \code{data.table} summarizing results across replicates.}
-}
+A list of class \code{movedesign_output}.
 }
 \description{
-Combines the outputs of several replicate movement-design simulations
-(created by \code{\link[=md_run]{md_run()}}) into a single aggregated object. For each
-replicate, the function re-runs \code{\link[=run_meta_resamples]{run_meta_resamples()}} to
-ensure consistent structure and then merges all results into a unified
-summary table.
+Assigns a replicate ID to each \code{\link[=md_run]{md_run()}} output, re-runs
+population-level resampling for each, and aggregates inference
+results into a unified output. Calling \code{md_stack()} on
+a list of \code{n} \code{\link[=md_run]{md_run()}} outputs produces the same result as
+calling \code{\link[=md_replicate]{md_replicate()}} with \code{n_replicates = n}.
 
-This function allows batch processing of replicates, producing a
-combined object suitable for downstream visualization (e.g., with
-\code{\link[=md_plot_replicates]{md_plot_replicates()}}).
+Use this function when the \code{\link[=md_run]{md_run()}} calls have already been
+made — for example, when runs were executed in parallel outside
+the standard workflow, or recovered after an interruption.
+
+The distinction from \code{\link[=md_merge]{md_merge()}} is important. \code{\link[=md_merge]{md_merge()}}
+pools all inputs into one larger dataset (\emph{e.g.}, if each run has
+\code{5} individuals, the output has \code{10}, and the design corresponds to
+a single replicate.
+\code{md_stack()} assigns each run a separate replicate ID:
+number of individuals does not accumulate, and population-level
+inference is aggregated across replicates.
 }

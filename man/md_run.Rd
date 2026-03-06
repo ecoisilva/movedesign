@@ -4,48 +4,46 @@
 \alias{md_run}
 \title{Run study design workflow}
 \usage{
-md_run(design, .seeds = NULL, trace = TRUE)
+md_run(design, trace = TRUE, .seeds = NULL)
 }
 \arguments{
-\item{design}{An object of class \code{movedesign_input},
-as returned by \code{\link[=md_prepare]{md_prepare()}}, containing all study design
-parameters and data.}
+\item{design}{An object of class \code{movedesign_input}, as returned by
+\code{\link[=md_prepare]{md_prepare()}} or \code{\link[=md_simulate]{md_simulate()}}.}
 
-\item{.seeds}{(Optional) List of random seeds for reproducibility.
-Required only if reproducing a previous workflow (from the Shiny app
-into R console).}
+\item{trace}{Logical. If \code{TRUE} (default), prints progress messages
+and elapsed time for each step. Set to \code{FALSE} for silent execution.}
 
-\item{trace}{Logical. If TRUE (default), print progress and timing
-messages to the console.}
+\item{.seeds}{(Optional) List of integer seeds, one per individual,
+used to reproduce a previous run exactly.
+Seeds from a prior run are stored in the \verb{$seedList} slot of the
+object returned by this function. Leave as \code{NULL} (default) for
+a fresh run with automatically generated seeds.}
 }
 \value{
-An object of class \code{movedesign_preprocess} containing
-all simulation outputs:
-\itemize{
-\item \code{simList}: List of simulated telemetry datasets,
-one per individual.
-\item \code{seedList}: List of random seeds used for
-reproducibility.
-\item \code{simfitList}: List of fitted movement models for
-each simulation.
-\item \code{akdeList}: List of home range (AKDE) estimates,
-present if the \code{hr} target was listed in \code{set_target}.
-\item \code{ctsdList}: List of continuous-time speed and
-distance (CTSD) estimates, present if the \code{ctsd} target
-was listed in \code{set_target}.
-}
+An object of class \code{movedesign_preprocess}, accepted by
+downstream functions such as \code{\link[=md_plot_preview]{md_plot_preview()}},
+or \code{\link[=md_compare_preview]{md_compare_preview()}}.
 }
 \description{
-Executes a complete simulation and analysis workflow for an animal
-movement study design prepared using \code{\link[=md_prepare]{md_prepare()}}. This function
-simulates telemetry data, fits movement models, estimates home ranges
-and/or movement speeds, and stores all results in the returned object.
-Progress and timing messages are printed by default.
+The main workhorse of the \code{movedesign} workflow. Runs one full round
+of simulation and analyses to evaluate whether the design meets its
+estimation targets. #' Call this function once your design has been
+built using \code{\link[=md_prepare]{md_prepare()}} for empirical data, or \code{\link[=md_simulate]{md_simulate()}}
+for user-specified parameters.
+
+Because a single run is subject to stochastic
+variation, treat outputs from \code{\link[=md_run]{md_run()}} as exploratory, and use
+\code{\link[=md_replicate]{md_replicate()}} for more robust inferences (as it aggregates
+results across multiple replicates).
 }
 \details{
-This function ensures reproducibility by saving all random seeds and
-intermediate results. Progress and timing messages help track the
-simulation workflow.
+Progress messages are printed by default.
+Every individual simulation is assigned a unique random
+seed, stored in \verb{$seedList} of the returned object.
+Passing that list to \code{.seeds} in a subsequent call
+reproduces the run exactly. This is particularly useful
+when replicating a result first produced in the Shiny
+app.
 
 Typical workflow:
 \itemize{
@@ -56,6 +54,7 @@ Typical workflow:
 }
 \examples{
 if(interactive()) {
+
 input <- md_prepare(
   data = buffalo,
   models = models,
@@ -65,15 +64,18 @@ input <- md_prepare(
   dti = list(value = 1, unit = "day"),
   add_individual_variation = FALSE,
   set_target = "hr",
-  which_meta = "mean"
-)
+  which_meta = "mean")
+  
 output <- md_run(input)
 }
 
 }
 \seealso{
-\code{\link[=md_prepare]{md_prepare()}},
-\code{\link[=md_replicate]{md_replicate()}},
-\code{\link[=md_check]{md_check()}},
-\code{\link[=md_plot]{md_plot()}}
+\code{\link[=md_prepare]{md_prepare()}} and \code{\link[=md_simulate]{md_simulate()}} to build the input
+object. \code{\link[=md_replicate]{md_replicate()}} to run the workflow multiple
+times and aggregate results, which is recommended over
+a single \code{\link[=md_run]{md_run()}} call for any final design
+evaluation.
+\code{\link[=md_plot_preview]{md_plot_preview()}} and \code{\link[=md_compare_preview]{md_compare_preview()}} to inspect
+or compare these preliminary outputs.
 }

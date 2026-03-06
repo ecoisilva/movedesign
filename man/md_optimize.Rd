@@ -42,7 +42,7 @@ processing. Defaults to all available cores detected by
 \item{trace}{Logical; if \code{TRUE} (default), prints progress and
 timing messages to the console.}
 
-\item{...}{Additional arguments used internally.}
+\item{...}{Reserved for internal use.}
 }
 \value{
 A list of class \code{movedesign_report} containing:

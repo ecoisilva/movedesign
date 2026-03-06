@@ -4,10 +4,12 @@
 \alias{summary.movedesign_check}
 \title{Summary method for \code{movedesign_check} objects}
 \usage{
-\method{summary}{movedesign_check}(object, ...)
+\method{summary}{movedesign_check}(object, verbose = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{movedesign_check}}
+
+\item{verbose}{Add interpretation text}
 
 \item{...}{Unused}
 }

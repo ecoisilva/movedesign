@@ -7,8 +7,8 @@
 md_check(
   obj,
   m = NULL,
-  tol = 0.01,
-  n_converge = 5,
+  tol = 0.05,
+  n_converge = 10,
   plot = TRUE,
   pal = c("#007d80", "#A12C3B")
 )
@@ -79,8 +79,10 @@ convergence threshold, aiding visual assessment.
 }
 \examples{
 if(interactive()) {
-  # After running a simulation or resampling:
+ 
+  output <- md_replicate(input, n_replicates = 20)
   md_check(output, tol = 0.05, n_converge = 10)
+ 
 }
 
 }
