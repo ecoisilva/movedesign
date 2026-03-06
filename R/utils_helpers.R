@@ -625,7 +625,32 @@ theme_movedesign <- function(ft_size = 13,
 #'
 #' @param ft_size Base font size.
 #' @noRd
-.theme_movedesign_report <- function(base_size = 13) {
+.theme_movedesign_report <- function(base_size = 13,
+                                     font = NULL) {
+  
+  base_family <- NULL
+  
+  if (!is.null(font)) {
+    if (!requireNamespace("sysfonts", quietly = TRUE) ||
+        !requireNamespace("showtext", quietly = TRUE)) {
+      
+      message("Optional packages 'sysfonts' ",
+              "and 'showtext' are not installed.")
+      message("Install them to enable Google font support.")
+      
+    } else {
+      
+      if (!(font %in% sysfonts::font_families()))
+        sysfonts::font_add_google(name = font,
+                                  family = font,
+                                  regular.wt = 400,
+                                  bold.wt = 700)
+
+      showtext::showtext_auto()
+      base_size <- base_size + 5
+      base_family <- font
+    }
+  }
   
   ggplot2::theme_classic(base_size = base_size) +
     ggplot2::theme(
@@ -640,47 +665,48 @@ theme_movedesign <- function(ft_size = 13,
       panel.grid.minor = ggplot2::element_blank(),
       
       # Axes
-      axis.title = ggplot2::element_text(
-        color = "grey30", size = 11),
+      axis.title = ggplot2::element_text(size = base_size - 2),
       axis.title.x = ggplot2::element_text(face = "bold", hjust = 1),
       axis.title.y = ggplot2::element_text(face = "bold", hjust = 1),
       axis.text = ggplot2::element_text(
-        color = "grey40", size = 10),
+        color = "grey40", size = 9),
       axis.ticks = ggplot2::element_line(
         color = "grey80", linewidth = 0.3),
       
       # Facet strips
       strip.text = ggplot2::element_text(
-        color = "grey20", size = 13, face = "bold",
+        face = "bold",
+        color = "grey20", size = base_size,
         margin = ggplot2::margin(b = 6)),
-      # strip.text = ggplot2::element_text(size = 16),
       strip.background.x = ggplot2::element_rect(
         color = NA, fill = NA),
       strip.background.y = ggplot2::element_rect(
         color = NA, fill = NA),
       
       # Titles and captions
-      plot.title = ggplot2::element_text(
-        face = "bold", size = 15,
-        margin = ggplot2::margin(b = 4)),
-      plot.subtitle = ggplot2::element_text(
-        color = "grey45", size = 10,
-        margin = ggplot2::margin(b = 10)),
       plot.caption = ggplot2::element_text(
-        color = "grey60", size = 9, hjust = 0.5,
-        margin = ggplot2::margin(t = 8)),
+        color = "grey60", size = base_size - 4,
+        hjust = 0.5, margin = ggplot2::margin(t = 8)),
+      plot.subtitle = ggplot2::element_text(
+        color = "grey45", size = base_size - 3,
+        margin = ggplot2::margin(b = 10)),
+      plot.title = ggplot2::element_text(
+        face = "bold",
+        size = base_size + 2,
+        margin = ggplot2::margin(b = 4)),
       
       # Legend
-      legend.position = "bottom",
-      legend.direction = "horizontal",
-      legend.box = "horizontal",
       legend.title = ggplot2::element_text(
-        color = "grey25", size = 10, face = "bold"),
+        face = "bold",
+        color = "grey25", size = base_size - 2),
       legend.text = ggplot2::element_text(
-        color = "grey35", size = 10),
+        color = "grey35", size = base_size - 3),
       legend.key.size = ggplot2::unit(0.9, "lines"),
       legend.margin = ggplot2::margin(t = 6),
       legend.box.spacing = ggplot2::unit(0.2, "cm"),
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
       
       plot.margin = ggplot2::unit(
         c(0.5, 0.5, 0.5, 0.5), "cm"))
@@ -705,16 +731,18 @@ theme_movedesign <- function(ft_size = 13,
     ggplot2::theme(
       
       # Canvas
+      panel.background = ggplot2::element_rect(
+        fill = "#F7F7F5", color = NA),
       panel.grid.major.x = ggplot2::element_line(
         color = "grey92", linewidth = 0.4),
       panel.grid.minor.x = ggplot2::element_blank(),
       panel.grid.major.y = ggplot2::element_blank(),
       panel.grid.minor.y = ggplot2::element_blank(),
-      panel.spacing = ggplot2::unit(0.5, "cm"),
+      panel.spacing = ggplot2::unit(0.8, "cm"),
       
       # Axes
       axis.text.x = ggplot2::element_text(
-        color = "grey30", size = 10,
+        color = "grey30", size = 9,
         margin = ggplot2::margin(t = 5)),
       axis.title.x = ggplot2::element_text(
         face = "bold", margin = ggplot2::margin(t = 10)),

@@ -1,80 +1,169 @@
 
-#' @title Simulate movement data from species-level parameters
+#' @title Simulate movement data from species parameters
 #'
 #' @description
 #' Simulates continuous-time movement trajectories based on
-#' ad hoc movement parameters. The function is designed to support
-#' study design workflows by generating synthetic tracking data under
-#' specified movement, sampling, and analytical assumptions.
-#'
-#' Movement parameters can be specified globally (single group)
-#' or for two groups (e.g. males vs. females). Simulated data
-#' are subsequently passed through the standard `movedesign` workflow
-#' (model fitting, aggregation, and target-metric evaluation).
-#'
+#' user-specified movement parameters. The function is designed to
+#' support study design workflows by generating synthetic tracking data
+#' under specified the movement, sampling, and analytical assumptions.
+#' 
+#' Use this function when you do not have empirical data available.
+#' For workflows grounded in real data, use [md_prepare()] instead,
+#' which extracts movement parameters directly from fitted models.
+#' 
 #' @param n_individuals Integer. Number of tracked individuals (tags)
-#'   in the simulated study. This defines the target population-level
-#'   sample size used in downstream inference.
-#' @param tau_p Position autocorrelation timescale(s). Either a single
-#'   list with elements `value` and `unit`, or (when `grouped = TRUE`)
-#'   a named list of such lists, one per group.
-#' @param tau_v Velocity autocorrelation timescale(s). Same structure
-#'   as `tau_p`.
-#' @param sigma Location variance parameter(s). Either a single
-#'   list with elements `value` and `unit`, or (when `grouped = TRUE`)
-#'   a named list of such lists, one per group.
-#' @param dur A list with elements `value` and `unit`
-#'   specifying the study duration (e.g.
-#'   `list(value = 2, unit = "months")`). Valid units are
-#'   `second`, `minute`, `hour`, `day`, `month`, or `year`.
-#' @param dti A list with elements `value` and `unit`
-#'   specifying the intended sampling interval between relocations
-#'   (e.g. `list(value = 1, unit = "day")`). Valid units are the
-#'   same as for `dur`.
-#' @param set_target Character vector specifying which target metrics
-#'   are evaluated in the study design workflow. Must include one or
-#'   both of `hr` (home range estimation) and `ctsd`
-#'   (continuous-time speed and distance).
+#'   to simulate. Defines the target population sample size. When
+#'   `grouped = TRUE`, this number is currently split evenly between
+#'   the two groups, so it must be even.
+#'   
+#' @param tau_p Position autocorrelation timescale, corresponding to
+#'   the average *home range crossing time*.
+#'   
+#'   Provide a list with two elements:
+#'   \itemize{
+#'     \item `value` — a numeric value (e.g. `6`)
+#'     \item `unit`  — a character string: one of `"second"`,
+#'       `"minute"`, `"hour"`, `"day"`, `"month"`, or `"year"`
+#'   }
+#' 
+#'   **Example:** `list(value = 6, unit = "hours")`
+#' 
+#'   When `grouped = TRUE`, provide a named list with two entries,
+#'   one per group:
+#' 
+#'   ```r
+#'   list(
+#'     A = list(value = 6,  unit = "hours"),
+#'     B = list(value = 12, unit = "hours")
+#'   )
+#'   ```
+#' 
+#' @param tau_v Velocity autocorrelation timescale, corresponding to
+#'   directional persistence (how long does an animal maintains a
+#'   consistent direction and speed before changing course).
+#'
+#'   Same format as `tau_p`.
+#'
+#' @param sigma Location variance parameter. Captures the overall
+#'   spatial extent of movement.
+#'
+#'   Same format as `tau_p`.
+#'
+#' @param dur Sampling duration. A list with elements `value`
+#'   (numeric) and `unit` (character).
+#'
+#'   **Example:** `list(value = 3, unit = "months")`
+#'
+#' @param dti Sampling interval between relocations.
+#'   A list with elements `value` (numeric) and `unit` (character).
+#'
+#'   **Example:** `list(value = 2, unit = "hours")`
+#'
+#' @param set_target Character vector specifying the target metrics
+#'   to be evaluated in the study design workflow. Choose one or
+#'   both:
+#'   \itemize{
+#'     \item `"hr"`   — home range area
+#'     \item `"ctsd"` — continuous-time speed and distance
+#'   }
+#'   Defaults to `c("hr", "ctsd")`.
+#'
 #' @param which_meta Character specifying the population-level
-#'   analytical target. Use `mean` (default) to evaluate
-#'   population means, `ratio` to compare group means
-#'   (requires `grouped = TRUE`), or `NULL` for
-#'   single-individual inference.
-#' @param grouped Logical. If `FALSE`, movement parameters
-#'   (`tau_p`, `tau_v`, `sigma`) must be provided as
-#'   single lists. If `TRUE`, each must be a named list of
-#'   group-specific parameter lists, and `n_individuals` must be
-#'   even.
-#' @param seed Optional integer. Random seed used for simulation.
-#'   If `NULL`, a seed is generated internally.
-#' @param parallel Logical. Passed to downstream fitting routines.
-#'   Currently reserved for future parallelization.
+#'   analytical target. Choose one:
+#'   \itemize{
+#'     \item `"mean"` (default) — estimates the average value
+#'       across all individuals.
+#'     \item `"ratio"` — compares the mean between groups A and B.
+#'       Requires `grouped = TRUE`.
+#'   }
+#'   
+#' @param grouped Logical. Set to `TRUE` to simulate two distinct
+#'   groups (e.g. males and females) with different movement
+#'   parameters. When `TRUE`, all three parameter arguments
+#'   (`tau_p`, `tau_v`, `sigma`) must be named lists for both groups,
+#'   and `n_individuals` must be even. Defaults to `FALSE`.
+#'   
+#' @param parallel Logical. Whether to use parallel processing
+#'   during model fitting. Defaults to `FALSE`.
+#'   
+#' @param seed Optional integer. Random seed for reproducibility.
+#'   If `NULL` (default), a seed is chosen automatically and stored
+#'   in the returned object so results can be reproduced later.
 #'
 #' @details
-#' When `grouped = TRUE`, simulations are generated independently
-#' for each group using group-specific movement parameters, but share
-#' the same sampling parameters. Group structure only affects
-#' downstream inference when `which_meta = "ratio"`.
+#' 
+#' Each simulated trajectory represents a single continuously-tracked
+#' animal, generated from a continuous-time movement model with the
+#' parameters you supply. The time vector is constructed from `dur`
+#' and `dti`, and then one trajectory per individual is drawn from
+#' that model.
+#' 
+#' Simulated data are immediately passed through the full
+#' `movedesign` workflow — model fitting, aggregation, and
+#' estimation of the target metrics — so the returned object is
+#' ready for study design evaluation without further steps.
+#' 
+#' When `grouped = TRUE`, simulations are generated independently for
+#' each using their own movement parameters but currently share the
+#' same sampling parameters (`dur` and `dti`).  Group structure
+#' only affects downstream inference when `which_meta = "ratio"`.
 #'
 #' @note
-#' The realism and interpretability of simulated data critically depend
-#' on the choice of movement parameters.
-#' Users are therefore encouraged to inform parameters with empirical
-#' data whenever possible. In the intended workflow, this is done via
-#' [`md_prepare()`], which derives parameters from fitted movement
-#' models from provided empirical tracking datasets.
-#'
-#' Simulations based on hypothetical or weakly justified parameters may
-#' still be useful for exploratory or pedagogical purposes, but require
-#' caution when evaluating sampling designs, estimator performance, or
-#' ecological inference.
-#'
+#' Results are only as informative as the parameters you provide.
+#' Where possible, derive parameters from real tracking data using
+#' [md_prepare()]. Simulations based on arbitrary or weakly justified
+#' parametersvalues may be useful for exploration purposes, but should
+#' be interpreted with caution in any design or inference context.
+#' 
 #' @return
-#' An object of class `movedesign_input` containing simulated
-#' tracking data, fitted movement models, and all metadata required
-#' for downstream study design evaluation.
+#' An object of class `movedesign_input`. This is the standard input
+#' object for the `movedesign` workflow and can be passed directly
+#' to downstream functions such as `md_run()` or `md_replicate()`.
+#' It contains the simulated trajectories, fitted movement models,
+#' and all metadata needed for study design evaluation.
+#'
+#' @examples
+#' if(interactive()) {
+#' 
+#' # Single group:
+#' # (simulate 10 individuals over 3 months with fixes every 2 hours)
+#' 
+#' input <- md_simulate(
+#'   n_individuals = 4,
+#'   tau_p = list(value = 6, unit = "hours"),
+#'   tau_v = list(value = 30, unit = "minutes"),
+#'   sigma = list(value = 1, unit = "km^2"),
+#'   dur = list(value = 1, unit = "month"),
+#'   dti = list(value = 2, unit = "hours"))
+#'
+#' # Two groups with different parameters:
+#' 
+#' input_grouped <- md_simulate(
+#'   n_individuals = 10,
+#'   tau_p  = list(
+#'     A = list(value = 6,  unit = "hours"),
+#'     B = list(value = 12, unit = "hours")
+#'   ),
+#'   tau_v  = list(
+#'     A = list(value = 0.5, unit = "hours"),
+#'     B = list(value = 1,   unit = "hours")
+#'   ),
+#'   sigma  = list(
+#'     A = list(value = 1, unit = "km^2"),
+#'     B = list(value = 2, unit = "km^2")
+#'   ),
+#'   dur = list(value = 3, unit = "months"),
+#'   dti = list(value = 2, unit = "hours"),
+#'   grouped = TRUE,
+#'   which_meta = "ratio")
+#'   
+#' }
+#'
+#' @seealso [md_prepare()] to derive parameters from real tracking
+#'   data.
 #'
 #' @importFrom ctmm %#%
+#' 
 #' @family workflow_steps
 #' @export
 md_simulate <- function(n_individuals = NULL,
@@ -86,8 +175,44 @@ md_simulate <- function(n_individuals = NULL,
                         set_target = c("hr", "ctsd"),
                         which_meta = "mean",
                         grouped = FALSE,
-                        seed = NULL,
-                        parallel = FALSE) {
+                        parallel = FALSE,
+                        seed = NULL) {
+  
+  if (grouped && which_meta == "mean") {
+    warning(paste0(
+      "Groups were specified, but the analytical target is set",
+      " to `mean`. Therefore, group structure will be ignored.",
+      " If this is not the intended behavior, set",
+      " `which_meta = \"ratio\"` to compare group means."))
+  }
+  
+  if (which_meta == "ratio") which_meta <- "compare"
+  
+  if (missing(n_individuals) || 
+      !is.numeric(n_individuals) ||
+      length(n_individuals) != 1)
+    stop("'n_individuals' must be a single integer.", call. = FALSE)
+  
+  if (missing(dur) || 
+      !is.list(dur) ||
+      !all(c("value", "unit") %in% names(dur)))
+    stop("'dur' must be a list with elements 'value' and 'unit'.",
+         call. = FALSE)
+  if (missing(dti) || 
+      !is.list(dti) || 
+      !all(c("value", "unit") %in% names(dti)))
+    stop("'dti' must be a list with elements 'value' and 'unit'.",
+         call. = FALSE)
+  
+  if (grouped && n_individuals %% 2 != 0)
+    stop("'n_individuals' must be even when 'grouped' is TRUE.",
+         call. = FALSE)
+  
+  if (!is.logical(parallel) ||
+      length(parallel) != 1L ||
+      is.na(parallel)) {
+    stop("'parallel' must be TRUE or FALSE.", call. = FALSE)
+  }
   
   species <- "simulated"
   add_individual_variation <- FALSE
@@ -106,32 +231,32 @@ md_simulate <- function(n_individuals = NULL,
     
     if (!grouped) {
       .stop_if(!is.list(x),
-              paste0(name,
-                     " must be a list when grouped = FALSE"))
+               paste0(name,
+                      " must be a list when grouped = FALSE"))
       .stop_if(!all(c("value", "unit") %in% names(x)),
-              paste0(name,
-                     " must contain 'value' and 'unit'"))
+               paste0(name,
+                      " must contain 'value' and 'unit'"))
       
       return(list(All = .make_df(x$value[[1]], x$unit[[1]])))
     }
     
     .stop_if(!is.list(x) || is.null(names(x)),
-            paste0(name, 
-                   " must be a named list when grouped = TRUE"))
+             paste0(name, 
+                    " must be a named list when grouped = TRUE"))
     
     out <- lapply(names(x), function(g) {
       xi <- x[[g]]
       .stop_if(!is.list(xi),
-              paste0(name, "[[", g, "]] must be a list"))
+               paste0(name, "[[", g, "]] must be a list"))
       .stop_if(!all(c("value", "unit") %in% names(xi)),
-              paste0(name, "[[", g,
-                     "]] must contain 'value' and 'unit'"))
+               paste0(name, "[[", g,
+                      "]] must contain 'value' and 'unit'"))
       
       .make_df(xi$value[[1]], xi$unit[[1]])
     })
     
     names(out) <- names(x)
-    out
+    return(out)
   }
   
   .validate_target <- function(set_target) {
@@ -142,10 +267,9 @@ md_simulate <- function(n_individuals = NULL,
     return(set_target)
   }
   
-  set_target <- .validate_target(set_target)
-  
   .validate_sampling <- function(param, key = NULL) {
-    check_entry <- function(x) {
+    
+    .check_entry <- function(x) {
       is.list(x) &&
         all(c("value", "unit") %in% names(x)) &&
         is.numeric(x$value) &&
@@ -154,11 +278,11 @@ md_simulate <- function(n_individuals = NULL,
         length(x$unit) == 1
     }
     
-    is_simple <- is.list(param) && check_entry(param)
+    is_simple <- is.list(param) && .check_entry(param)
     
     is_list_of_simple <- is.list(param) &&
       length(param) > 0 &&
-      all(vapply(param, check_entry, logical(1)))
+      all(vapply(param, .check_entry, logical(1)))
     
     if (!(is_simple || is_list_of_simple)) {
       stop(paste0(
@@ -171,35 +295,7 @@ md_simulate <- function(n_individuals = NULL,
   
   .validate_sampling(dur, "dur")
   .validate_sampling(dti, "dti")
-  
-  if (grouped && which_meta == "mean") {
-    warning(paste0(
-      "Groups were specified, but the analytical target is set",
-      " to `mean`. Therefore, group structure will be ignored.",
-      " If this is not the intended behavior, set",
-      " `which_meta = \"ratio\"` to compare group means."
-    ))
-  }
-  
-  if (which_meta == "ratio") which_meta <- "compare"
-  
-  if (missing(n_individuals) || 
-      !is.numeric(n_individuals) ||
-      length(n_individuals) != 1)
-    stop("'n_individuals' must be a single integer.")
-  if (missing(dur) || 
-      !is.list(dur) ||
-      !all(c("value", "unit") %in% names(dur)))
-    stop("'dur' must be a list with elements 'value' and 'unit'.")
-  if (missing(dti) || 
-      !is.list(dti) || 
-      !all(c("value", "unit") %in% names(dti)))
-    stop("'dti' must be a list with elements 'value' and 'unit'.")
-  
-  if (grouped && n_individuals %% 2 != 0)
-    stop("'n_individuals' must be even when 'grouped' is TRUE.")
-  
-  seed0 <- if (is.null(seed)) generate_seed() else seed
+  set_target <- .validate_target(set_target)
   
   tau_p <- .validate_parameters(tau_p, grouped, "tau_p")
   tau_v <- .validate_parameters(tau_v, grouped, "tau_v")
@@ -209,13 +305,17 @@ md_simulate <- function(n_individuals = NULL,
     stop("Both dur and dti must be provided", call. = FALSE)
   }
   
+  seed0 <- if (is.null(seed)) generate_seed() else seed
+  
   dur0 <- round(dur$value %#% dur$unit, 0)
   dti0 <- round(dti$value %#% dti$unit, 0)
-  
   t0 <- seq(0, dur0, by = dti0)[-1]
   
-  modList <- list()
-  data <- list()
+  data <- vector("list", length(tau_p))
+  modList <- vector("list", length(tau_p))
+  names(data) <- names(tau_p)
+  names(modList) <- names(tau_p)
+  
   for (gr in names(tau_p)) {
     
     modList[[gr]] <- prepare_mod(
@@ -224,12 +324,12 @@ md_simulate <- function(n_individuals = NULL,
       tau_v = tau_v[[gr]]$value[[2]],
       tau_v_unit = tau_v[[gr]]$unit[[2]],
       sigma = sigma[[gr]]$value[[2]],
-      sigma_unit = sigma[[gr]]$unit[[2]]
-    )
+      sigma_unit = sigma[[gr]]$unit[[2]])
     
     tmp_seed <- seed0
     if (gr == "B") tmp_seed <- seed0 + 1
-    dat <- ctmm::simulate(modList[[gr]], t = t0, seed = seed)
+    dat <- ctmm::simulate(modList[[gr]], t = t0, seed = tmp_seed)
+    
     dat <- pseudonymize(dat)
     dat$index <- seq_len(nrow(dat))
     dat$id <- as.character(seed0)
@@ -238,12 +338,26 @@ md_simulate <- function(n_individuals = NULL,
     
   }
   
+  groups <- NULL
   if (!grouped) {
-    names(data) <- c(as.character(seed0))
+    names(data) <- as.character(seed0)
+    names(modList) <- as.character(seed0)
+    seedList <- list(seed0)
+    
   } else {
     names(data) <- c(as.character(seed0),
                      as.character(seed0 + 1))
+    names(modList) <- c(as.character(seed0),
+                        as.character(seed0 + 1))
+    seedList <- list(seed0, seed0 + 1)
+    
+    groups <- vector("list", 2)
+    groups[[1]] <- list(A = seed0, B = seed0 + 1)
+    groups[[2]] <- list(A = c(), B = c())
+    names(groups) <- NULL
   }
+  
+  #  Fit movement models:
   
   fitList <- fitting_models(data, parallel = parallel)
   names(fitList) <- names(data)
@@ -253,20 +367,6 @@ md_simulate <- function(n_individuals = NULL,
   
   mu <- list(array(0, dim = 2, dimnames = list(c("x", "y"))))
   names(mu) <- "All"
-  
-  groups <- NULL
-  if (!grouped) {
-    names(modList) <- as.character(seed0)
-    seedList <- list(seed0)
-  } else {
-    names(modList) <- c(as.character(seed0),
-                        as.character(seed0 + 1))
-    groups[[1]] <- list(A = seed0, B = seed0 + 1)
-    groups[[2]] <- list(A = c(), B = c())
-    names(groups) <- NULL
-    
-    seedList <- list(seed0, seed0 + 1)
-  }
   
   use_global_parameters <- is.list(dur) &&
     all(c("value", "unit") %in% names(dur)) &&
@@ -281,7 +381,7 @@ md_simulate <- function(n_individuals = NULL,
     dti = dti,
     use_global_parameters = use_global_parameters,
     add_ind_var = add_individual_variation,
-    grouped = ifelse(grouped, TRUE, FALSE),
+    grouped = grouped,
     groups = groups,
     set_target = set_target,
     which_meta = which_meta,
@@ -294,7 +394,7 @@ md_simulate <- function(n_individuals = NULL,
     tau_p = tau_p,
     tau_v = tau_v,
     mu = mu,
-    seed = seed))
+    seed = seed0))
   
   return(design)
   
@@ -304,99 +404,133 @@ md_simulate <- function(n_individuals = NULL,
 #' @title Prepare movement study design inputs
 #'
 #' @description
-#' Prepares, validates, and organizes all required inputs and parameters
-#' for evaluating the study design of animal movement projects. This
-#' function checks data inputs, fits or verifies movement models,
-#' extracts key parameters, and consolidates all settings in a
-#' structured object for easy and reproducible downstream use.
-#'
-#' @param species Character. Scientific or common name of the focal
-#'   species used as a workflow label.
-#' @param data A named list of telemetry objects (from
-#'   `ctmm::as.telemetry()`) to be used as the empirical basis for the
+#' Prepares and validates all inputs needed to evaluate the study design
+#' of animal movement projects using parameters derived from empirical
+#' tracking data. The function checks data integrity, fits or verifies
+#' movement models, extracts key parameters, and consolidates all
+#' settings into a structured object for reproducible and streamlined
+#' downstream analyses.
+#' 
+#' If you do not have empirical data, use [md_simulate()]
+#' instead, which builds inputs from user-specified parameters.
+#' 
+#' @param species Character. A label for the focal species
+#'   (scientific or common name). Used for display and
+#'   bookkeeping only; does not affect results.
+#'   
+#' @param data A named list of telemetry objects, created with
+#'   [ctmm::as.telemetry()], to be used as the empirical basis for the
 #'   simulations. Each telemetry object must contain valid metadata
 #'   and timestamped locations.
-#' @param models (Optional) Named list of fitted ctmm models (from
-#'   `ctmm::ctmm.fit()` or `ctmm::ctmm.select()`). If not supplied,
-#'   models are fitted automatically.
-#' @param n_individuals Integer. Number of animals (tags) to include
-#'    in the study design; defines the target *population* sample size.
-#' @param dur A list with elements `value` and `unit` (e.g.,
-#'   `list(value = 2, unit = "months")`), for the study's maximum
-#'   duration. `unit` must be either `"second"`, `"minute"`, `"hour"`,
-#'   `"day"`, `"month"`, or `"year"`.
-#' @param dti A list with elements `value` and `unit` (e.g.,
-#'   `list(value = 1, unit = "day")`), specifying the intended
-#'   sampling interval between relocations. `unit` must be either
-#'   `"second"`, `"minute"`, `"hour"`, `"day"`, `"month"`, or `"year"`.
-#' @param set_target Character. Specifies the primary research target(s):
-#'   must be either `hr` (home range estimation), `ctsd` 
-#'   (movement speed), or a character vector including both. This
-#'   argument controls which target metrics are processed, analyzed,
-#'   and reported in the study design workflow.
+#'   
+#' @param models (Optional) Named list of fitted movement
+#'   models, one per individual, created with `ctmm::ctmm.select()`.
+#'   Names must match those in `data`. If not supplied, models are
+#'   fitted automatically.
+#'   
+#' @param n_individuals A single positive integer. The target number
+#'   of animals in the study design (equivalent to number of tags to
+#'   be deployed in the field). This defines the *population* sample
+#'   size used in downstream analyses, and does not need to match the
+#'   number of individuals in `data`.
+#'   
+#' @param dur Study duration. A list with elements `value`
+#'   (numeric) and `unit` (character).
+#'   
+#'   **Example:** `list(value = 2, unit = "months")`
+#'   
+#'   Valid units: `"second"`, `"minute"`, `"hour"`,
+#'   `"day"`, `"month"`, `"year"`.
+#'
+#' @param dti Sampling interval between consecutive GPS fixes.
+#'   A list with elements `value` (numeric) and `unit` (character).
+#'   Same valid units as `dur`.
+#'   
+#'   **Example:** `list(value = 1, unit = "day")`
+#'   
+#' @param set_target Character vector specifying the target metrics
+#'   to be evaluated in the study design workflow. Choose one or
+#'   both:
+#'   \itemize{
+#'     \item `"hr"`   — home range area
+#'     \item `"ctsd"` — continuous-time speed and distance
+#'   }
+#'   Defaults to `c("hr", "ctsd")`.
+#'
 #' @param which_meta Character. Specifies the analytical target for
-#'   population-level inference: `NULL`, `"mean"` (default), or
-#'   `"ratio"`. Use `NULL` for a single individual, `"mean"` for
-#'   population means, or `"ratio"` to compare group means
-#'   (requires `groups`).
+#'   population-level inference. Choose one:
+#'   \itemize{
+#'     \item `"mean"` (default) — estimates the average
+#'       across all individuals.
+#'     \item `"ratio"` — compares the mean between groups
+#'       `"A"` and `"B"`. Requires `groups` to be specified.
+#'     \item `NULL` — single-individual inference. Requires
+#'       `data` to be a single telemetry object rather than
+#'       a list.
+#'   }
 #'   
 #' @param add_individual_variation Logical. If `TRUE`, simulates
-#'   variation by drawing movement parameters from the population 
-#'   distribution.
-#' @param groups (Optional) A named list for group assignments.
+#'   variation by drawing movement parameters from the population
+#'   distribution. This produces more realistic
+#'   between-individual variability. Defaults to `FALSE`.
+#'   
+#' @param groups (Optional) A named list assigning individuals
+#'   to two groups, required when `which_meta = "ratio"`.
 #'   Each element is a character vector of individual names
-#'   (matching `data`). For example,
-#'   `list(A = c("id1", "id2"), B = c("id3", "id4"))` for groups
-#'   "A" and "B".Required when `which_meta = \"ratio\"`.
-#' @param parallel Logical. If `TRUE`, enables parallel processing
-#'   for model fitting, which speeds up analyses.
-#' @param .seed Set seeds to ensure reproducibility (optional);
-#'   only needed if replicating from Shiny app into R console.
-#'
+#'   (matching `data`).
+#'   
+#'   **Example:**
+#'   ```r
+#'   list(
+#'     A = c("Animal_01", "Animal_02"),
+#'     B = c("Animal_03", "Animal_04")
+#'   )
+#'   ```
+#'   
+#' @param parallel Logical. Whether to use parallel processing
+#'   during model fitting. Defaults to `FALSE`.
+#'   
+#' @param .seed (Optional) Integer. Random seed for reproducibility.
+#'   If `NULL` (default), a seed is chosen automatically and stored
+#'   in the returned object so results can be reproduced later.
+#'   Only needed to be specifiedwhen reproducing Shiny app analyses
+#'   in the R console.
+#'   
 #' @details
-#' This function is designed to streamline and standardize the preparation
-#' of input data and study design parameters for simulation-based movement
-#' ecology analyses. It performs the following key steps:
+#' This function is designed to streamline and standardize the
+#' preparation of input data and study design parameters for
+#' simulation-based movement ecology analyses. It performs the
+#' following key steps:
+#' 
 #' \itemize{
 #'   \item Validates that `data` is a non-empty list of telemetry
-#'     objects with metadata and location records.
+#'     objects.
 #'   \item Fits movement models to each individual if not supplied.
 #'   \item Checks supplied movement models for validity.
-#'   \item Extracts parameters (e.g., `sigma`, `tau_p`, `tau_v`)
-#'     for simulation.
-#'   \item Gathers settings (sample size, duration, sampling, grouping)
-#'     into a single object.
+#'   \item Extracts parameters (`tau_p`, `tau_v`, `sigma`) from fitted
+#'     models for use in downstream simulations.
+#'   \item Consolidates all settings, parameters, and model objects
+#'     into a single structured object.
 #' }
-#'
+#' 
+#' By default (`add_individual_variation = FALSE`), all
+#' simulated animals share the same movement parameters,
+#' estimated from the population mean. Setting
+#' `add_individual_variation = TRUE` instead randomly draws parameters
+#' from the population distribution for each individual, which
+#' better reflects natural variability but increases
+#' uncertainty in downstream estimates.
+#' 
 #' @return
-#' An object of class `movedesign_input` (and `movedesign`). This is
-#' a structured S3 list containing all validated inputs, model fits,
-#' and derived parameters for the study design workflow.
-#'
-#' The returned object includes:
-#' \itemize{
-#'   \item `design`: 
-#'         A `movedesign` object with all study settings and metadata.
-#'   \item `data`: 
-#'         The original or validated list of telemetry objects.
-#'   \item `fitList`: 
-#'         List of fitted movement models for each individual.
-#'   \item `meanfitList`:
-#'         List of population or group-level mean models.
-#'   \item `sigma`, `tau_p`, `tau_v`: 
-#'         Movement parameters extracted from data provided for
-#'         downstream simulations.
-#'   \item `mu`: List of mean locations.
-#'   \item `groups`: Group structure if specified, otherwise `NULL`.
-#'   \item Other slots describing *population* sample size, sampling
-#'         duration, sampling interval, targets, and workflow options.
-#' }
-#'
-#' This object is ready for use in downstream `movedesign` output
-#' and diagnostic functions.
-#'   
+#' An object of class `movedesign_input`, accepted by all
+#' downstream functions such as [md_run()] and
+#' [md_replicate()]. Contains the validated inputs, fitted
+#' models, extracted movement parameters, and all metadata
+#' needed for study design evaluation.
+#' 
 #' @examples
 #' if(interactive()) {
+#'   
 #'   data(buffalo)
 #'   input <- md_prepare(
 #'     data = buffalo,
@@ -407,9 +541,16 @@ md_simulate <- function(n_individuals = NULL,
 #'     dti = list(value = 1, unit = "day"),
 #'     set_target = "hr",
 #'     which_meta = "mean")
+#'     
 #'  summary(input)
 #' }
-#'
+#' 
+#' @seealso
+#'   [md_simulate()] to build inputs from directly specified
+#'   parameters rather than empirical data,
+#'   [md_run()],
+#'   [md_replicate()].
+#'   
 #' @importFrom ctmm %#%
 #' 
 #' @family workflow_steps
@@ -427,8 +568,19 @@ md_prepare <- function(species = NULL,
                        parallel = FALSE,
                        .seed = NULL) {
   
-  if (is.null(species))
-    stop("Add species label.")
+  if (is.null(species) ||
+      !is.character(species) ||
+      nchar(trimws(species)) == 0L) {
+    stop("'species' must be a non-empty string.",
+         call. = FALSE)
+  }
+  
+  if (!is.logical(parallel) ||
+      length(parallel) != 1L ||
+      is.na(parallel)) {
+    stop("'parallel' must be TRUE or FALSE.",
+         call. = FALSE)
+  }
   
   .validate_target <- function(set_target) {
     if (!is.character(set_target) || anyDuplicated(set_target) || 
@@ -449,7 +601,8 @@ md_prepare <- function(species = NULL,
                    "single 'telemetry' object."))
       }
       if (is.null(data$identity)) {
-        stop("If `which_meta` is NULL, 'data$identity' must not be NULL.")
+        stop("If `which_meta` is NULL,",
+             "'data$identity' must not be NULL.")
       }
     } else {
       if (!is.list(data)) {
@@ -464,14 +617,8 @@ md_prepare <- function(species = NULL,
     invisible(TRUE)
   }
   
-  set_target <- .validate_target(set_target)
-  .validate_meta(which_meta, data)
-  
-  stopifnot(is.list(data))
-  if (length(data) == 0) stop("Input 'data' cannot be empty.")
-  
   .validate_sampling <- function(param, key = NULL) {
-    check_entry <- function(x) {
+    .check_entry <- function(x) {
       is.list(x) &&
         all(c("value", "unit") %in% names(x)) &&
         is.numeric(x$value) &&
@@ -480,11 +627,11 @@ md_prepare <- function(species = NULL,
         length(x$unit) == 1
     }
     
-    is_simple <- is.list(param) && check_entry(param)
+    is_simple <- is.list(param) && .check_entry(param)
     
     is_list_of_simple <- is.list(param) &&
       length(param) > 0 &&
-      all(vapply(param, check_entry, logical(1)))
+      all(vapply(param, .check_entry, logical(1)))
     
     if (!(is_simple || is_list_of_simple)) {
       stop(paste0(
@@ -494,6 +641,12 @@ md_prepare <- function(species = NULL,
       ))
     }
   }
+  
+  stopifnot(is.list(data))
+  if (length(data) == 0) stop("Input 'data' cannot be empty.")
+  
+  set_target <- .validate_target(set_target)
+  .validate_meta(which_meta, data)
   
   if (!is.null(dur)) {
     if (missing(dur) || 
@@ -578,12 +731,14 @@ md_prepare <- function(species = NULL,
   if (!is.null(groups) && n_individuals %% 2 != 0)
     stop("'n_individuals' must be even when 'groups' is not NULL.")
   
+  # Fit or validate models:
+  
   fitList <- if (is.null(models)) {
     fitting_models(data, parallel = parallel)
   } else {
     if (!all(sapply(models, function(m) 
       inherits(m, c("ctmm", "ctmm.select")))))
-      stop("Models must be from ctmm.fit() or ctmm.select().")
+      stop("Models must be from ctmm.select().")
     models
   }
   names(fitList) <- names(data)
@@ -609,16 +764,16 @@ md_prepare <- function(species = NULL,
   
   if (is.null(tau_p)) {
     if ("hr" %in% set_target)
-      stop(paste("Position autocorrelation timescale (tau_p)",
-                 "is required for home range estimation."))
+      stop("Position autocorrelation timescale (tau_p) ",
+           "is required for home range estimation.")
   } else {
     names(tau_p) <- "All"
   }
   
   if (is.null(tau_v)) {
     if ("ctsd" %in% set_target)
-      stop(paste("Velocity autocorrelation timescale (tau_v)",
-                 "is required for speed & distance estimation."))
+      stop("Velocity autocorrelation timescale (tau_v) ",
+           "is required for speed & distance estimation.")
     
   } else {
     names(tau_v) <- "All"
@@ -654,10 +809,11 @@ md_prepare <- function(species = NULL,
       stop(paste0(
         "Extraction ", .msg("failed", "danger"), 
         " for one or both groups."))
-      
     } else {
-      meanfitList <- list(meanfitList[[1]], meanfitA, meanfitB)
-      names(meanfitList) <- c("All", "A", "B")
+      meanfitList <- list(
+        "All" = meanfitList[[1]], 
+        "A" = meanfitA, 
+        "B" = meanfitB)
     }
     
     mu <- list(mu[[1]], mu[[1]], mu[[1]])
@@ -675,13 +831,15 @@ md_prepare <- function(species = NULL,
     })
     
     validate_A <- tryCatch({
-      ctmm::simulate(fitA, t = seq(0, 100, by = 1), seed = seedInit)
+      ctmm::simulate(fitA, t = seq(0, 100, by = 1),
+                     seed = seedInit)
     }, error = function(e) {
       return(NULL)
     })
     
     validate_B <- tryCatch({
-      ctmm::simulate(fitB, t = seq(0, 100, by = 1), seed = seedInit + 1)
+      ctmm::simulate(fitB, t = seq(0, 100, by = 1),
+                     seed = seedInit + 1)
     }, error = function(e) {
       return(NULL)
     })
@@ -760,44 +918,46 @@ md_prepare <- function(species = NULL,
   return(design)
 }
 
+
 #' @title Run study design workflow
 #'
 #' @description
-#' Executes a complete simulation and analysis workflow for an animal
-#' movement study design prepared using [md_prepare()]. This function
-#' simulates telemetry data, fits movement models, estimates home ranges
-#' and/or movement speeds, and stores all results in the returned object.
-#' Progress and timing messages are printed by default.
+#' The main workhorse of the `movedesign` workflow. Runs one full round
+#' of simulation and analyses to evaluate whether the design meets its
+#' estimation targets. #' Call this function once your design has been
+#' built using [md_prepare()] for empirical data, or [md_simulate()]
+#' for user-specified parameters.
 #' 
-#' @param design An object of class `movedesign_input`,
-#'   as returned by [md_prepare()], containing all study design
-#'   parameters and data.
-#' @param trace Logical. If TRUE (default), print progress and timing
-#'   messages to the console.
-#' @param .seeds (Optional) List of random seeds for reproducibility.
-#'   Required only if reproducing a previous workflow (from the Shiny app
-#'   into R console).
-#'
-#' @return An object of class `movedesign_preprocess` containing
-#'   all simulation outputs:
-#'   \itemize{
-#'     \item `simList`: List of simulated telemetry datasets,
-#'       one per individual.
-#'     \item `seedList`: List of random seeds used for
-#'       reproducibility.
-#'     \item `simfitList`: List of fitted movement models for
-#'       each simulation.
-#'     \item `akdeList`: List of home range (AKDE) estimates,
-#'       present if the `hr` target was listed in `set_target`.
-#'     \item `ctsdList`: List of continuous-time speed and
-#'       distance (CTSD) estimates, present if the `ctsd` target
-#'       was listed in `set_target`.
-#'   }
-#'
+#' Because a single run is subject to stochastic
+#' variation, treat outputs from [md_run()] as exploratory, and use
+#' [md_replicate()] for more robust inferences (as it aggregates
+#' results across multiple replicates).
+#' 
+#' @param design An object of class `movedesign_input`, as returned by
+#'   [md_prepare()] or [md_simulate()].
+#'   
+#' @param trace Logical. If `TRUE` (default), prints progress messages
+#'   and elapsed time for each step. Set to `FALSE` for silent execution.
+#'   
+#' @param .seeds (Optional) List of integer seeds, one per individual,
+#'   used to reproduce a previous run exactly.
+#'   Seeds from a prior run are stored in the `$seedList` slot of the
+#'   object returned by this function. Leave as `NULL` (default) for
+#'   a fresh run with automatically generated seeds.
+#'   
+#' @return
+#' An object of class `movedesign_processed`, accepted by
+#' downstream functions such as [md_plot_preview()],
+#' or [md_compare_preview()].
+#' 
 #' @details
-#' This function ensures reproducibility by saving all random seeds and
-#' intermediate results. Progress and timing messages help track the
-#' simulation workflow.
+#' Progress messages are printed by default.
+#' Every individual simulation is assigned a unique random
+#' seed, stored in `$seedList` of the returned object.
+#' Passing that list to `.seeds` in a subsequent call
+#' reproduces the run exactly. This is particularly useful
+#' when replicating a result first produced in the Shiny
+#' app.
 #'
 #' Typical workflow:
 #' \itemize{
@@ -807,13 +967,17 @@ md_prepare <- function(species = NULL,
 #' }
 #'
 #' @seealso
-#'   [md_prepare()],
-#'   [md_replicate()],
-#'   [md_check()],
-#'   [md_plot()]
+#' [md_prepare()] and [md_simulate()] to build the input
+#' object. [md_replicate()] to run the workflow multiple
+#' times and aggregate results, which is recommended over
+#' a single [md_run()] call for any final design
+#' evaluation.
+#' [md_plot_preview()] and [md_compare_preview()] to inspect
+#' or compare these preliminary outputs.
 #'
 #' @examples
 #' if(interactive()) {
+#' 
 #' input <- md_prepare(
 #'   data = buffalo,
 #'   models = models,
@@ -823,17 +987,27 @@ md_prepare <- function(species = NULL,
 #'   dti = list(value = 1, unit = "day"),
 #'   add_individual_variation = FALSE,
 #'   set_target = "hr",
-#'   which_meta = "mean"
-#' )
+#'   which_meta = "mean")
+#'   
 #' output <- md_run(input)
 #' }
-#'
+#' 
+#' @family workflow_steps
 #' @export
-md_run <- function(design, .seeds = NULL, trace = TRUE) {
+md_run <- function(design,
+                   trace = TRUE,
+                   .seeds = NULL) {
   
   if (!inherits(design, "movedesign")) {
     stop(paste("The object must be of class 'movedesign'.",
                "Run md_prepare() first."))
+  }
+  
+  if (!is.logical(trace) ||
+      length(trace) != 1L ||
+      is.na(trace)) {
+    stop("'trace' must be TRUE or FALSE.",
+         call. = FALSE)
   }
   
   start_total <- Sys.time()
@@ -942,7 +1116,7 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
     }
   }
   
-  return(movedesign_preprocess(list(
+  return(movedesign_processed(list(
     data = design$data,
     get_species = design$get_species,
     data_type = design$data_type,
@@ -975,36 +1149,48 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
 #' @title Merge multiple simulation outputs
 #'
 #' @description
-#' Merges the results of multiple simulation runs, each produced by
-#' [`md_run()`], into a single unified `movedesign_output` object. This
-#' is especially useful when running replicate simulations for power
-#' analyses, sensitivity testing, or batch processing. Merging allows
-#' you to aggregate all simulated individuals, outputs, and related
-#' metadata, enabling streamlined downstream analyses.
+#' Pools two or more [md_run()] outputs into a single
+#' `movedesign_processed` object by concatenating all simulated
+#' individuals, fitted models, and seeds. The merged object behaves
+#' exactly as if all individuals had been simulated in one call:
+#' if each input contains 5 individuals, the merged output contains
+#' 10.
+#' 
+#' The distinction from [md_stack()] is important. `md_merge()`
+#' treats all inputs as parts of one larger dataset; replicate
+#' identity is lost and individual counts accumulate. [md_stack()]
+#' instead assigns a replicate ID to each [md_run()] output and
+#' aggregates population-level inference across them, keeping each
+#' run as a separate replicate.
 #'
-#' @param ... One or more objects of class `movedesign_preprocess`,
-#'   typically generated by [`md_run()`]. Each object must contain, at
-#'   minimum, the elements `simList`, `simfitList`, and `seedList`.
-#'   Optional elements such as `akdeList` and `ctsdList` 
-#'   are merged if present.
-#' @param .ignore_mismatch Logical; if `TRUE`, the function will
-#'   attempt to merge inputs even if they have mismatched columns.
-#'   Use with caution.
-#'
+#' Call `md_merge()` directly only when you have run [md_run()]
+#' separately and need to pool the raw outputs before downstream
+#' analyses.
+#' 
+#' @param x Either a list of `movedesign_processed` objects, or the
+#'   first of multiple objects passed individually. All objects must
+#'   share the same `set_target` and sampling parameters.
+#'   
+#' @param ... Reserved for internal use.
+#' 
+#' @details
+#' Before merging, all inputs are checked for consistent metadata
+#' (e.g. `dur`, `dti`, `set_target`). Movement timescale parameters
+#' (`tau_p`, `tau_v`) are compared after rounding to one decimal
+#' place, to tolerate minor numerical differences arising from
+#' separate model fitting runs. If any field mismatches are found,
+#' the function stops with an informative message listing the
+#' affected fields.
+#' 
 #' @return
 #' A single `movedesign_output` object that contains all merged
 #' simulation outputs and inherits metadata from the first input
-#' object. The output includes:
-#' - Merged list of simulated individuals (`simList`),
-#' - Merged list of fitted models (`simfitList`),
-#' - Merged list of seeds used for each simulation replicate
-#'   (`seedList`),
-#' - Optionally, merged home range (`akdeList`) and
-#'   speed (`ctsdList`) outputs,
-#' - Relevant metadata describing the study design parameters.
-#'
+#' object.
+#' 
 #' @examples
 #' if (interactive()) {
+#' 
+#'   data(buffalo)
 #'   input <- md_prepare(
 #'     data = buffalo,
 #'     models = models,
@@ -1013,24 +1199,40 @@ md_run <- function(design, .seeds = NULL, trace = TRUE) {
 #'     dur = list(value = 1, unit = "month"),
 #'     dti = list(value = 1, unit = "day"),
 #'     add_individual_variation = FALSE,
-#'     grouped = FALSE,
 #'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
+#'     which_meta = "mean")
 #'
 #'   output1 <- md_run(input)
 #'   output2 <- md_run(input)
 #'
-#'   merged <- md_merge(output1, output2)
+#'   # Both of the following are equivalent:
+#'
+#'   md_merge(output1, output2)
+#'   md_merge(list(output1, output2))
+#'   
 #' }
 #'
 #' @seealso
-#'   \code{\link{md_prepare}},
-#'   \code{\link{md_run}}
+#'   [md_prepare],
+#'   [md_run]
 #'
 #' @export
-md_merge <- function(..., .ignore_mismatch = FALSE) {
-  outs <- list(...)
+md_merge <- function(x, ...) {
+  
+  dots <- list(...)
+  .ignore_mismatch <- dots[[".ignore_mismatch"]] %||% FALSE
+  extra <- if (is.null(names(dots))) {
+    dots } else {  dots[is.na(names(dots)) | names(dots) == ""] }
+  
+  outs <- if (
+    is.list(x) &&
+    length(x) > 0L &&
+    inherits(x[[1L]], c("movedesign_processed",
+                        "movedesign_output"))) {
+    x
+  } else {
+    c(list(x), extra)
+  }
   
   if (length(outs) == 1 &&
       is.list(outs[[1]]) &&
@@ -1038,16 +1240,18 @@ md_merge <- function(..., .ignore_mismatch = FALSE) {
     outs <- outs[[1]]
   }
   
+  data_type <- outs[[1]]$data_type
+  
   class_list <- vapply(outs, function(x)
     if (is.list(x) && length(class(x)) > 0)
       class(x)[1] else NA_character_, character(1))
   
-  allowed_classes <- c("movedesign_preprocess",
+  allowed_classes <- c("movedesign_processed",
                        "movedesign_output")
   if (!all(class_list %in% allowed_classes)) {
     stop(
       "All inputs to md_merge() must be of class ",
-      "'movedesign_preprocess' or 'movedesign_output'.\n",
+      "'movedesign_processed' or 'movedesign_output'.\n",
       "Offending element(s): ",
       paste(which(!class_list %in% allowed_classes),
             collapse = ", "))
@@ -1091,10 +1295,20 @@ md_merge <- function(..., .ignore_mismatch = FALSE) {
       
       if (field %in% c("tau_p", "tau_v")) {
         ref_val <- round(ref[[field]]$All$value, 1)
-        identicals <- vapply(vals[-1], function(v) {
-          if (is.null(v)) return(FALSE)
-          all(round(v$All$value, 1) == ref_val)
-        }, logical(1))
+        
+        if (data_type != "simulated") {
+          identicals <- vapply(vals[-1], function(v) {
+            if (is.null(v)) return(FALSE)
+            all(round(v$All$value, 1) == ref_val)
+          }, logical(1))
+        } else {
+          identicals <- vapply(vals[-1], function(v) {
+            if (is.null(v)) return(FALSE)
+            all(round(v$All$value, 1) == ref_val, na.rm = TRUE)
+          }, logical(1))
+          
+        }
+       
       } else {
         identicals <- vapply(vals[-1], function(v)
           identical(v, vals[[1]]), logical(1))
@@ -1184,67 +1398,217 @@ md_merge <- function(..., .ignore_mismatch = FALSE) {
   ))
   
   out[sapply(out, is.null)] <- NULL
-  class(out) <- "movedesign_preprocess"
+  class(out) <- "movedesign_processed"
   
   return(out)
 }
 
 
-#' @title Replicate study design and aggregate simulation outputs
+#' @title Stack simulation outputs as replicates
 #'
 #' @description
-#' Runs the specified movement study design multiple times and aggregates
-#' outputs and summary statistics across independent replicates. This
-#' enables sensitivity analyses and quantifies variability arising from
-#' random sampling, especially when individual-level variation is enabled
-#' (i.e., `add_individual_variation = TRUE` in [`md_prepare()`]). 
-#' Replication helps assess how stochasticity and design choices impact
-#' simulation inference.
-#'
-#' @param obj An object of class `movedesign` created by
-#'   [`md_prepare()`]. It contains all parameters and input data
-#'   defining the movement study.
-#' @param n_replicates Integer specifying how many independent
-#'   simulation replicates to run.
-#' @param verbose Logical; if `TRUE`, runs population-level inferences
-#'   iteratively for increasing population sample sizes, saving results
-#'   at each step. Defaults to `FALSE`, which runs it only once for the
-#'   maximum sample size defined by `n_individuals` in [`md_prepare()`].
-#' @param trace Logical; if `TRUE` (default), prints progress and
-#'   timing messages to the console.
-#' @param parallel Logical; if `TRUE`, enables parallel processing.
-#'   Default is `FALSE`.
-#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
-#'   to display as a reference in the plot.
-#' @param ncores Integer; number of CPU cores to use for parallel
-#'   processing. Defaults to all available cores detected by
-#'   `parallel::detectCores()`.
-#' @param ... Additional arguments used internally.
+#' Assigns a replicate ID to each [md_run()] output, re-runs
+#' population-level resampling for each, and aggregates inference
+#' results into a unified output. Calling `md_stack()` on
+#' a list of `n` [md_run()] outputs produces the same result as
+#' calling [md_replicate()] with `n_replicates = n`.
+#' 
+#' Use this function when the [md_run()] calls have already been
+#' made — for example, when runs were executed in parallel outside
+#' the standard workflow, or recovered after an interruption.
+#' 
+#' The distinction from [md_merge()] is important. [md_merge()]
+#' pools all inputs into one larger dataset (*e.g.*, if each run has
+#' `5` individuals, the output has `10`, and the design corresponds to
+#' a single replicate.
+#' `md_stack()` assigns each run a separate replicate ID:
+#' number of individuals does not accumulate, and population-level
+#' inference is aggregated across replicates.
+#' 
+#' @param obj A list of `movedesign_processed` objects, each
+#'   returned by [md_run()]. All objects must share the same
+#'   `set_target`, `dur`, and `dti`.
+#'   
+#' @param error_threshold Numeric. The acceptable error
+#'   threshold used when summarising estimation performance across
+#'   replicates (e.g. `0.05` for 5%).
+#'   
+#' @param ... Reserved for internal use.
+#' 
+#' @return
+#' A list of class `movedesign_output`.
+#' 
+#' @export
+md_stack <- function(obj, error_threshold = 0.05, ...) {
+  
+  dots <- list(...)
+  
+  if (!is.list(obj)) {
+    stop("Object must be a list.")
+  }
+  
+  if (is.null(dots[[".ignore_mismatch"]])) {
+    .ignore_mismatch <- FALSE
+  } else {
+    .ignore_mismatch <- dots[[".ignore_mismatch"]]
+  }
+  
+  n_replicates <- length(obj)
+  
+  outputs <- list()
+  for (i in seq_along(obj)) {
+    
+    outputs[[i]] <- run_meta_resamples(
+      obj[[i]], set_target = obj[[i]]$set_target,
+      iter_step = 1,
+      subpop = obj[[i]]$grouped,
+      randomize = FALSE, 
+      trace = FALSE,
+      .automate_seq = FALSE)
+    outputs[[i]]$sample <- i
+    
+  }
+  
+  if (length(outputs) > 0) {
+    summary <- data.table::rbindlist(
+      outputs, fill = TRUE, idcol = "replicate")
+  } else {
+    summary <- data.table::data.table()
+  }
+  
+  if (length(obj) > 0) {
+    
+    if (obj[[1]]$grouped) {
+      group_keys <- c("A", "B")
+      common_names <- obj[[1]]$groups[[1]]
+      merged_ids <- lapply(obj, function(x) x$groups[[2]])
+      merged_ids <- Reduce(
+        function(x, y) Map(c, x, y), merged_ids)
+      
+      for (x in seq_along(obj)) {
+        obj[[x]]$groups <- list(common_names, merged_ids)
+      }
+    }
+    
+    merged <- md_merge(obj, .ignore_mismatch = .ignore_mismatch)
+    class(merged) <- unique(c("movedesign_output", class(merged)))
+  } else {
+    merged <- NULL
+  }
+  
+  merged$n_replicates <- n_replicates
+  
+  out <- structure(
+    list(data = merged,
+         summary = summary,
+         error_threshold = error_threshold), class = "movedesign")
+  class(out) <- unique(c("movedesign_output", class(out)))
+  return(out)
+  
+}
+
+
+#' @title Replicate study design workflow and aggregate outputs
+#' 
+#' @description
+#' Runs the full `movedesign` workflow multiple times and aggregates
+#' outputs across independent replicates. Use this function after
+#' [md_run()] to quantify how stochasticity and design choices affect
+#' estimation performance, and to produce the robust, replicated
+#' results needed for a reliable design evaluation. Use [md_check()]
+#' afterwards to assess whether enough replicates have been run for
+#' stable inference.
+#' 
+#' Can also extend a previous run of [md_replicate()]: passing an
+#' existing `movedesign_output` object appends new replicates to the
+#' existing outputs rather than starting over.
+#' 
+#' @param obj An object of class `movedesign_input`, as returned by
+#'   [md_prepare()] or [md_simulate()], or a `movedesign_output`
+#'   object from a previous call of this function. Passing a
+#'   `movedesign_output` appends `n_replicates` to
+#'   the existing results.
+#'   
+#' @param n_replicates A single positive integer. The number of
+#'   independent replicates to run. Must be at least `5`. Start with
+#'   a modest number (*e.g.*, `20`), then use [md_check()] to assess
+#'   convergence. If convergence has not been reached, pass the
+#'   output back to this function to append more replicates.
+#'   
+#' @param verbose Logical. If `TRUE` (default), evaluates
+#'   population-level inference at every *population* sample size
+#'   up to `n_individuals`, saving results at each step. This shows how
+#'   estimation performance changes as sample size grows. If `FALSE`,
+#'   inference is run only once at the maximum sample size defined
+#'   by `n_individuals` in [`md_prepare()`].
+#'   
+#' @param trace Logical. If `TRUE` (default), prints progress and
+#'   timing messages to the console for each replicate. Set to `FALSE`
+#'   for silent execution.
+#'   
+#' @param parallel Logical. If `TRUE`, runs replicates in parallel.
+#'   Defaults to `FALSE`. Not supported on Windows, where execution
+#'   falls back to sequential automatically.
+#'   
+#' @param error_threshold Numeric. The acceptable error
+#'   threshold used when summarising estimation performance across
+#'   replicates (e.g. `0.05` for 5%).
+#'   
+#' @param ncores Integer. Number of CPU cores to use when
+#'   `parallel = TRUE`. Defaults to all available cores via
+#'   [parallel::detectCores()]. Ignored when `parallel = FALSE` or
+#'   on Windows.
+#'   
+#' @param ... Reserved for internal use.
 #'
 #' @return
-#' A list of class `movedesign_output` with two elements:
-#' \itemize{
-#'   \item `data`: A list containing
-#'     merged simulation outputs from all replicates.
-#'   \item `summary`: A `data.table` summarizing key
-#'     statistics for each replicate.
-#' }
+#' An object of class `movedesign_output`, accepted by [md_check()],
+#' [md_plot()], and [md_plot_replicates()].
 #'
 #' @details
-#' Each replicate runs independently using the same study design object
-#' but with a unique random seed to ensure independence. Results from all
-#' replicates are merged using [`md_merge()`], and summary statistics
-#' combine into a single `data.table` for convenient downstream analyses
-#' and evaluation. Parallel processing can significantly reduce runtime
-#' when running many replicates; use `ncores` to specify the number of CPU
-#' cores used. If function is interrupted (e.g., Ctrl+C), it returns
-#' results from all completed replicates up to that point.
+#' Each replicate calls [md_run()] with a unique random seed,
+#' ensuring results are statistically independent. If the function is
+#' interrupted, it returns all results completed up to that point
+#' rather than discarding them. This makes it safe to stop a long run
+#' early and still retrieve partial results.
+#' 
+#' ## Parallel processing
+#' 
+#' Setting `parallel = TRUE` can substantially reduce runtime for
+#' large replication runs. Parallelisation relies on
+#' [parallel::mclapply()] and is not available on Windows; in that
+#' case, execution falls back to sequential with no error.
+#' 
+#' ## Appending replicates
+#' 
+#' Passing a `movedesign_output` object as `obj` adds new
+#' replicates to the existing results. This is useful when an
+#' initial run needs more replicates for stable inference without
+#' discarding completed work.
+#' 
+#' ## Assessing convergence
+#'
+#' There is no universal rule for how many replicates are sufficient.
+#' After an initial run, use [md_check()] to evaluate whether the
+#' cumulative mean of the tracked error metric has stabilised across
+#' replicates. If convergence has not been reached, pass the returned
+#' `movedesign_output` object back to [md_replicate()] to append
+#' more replicates without discarding completed work. Repeat until
+#' [md_check()] confirms convergence.
 #'
 #' @seealso
-#' [`md_prepare()`], [`md_run()`], [`md_merge()`]
+#'   [md_prepare()] and [md_simulate()] to build the input object.
+#'   [md_run()] for a single exploratory run before committing to
+#'   full replication.
+#'   [md_check()] to assess whether cumulative estimation error has
+#'   stabilised across replicates (the recommended criterion for
+#'   deciding when enough replicates have been run).
+#'   [md_plot()] and [md_plot_replicates()] to visualize outputs.
 #' 
 #' @examples
 #' if (interactive()) {
+#' 
+#'   data(buffalo)
 #'   input <- md_prepare(
 #'     data = buffalo,
 #'     models = models,
@@ -1255,13 +1619,16 @@ md_merge <- function(..., .ignore_mismatch = FALSE) {
 #'     add_individual_variation = TRUE,
 #'     grouped = FALSE,
 #'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
-#'
+#'     which_meta = "mean")
+#'   
 #'   output <- md_replicate(input, n_replicates = 5)
+#'   md_check(output)
+#'   
+#'   # Append more replicates to an existing result:
+#'   output <- md_replicate(output, n_replicates = 10)
 #' }
-#'
-#' @importFrom data.table rbindlist
+#' 
+#' @family workflow_steps
 #' @export
 md_replicate <- function(obj,
                          n_replicates,
@@ -1304,9 +1671,8 @@ md_replicate <- function(obj,
   .worker <- function(i) {
     rep_id <- offset + i
     
-    if (trace)
-      message(.msg(sprintf("\u2014 Replicate %s of %s",
-                           rep_id, offset + n_replicates), "main"))
+    if (trace) .header(sprintf("Replicate %s of %s",
+                               rep_id, offset + n_replicates), 2)
     
     out <- md_run(base_input, trace = trace)
     set_m <- if (verbose) NULL else base_input$n_individuals
@@ -1475,40 +1841,51 @@ md_replicate <- function(obj,
 #' @description
 #' Generates a quick visualization of relative error for home range or
 #' movement speed estimation from a single replicate of a movedesign
-#' workflow. 
+#' workflow.
 #' The plot can display either the estimates from that replicate for a
 #' random combination of individuals, or, when resampling is enabled,
 #' summaries derived from repeated draws of individuals at each population
 #' sample size (based on the specified number of resamples).
 #' 
-#' This functions shows preliminary outputs only based on the output of
-#' [md_run()] (a `movedesign_preprocess` object) and should not be used to
-#' evaluate study design by itself. Instead, users should run
+#' This functions shows preliminary outputs for a single stochastic run
+#' from [md_run()] (a `movedesign_processed` object) and should not be
+#' used to evaluate study design by itself. Instead, users should run
 #' [md_replicate()] and check for convergence with [md_check()].
-#'
-#' @param obj An object of class `movedesign_preprocess` 
-#'   (output of [md_run()]).
-#' @param n_resamples Numeric. Must be a positive value. Defines how many
-#'   combinations are generated for each population sample size,
-#'   with each combination producing a new population-level estimate.
-#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
-#'   to display as a reference in the plot.
-#' @param pal Character vector of two colors for within/outside threshold
-#'   (default: c("#007d80", "#A12C3B")).
-#' @param ... Additional arguments used internally.
-#'
+#' 
+#' @param obj An object of class `movedesign_processed`, as returned
+#'   by [md_run()].
+#'   
+#' @param n_resamples A single positive integer. The number of
+#'   random combinations of individuals generated at each population
+#'   sample size. Each combination produces one population-level
+#'   estimate. Set to `NULL` to plot raw estimates without
+#'   resampling.
+#'   
+#' @param error_threshold Numeric. Relative error threshold shown as
+#'   a reference line in the plot (e.g. `0.05` for 5%).
+#'   
+#' @param pal A character vector of two colours, used for estimates
+#'   within and outside the error threshold respectively.
+#'   Defaults to `c("#007d80", "#A12C3B")`.
+#'   
+#' @param ... Reserved for internal use.
+#' 
 #' @return
-#' A ggplot object displaying relative error by population sample size,
-#' with point estimate and confidence intervals for mean estimates,
-#' and horizontal error threshold lines.
-#'
+#' A `ggplot` object. Displays relative error as a function of
+#' population sample size, with point estimates, confidence
+#' intervals, and a horizontal reference line at `error_threshold`.
+#' 
 #' @details
-#' This plot summarizes a single replicate. Credible intervals and robust
-#' study design conclusions generally require multiple replicates generated
-#' with [md_replicate()].
-#'
+#' This plot summarizes a single replicate, so it is subject to
+#' stochastic variation. The plot shown here may look very
+#' different with another run of the same design. Use [md_replicate()]
+#' to aggregate results across many independent runs, and [md_check()]
+#' to confirm that estimates have stabilised before drawing conclusions.
+#' 
 #' @examples
 #' if (interactive()) {
+#'   
+#'   data(buffalo)
 #'   input <- md_prepare(
 #'     data = buffalo,
 #'     models = models,
@@ -1519,14 +1896,17 @@ md_replicate <- function(obj,
 #'     add_individual_variation = FALSE,
 #'     grouped = TRUE,
 #'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
-#'
+#'     which_meta = "mean")
+#'   
 #'   output <- md_run(input)
 #'   md_plot_preview(output, error_threshold = 0.05)
 #' }
 #' 
-#' @seealso [md_run()], [md_replicate()]
+#' @seealso
+#'   [md_run()] to generate the input object.
+#'   [md_replicate()] for robust outputs based on multiple replicates.
+#'   [md_check()] to assess convergence across replicates.
+#'   
 #' @export
 md_plot_preview <- function(obj,
                             n_resamples = NULL,
@@ -1541,8 +1921,8 @@ md_plot_preview <- function(obj,
   n <- x <- y <- id <- NULL
   type <- group <- error <- error_sd <- NULL
   
-  if (!inherits(obj, "movedesign_preprocess")) {
-    stop(paste("Input must be a 'movedesign_preprocess'",
+  if (!inherits(obj, "movedesign_processed")) {
+    stop(paste("Input must be a 'movedesign_processed'",
                "object from `md_run()`."))
   }
   
@@ -1585,19 +1965,24 @@ md_plot_preview <- function(obj,
   max_draws <- max(unique(out$sample))
   
   max_m <- max(unique(out$m))
-  only_one_m <- length(unique(out$m)) == 1
+  only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
   if (only_one_m) { 
     out$m <- factor(out$m)
     warning(paste0(
-      "Only one unique value of `m` detected per group.\n",
-      "No resampling possible for design ", id, "."),
+      "Only ", .msg("one", "danger"),
+      " unique value of `m` detected per group.\n",
+      "No resampling possible for this design.\n"),
       call. = FALSE)
   }
   
+  dti <- fix_unit(obj$dti$value, obj$dti$unit)
+  txt_tdi <- ifelse(dti$value == 1,
+                    dti$unit, paste(dti$value, dti$unit))
+  
   set_subtitle <- paste0(
-      max_m, " tags, tracked for ",
-      paste(obj$dur$value, obj$dur$unit), " every ",
-      paste(obj$dti$value, obj$dti$unit))
+    max_m, " tags, tracked for ",
+    paste(obj$dur$value, obj$dur$unit), " every ",
+    txt_tdi)
   
   grouped <- unique(out$is_grouped)
   set_target <- unique(out$type)
@@ -1613,16 +1998,7 @@ md_plot_preview <- function(obj,
     if (grouped) out <- dplyr::filter(out, group != "All")
     
     out_mean <- .summarize_error(out)
-    ci_pct <- sprintf("%g%%", unique(out_mean$ci) * 100)
-    
-    only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
-    if (only_one_m) { 
-      out$m <- factor(out$m)
-      warning(paste0(
-        "Only one unique value of `m` detected per group.\n",
-        "No resampling possible for design ", id, "."),
-        call. = FALSE)
-    }
+    label_ci <- sprintf("%g%%", unique(out_mean$ci) * 100)
     
     m_resampled <- out_mean$m[out_mean$n > 1L]
     
@@ -1715,7 +2091,7 @@ md_plot_preview <- function(obj,
             "Wide bars: %s prediction interval  \u2022  ",
             "Narrow bars: %s confidence interval\n",
             "Based on %d resamples"),
-          ci_pct, ci_pct, max_draws)) +
+          label_ci, label_ci, max_draws)) +
       
       { if (length(unique(out$m)) == 2) {
         ggplot2::scale_x_continuous(
@@ -1732,7 +2108,7 @@ md_plot_preview <- function(obj,
         expand = ggplot2::expansion(mult = c(0.05, 0.10))) +
       ggplot2::scale_color_manual(
         values = c("TRUE" = pal[1], "FALSE" = pal[2]),
-        labels = c("TRUE" = "Yes", "FALSE" = "No"),
+        # labels = c("TRUE" = "Yes", "FALSE" = "No"),
         drop = FALSE) +
       
       { if (grouped)
@@ -1754,16 +2130,7 @@ md_plot_preview <- function(obj,
     
     if (grouped) out <- dplyr::filter(out, group != "All")
     
-    only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
-    if (only_one_m) { 
-      out$m <- factor(out$m)
-      warning(paste0(
-        "Only one unique value of `m` detected per group.\n",
-        "No resampling possible for design ", id, "."),
-        call. = FALSE)
-    }
-    
-    ci_pct <- "95%"
+    label_ci <- "95%"
     
     p <- out %>%
       ggplot2::ggplot(
@@ -1832,7 +2199,7 @@ md_plot_preview <- function(obj,
         color = paste0("Within error threshold (\u00B1",
                        error_threshold * 100, "%)?"),
         caption = sprintf(
-          "Narrow bars: %s confidence interval", ci_pct)) +
+          "Narrow bars: %s confidence interval", label_ci)) +
       
       { if (length(unique(out$m)) == 2) {
         ggplot2::scale_x_continuous(
@@ -1877,12 +2244,12 @@ md_plot_preview <- function(obj,
   
   if (resampled && obj$n_individuals < 15) {
     warning(
-      crayon::bold("\n! PRELIMINARY RESULTS\n"),
-      "  This plot displays outputs from ",
-      crayon::yellow(paste0("1 replicate + ",
-                            n_resamples, " resamples")),
-      ".\n",
-      "  Results may change substantially",
+      crayon::bold("! PRELIMINARY RESULTS ONLY\n"),
+      " This plot displays outputs from ",
+      crayon::yellow(paste0(
+        "1 replicate + ",
+        length(unique(out$sample)), " resample(s)")),
+      ".\n Results may change substantially",
       " with additional replicates or resamples.\n\n",
       crayon::bold("  Run `md_replicate()`"),
       crayon::bold(" for more robust inferences.\n"),
@@ -1890,8 +2257,8 @@ md_plot_preview <- function(obj,
     
   } else if (!resampled && obj$n_individuals < 15) {
     warning(
-      crayon::bold("\n! PRELIMINARY RESULTS\n"),
-      "  This plot displays outputs from ",
+      crayon::bold("! PRELIMINARY RESULTS ONLY\n"),
+      " This plot displays outputs from ",
       crayon::yellow("a single replicate"),
       " and no resampling.\n",
       "  Results may change substantially",
@@ -1901,8 +2268,8 @@ md_plot_preview <- function(obj,
       call. = FALSE)
   } else if (!resampled && obj$n_individuals >= 15) {
     warning(
-      crayon::bold("\n! PRELIMINARY RESULTS\n"),
-      "  This plot displays outputs with no ",
+      crayon::bold("! PRELIMINARY RESULTS ONLY\n"),
+      " This plot displays outputs with no ",
       crayon::yellow("resampling"), ".\n",
       crayon::bold("  Run `md_plot_preview()`"),
       crayon::bold(" with resampling.\n"),
@@ -1947,13 +2314,12 @@ md_plot_preview <- function(obj,
 #'   and mean line. If a single group, supply one color (default:
 #'   `"#007d80"`). If groups are present, supply two colors (default:
 #'   `c("#007d80", "#A12C3B")`).
-#' @param m Numeric (optional). If provided, restricts the
-#'   results for a specific population sample size (`m`).
-#'   Defaults to `NULL`, which checks up to the maximum population
-#'   sample size.
+#' @param m Numeric (Optional). If provided, restricts the results to a
+#'   specific population sample size (`m`). Defaults to `NULL`, which
+#'   checks up to the maximum population sample size.
 #' @param show_text Logical, whether to display text annotations in
 #'   the plots. Default is `TRUE`.
-#' @param ... Additional arguments used internally.
+#' @param ... Reserved for internal use.
 #'
 #' @return
 #' A `ggplot` object showing:
@@ -2012,11 +2378,6 @@ md_plot_preview <- function(obj,
 #'   md_plot(output, ci = 0.80, method = "HDI")
 #' }
 #'
-#' @import ggplot2
-#' @importFrom stats density
-#' @importFrom scales percent percent_format breaks_pretty
-#' @importFrom dplyr filter mutate across
-#' @importFrom bayestestR ci
 #' @export
 md_plot <- function(x,
                     stat = c("mean", "median"),
@@ -2029,6 +2390,7 @@ md_plot <- function(x,
   
   dots <- list(...)
   .verbose <- dots[[".verbose"]] %||% FALSE
+  .override <- dots[[".override"]] %||% FALSE
   
   # Input validation:
   stat <- match.arg(stat)
@@ -2043,9 +2405,11 @@ md_plot <- function(x,
     stop("`ci` must be a single numeric value strictly between ",
          " 0 and 1 (e.g. `ci = 0.80` for an 80% credible interval).")
   
-  if (inherits(x, "movedesign_output")) {
+  if (!(inherits(x, "movedesign_output") ||
+        inherits(x, "movedesign_optimized"))) {
+    if (!.override) stop("`x` must be 'movedesign_output' object.")
+  } else {
     x <- list(x)
-    # stop("`x` must be 'movedesign_output' object.")
   }
   
   if (!is.null(m) && (!is.numeric(m) ||
@@ -2070,7 +2434,8 @@ md_plot <- function(x,
     
     warnings_list <- character(0L)
     cri <- withCallingHandlers(
-      .extract_cri(x, method = method, ci = ci),
+      suppressWarnings(
+        .extract_cri(x, method = method, ci = ci)),
       warning = function(w) {
         warnings_list <<- unique(c(
           warnings_list, conditionMessage(w)))
@@ -2088,7 +2453,8 @@ md_plot <- function(x,
   
   .validate_design <- function(input) {
     
-    if (!inherits(input, "movedesign_output") ||
+    if ( !(inherits(input, "movedesign_output") ||
+           inherits(input, "movedesign_optimized")) ||
         !("summary" %in% names(input))) {
       stop("Each element of `x` must be a `movedesign_output` ",
            "object produced by `md_replicate()`.")
@@ -2188,83 +2554,76 @@ md_plot <- function(x,
   }
   
   .resolve_label_positions <- function(text_data,
-                                       pad = 0.05,
+                                       pad = 0.08,
                                        x_tol = NULL,
                                        y_tol = NULL,
                                        y_step = 0.05) {
     
-    if (is.null(text_data) || nrow(text_data) == 0L)
-      return(text_data)
+    if (is.null(text_data) ||
+        nrow(text_data) == 0L) return(text_data)
     
     n <- nrow(text_data)
-    max_y_g <- max(text_data$max_y)
+    sv <- text_data$stat_value
+    lci <- text_data$lci
+    uci <- text_data$uci
+    max_y <- text_data$max_y
+    max_y_g <- max(max_y)
     
-    x_span <- diff(range(c(
-      text_data$stat_value,
-      text_data$lci,
-      text_data$uci)))
-    
+    # Tolerances
+    x_range_vals <- range(c(sv, lci, uci))
+    x_span <- diff(x_range_vals)
     if (is.null(x_tol)) x_tol <- max(x_span * 0.08, 0.02)
     if (is.null(y_tol)) y_tol <- max_y_g * 0.15
     
-    # initial x_adjust direction
-    x_range_vals <- range(c(
-      text_data$lci,
-      text_data$uci,
-      text_data$stat_value))
+    # Label y anchor
+    text_data$label_y <- max_y * (1 + pad)
+    
+    # x nudge and adjust
     x_mid <- mean(x_range_vals)
-    x_nudge <- diff(x_range_vals) * 0.012
+    x_nudge <- x_span * 0.012
     
-    for (i in seq_len(n)) {
-      if (is.na(text_data$x_adjust[i])) {
-        text_data$x_adjust[i] <- ifelse(
-          text_data$stat_value[i] > x_mid, -x_nudge, x_nudge)
-      }
-    }
+    if (is.null(text_data$x_adjust))
+      text_data$x_adjust <- NA_real_
     
-    # x-close pairs get forced to opposite sides
-    if (n >= 2L) {
-      ord <- order(text_data$stat_value)
-      text_data <- text_data[ord, ]
-      
-      for (i in seq_len(n - 1L)) {
-        for (j in (i + 1L):n) {
-          x_i <- text_data$stat_value[i]
-          x_j <- text_data$stat_value[j]
-          if (abs(x_i - x_j) < x_tol) {
-            text_data$x_adjust[i] <- -abs(x_nudge)
-            text_data$x_adjust[j] <- abs(x_nudge)
-          }
-        }
-      }
-    }
-    
+    na_idx <- is.na(text_data$x_adjust)
+    text_data$x_adjust[na_idx] <- ifelse(
+      sv[na_idx] > x_mid, -x_nudge, x_nudge)
     text_data$hjust <- ifelse(text_data$x_adjust < 0, 1, 0)
     
-    # Cross-density y clearance
-    for (i in seq_len(n)) {
-      others_y <- text_data$local_y[-i]
-      floor_y <- max(c(text_data$local_y[i], others_y))
-      text_data$label_y[i] <- floor_y + pad * text_data$max_y[i]
-    }
-    
-    # Vertical stagger fallback
+    # Force horizontal separation for x-close pairs
     if (n >= 2L) {
-      ord <- order(text_data$label_y)
+      ord <- order(sv)
       text_data <- text_data[ord, ]
+      sv <- text_data$stat_value
       
       for (i in seq_len(n - 1L)) {
         for (j in (i + 1L):n) {
-          x_dist <- abs(text_data$stat_value[i] - 
-                          text_data$stat_value[j])
-          y_dist <- abs(text_data$label_y[j] -
-                          text_data$label_y[i])
-          if (x_dist < x_tol && y_dist < y_tol) {
-            text_data$label_y[j] <- text_data$label_y[i] +
-              y_step * max_y_g
+          if (abs(sv[i] - sv[j]) < x_tol) {
+            text_data$x_adjust[i] <- -abs(x_nudge)
+            text_data$x_adjust[j] <-  abs(x_nudge)
           }
         }
       }
+    }
+    
+    # Vertical stagger for y-close pairs
+    if (n >= 2L) {
+      
+      ord <- order(text_data$label_y)
+      text_data <- text_data[ord, ]
+      sv <- text_data$stat_value
+      ly <- text_data$label_y
+      
+      for (i in seq_len(n - 1L)) {
+        for (j in (i + 1L):n) {
+          if (abs(sv[i] - sv[j]) < x_tol &&
+              abs(ly[j] - ly[i]) < y_tol) {
+            ly[j] <- ly[i] + y_step * max_y_g
+          }
+        }
+      }
+      
+      text_data$label_y <- ly
     }
     
     return(text_data)
@@ -2367,7 +2726,9 @@ md_plot <- function(x,
         .build_text(d, tp, gr, global_x_range))
     text_data <- .resolve_label_positions(text_data)
     
-    set_title <- paste("Design", i)
+    if (length(processed) > 1) {
+      set_title <- paste("Design", i)
+    } else { set_title <- "Design" }
     
     n_tags <- max(data$m, na.rm = TRUE)
     set_n_tags <- if (has_groups) {
@@ -2376,11 +2737,14 @@ md_plot <- function(x,
       paste0(n_tags, " tags")
     }
     
+    dti <- fix_unit(input$data$dti$value, input$data$dti$unit)
+    txt_tdi <- ifelse(dti$value == 1,
+                      dti$unit, paste(dti$value, dti$unit))
+    
     set_subtitle <- paste0(
-      input$data$n_replicates, " replicates\n",
       set_n_tags, ", tracked for ",
       input$data$dur$value, " ", input$data$dur$unit,
-      " every ", input$data$dti$value, " ", input$data$dti$unit)
+      " every ", txt_tdi, "\n", input$data$n_replicates, " replicates")
     
     set_caption <- paste0(
       "Shaded region: ", as.integer(ci * 100L),
@@ -2406,13 +2770,17 @@ md_plot <- function(x,
     glow_alphas <- c(0.04, 0.10, 0.22, 0.90)
     ci_area_alphas <- c(0.04, 0.08, 0.13, 0.18)
     
+    overlaps_zero <- (global_x_range[1] <= 0 &
+                        global_x_range[2] >= 0)
+    
     p <- ggplot2::ggplot(data) +
       
       # Zero reference:
-      ggplot2::geom_vline(
+      { if (overlaps_zero) 
+        ggplot2::geom_vline(
         xintercept = 0,
-        # color = "grey70",
-        linetype = "solid", linewidth = 0.7) +
+        linetype = "solid", linewidth = 0.7)
+      } +
       
       # Replicates as ticks:
       ggplot2::geom_jitter(
@@ -2432,14 +2800,16 @@ md_plot <- function(x,
         alpha = 0.05, position = "identity")
     
     # Layered CI shading:
-    for (i_glow in seq_along(ci_area_alphas)) {
-      p <- p + ggplot2::geom_area(
-        data = dens_shaded,
-        ggplot2::aes(x = .data$x,
-                     y = .data$y,
-                     fill = .data$group),
-        alpha = ci_area_alphas[i_glow],
-        position = "identity")
+    if (nrow(dens_shaded) > 0) {
+      for (i_glow in seq_along(ci_area_alphas)) {
+        p <- p + ggplot2::geom_area(
+          data = dens_shaded,
+          ggplot2::aes(x = .data$x,
+                       y = .data$y,
+                       fill = .data$group),
+          alpha = ci_area_alphas[i_glow],
+          position = "identity")
+      }
     }
     
     # Central tendency:
@@ -2477,7 +2847,7 @@ md_plot <- function(x,
     
     # Labels:
     p <- p + ggplot2::labs(
-      title = paste("Design", i),
+      title = set_title,
       subtitle = set_subtitle,
       caption = paste0(
         "Shaded region: ", as.integer(ci * 100L),
@@ -2531,34 +2901,39 @@ md_plot <- function(x,
   
   if (length(warnings_list) > 0) {
     warning(
-      "`ci` may be too large or `n_replicates` too low; ",
-      "credible interval returned NA for one or more designs.\n",
-      "  Consider reducing `ci` or increasing `n_replicates`.")
+      "\n",
+      "  The requested credible interval could not be computed.\n",
+      "  This can occur if `ci` is too high or `n_replicates` low.\n",
+      "  ", crayon::yellow$bold("Reduce `ci`"), 
+      " or ", crayon::yellow$bold("increase `n_replicates`"),
+      " for more reliable results.\n",
+      call. = FALSE)
   }
   
   if (.verbose) {
     
-    out <- lapply(processed, function(x) {
-      
-      data <- x$data
-      cri <- dplyr::bind_rows(
-        lapply(groups, function(gr) {
-          lapply(types, function(tp) {
-            d <- data[data$type == tp & data$group == gr, ]
-            dens <- stats::density(d$error, na.rm = TRUE)
-            df <- data.frame(x = dens$x, y = dens$y,
-                             type = tp, group = gr)
-            
-            tmp <- .safe_extract_cri(
-              d$error, method = method, ci = ci)
-            tmp$type <- tp
-            tmp$group <- gr
-          
-            return(tmp)
-          })
-        })
-      )
-    })
+    out <- suppressMessages(
+      lapply(processed, function(x) {
+        
+        data <- x$data
+        cri <- dplyr::bind_rows(
+          lapply(groups, function(gr) {
+            lapply(types, function(tp) {
+              d <- data[data$type == tp & data$group == gr, ]
+              dens <- stats::density(d$error, na.rm = TRUE)
+              df <- data.frame(x = dens$x, y = dens$y,
+                               type = tp, group = gr)
+              
+              tmp <- .safe_extract_cri(
+                d$error, method = method, ci = ci)
+              tmp$type <- tp
+              tmp$group <- gr
+              
+              return(tmp)
+              
+            })}))
+      })
+    )
     
     return(list(
       outputs = out,
@@ -2636,17 +3011,17 @@ md_plot <- function(x,
 #'
 #' @examples
 #' if(interactive()) {
-#'   # After running a simulation or resampling:
+#'  
+#'   output <- md_replicate(input, n_replicates = 20)
 #'   md_check(output, tol = 0.05, n_converge = 10)
+#'  
 #' }
-#' 
-#' @importFrom dplyr filter
 #' 
 #' @export
 md_check <- function(obj,
                      m = NULL,
-                     tol = 0.01,
-                     n_converge = 5,
+                     tol = 0.05,
+                     n_converge = 10,
                      plot = TRUE,
                      pal = c("#007d80", "#A12C3B")) {
   
@@ -2662,19 +3037,22 @@ md_check <- function(obj,
                "`verbose = TRUE` to use the `m` argument."))
   }
   
-  index <- NULL
-  caption <- NULL
-  if (n_converge < 5) {
-    caption <- paste(
+  stopifnot(
+    is.numeric(tol) && tol > 0 && tol < 1,
+    is.numeric(n_converge) && n_converge >= 0)
+  
+  set_caption <- NULL
+  if (n_converge < 5 || obj$data$n_replicates <= 5) {
+    set_caption <- paste(
       "Using a small number of replicates may",
       "give unreliable convergence diagnostics.")
-    
-    warning(paste(caption, "Consider increasing 'n_converge'."))
-    caption <- paste("Warning:", caption)
+    set_caption <- paste("Warning:", set_caption)
   }
   
-  cummean <- delta_cummean <- last_cummean <- NULL
+  index <- NULL
   type <- group <- has_converged <- NULL
+  cummean <- delta_cummean <- last_cummean <- NULL
+  idx_stable_start <- last_roll_sd <- NULL
   
   variable <- "error"
   data <- obj$summary
@@ -2705,6 +3083,8 @@ md_check <- function(obj,
   stopifnot(is.numeric(n_converge) && n_converge >= 2)
   stopifnot(variable %in% names(data))
   
+  # Rolling SD (vectorized):
+  
   .roll_sd <- function(x, n) {
     sd_vec <- rep(NA_real_, length(x))
     if(length(x) >= n) {
@@ -2715,18 +3095,22 @@ md_check <- function(obj,
     return(sd_vec)
   }
   
-  .find_stable <- function(delta_vec, roll_vec, tol) {
-    if (length(delta_vec) < n_converge) return(NA)
-    roll_vec[is.na(roll_vec)] <- Inf
+  # Stable detection:
+  
+  .find_stable <- function(delta_vec, tol, n_converge) {
     
-    for (i in seq_along(delta_vec)) {
-      if (i + n_converge - 1 > length(delta_vec)) break
-      recent_delta <- delta_vec[i:(i + n_converge - 1)]
-      recent_sd <- roll_vec[i:(i + n_converge - 1)]
-      if (all(abs(recent_delta) <= tol & recent_sd <= tol)) return(i)
+    valid <- !is.na(delta_vec) & (abs(delta_vec) <= tol)
+    if (sum(valid) < n_converge) return(NA_integer_)
+    
+    # Find first run of n_converge consecutive TRUEs:
+    run_len <- 0L
+    for (i in seq_along(valid)) {
+      run_len <- if (valid[i]) run_len + 1L else 0L
+      if (run_len >= n_converge)
+        return(i - n_converge + 1L)
     }
     
-    return(NA)
+    return(NA_integer_)
   }
   
   # Compute cumulative mean and stepwise changes:
@@ -2740,25 +3124,34 @@ md_check <- function(obj,
       delta_cummean = c(NA, diff(cummean)),
       has_converged = abs(delta_cummean) < tol,
       roll_sd = .roll_sd(cummean, n = n_converge)) %>%
+    dplyr::mutate(
+      color_state = dplyr::case_when(
+        .data$index <= max(.data$index) - n_converge ~ "early",
+        .data$has_converged ~ "converged",
+        TRUE ~ "diverged")) %>%
     dplyr::ungroup()
   
-  get_r <- ifelse(has_groups,
-                  length(data_subset$cummean) / 2,
-                  length(data_subset$cummean))
-  if (length(set_target) > 1) get_r <- get_r / 2
+  get_r <- data_subset %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::summarise(
+      n_steps = sum(!is.na(.data$delta_cummean)),
+      .groups = "drop") %>%
+    dplyr::pull(.data$n_steps) %>%
+    min()
+  
   if (get_r < n_converge) {
     stop(sprintf(
-      "Not enough replicates (n = %d) to check %d convergence steps.",
+      "Not enough replicates (n = %d) to check %d steps.",
       get_r, n_converge))
   }
-  
+
   # Compute convergence diagnostics:
   
-  dt_stable_idx <- data_subset %>%
+  stable_idx <- data_subset %>%
     dplyr::group_by(.data$type, .data$group) %>%
     dplyr::summarise(
       idx_stable_start = .find_stable(
-        .data$delta_cummean, .data$roll_sd, tol),
+        delta_cummean, tol, n_converge),
       .groups = "drop")
   
   diag <- data_subset %>%
@@ -2766,22 +3159,25 @@ md_check <- function(obj,
     dplyr::summarise(
       last_cummean = tail(.data$cummean, 1),
       recent_cummean = list(tail(.data$cummean, n_converge)),
-      recent_delta_cummean = list(tail(.data$delta_cummean, n_converge)),
+      recent_delta_cummean = list(
+        tail(.data$delta_cummean, n_converge)),
       recent_roll_sd = list(tail(.data$roll_sd, n_converge)),
-      # has_converged = all(abs(unlist(
-      #   .data$recent_delta_cummean)) < tol),
-      has_converged = !is.na(dt_stable_idx$idx_stable_start[
-        dplyr::cur_group_id()]),
+      last_roll_sd = max(
+        tail(.data$roll_sd, 1), na.rm = TRUE),
+      idx_stable_start = .find_stable(
+        delta_cummean, tol, n_converge),
       .groups = "drop") %>%
+    dplyr::mutate(
+      has_converged = !is.na(.data$idx_stable_start) &
+        .data$last_roll_sd <= tol) %>%
     dplyr::arrange(dplyr::desc(.data$type))
-  
-  label_y <- paste0("|", "\u0394", "(cumulative mean error)|")
   
   dt_plot <- data_subset %>%
     dplyr::left_join(
-      diag %>% dplyr::select(-has_converged),
+      diag %>% dplyr::select(
+        -"has_converged", -"idx_stable_start"),
       by = c("type", "group")) %>%
-    dplyr::left_join(dt_stable_idx, by = c("type", "group"))
+    dplyr::left_join(stable_idx, by = c("type", "group"))
   
   dt_rect <- suppressWarnings(
     dt_plot %>%
@@ -2796,205 +3192,309 @@ md_check <- function(obj,
     dplyr::filter(!.data$has_converged) %>%
     dplyr::mutate(
       group_label = if (has_groups) {
-        paste(.data$type, .data$group, sep = " / ")
+        paste0(.data$type, " / group ", .data$group)
       } else {
         dplyr::case_when(
           .data$type == "hr" ~ "mean home range",
           .data$type == "ctsd" ~ "mean speed",
-          TRUE ~ as.character(.data$type))
-      }
-    ) %>%
+          TRUE ~ as.character(.data$type)
+        )
+      }) %>%
+    dplyr::pull(.data$group_label)
+  
+  all_groups <- diag %>%
+    dplyr::mutate(
+      group_label = if (has_groups) {
+        paste0(.data$type, " / group ", .data$group)
+      } else {
+        dplyr::case_when(
+          .data$type == "hr" ~ "mean home range",
+          .data$type == "ctsd" ~ "mean speed",
+          TRUE ~ as.character(.data$type)
+        )
+      }) %>%
     dplyr::pull(.data$group_label)
   
   if (has_groups) {
+    all_groups <- gsub("^hr", "mean home range", all_groups)
+    all_groups <- gsub("^ctsd", "mean speed", all_groups)
     failed_groups <- gsub("^hr", "mean home range", failed_groups)
     failed_groups <- gsub("^ctsd", "mean speed", failed_groups)
   }
   
-  subtitle_text <- if (length(failed_groups) == 0) {
-    sprintf("All groups converged at replicate %d within \u00b1 %g%%",
-            dt_rect$xmin, tol * 100)
-  } else if (length(set_target) > 1) {
-    paste(
-      sprintf("Did not converge: %s (tolerance = \u00b1 %g%%)", 
-              failed_groups, tol * 100),
-      collapse = "\n"
-    )
-  } else {
-    sprintf("Did not converge: %s (tolerance = \u00b1 %g%%)", 
-            paste(failed_groups, collapse = ", "), tol * 100)
-  }
+  converged_groups <- setdiff(all_groups, failed_groups)
+  set_subtitle <- paste0(
+    if (length(converged_groups)) {
+      paste0("Converged: ",
+             paste(converged_groups,
+                   collapse = "\n                  "))
+    } else "",
+    
+    if (length(converged_groups) && 
+        length(failed_groups)) "\n" else "",
+    
+    if (length(failed_groups)) {
+      paste0("Did not converge: ",
+             paste(failed_groups,
+                   collapse = "\n                           "))
+    } else "",
+    
+    sprintf("\n(tolerance = \u00B1 %g%%)", tol * 100)
+  )
   
   dt_plot$type_f <- factor(dt_plot$type, levels = c("hr", "ctsd"))
   dt_rect$type_f <- factor(dt_rect$type, levels = c("hr", "ctsd"))
   
+  col_converged <- col_tolerance <- pal[1]
+  col_diverged <- pal[2]
+  
   p <- NULL
-  if (has_groups) {
+  p <- dt_plot %>%
+    ggplot2::ggplot(
+      ggplot2::aes(x = .data$replicate, 
+                   y = .data$delta_cummean,
+                   group = .data$group,
+                   shape = .data$group,
+                   linetype = .data$group)) +
     
-    p <- dt_plot %>%
-      ggplot2::ggplot(
-        ggplot2::aes(x = .data$replicate, 
-                     y = .data$delta_cummean,
-                     group = .data$group,
-                     shape = .data$group,
-                     linetype = .data$group)) +
-      
-      ggplot2::geom_hline(yintercept = 0) +
-      ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
-      ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
-      
-      { if (length(set_target) > 1)
-        ggplot2::facet_wrap(
-          . ~ .data$type_f,
-          labeller = ggplot2::labeller(
-            type_f = c(
-              "hr" = "Home range estimation", 
-              "ctsd" = "Speed \u0026 distance estimation"))) } +
-      
-      ggplot2::geom_line(
-        linewidth = 0.5, position = position_dodge(width = 0.5)) +
-      ggplot2::geom_point(
-        ggplot2::aes(color = .data$has_converged),
-        size = 4, position = position_dodge(width = 0.5)) +
-      
-      { if (nrow(dt_rect) > 0) 
-        ggplot2::geom_rect(
-          data = dt_rect,
-          mapping = ggplot2::aes(
-            xmin = .data$xmin,
-            xmax = .data$xmax, 
-            ymin = -Inf, 
-            ymax = Inf),
-          fill = "black",
-          alpha = 0.08,
-          inherit.aes = FALSE) } +
-      
-      ggplot2::scale_color_manual(
-        values = c("TRUE" = pal[1],
-                   "FALSE" = pal[2]),
-        drop = FALSE) +
-      
+    # Convergence zone:
+    ggplot2::annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,
+      ymin = -tol, ymax = tol,
+      fill = col_tolerance,
+      alpha = 0.05) +
+    
+    # Stable region:
+    # { if (nrow(dt_rect) > 0L)
+    #   ggplot2::geom_rect(
+    #     data = dt_rect,
+    #     ggplot2::aes(
+    #       xmin = .data$xmin, # - 0.08,
+    #       xmax = .data$xmax, # + 0.08,
+    #       ymin = -Inf,
+    #       ymax = Inf),
+    #     fill = col_converged, alpha = 0.06,
+    #     inherit.aes = FALSE)
+    # } +
+    
+    # Vertical entry marker:
+    { if (nrow(dt_rect) > 0L)
+      ggplot2::geom_vline(
+        data = dt_rect,
+        ggplot2::aes(xintercept = .data$xmin),
+        color = col_converged,
+        linetype = "dotted", linewidth = 0.45,
+        inherit.aes = FALSE)
+    } +
+    
+    # Zero reference:
+    ggplot2::geom_hline(
+      yintercept = 0,
+      color = "black",
+      # color = "#1a1a1a",
+      linewidth = 0.35,
+      alpha = 0.35) +
+    
+    # Tolerance bounds:
+    ggplot2::geom_hline(
+      yintercept = tol,
+      color = col_tolerance,
+      linewidth = 0.55,
+      linetype = "dashed") +
+    ggplot2::geom_hline(
+      yintercept = -tol,
+      color = col_tolerance,
+      linewidth = 0.55,
+      linetype = "dashed") +
+    
+    # Tolerance labels:
+    ggplot2::annotate(
+      "text",
+      x = Inf, y = tol,
+      label = sprintf("+%g%%", tol * 100),
+      color = col_tolerance,
+      # fontface = "bold",
+      hjust = 1.08, vjust = -0.5,
+      size = 3.2) +
+    ggplot2::annotate(
+      "text",
+      x = Inf, y = -tol,
+      label = sprintf("\u2212%g%%", tol * 100),
+      color = col_tolerance,
+      # fontface = "bold",
+      hjust = 1.08, vjust = 1.5,
+      size = 3.2) +
+    
+    # Facets:
+    
+    { if (length(set_target) > 1)
+      ggplot2::facet_wrap(
+        . ~ .data$type_f,
+        labeller = ggplot2::labeller(
+          type_f = c(
+            "hr" = "Home range estimation", 
+            "ctsd" = "Speed \u0026 distance estimation"))) } +
+    
+    ggplot2::geom_line(
+      color = "#CCCCCC",
+      position = if (has_groups)
+        ggplot2::position_dodge(width = 0.1) else 
+          ggplot2::position_identity(),
+      linewidth = 0.7,
+      lineend = "round",
+      show.legend = FALSE) +
+    
+    ggplot2::geom_point(
+      ggplot2::aes(color = .data$color_state),
+      position = if (has_groups)
+        ggplot2::position_dodge(width = 0.1) else 
+          ggplot2::position_identity(),
+      size = 8,
+      alpha = 0.10) +
+    
+    ggplot2::geom_point(
+      ggplot2::aes(color = .data$color_state),
+      position = if (has_groups)
+        ggplot2::position_dodge(width = 0.1) else 
+          ggplot2::position_identity(),
+      size = 5,
+      alpha = 0.25) +
+    
+    ggplot2::geom_point(
+      ggplot2::aes(color = .data$color_state),
+      position = if (has_groups)
+        ggplot2::position_dodge(width = 0.1) else 
+          ggplot2::position_identity(),
+      size = 1.8,
+      alpha = 1) +
+    
+    ggplot2::scale_y_continuous(
+      labels = scales::percent,
+      expand = ggplot2::expansion(mult = 0.15)) +
+    ggplot2::scale_x_continuous(
+      breaks = scales::breaks_pretty(),
+      expand = ggplot2::expansion(mult = 0.10)) +
+    
+    ggplot2::scale_color_manual(
+      name = NULL,
+      values = c(
+        early = "#C8C8C8",
+        converged = col_converged,
+        diverged = col_diverged),
+      labels = c(
+        early = paste0(
+          "Burn-in (\u2264 ", n_converge, " replicates)"),
+        converged = "Converged",
+        diverged = "Not yet converged"),
+      drop = FALSE) +
+    
+    { if (has_groups)
       ggplot2::scale_shape_manual(
-        "Groups:", values = c(16, 17), drop = FALSE) +
+        "Groups:", values = c(16, 17), drop = FALSE)
+    } +
+    { if (has_groups)
       ggplot2::scale_linetype_manual(
         "Groups:", values = c("solid", "dashed"),
-        drop = FALSE) +
+        drop = FALSE)
+    } +
+    
+    # Labels:
+    ggplot2::labs(
+      title = "Convergence diagnostics",
+      subtitle = set_subtitle,
+      caption = set_caption,
+      # caption = paste0(
+      #   if (!is.null(caption))
+      #     paste0(caption, " \u2022 ") else NULL,
+      #   "\u25cf\u2009Converged ",
+      #   "\u25cf\u2009Not converged"),
+      x = "Replicate index",
+      y = "Stepwise \u0394 cumulative mean") +
+    
+    # Theme:
+    ggplot2::theme_minimal(base_size = 13) +
+    ggplot2::theme(
       
-      ggplot2::scale_y_continuous(labels = scales::percent) +
+      # Canvas
+      plot.background = ggplot2::element_rect(
+        fill = "#FFFFFF", color = NA),
+      panel.background = ggplot2::element_rect(
+        fill = "#F7F7F5", color = NA),
+      panel.spacing = ggplot2::unit(0.8, "cm"),
       
-      ggplot2::labs(
-        title = "Stepwise change in cumulative mean",
-        subtitle = subtitle_text,
-        caption = caption,
-        x = "Replicate index",
-        y = label_y
-      ) +
+      # Grid
+      panel.grid.major.y = ggplot2::element_line(
+        color = "#E8E8E8", linewidth = 0.35),
+      panel.grid.major.x = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
       
-      theme_classic() +
-      ggplot2::theme(
-        text = ggplot2::element_text(size = 13),
-        strip.text = ggplot2::element_text(size = 15),
-        strip.background.x = ggplot2::element_rect(
-          color = NA, fill = NA),
-        strip.background.y = ggplot2::element_rect(
-          color = NA, fill = NA),
-        legend.position = "bottom",
-        legend.key.width = ggplot2::unit(1, "cm"),
-        plot.title = ggplot2::element_text(size = 16),
-        plot.subtitle = ggplot2::element_text(face = "italic"),
-        plot.margin = ggplot2::unit(c(1, 1, 1, 1), "cm")) +
+      # Axes
+      axis.title = ggplot2::element_text(
+        size = 11),
+      axis.title.x = ggplot2::element_text(
+        face = "bold", hjust = 1),
+      axis.title.y = ggplot2::element_text(
+        face = "bold", hjust = 1),
+      axis.text = ggplot2::element_text(
+        color = "grey40", size = 9),
+      axis.ticks = ggplot2::element_line(
+        color = "grey80", linewidth = 0.3),
+      
+      # Facet strips
+      strip.text = ggplot2::element_text(
+        color = "grey20", size = 14, face = "bold",
+        margin = ggplot2::margin(b = 6)),
+      strip.background.x = ggplot2::element_rect(
+        color = NA, fill = NA),
+      strip.background.y = ggplot2::element_rect(
+        color = NA, fill = NA),
+      strip.clip = "off",
+      
+      # Title block
+      plot.title = ggplot2::element_text(
+        face = "bold", size = 16,
+        margin = ggplot2::margin(b = 4)),
+      plot.subtitle = ggplot2::element_text(
+        color = "grey45", size = 10,
+        margin = ggplot2::margin(b = 10)),
+      plot.caption = ggplot2::element_text(
+        color = "grey60", size = 9, hjust = 0.5,
+        margin = ggplot2::margin(t = 8)),
+      plot.title.position = "plot",
+      plot.caption.position = "plot",
+      
+      # Margins
+      plot.margin = ggplot2::unit(
+        c(1, 1, 1, 1), "cm"))
+  
+  if (has_groups) {
+    p <- p +
+      ggplot2::theme(legend.position = "bottom") +
       ggplot2::guides(color = "none", fill = "none")
     
   } else {
-    
-    p <- dt_plot %>%
-      ggplot2::ggplot(
-        ggplot2::aes(x = .data$replicate, 
-                     y = .data$delta_cummean)) +
-      
-      ggplot2::geom_hline(yintercept = 0) +
-      ggplot2::geom_hline(yintercept = tol, linetype = "dashed") +
-      ggplot2::geom_hline(yintercept = -tol, linetype = "dashed") +
-      
-      { if (length(set_target) > 1)
-        ggplot2::facet_wrap(
-          . ~ .data$type_f,
-          labeller = ggplot2::labeller(
-            type_f = c(
-              "hr" = "Home range estimation", 
-              "ctsd" = "Speed \u0026 distance estimation"))) } +
-      
-      ggplot2::geom_line(
-        linewidth = 0.5, position = position_dodge(width = 0.5)) +
-      ggplot2::geom_point(
-        ggplot2::aes(color = .data$has_converged),
-        size = 4, position = position_dodge(width = 0.5)) +
-      
-      { if (nrow(dt_rect) > 0) 
-        ggplot2::geom_rect(
-          data = dt_rect,
-          mapping = ggplot2::aes(
-            xmin = .data$xmin,
-            xmax = .data$xmax, 
-            ymin = -Inf, 
-            ymax = Inf),
-          fill = "black",
-          alpha = 0.08,
-          inherit.aes = FALSE) } +
-      
-      ggplot2::scale_color_manual(
-        values = c("TRUE" = pal[1],
-                   "FALSE" = pal[2]),
-        drop = FALSE) +
-      
-      ggplot2::scale_y_continuous(labels = scales::percent) +
-      ggplot2::scale_x_continuous(
-        breaks = scales::breaks_pretty()) +
-      
-      ggplot2::labs(
-        title = "Stepwise change in cumulative mean",
-        subtitle = subtitle_text,
-        caption = caption,
-        x = "Replicate index",
-        y = label_y
-      ) +
-      
-      theme_classic() +
-      ggplot2::theme(
-        text = ggplot2::element_text(size = 13),
-        strip.text = ggplot2::element_text(size = 15),
-        strip.background.x = ggplot2::element_rect(
-          color = NA, fill = NA),
-        strip.background.y = ggplot2::element_rect(
-          color = NA, fill = NA),
-        legend.position = "bottom",
-        legend.key.width = ggplot2::unit(1, "cm"),
-        plot.title = ggplot2::element_text(size = 16),
-        plot.subtitle = ggplot2::element_text(face = "italic"),
-        plot.margin = ggplot2::unit(c(1, 1, 1, 1), "cm")) +
-      ggplot2::guides(color = "none",
-                      fill = "none", 
-                      linetype = "none")
+    p <- p + 
+      ggplot2::theme(legend.position = "none") +
+      ggplot2::guides(
+        color = "none", fill = "none", linetype = "none")
   }
-  
-  if (length(set_target) > 1)
-    p <- p + ggplot2::theme(
-      plot.subtitle = ggplot2::element_text(lineheight = 0.7))
-  
+   
   if (plot) {
     suppressWarnings(print(p))
   }
   
-  structure(list(
+  return(structure(list(
     grouped = has_groups,
     diagnostics_table = diag,
     tolerance = tol,
     n_converge = n_converge,
     has_converged = diag$has_converged,
-    stabilized_at = dt_stable_idx,
+    stabilized_at = stable_idx,
+    error_threshold = obj$error_threshold,
     plot = p,
-    warning = caption
-  ), class = "movedesign_check")
+    warning = set_caption
+  ), class = "movedesign_check"))
   
 }
 
@@ -3036,6 +3536,7 @@ md_check <- function(obj,
 #' @seealso [`md_prepare()`]
 #' 
 #' @importFrom ctmm %#%
+#' 
 #' @export
 md_configure <- function(data, models = NULL, parallel = FALSE) {
   
@@ -3749,7 +4250,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
 #'
 #' @keywords internal
 #' @noRd
-.md_optimize_execute <- function(prep) {
+.md_optimize_execute <- function(prep, trace) {
   
   if (!prep$proceed) {
     message("Execution stopped by user.")
@@ -3831,10 +4332,11 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     return(obj)
   }
   
-  .worker <- function(r, m, obj, seeds = NULL) {
+  .worker <- function(r, m, obj, seeds = NULL, trace = FALSE) {
     
-    message(.msg(sprintf("\u2014 Replicate %s of %s", r,
-                         n_replicates), "main"))
+    if (trace) .header(sprintf(
+      "Replicate %s of %s", r, n_replicates), 2)
+    if (trace) cat("\n")
     
     obj$n_individuals <- ifelse(obj$grouped, m * 2, m)
     
@@ -3995,12 +4497,12 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       if (sysname != "Windows" && parallel) {
         tmpList_updated <- suppressMessages(
           parallel::mclapply(r_tmp, function(r) 
-            .worker(r, m_tmp, obj_updated, seeds_tmp),
+            .worker(r, m_tmp, obj_updated, seeds_tmp, trace = FALSE),
           mc.cores = ncores))
       } else {
         tmpList_updated <- suppressMessages(
           lapply(r_tmp, function(r) 
-            .worker(r, m_tmp, obj_updated, seeds_tmp)))
+            .worker(r, m_tmp, obj_updated, seeds_tmp, trace = FALSE)))
       }
       
       out_N <- unlist(
@@ -4074,7 +4576,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     
     if (i == 1) {
       outList[[i]] <- tmpList
-      class(outList[[i]]) <- "movedesign_preprocess"
+      class(outList[[i]]) <- "movedesign_processed"
     }
     
     nms <- list()
@@ -4107,7 +4609,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       }, outList[[i - 1]], tmpList)
       
       outList[[i]] <- tmpList
-      class(outList[[i]]) <- "movedesign_preprocess"
+      class(outList[[i]]) <- "movedesign_processed"
     }
     
     metaList <- lapply(tmpList, function(x) {
@@ -4639,7 +5141,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
 #'   `parallel::detectCores()`.
 #' @param plot Logical. If TRUE, displays a diagnostic plot of
 #'   the final results.
-#' @param ... Additional arguments used internally.
+#' @param ... Reserved for internal use.
 #' 
 #' @return A list of class `movedesign_report` containing:
 #' \itemize{
@@ -4670,7 +5172,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
 #' 
 #' @export
 md_optimize <- function(obj,
-                        n_replicates = 20,
+                        n_replicates = 10,
                         error_threshold = 0.05,
                         plot = FALSE,
                         verbose = TRUE,
@@ -4691,8 +5193,8 @@ md_optimize <- function(obj,
   .check_logical(trace)
   stopifnot(is.numeric(n_replicates) && n_replicates > 0)
   
-  # if (n_replicates < 5)
-  #   stop("`n_replicates` must be set to at least 5.")
+  if (n_replicates < 5)
+    stop("`n_replicates` must be set to at least 5.")
   
   start_total <- Sys.time()
   print(sprintf("Start time: %s",
@@ -4714,7 +5216,7 @@ md_optimize <- function(obj,
     return(invisible(NULL))
   }
   
-  out <- .md_optimize_execute(init)
+  out <- .md_optimize_execute(init, trace = trace)
   
   message("Total elapsed time:")
   print(difftime(Sys.time(), start_total))
@@ -4724,151 +5226,180 @@ md_optimize <- function(obj,
 }
 
 
-#' @title Plot replicate error estimates and confidence intervals
+#' @title Plot estimation error, replicates and confidence intervals
 #'
 #' @description
-#' This function generates two complementary visualizations of replicate
-#' performance across different population sample sizes. It summarizes and
-#' plots relative estimation errors for each type of analysis (e.g., home
-#' range or speed estimation), distinguishing results that fall within or
-#' outside a user-defined error threshold.
+#' This function produces two complementary visualizations of replicate
+#' performance across a range of population sample sizes \eqn{m}, up to
+#' the maximum number of individuals requested. It
+#' summarizes and plots relative errors regarding the estimation of a
+#' set target (*e.g.*, home range or speed estimation), and classified by
+#' whether the error falls within a user-defined acceptable threshold.
 #'
-#' @param obj A movement design output object (see [`md_replicate()`]
-#'   or [`md_stack()`]).
-#' @param ci Numeric scalar between 0 and 1. The probability of the
-#'   credible interval (CI) to be estimated. Default to `0.95` (95%).
-#' @param view Character string indicating whether to return the
+#' \describe{
+#'   \item{"Estimation error (for a single random replicate)"}{
+#'     Error for one randomly-selected replicate, rendered as
+#'     point estimates with confidence interval bars. Reflects
+#'     the outcome a researcher would observe from a *single*
+#'     empirical study.
+#'   }
+#'   \item{"Mean estimation error across all replicates"}{
+#'     Mean error collapsed across **all** replicates (with confidence
+#'     intervals as a narrow bar, and prediction intervals as a wide
+#'     shaded band), with per-replicate jitter in the background.
+#'     Conveys the full distribution of outcomes with the set
+#'     sampling parameters and population sample size.
+#'   }
+#' }
+#'
+#' Both panels share a common colour palette (within/outside the
+#' acceptable error threshold) and, when two groups are present,
+#' a common shape scale.
+#' 
+#' @param obj A movement design output object (returned by
+#'   either [`md_replicate()`] or [`md_optimize()`]).
+#' @param ci Confidence level for the intervals. Applied to both
+#'   the narrow confidence bars and wide prediction bands. Must be
+#'   between `0` and `1`. Default: `0.95` (95%).
+#' @param view Layout selector. Indicate whether to return the
 #'   complete two-panel layout (`"both"`) or only the aggregated
 #'   summary plot with all replicates (`"summary_only"`).
+#' @param pal Character vector of two valis hex color code for
+#'   within and for outside the threshold
+#'   (default: `c("#007d80", "#A12C3B"))`.
+#' @param ... Reserved for internal use.
 #' 
-#' @return A list of class `movedesign_report` containing:
-#' A list with two elements:
+#' @return A `patchwork` / `ggplot` object containing:
 #' \itemize{
-#'   \item `p`: A `ggplot` object displaying the results from a single
-#'     randomly selected replicate, showing individual error estimates
-#'     and their confidence intervals.
-#'   \item `p.replicates`: A `ggplot` object summarizing mean relative error
-#'     across all replicates, with aggregated estimates in the foreground
-#'     and individual replicates shown in lighter tones in the background.
+#'   \item Top plot: A `ggplot` object displaying the results from a
+#'     single randomly selected replicate, showing individual error
+#'     estimates and their confidence intervals.
+#'   \item Bottom plot: A `ggplot` object summarizing mean relative
+#'     error across all replicates, with aggregated estimates in the
+#'     foreground and individual replicates shown in lighter tones in
+#'     the background.
 #' }
-#' 
+#'
 #' @examples
 #' if(interactive()) {
+#'   
 #'   obj <- md_replicate(...)
 #'   
-#'   plots <- md_plot_replicates(obj)
-#'   # Display the plots:
-#'   plots[[1]]
-#'   plots[[2]]
+#'   # Default: both panels
+#'   md_plot_replicates(obj)
+#'   
+#'   # Summary panel, custom palette, 80% CI:
+#'   md_plot_replicates(
+#'     obj,
+#'     ci = 0.90,
+#'     view = "summary_only",
+#'     pal = c("#1e2a38", "#9e3419"))
+#'
 #' }
 #' 
 #' @seealso
-#' [`md_plot()`]
+#' [md_plot()] for the density plot for the maximum \eqn{m}. \cr
+#' [md_replicate()] to produce a `movedesign_output`. \cr
+#' [md_optimize()] to produce a `movedesign_optimized`.
 #' 
 #' @export
 md_plot_replicates <- function(obj,
                                ci = 0.95,
                                view = c("both",
-                                        "summary_only")) {
+                                        "summary_only"),
+                               pal = c("#007d80", "#A12C3B"),
+                               ...) {
+  
+  dots <- list(...)
+  .font <- dots[[".font"]] %||% NULL
   
   view <- match.arg(view)
   
-  pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
+  if (!is.character(pal) || length(pal) != 2) {
+    stop("`pal` must be a character vector of exactly two colors.", 
+         call. = FALSE)
+  }
+  if (any(!grepl("^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$", pal))) {
+    stop("`pal` must contain valid hexadecimal color codes.",
+         call. = FALSE)
+  }
   
-  if (!inherits(obj, "movedesign_report") &&
+  if (!inherits(obj, "movedesign_optimized") &&
       !inherits(obj, "movedesign_output")) {
     
-    stop("`obj` must be either a 'movedesign_report' ",
-         "(from `md_replicate()`) or a ",
-         "'movedesign_output' object ",
-         "(from `md_optimize()`).", call. = FALSE)
+    stop("`obj` must be either a ",
+         "'movedesign_output' (from `md_replicate()`) or a ",
+         "'movedesign_optimized' object (from `md_optimize()`).",
+         call. = FALSE)
   }
   
   top_facet <- NULL
   type <- overlaps <- NULL
   n <- error_mean <- error_sd <- NULL
   
-  alpha <- 1 - ci
   error_threshold <- obj$error_threshold
+  max_replicates <- obj$data$n_replicates
   
-  dt_plot <- obj$summary
-  has_groups <- "group" %in% names(dt_plot) &&
-    all(c("A", "B") %in% unique(as.character(dt_plot$group)))
+  pal <- list("TRUE" = pal[1], "FALSE" = pal[2])
+  
+  label_ci <- paste0(ci * 100, "%")
+  label_threshold <- sprintf("%s%%", error_threshold * 100)
+  labels_target <- c("hr" = "Home range area estimation",
+                     "ctsd" = "Speed \u0026 distance estimation")
+  
+  # Prepare data:
+  
+  out <- obj$summary %>%
+    dplyr::mutate(
+      overlaps = factor(
+        abs(.data$error) <= error_threshold,
+        levels = c(TRUE, FALSE)),
+      highlight = FALSE)
+  
+  has_groups <- "group" %in% names(out) &&
+    all(c("A", "B") %in% unique(as.character(out$group)))
   
   if (has_groups) {
-    dt_plot <- dt_plot[dt_plot$group != "All", ]
+    out <- out[out$group != "All", ]
     set_shapes <- c(21, 24)
     set_shapes_manual <- c(16, 17)
   } else {
-    dt_plot <- dt_plot[dt_plot$group == "All", ]
+    out <- out[out$group == "All", ]
     set_shapes <- c(21, 21)
     set_shapes_manual <- c(16, 16)
   }
   
-  dt_plot <- dt_plot %>%
+  out_mean <- .summarize_error(out, conf_level = ci)
+  
+  set_target <- unique(out$type)
+  max_m <- max(unique(out$m))
+  
+  out_one <- dplyr::filter(
+    out, .data$replicate == sample(max_replicates, 1))
+  out_one$facet <- "original"
+  out_mean$facet <- "resampled"
+  
+  if (view == "both") {
+  out <- out %>%
     dplyr::mutate(
-      overlaps = dplyr::between(
-        abs(.data$error), 0, error_threshold))
-  
-  dt_plot_means <- dt_plot %>%
-    dplyr::mutate(
-      dplyr::across(
-        "type", ~factor(., levels = c("hr", "ctsd")))) %>%
-    dplyr::select(
-      "type", "m", "group",
-      "error", "error_lci", "error_uci") %>%
-    dplyr::distinct() %>%
-    dplyr::group_by(.data$type, .data$group, .data$m) %>% 
-    dplyr::summarize(
-      n = dplyr::n(),
-      error_sd = stats::sd(.data$error, na.rm = TRUE),
-      error_mean = mean(.data$error, na.rm = TRUE),
-      error_mean_lci = error_mean - stats::qt(
-        0.975, df = n - 1) * error_sd / sqrt(n),
-      error_mean_uci = error_mean + stats::qt(
-        0.975, df = n - 1) * error_sd / sqrt(n),
-      pred_lci = error_mean - stats::qt(
-        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
-      pred_uci = error_mean + stats::qt(
-        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
-      .groups = "drop") %>%
-    dplyr::mutate(
-      overlaps = dplyr::between(
-        abs(.data$error_mean), 0, error_threshold),
-      overlaps = factor(.data$overlaps,
-                        levels = c("TRUE", "FALSE")),
-      top_facet = .data$type == "hr") %>%
-    dplyr::ungroup()
-  
-  max_m <- max(unique(dt_plot$m))
-  set_target <- unique(dt_plot$type)
-  max_replicates <- obj$data$n_replicates
-  
-  dt_plot_one <- dplyr::filter(
-    dt_plot, .data$replicate == sample(max_replicates, 1))
-  dt_plot_one$facet <- "original"
-  dt_plot_means$facet <- "resampled"
-  
-  if (!(max_m %% 2)) {
-    dt_plot_one <- dplyr::filter(dt_plot_one, .data$m %% 2 == 0)
-    dt_plot_means <- dplyr::filter(dt_plot_means, .data$m %% 2 == 0)
+      highlight = .data$replicate %in% out_one$replicate &
+        .data$m %in% out_one$m &
+        .data$group %in% out_one$group)
   }
   
-  dt_plot <- dt_plot %>%
-    dplyr::mutate(
-      overlaps = factor(.data$overlaps,
-                        levels = c("TRUE", "FALSE")))
+  if (!(max_m %% 2)) {
+    out_one <- dplyr::filter(out_one, .data$m %% 2 == 0)
+    out_mean <- dplyr::filter(out_mean, .data$m %% 2 == 0)
+  }
   
-  # facet_labels <- c(
-  #   "resampled" = paste0("<b>Resampling</b>"),
-  #   "original" = paste0(
-  #     "<span style='color: #dd4b39'><b>No</b></span> ",
-  #     "<b>resampling</b>"))
+  only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
+  if (only_one_m) out$m <- factor(out$m)
   
-  p <- dt_plot_one %>%
-    dplyr::mutate(
-      overlaps = factor(.data$overlaps,
-                        levels = c("TRUE", "FALSE"))) %>% 
+  m_resampled <- out_mean$m[out_mean$n > 1L]
+  
+  # Plot with a single replicate:
+  
+  p <- out_one %>%
     ggplot2::ggplot(
       ggplot2::aes(x = .data$m,
                    y = .data$error,
@@ -4876,189 +5407,242 @@ md_plot_replicates <- function(obj,
                    shape = .data$group,
                    color = .data$overlaps)) +
     
-    ggplot2::geom_linerange(
-      ggplot2::aes(ymin = .data$error_lci,
-                   ymax = .data$error_uci),
-      show.legend = TRUE,
-      position = ggplot2::position_dodge2(width = 0.3),
-      linewidth = 1.2, alpha = 0.3) +
-    
-    ggplot2::geom_point(
-      position = ggplot2::position_dodge2(width = 0.3),
-      show.legend = TRUE,
-      size = 3) +
-    
     ggplot2::geom_hline(
       yintercept = 0,
       linewidth = 0.3,
       linetype = "solid") +
+    ggplot2::annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,
+      ymin = -error_threshold,
+      ymax = error_threshold,
+      alpha = 0.05) +
     ggplot2::geom_hline(
-      yintercept = error_threshold,
-      linewidth = 0.4,
-      linetype = "dotted") + 
-    ggplot2::geom_hline(
-      yintercept = -error_threshold,
-      linewidth = 0.4,
-      linetype = "dotted") +
+      yintercept = c(-error_threshold, error_threshold),
+      linetype = "dashed",
+      linewidth = 0.35, alpha = 0.8) +
+    ggplot2::annotate(
+      "text",
+      x = Inf, y = error_threshold,
+      label = paste0("+", label_threshold),
+      hjust = 1.08, vjust = -0.5,
+      size = 3.2) +
+    ggplot2::annotate(
+      "text",
+      x = Inf, y = -error_threshold,
+      label = paste0("\u2212", label_threshold),
+      hjust = 1.08, vjust = 1.5,
+      size = 3.2) +
+    
+    # Confidence intervals:
+    ggplot2::geom_linerange(
+      ggplot2::aes(ymin = .data$error_lci,
+                   ymax = .data$error_uci),
+      position = if (has_groups)
+        ggplot2::position_dodge(width = 0.5) else 
+          ggplot2::position_identity(),
+      linewidth = 1.1,
+      alpha = 0.55,
+      show.legend = FALSE) +
+    
+    ggplot2::geom_point(
+      position = if (has_groups)
+        ggplot2::position_dodge(width = 0.5) else 
+          ggplot2::position_identity(),
+      size = 4,
+      show.legend = TRUE) +
     
     { if (length(set_target) > 1)
-      ggplot2::facet_grid(
-        cols = ggplot2::vars(type),
-        scales = "free",
-        labeller = ggplot2::labeller(
-          type = c(
-            "hr" = "Home range estimation", 
-            "ctsd" = "Speed \u0026 distance estimation"))) } +
-    
-    ggplot2::scale_shape_manual(
-      "Groups:", values = c(16, 17)) +
-    ggplot2::scale_color_manual(
-      name = paste0("Within error threshold (\u00B1",
-                    error_threshold * 100, "%)?"),
-      breaks = c("TRUE", "FALSE"),
-      values = pal, drop = FALSE,
-      guide = ggplot2::guide_legend(
-        override.aes = list(color = pal, fill = pal, size = 3),
-        order = 1,
-        label.vjust = 0.4)) +
+      ggplot2::facet_wrap(
+        . ~ .data$type, scales = "free_y",
+        labeller = ggplot2::labeller(type = labels_target))
+    } +
     
     ggplot2::labs(
       title = expression("Estimation error (for a single " *
                            italic("random") * " replicate)"),
       x = "Population sample size",
-      y = "Relative error (%)") +
+      y = "Relative error (%)",
+      color = paste0("Within error threshold (\u00B1",
+                     error_threshold * 100, "%)?")) +
+      # caption = sprintf(
+      #   "Narrow bars: %s confidence interval", label_ci)) +
     
-    ggplot2::scale_x_continuous(
-    breaks = scales::breaks_pretty()) +
+    { if (length(unique(out$m)) == 2) {
+      ggplot2::scale_x_continuous(
+        breaks = unique(out$m),
+        expand = ggplot2::expansion(mult = c(0.10, 0.10)))
+    } else if (!only_one_m) {
+      ggplot2::scale_x_continuous(
+        breaks = scales::breaks_pretty(),
+        expand = ggplot2::expansion(mult = c(0.10, 0.10)))
+    }
+    } +
+    
     ggplot2::scale_y_continuous(
       labels = scales::percent,
-      breaks = scales::breaks_pretty()) +
+      breaks = scales::breaks_pretty(),
+      expand = ggplot2::expansion(mult = c(0.10, 0.10))) +
+    ggplot2::scale_color_manual(
+      values = c(pal[1], pal[2]),
+      drop = FALSE) +
     
-    ggplot2::theme_classic() +
-    ggplot2::theme(
-      text = ggplot2::element_text(size = 13),
-      legend.position = "bottom",
-      strip.text = ggplot2::element_text(size = 16),
-      strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
-      strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
-      plot.margin = ggplot2::unit(
-        c(0.3, 0.3, 0.3, 0.3), "cm"))
+    { if (has_groups)
+      ggplot2::scale_shape_manual(
+        "Groups:", values = c(16, 17),
+      ) } +
+    
+    { if (has_groups)
+      ggplot2::guides(
+        color = ggplot2::guide_legend(
+          override.aes = list(
+            shape = 22, size = 4,
+            fill = c(pal[1], pal[2])))) } +
+    { if (has_groups)
+      ggplot2::guides(
+        shape = ggplot2::guide_legend(
+          override.aes = list(size = 4))) } +
+    
+    .theme_movedesign_report(font = .font)
+  
   if (!has_groups) p <- p + ggplot2::guides(shape = "none")
   
-  p.replicates <- dt_plot_means %>%
+  # Plot with all the replicates:
+  
+  p.replicates <- out_mean %>%
     ggplot2::ggplot(
       ggplot2::aes(x = .data$m,
-                   y = .data$error_mean,
+                   y = .data$error,
                    group = .data$group,
                    shape = .data$group,
-                   fill = .data$overlaps)) +
-    
-    { if (length(set_target) > 1)
-      ggplot2::facet_grid(
-        cols = ggplot2::vars(type),
-        scales = "free",
-        labeller = ggplot2::labeller(
-          type = c(
-            "hr" = "Home range estimation", 
-            "ctsd" = "Speed \u0026 distance estimation"))) } +
-    
-    ggplot2::geom_jitter(
-      dt_plot,
-      mapping = ggplot2::aes(
-        x = .data$m,
-        y = .data$error,
-        group = .data$group,
-        shape = .data$group,
-        fill = .data$overlaps),
-      position = ggplot2::position_jitterdodge(dodge.width = 0.4),
-      size = 3, alpha = 0.5, color = "transparent") +
+                   color = .data$overlaps)) +
     
     ggplot2::geom_hline(
       yintercept = 0,
       linewidth = 0.3,
       linetype = "solid") +
+    ggplot2::annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,
+      ymin = -error_threshold,
+      ymax = error_threshold,
+      alpha = 0.05) +
     ggplot2::geom_hline(
-      data = subset(dt_plot_means, top_facet),
-      ggplot2::aes(yintercept = error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
-    ggplot2::geom_hline(
-      data = subset(dt_plot_means, top_facet),
-      ggplot2::aes(yintercept = -error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
+      yintercept = c(-error_threshold, error_threshold),
+      linetype = "dashed",
+      linewidth = 0.35, alpha = 0.8) +
+    ggplot2::annotate(
+      "text",
+      x = Inf, y = error_threshold,
+      label = paste0("+", label_threshold),
+      hjust = 1.08, vjust = -0.5,
+      size = 3.2) +
+    ggplot2::annotate(
+      "text",
+      x = Inf, y = -error_threshold,
+      label = paste0("\u2212", label_threshold),
+      hjust = 1.08, vjust = 1.5,
+      size = 3.2) +
     
-    ggplot2::geom_hline(
-      data = subset(dt_plot_means, !top_facet),
-      ggplot2::aes(yintercept = error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
-    ggplot2::geom_hline(
-      data = subset(dt_plot_means, !top_facet),
-      ggplot2::aes(yintercept = -error_threshold),
-      linewidth = 0.7,
-      linetype = "dotted") +
+    { if (!only_one_m)
+      ggplot2::geom_jitter(
+        data = dplyr::filter(out, .data$m %in% m_resampled),
+        mapping = ggplot2::aes(x = .data$m,
+                               y = .data$error,
+                               group = .data$group,
+                               shape = .data$group,
+                               color = .data$overlaps,
+                               alpha = .data$highlight),
+        position = ggplot2::position_jitterdodge(
+          dodge.width = 0.8),
+        color = "grey50", size = 3) } +
+        # color = "grey80",  alpha = 0.9) } +
     
-    ggplot2::geom_linerange(
-      ggplot2::aes(ymin = .data$error_mean_lci,
-                   ymax = .data$error_mean_uci),
-      position = ggplot2::position_dodge(width = 0.4),
-      show.legend = TRUE,
-      color = "black", linewidth = 1) +
+    # Prediction intervals:
     ggplot2::geom_linerange(
       ggplot2::aes(ymin = .data$pred_lci,
                    ymax = .data$pred_uci),
-      position = ggplot2::position_dodge(width = 0.4),
-      color = "black", linewidth = 0.4) +
+      position = ggplot2::position_dodge(width = 0.5),
+      linewidth = 3,
+      alpha = 0.18,
+      show.legend = FALSE) +
+    
+    # Confidence intervals:
+    ggplot2::geom_linerange(
+      ggplot2::aes(ymin = .data$error_lci,
+                   ymax = .data$error_uci),
+      position = ggplot2::position_dodge(width = 0.5),
+      linewidth = 1.1,
+      alpha = 0.55,
+      show.legend = FALSE) +
     
     ggplot2::geom_point(
-      position = ggplot2::position_dodge(width = 0.4),
-      show.legend = TRUE,
-      stroke = 1.05, size = 5) +
+      position = ggplot2::position_dodge(width = 0.5),
+      size = 4,
+      show.legend = TRUE) +
+    
+    { if (length(set_target) > 1)
+      ggplot2::facet_wrap(
+        . ~ .data$type, scales = "free_y",
+        labeller = ggplot2::labeller(type = labels_target))
+    } +
     
     ggplot2::labs(
-      title = "Mean estimation error across all replicates",
+      title = expression(
+        "Mean estimation error across " *
+          italic("all") * " replicates"),
       x = "Population sample size",
-      y = "Relative error (%)") +
+      y = "Relative error (%)",
+      color = sprintf(
+        "Within error threshold (\u00B1%g%%)?",
+        error_threshold * 100)) +
+      # caption = sprintf(
+      #   paste0(
+      #     "Wide bars: %s prediction interval  \u2022  ",
+      #     "Narrow bars: %s confidence interval\n",
+      #     "Based on %d resamples"),
+      #   label_ci, label_ci, max_draws)) +
     
-    { if (!has_groups) {
-      ggplot2::scale_shape_manual(
-        name = "Groups:",
-        values = set_shapes)
-    } else {
-      ggplot2::scale_shape_manual(
-        name = "Groups:",
-        values = set_shapes,
-        guide = ggplot2::guide_legend(
-          override.aes = list(shape = set_shapes_manual, size = 3)))
+    { if (length(unique(out$m)) == 2) {
+      ggplot2::scale_x_continuous(
+        breaks = unique(out$m))
+    } else if (!only_one_m) {
+      ggplot2::scale_x_continuous(
+        breaks = scales::breaks_pretty())
     }
     } +
     
-    ggplot2::scale_fill_manual(
-      name = paste0("Within error threshold (\u00B1",
-                    error_threshold * 100, "%)?"),
-      breaks = c("TRUE", "FALSE"),
-      values = pal, drop = FALSE,
-      guide = ggplot2::guide_legend(
-        override.aes = list(color = pal, fill = pal, size = 3),
-        order = 1,
-        label.vjust = 0.4)) +
-    
-    ggplot2::scale_x_continuous(
-      breaks = scales::breaks_pretty()) +
     ggplot2::scale_y_continuous(
       labels = scales::percent,
-      breaks = scales::breaks_pretty()) +
+      breaks = scales::breaks_pretty(),
+      expand = ggplot2::expansion(mult = c(0.05, 0.10))) +
+    ggplot2::scale_color_manual(
+      values = c(pal[1], pal[2]),
+      # labels = c("TRUE" = "Yes", "FALSE" = "No"),
+      drop = FALSE) +
     
-    ggplot2::theme_classic() +
-    ggplot2::theme(
-      text = ggplot2::element_text(size = 13),
-      legend.position = "bottom",
-      strip.text = ggplot2::element_text(size = 16),
-      strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
-      strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
-      plot.margin = ggplot2::unit(
-        c(0.3, 0.3, 0.3, 0.3), "cm"))
+    { if (has_groups)
+      ggplot2::scale_shape_manual(
+        "Groups:", values = c(16, 17)) } +
+    
+    { if (view == "both") {
+      ggplot2::scale_alpha_continuous(
+        range = c(0.2, 0.9)) 
+    } else {
+      ggplot2::scale_alpha_continuous(
+        range = c(0.3, 0.3)) 
+    }} +
+    
+    { if (has_groups)
+      ggplot2::guides(
+        color = ggplot2::guide_legend(
+          override.aes = list(
+            shape = 22, size = 4,
+            fill = c(pal[1], pal[2])))) } +
+    
+    .theme_movedesign_report(font = .font)
+  
+  p.replicates <- p.replicates + ggplot2::guides(alpha = "none")
   
   if (!has_groups) {
     p.replicates <- p.replicates + ggplot2::guides(shape = "none")
@@ -5076,156 +5660,77 @@ md_plot_replicates <- function(obj,
     
     plots <- list(p, p.replicates)
     
-    return(suppressWarnings(
+    return(suppressWarnings(print(
       patchwork::wrap_plots(
         plots,
         nrow = length(plots),
         guides = "collect") +
         patchwork::plot_annotation(
-          theme = ggplot2::theme(legend.position = "bottom"))))
+          theme = ggplot2::theme(legend.position = "bottom")))))
     
   } else {
-    return(p.replicates)
+    return(suppressWarnings(print(p.replicates)))
   }
   
 }
 
 
-#' @title Stack simulation outputs as replicates
+#' @title Compare estimation error across designs (single replicate)
 #'
 #' @description
-#' Combines the outputs of several replicate movement-design simulations
-#' (created by [md_run()]) into a single aggregated object. For each
-#' replicate, the function re-runs [run_meta_resamples()] to
-#' ensure consistent structure and then merges all results into a unified
-#' summary table.
+#' Plots estimation error of the chosen targets for two or more
+#' study designs, each represented by a single [md_run()] output.
+#' Use this function to quickly compare how design choices
+#' affect estimation performance before committing to a full
+#' replication with [md_replicate()].
 #'
-#' This function allows batch processing of replicates, producing a
-#' combined object suitable for downstream visualization (e.g., with
-#' [md_plot_replicates()]).
+#' Because each design is represented by a single stochastic run,
+#' results are preliminary. For robust, publication-ready
+#' comparisons, run [md_replicate()] for each design and compare
+#' with [md_compare()].
 #'
-#' @param obj A list of replicate objects, typically the output of
-#'   [md_replicate()].
-#' @param ... Additional arguments passed to internal functions.
+#' @param x A list of at least two `movedesign_processed` objects,
+#'   each returned by [md_run()]. Each element represents one study
+#'   design to compare. Designs typically differ in sampling
+#'   parameters such as `dur`, `dti`, or `n_individuals`, but any
+#'   valid [md_prepare()] or [md_simulate()] inputs can be compared.
+#'   
+#' @param n_resamples A single positive integer. The number of
+#'   random combinations of individuals generated at each population
+#'   sample size per design. Each combination produces one
+#'   population-level estimate. Set to `NULL` to plot
+#'   raw estimates without resampling.
+#'   
+#' @param error_threshold Numeric. Relative error threshold shown
+#'   as a horizontal reference line in the plot (e.g. `0.05` for 5%).
+#'   
+#' @param pal A character vector of two colours, used for estimates
+#'   within and outside the error threshold respectively.
+#'   Defaults to `c("#007d80", "#A12C3B")`.
+#'   
+#' @param ... Reserved for internal use.
 #' 
 #' @return
-#' A list of class `movedesign_output` containing:
-#' \describe{
-#'   \item{data}{
-#'      A merged `moveoutput` object combining all replicate-level data.}
-#'   \item{summary}{
-#'      A `data.table` summarizing results across replicates.}
-#' }
-#' 
-#' @importFrom data.table rbindlist data.table
-#' @importFrom movedesign run_meta_resamples
-#' @export
-md_stack <- function(obj, ...) {
-  
-  dots <- list(...)
-  
-  if (!is.list(obj)) {
-    stop("Object must be a list.")
-  }
-  
-  if (is.null(dots[[".ignore_mismatch"]])) {
-    .ignore_mismatch <- FALSE
-  } else {
-    .ignore_mismatch <- dots[[".ignore_mismatch"]]
-  }
-  
-  n_replicates <- length(obj)
-  
-  outputs <- list()
-  for (i in seq_along(obj)) {
-    
-    outputs[[i]] <- run_meta_resamples(
-      obj[[i]], set_target = obj[[i]]$set_target,
-      iter_step = 1,
-      subpop = obj[[i]]$grouped,
-      randomize = FALSE, 
-      trace = FALSE,
-      .automate_seq = FALSE)
-    outputs[[i]]$sample <- i
-    
-  }
-  
-  if (length(outputs) > 0) {
-    summary <- data.table::rbindlist(
-      outputs, fill = TRUE, idcol = "replicate")
-  } else {
-    summary <- data.table::data.table()
-  }
-  
-  if (length(obj) > 0) {
-    
-    if (obj[[1]]$grouped) {
-      group_keys <- c("A", "B")
-      common_names <- obj[[1]]$groups[[1]]
-      merged_ids <- lapply(obj, function(x) x$groups[[2]])
-      merged_ids <- Reduce(
-        function(x, y) Map(c, x, y), merged_ids)
-      
-      for (x in seq_along(obj)) {
-        obj[[x]]$groups <- list(common_names, merged_ids)
-      }
-    }
-    
-    merged <- md_merge(obj, .ignore_mismatch = .ignore_mismatch)
-    class(merged) <- unique(c("movedesign_output", class(merged)))
-  } else {
-    merged <- NULL
-  }
-  
-  merged$n_replicates <- n_replicates
-  
-  out <- structure(
-    list(data = merged, summary = summary), class = "movedesign")
-  class(out) <- unique(c("movedesign_output", class(out)))
-  return(out)
-  
-}
-
-
-#' @title Preview plot for movedesign workflow outputs (single replicate)
-#'
-#' @description
-#' Generates a quick visualization of relative error for home range or
-#' movement speed estimation from a single replicate of a movedesign
-#' workflow. 
-#' The plot can display either the estimates from that replicate for a
-#' random combination of individuals, or, when resampling is enabled,
-#' summaries derived from repeated draws of individuals at each population
-#' sample size (based on the specified number of resamples).
-#' 
-#' This functions shows preliminary outputs only based on the output of
-#' [md_run()] (a `movedesign_preprocess` object) and should not be used to
-#' evaluate study design by itself. Instead, users should run
-#' [md_replicate()] and check for convergence with [md_check()].
-#'
-#' @param x A list of objects of class `movedesign_preprocess` 
-#'   (outputs of [md_run()]).
-#' @param n_resamples Numeric. Must be a positive value. Defines how many
-#'   combinations are generated for each population sample size,
-#'   with each combination producing a new population-level estimate.
-#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
-#'   to display as a reference in the plot.
-#' @param pal Character vector of two colors for within/outside threshold
-#'   (default: c("#007d80", "#A12C3B")).
-#' @param ... Additional arguments used internally.
-#'
-#' @return
-#' A ggplot object displaying relative error by population sample size,
-#' with point estimate and confidence intervals for mean estimates,
-#' and horizontal error threshold lines.
+#' A `ggplot` object. Displays relative error as a function of
+#' population sample size, with one panel (or two if two target) 
+#' per design. Point estimates, confidence intervals, and a horizontal
+#' reference line at `error_threshold`.
 #'
 #' @details
-#' This plot summarizes a single replicate. Credible intervals and robust
-#' study design conclusions generally require multiple replicates generated
-#' with [md_replicate()].
-#'
+#' If `n_resamples` is not `NULL`, the function draws `n_resamples`
+#' random combinations of individuals at each population sample size
+#' and computes a population-level estimate for each. This step
+#' 
+#' Each design is represented by a single stochastic run. Apparent
+#' differences between designs may reflect random variation rather
+#' than genuine performance differences. Use [md_replicate()] to
+#' generate robust, replicated results for each design, and
+#' [md_compare()] to compare multiple designs.
+#' 
 #' @examples
 #' if (interactive()) {
+#' 
+#'   data(buffalo)
 #'   inputA <- md_prepare(
 #'     data = buffalo,
 #'     models = models,
@@ -5236,8 +5741,8 @@ md_stack <- function(obj, ...) {
 #'     add_individual_variation = FALSE,
 #'     grouped = TRUE,
 #'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
+#'     which_meta = "mean")
+#'   
 #'   inputB <- md_prepare(
 #'     data = buffalo,
 #'     models = models,
@@ -5248,16 +5753,20 @@ md_stack <- function(obj, ...) {
 #'     add_individual_variation = TRUE,
 #'     grouped = TRUE,
 #'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
-#'
+#'     which_meta = "mean")
+#'   
 #'   outputA <- md_run(inputA)
 #'   outputB <- md_run(inputB)
 #'   md_compare_preview(list(outputA,
 #'                           outputB), error_threshold = 0.05)
 #' }
 #' 
-#' @seealso [md_run()], [md_replicate()]
+#' @seealso
+#'   [md_run()] to generate each input object.
+#'   [md_plot_preview()] for a single-design equivalent.
+#'   [md_replicate()] for robust multi-replicate outputs per design.
+#'   [md_check()] to assess convergence across replicates.
+#'   
 #' @export
 md_compare_preview <- function(x,
                                n_resamples = NULL,
@@ -5271,7 +5780,7 @@ md_compare_preview <- function(x,
   n <- group <- error <- error_sd <- NULL
   single_obj <- FALSE
   
-  if (inherits(x, "movedesign_preprocess") &&
+  if (inherits(x, "movedesign_processed") &&
       inherits(x, "movedesign")) {
     x <- list(x) 
     single_obj <- TRUE
@@ -5286,9 +5795,9 @@ md_compare_preview <- function(x,
   # Check that all objects have the same target:
   
   set_targets <- vapply(x, function(obj) {
-    if (!inherits(obj, "movedesign_preprocess")) {
+    if (!inherits(obj, "movedesign_processed")) {
       stop(paste(
-        "All elements must be 'movedesign_preprocess' objects.",
+        "All elements must be 'movedesign_processed' objects.",
         "Use output from md_run()."))
     }
     paste(sort(unique(obj$set_target)), collapse = ",")
@@ -5309,9 +5818,9 @@ md_compare_preview <- function(x,
   
   .worker <- function(obj, name) {
     
-    if (!inherits(obj, "movedesign_preprocess")) {
+    if (!inherits(obj, "movedesign_processed")) {
       stop(paste(
-        "Each object must be a 'movedesign_preprocess' object.\n",
+        "Each object must be a 'movedesign_processed' object.\n",
         "Use the output of md_run()."))
     }
     
@@ -5334,14 +5843,32 @@ md_compare_preview <- function(x,
     out <- out %>%
       dplyr::mutate(
         type = factor(.data$type, levels = c("hr", "ctsd")),
-        overlaps = factor(.data$error >= -error_threshold &
-                            .data$error <= error_threshold,
-                          levels = c(TRUE, FALSE)))
+        overlaps = factor(
+          abs(.data$error) <= error_threshold,
+          levels = c(TRUE, FALSE)))
     
-    global_y_range <<- c(min(global_y_range[1], 
-                             min(out$error_lci, na.rm = TRUE)),
-                         max(global_y_range[2],
-                             max(out$error_uci, na.rm = TRUE)))
+    if (is.null(n_resamples)) {
+      global_y_range <<- c(
+        min(global_y_range[1], 
+            ifelse(is.na(out$error_lci),
+                   global_y_range[1],
+                   min(out$error_lci, na.rm = TRUE))),
+        max(global_y_range[2],
+            ifelse(is.na(out$error_uci),
+                   global_y_range[2],
+                   min(out$error_uci, na.rm = TRUE))))
+    } else {
+      out_mean <- .summarize_error(out)
+      global_y_range <<- c(
+        min(global_y_range[1], 
+            ifelse(is.na(out_mean$pred_lci),
+                   global_y_range[1],
+                   min(out_mean$pred_lci, na.rm = TRUE))),
+        max(global_y_range[2],
+            ifelse(is.na(out_mean$pred_uci),
+                   global_y_range[2],
+                   min(out_mean$pred_uci, na.rm = TRUE))))
+    }
     
     return(out)
   }
@@ -5365,11 +5892,16 @@ md_compare_preview <- function(x,
     }
     
     set_titles <- c(set_titles, paste("Design", id))
+    
+    dti <- fix_unit(x[[id]]$dti$value, x[[id]]$dti$unit)
+    txt_tdi <- ifelse(dti$value == 1,
+                      dti$unit, paste(dti$value, dti$unit))
+    
     set_subtitles <- c(
       set_subtitles, paste0(
         max_m, " tags, tracked for ",
         paste(x[[id]]$dur$value, x[[id]]$dur$unit), " every ",
-        paste(x[[id]]$dti$value, x[[id]]$dti$unit)))
+        txt_tdi))
     
     grouped <- unique(out$is_grouped)
     set_target <- unique(out$type)
@@ -5385,14 +5917,15 @@ md_compare_preview <- function(x,
       if (grouped) out <- dplyr::filter(out, group != "All")
       
       out_mean <- .summarize_error(out)
-      ci_pct <- sprintf("%g%%", unique(out_mean$ci) * 100)
+      label_ci <- sprintf("%g%%", unique(out_mean$ci) * 100)
       
       only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
       if (only_one_m) { 
         out$m <- factor(out$m)
         warning(paste0(
-          "Only one unique value of `m` detected per group.\n",
-          "No resampling possible for design ", id, "."),
+          "Only ", .msg("one", "danger"),
+          " unique value of `m` detected per group.\n",
+          "No resampling possible for design ", id, ".\n"),
           call. = FALSE)
       }
       
@@ -5446,22 +5979,26 @@ md_compare_preview <- function(x,
             color = "grey80", size = 3, alpha = 0.9) } +
         
         # Prediction intervals:
+        { if (!all(is.na(out_mean$pred_lci)) &&
+              !all(is.na(out_mean$pred_uci)))
         ggplot2::geom_linerange(
           ggplot2::aes(ymin = .data$pred_lci,
                        ymax = .data$pred_uci),
           position = ggplot2::position_dodge(width = 0.5),
           linewidth = 3,
           alpha = 0.18,
-          show.legend = FALSE) +
+          show.legend = FALSE) } +
         
         # Confidence intervals:
-        ggplot2::geom_linerange(
+        { if (!all(is.na(out_mean$error_lci)) &&
+              !all(is.na(out_mean$error_uci)))
+          ggplot2::geom_linerange(
           ggplot2::aes(ymin = .data$error_lci,
                        ymax = .data$error_uci),
           position = ggplot2::position_dodge(width = 0.5),
           linewidth = 1.1,
           alpha = 0.55,
-          show.legend = FALSE) +
+          show.legend = FALSE) } +
         
         ggplot2::geom_point(
           position = ggplot2::position_dodge(width = 0.5),
@@ -5485,7 +6022,7 @@ md_compare_preview <- function(x,
               "Wide bars: %s prediction interval  \u2022  ",
               "Narrow bars: %s confidence interval\n",
               "Based on %d resamples"),
-            ci_pct, ci_pct, max_draws)) +
+            label_ci, label_ci, max_draws)) +
         
         { if (length(unique(out$m)) == 2) {
           ggplot2::scale_x_continuous(
@@ -5502,7 +6039,6 @@ md_compare_preview <- function(x,
           expand = ggplot2::expansion(mult = c(0.05, 0.10))) +
         ggplot2::scale_color_manual(
           values = c("TRUE" = pal[1], "FALSE" = pal[2]),
-          labels = c("TRUE" = "Yes", "FALSE" = "No"),
           drop = FALSE) +
         
         { if (grouped)
@@ -5516,7 +6052,7 @@ md_compare_preview <- function(x,
                 shape = 22, size = 4,
                 fill = c(pal[1], pal[2])))) } +
         
-        { if (!single_obj)
+        { if (!single_obj && !only_one_m)
           ggplot2::coord_cartesian(ylim = global_y_range) } +
         .theme_movedesign_report()
       
@@ -5530,12 +6066,12 @@ md_compare_preview <- function(x,
       if (only_one_m) { 
         out$m <- factor(out$m)
         warning(paste0(
-          "Only one unique value of `m` detected per group.\n",
-          "No resampling possible for design ", id, "."),
+          "Only ", .msg("one", "danger"),
+          " unique value of `m` detected per group.\n"),
           call. = FALSE)
       }
       
-      ci_pct <- "95%"
+      label_ci <- "95%"
       
       p <- out %>%
         ggplot2::ggplot(
@@ -5602,7 +6138,7 @@ md_compare_preview <- function(x,
           color = paste0("Within error threshold (\u00B1",
                          error_threshold * 100, "%)?"),
           caption = sprintf(
-            "Narrow bars: %s confidence interval", ci_pct)) +
+            "Narrow bars: %s confidence interval", label_ci)) +
         
         { if (length(unique(out$m)) == 2) {
           ggplot2::scale_x_continuous(
@@ -5652,17 +6188,28 @@ md_compare_preview <- function(x,
   
   if (resampled) {
     warning(
-      "You are viewing preliminary results from a single replicate ",
-      "and ", n_resamples, " resamples. ",
-      "To assess variability and credible intervals, please run ",
-      "`md_replicate()` to generate multiple replicates and ",
-      "aggregate results.")
+      crayon::bold("! PRELIMINARY RESULTS ONLY\n"),
+      " This plot displays outputs from ",
+      crayon::yellow(paste0(
+        "1 replicate + ",
+        length(unique(out$sample)), " resample(s)")),
+      ".\n Results may change substantially",
+      " with additional replicates or resamples.\n\n",
+      crayon::bold("  Run `md_replicate()`"),
+      crayon::bold(" for more robust inferences.\n"),
+      call. = FALSE)
+    
   } else {
     warning(
-      "You are viewing preliminary results from a single replicate. ",
-      "To assess variability and credible intervals, please run ",
-      "`md_replicate()` to generate multiple replicates and ",
-      "aggregate results.")
+      crayon::bold("! PRELIMINARY RESULTS ONLY\n"),
+      " This plot displays outputs from ",
+      crayon::yellow("a single replicate"),
+      " and no resampling.\n",
+      "  Results may change substantially",
+      " with additional replicates or resamples.\n\n",
+      crayon::bold("  Run `md_replicate()`"),
+      crayon::bold(" for more robust inferences.\n"),
+      call. = FALSE)
   }
   
   plots <- lapply(
@@ -5678,59 +6225,115 @@ md_compare_preview <- function(x,
     "For more robust inferences, run additional replicates",
     "using `md_replicate()`.")
   
-  return(patchwork::wrap_plots(
-    plots, ncol = length(plots),
-    guides = "collect") +
-      patchwork::plot_annotation(
-        caption = caption,
-        theme = ggplot2::theme(legend.position = "bottom")))
+  return(suppressWarnings(print(
+    patchwork::wrap_plots(
+        plots,
+        ncol = length(plots),
+        guides = "collect") +
+        patchwork::plot_annotation(
+          caption = caption,
+          theme = ggplot2::theme(legend.position = "bottom")))))
   
 }
 
-#' @title Compare study design outputs
-#'
-#' @description
-#' The `md_compare()` function evaluates multiple study designs based
-#' on the estimated relative error of a target metric (e.g., home range
-#' area or movement speed) and the uncertainty around these estimates.
-#' It summarizes the performance of each design per type and per group
-#' (if present), ranks them according to how close their estimates are
-#' to optimal (zero error), and identifies designs that perform best
-#' across all groups.
+
+#' @title Compare estimation error across study design workflows
 #' 
-#' It also produces a publication-ready density plot showing the
-#' distribution of relative error estimates for all replicates. The plot
-#' highlights the mean (or median) and a shaded credible interval (CI)
-#' region, following the computation of credible intervals. If groups
-#' are present, density curves for each group are overlaid for
-#' comparison, using customizable colors.
+#' @description
+#' The final step in the `movedesign` workflow. Takes replicated
+#' outputs from two or more study designs, ranks them by estimation
+#' performance, identifies the best-performing design, and produces
+#' a density plot of relative error across replicates.
+#' 
+#' Use this function after running [md_replicate()] for each design
+#' and confirming convergence with [md_check()]. For a quick visual
+#' comparison before full replication, use [md_compare_preview()]
+#' instead.
+#' 
+#' @param x A list of at least two `movedesign_output` objects, each
+#'   returned by [md_replicate()]. All designs must share the same
+#'   `set_target`. Designs typically differ in sampling parameters
+#'   such as `dur`, `dti`, or `n_individuals`.
+#'   
+#' @param stat Character. Summary statistic used to represent the
+#'   centre of the error distribution in the plot and ranking.
+#'   Must be `"mean"` (default) or `"median"`.
+#'   
+#' @param ci Numeric. Coverage probability of the credible interval
+#'   computed over the distribution of relative error across
+#'   replicates. Must be strictly between 0 and 1. Defaults to
+#'   `0.80` (80% CI).
+#'   
+#' @param method Character. Method used to compute the credible
+#'   interval, passed to [bayestestR::ci()]. Defaults to `"HDI"`
+#'   (Highest Density Interval), which is generally preferred for
+#'   asymmetric or skewed error distributions. See
+#'   `?bayestestR::ci` for all available options.
+#'   
+#' @param pal A character vector of colours for the density curves,
+#'   CI shading, and centre line. Defaults to `c("#007d80", "#A12C3B")`.
+#'   
+#' @param m (Optional) Numeric. If provided, restricts all results
+#'   and ranking to a specific *population* sample size. Defaults to
+#'   `NULL`, which uses the maximum sample size defined by
+#'   `n_individuals`.
+#'   
+#' @param show_text Logical. Whether to display annotation text in
+#'   the plot with the mean (or median) relative errors.
+#'   Defaults to `TRUE`.
+#'   
+#' @return An object of class `movedesign_report`.
+#' A density plot of relative error is printed as a side effect;
+#' to reproduce it later, call [md_plot()] on any of the input
+#' designs.
+#' 
+#' This object contains:
+#' \describe{
+#'   \item{ranking}{
+#'   Data frame with one row per design per target
+#'   (and per group if grouping is used). Columns include
+#'   the centre error statistic (`error`), credible
+#'   interval bounds (`error_lci`, `error_uci`), CI width,
+#'   distance from zero error, and rank. Lower rank
+#'   indicates better performance.
+#'   }
 #'
-#' @param x A list of `movedesign_output` objects, as returned by
-#'   [`md_replicate()`].
-#' @param stat Character vector specifying which summary statistic to
-#'   display. Must be `"mean"` or `"median"`. Defaults to `"mean"`.
-#' @param ci Numeric value between 0 and 1. The probability of the
-#'   credible interval (CI) to be estimated. Default to `0.80` (80%).
-#' @param method Character. Credible interval estimation method (passed
-#'   to `bayestestR::ci()`). See `?bayestestR::ci()`
-#'   for more details. Default is `"HDI"` (Highest Density Interval).
-#' @param pal Character vector of color(s) for the density, CI shading,
-#'   and mean line. If no groups, supply one color (default:
-#'   `"#007d80"`). If groups are present, supply two colors (default:
-#'   `c("#007d80", "#A12C3B")`).
-#' @param m Numeric (optional). If provided, restricts the
-#'   results for a specific population sample size (`m`).
-#'   Defaults to `NULL`, which checks up to the maximum population
-#'   sample size.
-#' @param show_text Logical, whether to display text annotations in
-#'   the plots. Default is `TRUE`.
-#'
-#' @return A list with two elements:
-#' - `ranking`: Data frame containing all designs with computed metrics,
-#'   CI, distance to zero error, and ranking by type and group.
-#' - `winners`: Data frame of designs that are joint winners across all
-#'   groups (or the single winner if no groups are present).
-#'
+#'   \item{winners}{
+#'   Data frame identifying designs that rank first across
+#'   all groups for each target. A design is a winner when
+#'   it has the lowest absolute error and the credible
+#'   interval closest to zero across every group.
+#'   Returns empty if no single design dominates.
+#'   }
+#' }
+#' 
+#' @details
+#' 
+#' Designs are ranked separately for each target metric (home
+#' range, speed) and group (if present). The ranking criterion
+#' combines absolute relative error and distance of the credible
+#' interval from zero: designs with lower error and tighter
+#' intervals closer to zero rank higher. A design is
+#' identified as the overall winner only if it ranks first across
+#' all groups for a given target.
+#' 
+#' The function prints a density plot showing the full
+#' distribution of relative error across replicates for each
+#' design. The centre statistic (`stat`) and credible interval
+#' (`ci`) are overlaid. When groups are present, density curves
+#' for each group are shown side by side using the colours in
+#' `pal`.
+#' 
+#' ## Recommended workflow
+#' 
+#' This function is designed to be called at the end of the
+#' `movedesign` workflow:
+#' 
+#' 1. Build each design with [md_prepare()].
+#' 2. Run [md_replicate()] for each design.
+#' 3. Confirm convergence with [md_check()].
+#' 4. Compare and rank designs with [md_compare()].
+#' 
 #' @seealso
 #' [`md_replicate()`],
 #' [`md_check()`] for convergence diagnostics,
@@ -5739,6 +6342,8 @@ md_compare_preview <- function(x,
 #'
 #' @examples
 #' if (interactive()) {
+#' 
+#'   data(buffalo)
 #'   inputA <- md_prepare(
 #'     data = buffalo,
 #'     models = models,
@@ -5749,8 +6354,8 @@ md_compare_preview <- function(x,
 #'     add_individual_variation = TRUE,
 #'     grouped = TRUE,
 #'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
+#'     which_meta = "mean")
+#'   
 #'   inputB <- md_prepare(
 #'     data = buffalo,
 #'     models = models,
@@ -5761,21 +6366,17 @@ md_compare_preview <- function(x,
 #'     add_individual_variation = TRUE,
 #'     grouped = TRUE,
 #'     set_target = "hr",
-#'     which_meta = "mean"
-#'   )
-#'
+#'     which_meta = "mean")
+#'   
 #'   outputA <- md_replicate(inputA, n_replicates = 20)
 #'   outputB <- md_replicate(inputB, n_replicates = 20)
-#'
+#'   
 #'   # Plot with 80% credible intervals:
 #'   md_compare(list(outputA, outputB), ci = 0.80, method = "HDI")
+#'   
 #' }
-#'
-#' @import ggplot2
-#' @importFrom stats density
-#' @importFrom scales percent percent_format breaks_pretty
-#' @importFrom dplyr filter mutate across
-#' @importFrom bayestestR ci
+#' 
+#' @family workflow_steps
 #' @export
 md_compare <- function(x,
                        stat = c("mean", "median"),
@@ -5791,7 +6392,7 @@ md_compare <- function(x,
          "  To evaluate a single design, use `md_plot()` instead.")
   }
   
-  if (!is.list(x) || length(x) < 2) {
+  if (!is.list(x) || length(x) < 2L) {
     stop("`x` must be a list of at least ",
          "two `movedesign_output` objects, ",
          "but received ", if (is.list(x))
@@ -5800,7 +6401,7 @@ md_compare <- function(x,
   
   invalid_elements <- which(!vapply(
     x, inherits, logical(1L), "movedesign_output"))
-  
+
   if (length(invalid_elements) > 0) {
     stop(paste("All elements of `x` must be of",
                "class 'movedesign_output'.\n ",
@@ -5810,6 +6411,7 @@ md_compare <- function(x,
   
   if (!all(stat %in% c("mean", "median")))
     stop("`stat` must be either 'mean' or 'median'.")
+  stat <- match.arg(stat)
   
   if (!is.numeric(ci) || length(ci) != 1 || ci <= 0 || ci >= 1) 
     stop("`ci` must be a single numeric value strictly between ",
@@ -5841,7 +6443,13 @@ md_compare <- function(x,
   }
   
   set_target <- .check_field_consistency(x, "set_target")
-  target_map <- c(hr = "home range area", ctsd = "movement speed")
+  target_map <- c(hr = "Home range estimation",
+                  ctsd = "Movement speed estimation")
+  has_groups <- x[[1]]$input$grouped
+  # error thresholds much match?
+  error_threshold <- x[[1]]$error_threshold
+  
+  # Generate plots and processed outputs:
   
   plot_output <- tryCatch({
     md_plot(x = x,
@@ -5850,7 +6458,8 @@ md_compare <- function(x,
             method = method,
             pal = pal,
             show_text = show_text,
-            .verbose = TRUE)
+            .verbose = TRUE,
+            .override = TRUE)
   }, error = function(e) stop("Error in md_plot(): ", e$message))
   
   if (!all(c("plots", "outputs") %in% names(plot_output))) {
@@ -5864,24 +6473,25 @@ md_compare <- function(x,
     stop("`out` must be a non-empty list of data.frames.")
   }
   
-  out_long <- do.call(rbind, lapply(seq_along(out), function(i) {
+  out_long <- do.call(rbind,
+                      lapply(seq_along(out), function(i) {
     
     tmp <- out[[i]]
     input_i <- x[[i]]$input
     data_i <- x[[i]]$data
     
     required_input <- c("n_individuals", "grouped", "set_target")
-    required_data  <- c("dur", "dti")
+    required_data <- c("dur", "dti")
     
     missing_input <- setdiff(required_input, names(input_i))
     missing_data <- setdiff(required_data, names(data_i))
     
     if (length(missing_input) > 0) 
       stop("Missing input fields in design ", i, ": ",
-           paste(missing_input, collapse=", "))
+           paste(missing_input, collapse = ", "))
     if (length(missing_data) > 0) 
       stop("Missing data fields in design ", i, ": ",
-           paste(missing_data, collapse=", "))
+           paste(missing_data, collapse = ", "))
     
     tmp$design_id <- i
     tmp$m <- input_i$n_individuals
@@ -5894,154 +6504,82 @@ md_compare <- function(x,
     
   }))
   
-  has_groups <- x[[1]]$input$grouped
-  set_target <- x[[1]]$input$set_target
-  
   # Compute evaluation metrics:
   
-  out_long$overlaps_with_zero <- out_long$lci <= 0 &
-    out_long$uci >= 0
+  out_long$abs_estimate <- abs(out_long$est)
+  out_long$overlaps_with_zero <- out_long$lci <= 0 & out_long$uci >= 0
   out_long$dist_to_zero <- ifelse(
     out_long$overlaps_with_zero,
     0, pmin(abs(out_long$lci), abs(out_long$uci)))
-  out_long$abs_estimate <- abs(out_long$est)
   out_long$ci_width <- out_long$uci - out_long$lci
   
   # Rank designs:
   
-  ranking <- do.call(rbind, lapply(
-    unique(out_long$type), function(t) {
-                       
-    do.call(rbind, lapply(
-      unique(out_long$group), function(g) {
-        
-      subset_df <- out_long[out_long$type == t &
-                              out_long$group == g, ]
-      subset_df <- subset_df[order(-subset_df$overlaps_with_zero,
-                                   subset_df$dist_to_zero,
-                                   subset_df$abs_estimate,
-                                   subset_df$ci_width), ]
-      subset_df$rank <- seq_len(nrow(subset_df))
-      return(subset_df)
-    }))
-      
-  }))
+  ranking <- out_long[order(out_long$type,
+                            out_long$group,
+                            out_long$abs_estimate,
+                            -out_long$overlaps_with_zero,
+                            out_long$dist_to_zero,
+                            out_long$ci_width), ]
+  
+  # ranking$rank <- stats::ave(
+  #   seq_len(nrow(ranking)),
+  #   interaction(ranking$type, ranking$group, drop = TRUE),
+  #   FUN = function(z) {
+  #     rank(ranking$abs_estimate[z] + 
+  #            ranking$dist_to_zero[z] + 
+  #            ranking$ci_width[z],
+  #          ties.method = "min")
+  #   }
+  # )
+  
+  ranking$rank <- stats::ave(
+    seq_len(nrow(ranking)),
+    interaction(ranking$type, ranking$group, drop = TRUE),
+    FUN = function(z) {
+      rank(ranking$abs_estimate[z] + 
+             ranking$dist_to_zero[z],
+           ties.method = "min")
+    }
+  )
   
   rownames(ranking) <- NULL
   
   # Identify preliminary winners:
   
-  preliminary_winners <- ranking[ranking$rank == 1, ]
+  preliminary_winners <- ranking[ranking$rank == 1L, , drop = FALSE]
   
-  # Determine conditional/joint winners:
-  
-  unique_groups <- unique(ranking$group)
-  joint_winners <- do.call(rbind, lapply(
-    unique(preliminary_winners$design_id), function(d) {
-      
-    design_subset <- preliminary_winners[
-      preliminary_winners$design_id == d, ]
-    
-    if (length(unique(design_subset$group)) ==
-        length(unique_groups)) {
-      
-      data.frame(
-        design_id = d,
-        type = unique(design_subset$type),
-        n_groups_won = length(unique(design_subset$group)),
-        groups_won = paste(sort(unique(design_subset$group)),
-                           collapse = ", "),
-        stringsAsFactors = FALSE)
-    } else NULL
-    
-  }))
-  
-  if (is.null(joint_winners) || nrow(joint_winners) == 0)
+  if (nrow(preliminary_winners) == 0L) {
     joint_winners <- data.frame()
-  
-  # Reporting of results:
-  
-  .header("Design comparison", 5)
-  
-  if (nrow(joint_winners) == 0) {
-    message(
-      .msg("   No single design is optimal for all groups.", "warning"))
-    message("   Different designs perform best in different groups.")
+    
   } else {
-    for (i in seq_len(nrow(joint_winners))) {
-      jw <- joint_winners[i, ]
+    joint_winners <- lapply(unique(ranking$type), function(tp) {
       
-      message(format(
-        .msg(paste0("   Target: "), "main"),
-        width = 3, justify = "left"),
-        target_map[jw$type])
+      pre_winners_t <- preliminary_winners[
+        preliminary_winners$type == tp, , drop = FALSE]
       
-      message(format(
-        .msg(paste0("   Best study design: "), "success"),
-        width = 3, justify = "left"),
-        jw$design)
+      if (nrow(pre_winners_t) == 0L) return(NULL)
       
-      if (has_groups)
-        if ("groups_won" %in% names(jw)) {
-          message(format(
-            .msg(paste0("   Wins for groups: "), "success"),
-            width = 3, justify = "left"),
-            jw$groups_won)
-        }
+      unique_groups <- unique(pre_winners_t$group)
+      win_counts <- tapply(pre_winners_t$group,
+                           pre_winners_t$design_id,
+                           function(g) length(unique(g)))
       
-      # Study design parameters:
-      obj <- x[[jw$design]]$data
-      m <- x[[jw$design]]$input$n_individuals
-      if (has_groups) {
-        m <- paste0(m, " (", m / 2, " per group)")
-      }
+      joint_ids <- as.integer(names(win_counts)[
+        win_counts == length(unique_groups)])
       
-      .header("Parameters of best study design", 5)
-      message(format(
-        .msg(paste0("   Number of tags: "), "success"),
-        width = 3, justify = "left"), m)
-      message(format(
-        .msg(paste0("   Sampling duration: "), "success"),
-        width = 3, justify = "left"),
-        round(obj$dur$value, 1), " ", obj$dur$unit)
-      message(format(
-        .msg(paste0("   Sampling interval: "), "success"),
-        width = 3, justify = "left"),
-        round(obj$dti$value, 1), " ", obj$dti$unit)
+      if (length(joint_ids) == 0) return(NULL)
       
-      # Error and CI:
-      est_rows <- ranking[ranking$design_id == jw$design &
-                            ranking$type == jw$type, ]
-      
-      for (r in seq_len(nrow(est_rows))) {
-        w <- est_rows[r, ]
-        
-        if (has_groups) {
-        message(format(
-          .msg(paste0("   Group: "), "main"),
-          width = 3, justify = "left"),
-          w$group)
-        } else {
-          message(format(
-            .msg(paste0(""), "main")))
-        }
-        message(format(
-          .msg(paste0("       Relative error: "), "success"),
-          width = 3, justify = "left"),
-          paste0(.err_to_txt(w$est), "%"))
-        message(format(
-          .msg(paste0("       CI: "), "success"),
-          width = 3, justify = "left"),
-          paste0("[",
-                 .err_to_txt(w$lci), ", ",
-                 .err_to_txt(w$uci), "%]"))
-        
-        if (w$overlaps_with_zero) {
-          cat("       Reason: Credible interval overlaps 0.\n")
-        } else {
-          cat("       Reason: Smallest distance of CI to 0.\n")
-        }
-      }
+      data.frame(type = tp,
+                 design_id = joint_ids,
+                 stringsAsFactors = FALSE)
+    })
+    
+    joint_winners <- do.call(rbind, joint_winners)
+    
+    # If no winners found, return empty:
+    if (is.null(joint_winners) || nrow(joint_winners) == 0L) {
+      joint_winners <- data.frame()
     }
   }
   
@@ -6053,15 +6591,18 @@ md_compare <- function(x,
     "overlaps_with_zero", "dist_to_zero", "rank")]
   
   colnames(ranking_out)[
-    colnames(ranking_out) %in% c("est", "lci", "uci")] <- 
-    c("error", "error_lci", "error_uci")
+    colnames(ranking_out) %in% c("est", "lci", "uci")
+  ] <- c("error", "error_lci", "error_uci")
   
   report <- structure(
     list(info = list(grouped = has_groups,
-                     set_target = set_target),
+                     set_target = set_target,
+                     error_threshold = error_threshold),
          ranking = ranking_out,
          winners = joint_winners),
     class = c("movedesign_report", "movedesign"))
+  
+  summary(report)
   
   return(invisible(report))
   

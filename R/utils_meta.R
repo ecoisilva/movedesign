@@ -544,6 +544,13 @@
     "Yes" = colors[[1]], "No" = colors[[2]])
   }
   
+  if (!is.null(filter_to)) {
+    if (filter_to == 1) {
+      replicate <- FALSE
+      randomize <- FALSE
+    }
+  }
+  
   if (replicate) {
     
     if (is.null(rv$meta_tbl_replicates)) {

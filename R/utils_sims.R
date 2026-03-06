@@ -37,7 +37,7 @@ generate_seed <- function(seed_list = NULL) {
 #'  the dataset is truncated after a random time point.
 #' 
 #' @param obj A list of data frames, where each element corresponds to
-#'   a single individual’s telemetry data.
+#'   a single individual's telemetry data.
 #' 
 #' @return
 #' A list with two components:

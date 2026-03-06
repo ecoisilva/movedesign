@@ -258,9 +258,6 @@
 #' @seealso
 #'   \code{\link[ctmm]{akde}}, \code{\link[ctmm]{speed}},
 #' 
-#' @encoding UTF-8
-#' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
-#' 
 #' @keywords internal
 #' @export
 run_meta_resamples <- function(rv,
@@ -402,10 +399,11 @@ run_meta_resamples <- function(rv,
                         na.rm = TRUE)) {
       
       warning(paste0(
-          "n_resamples = ", max_draws,
+          "n_resamples = ", .msg(max_draws, "danger"),
           " exceeds the maximum number of unique combinations.",
-          " Only ", max(combinations_df$n_combinations),
-          " unique combinations will be drawn."
+          "\nOnly ", .msg(max(combinations_df$n_combinations),
+                          "danger"),
+          " unique combination(s) will be drawn.\n"
         ), call. = FALSE)
       
     }
@@ -824,8 +822,6 @@ run_meta <- function(rv,
 #' }
 #'
 #' @return A data frame containing summarized simulation outputs.
-#' @encoding UTF-8
-#' @author Inês Silva \email{i.simoes-silva@@hzdr.de}
 #' 
 #' @keywords internal
 #' @export
