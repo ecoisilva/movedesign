@@ -835,7 +835,7 @@ extract_pars <- function(
     if (length(obj[[x]]$tau) == 2 && 
         all(obj[[x]]$tau[1] == obj[[x]]$tau[2])) { 
       
-      # (OUΩ and OUf):
+      # (OUOmega and OUf):
       tmp_name <- ifelse(any(grepl("decay", nms.obj)),  
                          "decay", "\u03C4") 
       tmp <- sum.obj$CI[grep(tmp_name, nms.obj), ] 
