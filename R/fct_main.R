@@ -2559,8 +2559,8 @@ md_plot <- function(x,
                                        y_tol = NULL,
                                        y_step = 0.05) {
     
-    if (is.null(text_data) ||
-        nrow(text_data) == 0L) return(text_data)
+    if (is.null(text_data) || nrow(text_data) == 0L)
+      return(text_data)
     
     n <- nrow(text_data)
     sv <- text_data$stat_value
@@ -2570,7 +2570,7 @@ md_plot <- function(x,
     max_y_g <- max(max_y)
     
     # Tolerances
-    x_range_vals <- range(c(sv, lci, uci))
+    x_range_vals <- range(c(sv, lci, uci), na.rm = TRUE)
     x_span <- diff(x_range_vals)
     if (is.null(x_tol)) x_tol <- max(x_span * 0.08, 0.02)
     if (is.null(y_tol)) y_tol <- max_y_g * 0.15
@@ -2598,7 +2598,8 @@ md_plot <- function(x,
       
       for (i in seq_len(n - 1L)) {
         for (j in (i + 1L):n) {
-          if (abs(sv[i] - sv[j]) < x_tol) {
+          if (!is.na(sv[i]) && !is.na(sv[j]) && 
+              abs(sv[i] - sv[j]) < x_tol) {
             text_data$x_adjust[i] <- -abs(x_nudge)
             text_data$x_adjust[j] <-  abs(x_nudge)
           }
@@ -2616,7 +2617,8 @@ md_plot <- function(x,
       
       for (i in seq_len(n - 1L)) {
         for (j in (i + 1L):n) {
-          if (abs(sv[i] - sv[j]) < x_tol &&
+          if (!is.na(sv[i]) && !is.na(sv[j]) &&
+              abs(sv[i] - sv[j]) < x_tol &&
               abs(ly[j] - ly[i]) < y_tol) {
             ly[j] <- ly[i] + y_step * max_y_g
           }
