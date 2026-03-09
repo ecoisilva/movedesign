@@ -351,26 +351,26 @@ mod_comp_m_server <- function(id, rv,
     ## Rendering (and updating) error threshold: --------------------------
     
     output$error_threshold_for_m <- renderUI({
+      
       shinyWidgets::numericInputIcon(
         inputId = ns("error_threshold"),
         label = "Error threshold:",
-        min = 1, max = 50, step = 1,
+        min = 1, max = 100, step = 1,
         value = rv$error_threshold * 100,
-        icon = list(NULL, icon("percent")))
+        icon = list(NULL, icon("percent")),
+        help_text =  "Must be between 1 and 100.")
     })
     
     observe({
       req(rv$active_tab == 'hr' || rv$active_tab == 'ctsd')
       
-      new_value <- error_threshold * 100
-      
       shinyWidgets::updateNumericInputIcon(
         session = session,
         input = "error_threshold",
-        value = new_value)
+        value = rv$error_threshold * 100)
       
-    }, priority = 2) %>% # end of observe,
-      bindEvent(rv$error_threshold)
+    }, priority = 1) %>% # end of observe,
+      bindEvent(rv$active_tab)
     
     # SIMULATIONS ---------------------------------------------------------
     ## Run multiple simulations (set number of tags): ---------------------
