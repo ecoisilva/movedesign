@@ -628,30 +628,6 @@ theme_movedesign <- function(ft_size = 13,
 .theme_movedesign_report <- function(base_size = 13,
                                      font = NULL) {
   
-  base_family <- NULL
-  
-  if (!is.null(font)) {
-    if (!requireNamespace("sysfonts", quietly = TRUE) ||
-        !requireNamespace("showtext", quietly = TRUE)) {
-      
-      message("Optional packages 'sysfonts' ",
-              "and 'showtext' are not installed.")
-      message("Install them to enable Google font support.")
-      
-    } else {
-      
-      if (!(font %in% sysfonts::font_families()))
-        sysfonts::font_add_google(name = font,
-                                  family = font,
-                                  regular.wt = 400,
-                                  bold.wt = 700)
-
-      showtext::showtext_auto()
-      base_size <- base_size + 5
-      base_family <- font
-    }
-  }
-  
   ggplot2::theme_classic(base_size = base_size) +
     ggplot2::theme(
       
@@ -1589,13 +1565,13 @@ create_modal <- function(var, id) {
         p(),
         
         span(
-          class = "help-block",
+          class = "notes-block",
           style = paste0(
             "text-align: justify !important;",
             "font-size: 14px;"),
           
           fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
-          span("Note:", class = "help-block-note"), 
+          span("Note:", class = "cl-dgr"), 
           "When the risk of device failure or animal",
           "mortality during deployment is high, we",
           "recommend proportionally increasing the",
