@@ -20,7 +20,7 @@ object returned by this function. Leave as \code{NULL} (default) for
 a fresh run with automatically generated seeds.}
 }
 \value{
-An object of class \code{movedesign_preprocess}, accepted by
+An object of class \code{movedesign_processed}, accepted by
 downstream functions such as \code{\link[=md_plot_preview]{md_plot_preview()}},
 or \code{\link[=md_compare_preview]{md_compare_preview()}}.
 }
@@ -78,4 +78,11 @@ a single \code{\link[=md_run]{md_run()}} call for any final design
 evaluation.
 \code{\link[=md_plot_preview]{md_plot_preview()}} and \code{\link[=md_compare_preview]{md_compare_preview()}} to inspect
 or compare these preliminary outputs.
+
+Other workflow_steps: 
+\code{\link{md_compare}()},
+\code{\link{md_prepare}()},
+\code{\link{md_replicate}()},
+\code{\link{md_simulate}()}
 }
+\concept{workflow_steps}

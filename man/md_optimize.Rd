@@ -6,7 +6,7 @@
 \usage{
 md_optimize(
   obj,
-  n_replicates = 20,
+  n_replicates = 10,
   error_threshold = 0.05,
   plot = FALSE,
   verbose = TRUE,

@@ -13,7 +13,7 @@ md_plot_preview(
 )
 }
 \arguments{
-\item{obj}{An object of class \code{movedesign_preprocess}, as returned
+\item{obj}{An object of class \code{movedesign_processed}, as returned
 by \code{\link[=md_run]{md_run()}}.}
 
 \item{n_resamples}{A single positive integer. The number of
@@ -46,7 +46,7 @@ summaries derived from repeated draws of individuals at each population
 sample size (based on the specified number of resamples).
 
 This functions shows preliminary outputs for a single stochastic run
-from \code{\link[=md_run]{md_run()}} (a \code{movedesign_preprocess} object) and should not be
+from \code{\link[=md_run]{md_run()}} (a \code{movedesign_processed} object) and should not be
 used to evaluate study design by itself. Instead, users should run
 \code{\link[=md_replicate]{md_replicate()}} and check for convergence with \code{\link[=md_check]{md_check()}}.
 }

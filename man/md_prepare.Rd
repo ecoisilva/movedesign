@@ -170,6 +170,9 @@ parameters rather than empirical data,
 \code{\link[=md_replicate]{md_replicate()}}.
 
 Other workflow_steps: 
+\code{\link{md_compare}()},
+\code{\link{md_replicate}()},
+\code{\link{md_run}()},
 \code{\link{md_simulate}()}
 }
 \concept{workflow_steps}

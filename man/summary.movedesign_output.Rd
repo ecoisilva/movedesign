@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_main.R
 \name{summary.movedesign_output}
 \alias{summary.movedesign_output}
-\title{Summarise a replicated study design output}
+\title{Summarise a study design output}
 \usage{
 \method{summary}{movedesign_output}(
   object,

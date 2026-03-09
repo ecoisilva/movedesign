@@ -2,15 +2,61 @@
 % Please edit documentation in R/utils_main.R
 \name{summary.movedesign_optimized}
 \alias{summary.movedesign_optimized}
-\title{Summary method for \code{movedesign_optimized} objects}
+\title{Summarise a study design optimization}
 \usage{
-\method{summary}{movedesign_optimized}(object, ...)
+\method{summary}{movedesign_optimized}(
+  object,
+  verbose = TRUE,
+  m = NULL,
+  ci = 0.95,
+  tol = 0.05,
+  n_converge = 10,
+  plot = TRUE,
+  pal = c("#007d80", "#A12C3B"),
+  ...
+)
 }
 \arguments{
-\item{object}{An object of class \code{movedesign_optimized}}
+\item{object}{A \code{movedesign_optimized} object returned by
+\code{\link[=md_replicate]{md_replicate()}} or \code{\link[=md_stack]{md_stack()}}.}
 
-\item{...}{Unused}
+\item{verbose}{Logical. If \code{TRUE}, run \code{\link[=md_check]{md_check()}} and
+print the full convergence diagnostics. This can also
+display a convergence plot when \code{plot = TRUE}.
+If \code{FALSE} (default), only the convergence status is
+printed.}
+
+\item{m}{Numeric (Optional). If provided, restricts the results to
+a specific population sample size (\code{m}). Defaults to \code{NULL}, which
+checks up to the maximum population sample size.}
+
+\item{ci}{Confidence level for the intervals. Applied to both
+the narrow confidence bars and wide prediction bands. Must be
+between \code{0} and \code{1}. Default: \code{0.95} (95\%).}
+
+\item{tol}{Numeric. The tolerance threshold for absolute change in
+the cumulative mean to declare convergence. Defaults to
+\code{0.05}.}
+
+\item{n_converge}{Integer. Number of consecutive steps within
+tolerance required to confirm convergence. Defaults to \code{10}.}
+
+\item{plot}{Logical. If \code{TRUE} (default), generates a plot of
+stepwise changes in the cumulative mean, highlighting when
+convergence is achieved.}
+
+\item{pal}{Character vector of color(s) of the plot, such as
+\code{c("#007d80", "#A12C3B")}) (default).}
+
+\item{...}{Additional arguments}
 }
 \description{
-Summary method for \code{movedesign_optimized} objects
+Print a structured summary of a \code{movedesign_optimized} object
+produced by \code{\link[=md_optimize]{md_optimize()}}. The summary
+reports the study design, replication settings, estimation
+performance for each target metric, and a convergence
+assessment.
+
+This method runs automatically when calling
+\code{summary(output)} on a \code{movedesign_optimized} object.
 }

@@ -181,6 +181,9 @@ input_grouped <- md_simulate(
 data.
 
 Other workflow_steps: 
-\code{\link{md_prepare}()}
+\code{\link{md_compare}()},
+\code{\link{md_prepare}()},
+\code{\link{md_replicate}()},
+\code{\link{md_run}()}
 }
 \concept{workflow_steps}

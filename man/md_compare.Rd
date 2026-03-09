@@ -153,4 +153,11 @@ if (interactive()) {
 \code{\link[=md_check]{md_check()}} for convergence diagnostics,
 and refer to \code{bayestestR::ci()} for details on credible interval
 computation and interpretation.
+
+Other workflow_steps: 
+\code{\link{md_prepare}()},
+\code{\link{md_replicate}()},
+\code{\link{md_run}()},
+\code{\link{md_simulate}()}
 }
+\concept{workflow_steps}

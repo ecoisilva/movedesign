@@ -13,7 +13,7 @@ md_compare_preview(
 )
 }
 \arguments{
-\item{x}{A list of at least two \code{movedesign_preprocess} objects,
+\item{x}{A list of at least two \code{movedesign_processed} objects,
 each returned by \code{\link[=md_run]{md_run()}}. Each element represents one study
 design to compare. Designs typically differ in sampling
 parameters such as \code{dur}, \code{dti}, or \code{n_individuals}, but any

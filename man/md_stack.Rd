@@ -7,7 +7,7 @@
 md_stack(obj, error_threshold = 0.05, ...)
 }
 \arguments{
-\item{obj}{A list of \code{movedesign_preprocess} objects, each
+\item{obj}{A list of \code{movedesign_processed} objects, each
 returned by \code{\link[=md_run]{md_run()}}. All objects must share the same
 \code{set_target}, \code{dur}, and \code{dti}.}
 

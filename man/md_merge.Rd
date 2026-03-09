@@ -7,7 +7,7 @@
 md_merge(x, ...)
 }
 \arguments{
-\item{x}{Either a list of \code{movedesign_preprocess} objects, or the
+\item{x}{Either a list of \code{movedesign_processed} objects, or the
 first of multiple objects passed individually. All objects must
 share the same \code{set_target} and sampling parameters.}
 
@@ -20,7 +20,7 @@ object.
 }
 \description{
 Pools two or more \code{\link[=md_run]{md_run()}} outputs into a single
-\code{movedesign_preprocess} object by concatenating all simulated
+\code{movedesign_processed} object by concatenating all simulated
 individuals, fitted models, and seeds. The merged object behaves
 exactly as if all individuals had been simulated in one call:
 if each input contains 5 individuals, the merged output contains
