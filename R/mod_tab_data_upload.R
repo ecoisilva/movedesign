@@ -527,10 +527,10 @@ mod_tab_data_upload_server <- function(id, rv) {
       ui <- NULL
       if (add_ui) {
         ui <- span(
-          class = "help-block", 
+          class = "notes-block", 
           tagList(
             fontawesome::fa("triangle-exclamation", fill = pal$dgr),
-            span("Warning:", class = "help-block-note"), 
+            span("Warning:", class = "cl-dgr"),
             ui_N_area,
             ui_N_speed,
             "Very small effective sample sizes may lead to",

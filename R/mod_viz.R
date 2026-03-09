@@ -227,11 +227,11 @@ mod_viz_server <- function(id, rv) {
       if (is.null(rv$id)) {
         ui <- tagList(
           p(style = "margin-top: 35px;"),
-          span(class = "help-block",
+          span(class = "notes-block",
                style = "text-align: center !important;",
                
                fontawesome::fa("circle-exclamation", fill = pal$dgr),
-               span("Note:", class = "help-block-note"),
+               span("Note:", class = "cl-dgr"),
                "Please select all the individuals from the",
                fontawesome::fa("stopwatch", fill = pal$sea),
                span("Dataset", class = "cl-sea"), "box",
@@ -618,11 +618,11 @@ mod_viz_server <- function(id, rv) {
       
       ui <- tagList(
         p(style = "margin-top: 35px;"),
-        span(class = "help-block",
+        span(class = "notes-block",
              style = "text-align: justify !important;",
              
              fontawesome::fa("circle-exclamation", fill = pal$dgr),
-             span("Note:", class = "help-block-note"),
+             span("Note:", class = "cl-dgr"),
              txt_detected
         ))
       

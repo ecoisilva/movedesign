@@ -1611,7 +1611,7 @@ mod_tab_design_server <- function(id, rv) {
         
         ui <- tagList(
           fontawesome::fa("circle-exclamation", fill = pal$dgr),
-          span("Note:", class = "help-block-note"), 
+          span("Note:", class = "cl-dgr"), 
           "The primary axis is the", 
           wrap_none(span("sampling duration", col = "black"), end = ","),
           "(points), and the secondary axis (lines) are",
@@ -1630,7 +1630,7 @@ mod_tab_design_server <- function(id, rv) {
             req(rv$tau_p[[1]])
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "help-block-note"), 
+              span("Note:", class = "cl-dgr"), 
               "The secondary axis (lines) are",
               "the expected effective sample sizes (roughly estimated)",
               "\u2014", span("N[area]", class = "cl-sea"), "\u2014",
@@ -1642,7 +1642,7 @@ mod_tab_design_server <- function(id, rv) {
             req(rv$tau_v[[1]])
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "help-block-note"), 
+              span("Note:", class = "cl-dgr"), 
               "The secondary axis (lines) are",
               "the expected effective sample sizes (roughly estimated)",
               "\u2014", span("N[speed]", class = "cl-dgr"), "\u2014",
@@ -1655,7 +1655,7 @@ mod_tab_design_server <- function(id, rv) {
         )
       }
       
-      ui <- span(class = "help-block", ui,
+      ui <- span(class = "notes-block", ui,
                  "Sampling interval (x axis) is set to",
                  "logarithmic scale to show these",
                  "values more clearly.")
@@ -1707,10 +1707,10 @@ mod_tab_design_server <- function(id, rv) {
       if (n_diff > 1) {
         ui <- tagList(
           p(style = "margin-top: 22px;"),
-          span(class = "help-block",
+          span(class = "notes-block",
                
                fontawesome::fa("circle-exclamation", fill = pal$dgr),
-               span("Note:", class = "help-block-note"), 
+               span("Note:", class = "cl-dgr"), 
                "If multiple combinations of sampling parameters were",
                "tested, only the last set selected will be used for",
                "further analyses."))

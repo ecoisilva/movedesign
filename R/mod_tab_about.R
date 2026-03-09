@@ -39,11 +39,11 @@ mod_tab_about_ui <- function(id) {
                              class = "cl-sea-d"), ".")),
           br() # ,
           # p(style = "max-width: 685px;",
-          #   span(class = "help-block",
+          #   span(class = "notes-block",
           #        style = "text-align: center !important;",
           # 
           #        fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
-          #        span("Note:", class = "help-block-note"),
+          #        span("Note:", class = "cl-dgr"),
           #        "This is the", span( "development", class = "cl-dgr"),
           #        "version of the application, currently undergoing",
           #        "testing. Use with caution, as it may crash",
@@ -458,11 +458,11 @@ mod_tab_about_server <- function(id, rv) {
         ui <- tagList(
           p(style = "max-width: 685px;",
             span(
-              class = "help-block",
+              class = "notes-block",
               style = "text-align: center !important;",
               
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "help-block-note"),
+              span("Note:", class = "cl-dgr"),
               "Requires careful selection of individuals",
               "to inform subsequent simulations. Ensure all selected",
               "individuals meet the assumptions for ", ui_txt)))

@@ -431,10 +431,9 @@ mod_tab_sims_ui <- function(id) {
                 reactable::reactableOutput(ns("simTable")),
                 
                 br(), span(
-                  class = "help-block", 
-                  fontawesome::fa("circle-exclamation",
-                                  fill = "#dd4b39"),
-                  span("Note:", class = "help-block-note"), 
+                  class = "notes-block", 
+                  fontawesome::fa("circle-exclamation", fill = "#dd4b39"),
+                  span("Note:", class = "cl-dgr"), 
                   
                   "The", span("movement speed",
                               style = "color: #000000;"),

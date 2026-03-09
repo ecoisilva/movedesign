@@ -337,15 +337,21 @@ a {
   color: #717171;
   padding: 11px 17px;
   margin-bottom: 10px;
-  border: 1.5px dashed #717171;
+  border: 1.5px dashed #DB4545;
   border-radius: 5px;
-
 }
-.help-block-note {
+
+.notes-block {
+  display: inline-block;
   font-family: var(--monosans);
   letter-spacing: 0.5px;
   text-align: justify;
-  color: var(--danger) !important;
+  
+  color: #717171;
+  padding: 11px 17px;
+  margin-bottom: 10px;
+  border: 1.5px dashed #717171;
+  border-radius: 5px;
 }
 
 label,

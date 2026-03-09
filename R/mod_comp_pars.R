@@ -243,11 +243,11 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       if (input$parInput_target == "tau_p" && is.null(taup)) {
         ui <- tagList(
           p(style = "margin-top: 15px;"),
-          span(class = "help-block",
+          span(class = "notes-block",
                style = "text-align: justify !important;",
                
                fontawesome::fa("circle-exclamation", fill = pal$dgr),
-               span("Note:", class = "help-block-note"), 
+               span("Note:", class = "cl-dgr"), 
                "No significant signature of the animal's",
                span("position autocorrelation", class = "cl-dgr"),
                "parameter remains in this dataset.", ui_extra))
@@ -259,11 +259,11 @@ mod_comp_pars_server <- function(id, rv, set_type) {
       if (input$parInput_target == "tau_v" && is.null(tauv)) {
         ui <- tagList(
           p(style = "margin-top: 15px;"),
-          span(class = "help-block",
+          span(class = "notes-block",
                style = "text-align: justify !important;",
                
                fontawesome::fa("circle-exclamation", fill = pal$dgr),
-               span("Note:", class = "help-block-note"), 
+               span("Note:", class = "cl-dgr"), 
                "No significant signature of the animal's",
                span("velocity autocorrelation", class = "cl-dgr"),
                "parameter remains in this dataset.", ui_extra))

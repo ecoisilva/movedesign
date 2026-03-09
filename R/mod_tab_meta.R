@@ -737,11 +737,11 @@ mod_tab_meta_server <- function(id, rv) {
       
       ui <- tagList(
         p(style = "margin-top: 35px;"),
-        span(class = "help-block",
+        span(class = "notes-block",
              style = "text-align: justify !important;",
              
              fontawesome::fa("circle-exclamation", fill = pal$dgr),
-             span("Note:", class = "help-block-note"),
+             span("Note:", class = "cl-dgr"),
              # txt_method, br(),
              txt, txt_subpop
         ))
@@ -755,11 +755,11 @@ mod_tab_meta_server <- function(id, rv) {
       
       ui <- tagList(
         p(style = "margin-top: 35px;"),
-        span(class = "help-block",
+        span(class = "notes-block",
              style = "text-align: justify !important;",
              
              fontawesome::fa("circle-exclamation", fill = pal$dgr),
-             span("Note:", class = "help-block-note"),
+             span("Note:", class = "cl-dgr"),
              "Model selection is performed between the \u03C7\u00B2-IG",
              "population model (with population mean and variance) and",
              "the Dirac-\u03B4 population model (population mean only)."
@@ -776,11 +776,11 @@ mod_tab_meta_server <- function(id, rv) {
       
       ui <- tagList(
         p(style = "margin-top: 35px;"),
-        span(class = "help-block",
+        span(class = "notes-block",
              style = "text-align: justify !important;",
              
              fontawesome::fa("circle-exclamation", fill = pal$dgr),
-             span("Note:", class = "help-block-note"),
+             span("Note:", class = "cl-dgr"),
              "Out of", length(rv$simList), "tags,", n_failed,
              "failed before reaching the set maximum",
              "sampling duration.", p()

@@ -687,11 +687,11 @@ mod_tab_hrange_server <- function(id, rv) {
         if (is.na(lci) || is.na(uci))
           ui <- tagList(
             p(style = "margin-top: 35px;"),
-            span(class = "help-block",
+            span(class = "notes-block",
                  style = "text-align: center !important;",
                  
                  fontawesome::fa("circle-exclamation", fill = pal$dgr),
-                 span("Note:", class = "help-block-note"), 
+                 span("Note:", class = "cl-dgr"), 
                  "Credible intervals (CIs) were too large or the",
                  "number of simulations insufficient, returning ",
                  wrap_none(span("NAs", class = "cl-dgr"), "."),
@@ -700,11 +700,11 @@ mod_tab_hrange_server <- function(id, rv) {
       } else {
         ui <- tagList(
           p(style = "margin-top: 22px;"),
-          span(class = "help-block",
+          span(class = "notes-block",
                style = "text-align: center !important;",
                
                fontawesome::fa("circle-exclamation", fill = pal$dgr),
-               span("Note:", class = "help-block-note"), 
+               span("Note:", class = "cl-dgr"), 
                "This relative error is based on a single simulation,",
                "and the error range is calculated from the 95%",
                "confidence intervals [low\u2014high CI].",
@@ -930,11 +930,11 @@ mod_tab_hrange_server <- function(id, rv) {
             
             uiOutput(ns("hrUI_compare_n")),
             
-            p(span(class = "help-block",
+            p(span(class = "notes-block",
                    style = "text-align: center !important;",
                    
                    fontawesome::fa("circle-exclamation", fill = pal$dgr),
-                   span("Note:", class = "help-block-note"),
+                   span("Note:", class = "cl-dgr"),
                    "Longer sampling durations + lower sampling",
                    "intervals will add run time to simulation, model",
                    "fitting, and estimation functions. Proceed with",

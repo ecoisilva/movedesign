@@ -2454,7 +2454,7 @@ mod_tab_report_server <- function(id, rv) {
         
         ui <- tagList(
           fontawesome::fa("circle-exclamation", fill = pal$dgr),
-          span("Note:", class = "help-block-note"), 
+          span("Note:", class = "cl-dgr"), 
           "These plots show the probability density of",
           span("individual", style =  "font-weight: bold;"),
           "estimate errors", wrap_none(txt_m, ","),
@@ -2494,7 +2494,7 @@ mod_tab_report_server <- function(id, rv) {
             
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "help-block-note"), 
+              span("Note:", class = "cl-dgr"), 
               "This plot shows the probability density of",
               span("individual", style =  "font-weight: bold;"),
               "estimate errors", txt_m, "for", sim_details, 
@@ -2532,7 +2532,7 @@ mod_tab_report_server <- function(id, rv) {
             
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "help-block-note"), 
+              span("Note:", class = "cl-dgr"), 
               "This plot shows the probability density of",
               span("individual", style =  "font-weight: bold;"),
               "estimate errors", txt_m, "for", 
@@ -2551,7 +2551,7 @@ mod_tab_report_server <- function(id, rv) {
         )
       }
       
-      ui <- span(class = "help-block", ui)
+      ui <- span(class = "notes-block", ui)
       
       return(ui)
       
@@ -3265,7 +3265,7 @@ mod_tab_report_server <- function(id, rv) {
       if (length(rv$which_question) > 1) {
         ui <- tagList(
           fontawesome::fa("circle-exclamation", fill = pal$dgr),
-          span("Note:", class = "help-block-note"), 
+          span("Note:", class = "cl-dgr"), 
           "This plot has the same information as above,",
           "but showing each expected error in a different line.",
           "If your simulations",
@@ -3295,7 +3295,7 @@ mod_tab_report_server <- function(id, rv) {
             
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "help-block-note"), 
+              span("Note:", class = "cl-dgr"), 
               "This plot shows the expected error",
               "based on", m, "simulations for",
               sim_details,
@@ -3329,7 +3329,7 @@ mod_tab_report_server <- function(id, rv) {
             
             ui <- tagList(
               fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "help-block-note"), 
+              span("Note:", class = "cl-dgr"), 
               "This plot shows the expected error",
               "based on", m, "simulations for",
               
@@ -3357,7 +3357,7 @@ mod_tab_report_server <- function(id, rv) {
         )
       }
       
-      ui <- span(class = "help-block", ui)
+      ui <- span(class = "notes-block", ui)
       
       return(ui)
       
@@ -3688,7 +3688,7 @@ mod_tab_report_server <- function(id, rv) {
           
           ui <- tagList(
             fontawesome::fa("triangle-exclamation", fill = pal$dgr),
-            span("Warning:", class = "help-block-note"), 
+            span("Warning:", class = "cl-dgr"), 
             "This plot shows only the mean expected errors and",
             "(confidence intervals) simulated for",
             
@@ -3718,7 +3718,7 @@ mod_tab_report_server <- function(id, rv) {
           
           ui <- tagList(
             fontawesome::fa("circle-exclamation", fill = pal$dgr),
-            span("Note:", class = "help-block-note"), 
+            span("Note:", class = "cl-dgr"), 
             "This plot shows only the mean expected errors and",
             "(confidence intervals) simulated",
             "for different sampling durations",
@@ -3736,7 +3736,7 @@ mod_tab_report_server <- function(id, rv) {
                     rv$which_question, "."))
       )
       
-      ui <- span(class = "help-block", ui)
+      ui <- span(class = "notes-block", ui)
       
       return(ui)
       
