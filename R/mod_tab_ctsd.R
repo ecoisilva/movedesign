@@ -2643,7 +2643,7 @@ mod_tab_ctsd_server <- function(id, rv) {
     }) # end of observe
     
     observe({
-      req(rv$active_tab == 'ctsd', rv$simList, rv$simfitList, rv$ctsdList)
+      req(rv$active_tab == 'ctsd', rv$simList, rv$ctsdList)
       req(length(rv$ctsdList) >= 1)
       
       mod_blocks_server(

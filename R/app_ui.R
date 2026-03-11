@@ -169,7 +169,7 @@ app_ui <- function(request) {
         right = tags$div(
           HTML(paste('<i class="fa fa-copyright"',
                      'style = "color:#222d32;"> </i>',
-                     "2024\u20142025")))
+                     "2024\u20142026")))
         
       ) # end of dashboardFooter
     ) # end of dashboardPage

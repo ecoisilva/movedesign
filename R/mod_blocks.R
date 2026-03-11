@@ -180,7 +180,6 @@ mod_blocks_server <- function(id,
              "outputs" = {
                
                out <- rv[[name]]
-               # out <- out[stats::complete.cases(out), ]
                
                if (grepl("Est", name)) {
                  
@@ -229,7 +228,7 @@ mod_blocks_server <- function(id,
                                 ci$CI_high)
                    } else {
                      req(get_id)
-                     req(!is.na(out[get_id, 5]))
+                     req(!is.na(out[get_id, 3]))
                      
                      value <- c(out[get_id, "lci"],
                                 out[get_id, "est"],

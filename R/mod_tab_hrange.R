@@ -2068,7 +2068,7 @@ mod_tab_hrange_server <- function(id, rv) {
     
     observe({
       req(rv$active_tab == 'hr')
-      req(rv$simList, rv$akdeList, rv$hr_nsim)
+      req(rv$simList, rv$hr_completed, rv$hr_nsim)
       req(nrow(rv$hrEst) == length(rv$simList),
           nrow(rv$hrErr) == length(rv$simList))
       

@@ -1782,6 +1782,7 @@ mod_tab_design_server <- function(id, rv) {
                 value = 5,
                 step = 1,
                 icon = list(NULL, icon("percent"))),
+              br(),
               
               shinyWidgets::autonumericInput(
                 inputId = ns("n_replicates"),
