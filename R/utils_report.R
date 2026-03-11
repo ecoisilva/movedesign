@@ -1,9 +1,9 @@
 
 #' @title Format error as rounded percentage string
 #' @noRd
-.err_to_txt <- function(x) { 
-  if (length(x) > 1) return(round(mean(x, na.rm = TRUE) * 100, 1))
-  else return(round(x * 100, 1))
+.err_to_txt <- function(x, digits = 1) { 
+  if (length(x) > 1) return(round(mean(x, na.rm = TRUE) * 100, digits))
+  else return(round(x * 100, digits))
 }
 
 #' @title Get credible intervals

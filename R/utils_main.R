@@ -228,20 +228,10 @@ movedesign_output <- function(input) {
 #' @export
 summary.movedesign_input <- function(object, ...) {
   
-  .format_txt <- function(x) {
-    if (length(x) > 0 && .has_results(x)) {
-      crayon::yellow("\u2713 Yes")
-    } else { crayon::red("\u2718 No") }
-  }
-  
   .format_lgc <- function(x) {
     if (x) {
       crayon::yellow("\u2713 Yes")
     } else { crayon::red("\u2718 No") }
-  }
-  
-  .format_pct <- function(x) {
-    paste0(round(abs(x) * 100, 1L), "%")
   }
   
   .line <- function(label, value, width = 40L) {
@@ -1119,6 +1109,9 @@ summary.movedesign_optimized <- function(object,
                                          pal = c("#007d80",
                                                  "#A12C3B"),
                                          ...) {
+  
+  grouped <- NULL
+  
   if (!verbose) {
     extra_args_used <- !missing(m) ||
       !missing(ci) ||
@@ -1144,18 +1137,6 @@ summary.movedesign_optimized <- function(object,
            hr = "Home range estimation",
            ctsd = "Movement speed estimation",
            target)
-  }
-  
-  .format_txt <- function(x) {
-    if (length(x) > 0 && .has_results(x)) {
-      crayon::yellow("\u2713 Yes")
-    } else { crayon::red("\u2718 No") }
-  }
-  
-  .format_lgc <- function(x) {
-    if (x) {
-      crayon::yellow("\u2713 Yes")
-    } else { crayon::red("\u2718 No") }
   }
   
   .format_pct <- function(x) {
@@ -1281,9 +1262,9 @@ summary.movedesign_optimized <- function(object,
           crayon::yellow("\u2713 Converged")
           
         } else {
-          if (nrow(diag) == 1 && !grouped) {
+          if (nrow(diag) == 1 && !has_groups) {
             crayon::red("\u2718 Not yet converged")
-          } else if (grouped) {
+          } else if (has_groups) {
             crayon::red("\u2718 Not yet converged for all groups")
           } else {
             crayon::red("\u2718 Not yet converged for all targets")
@@ -1352,6 +1333,13 @@ plot.movedesign_optimized <- function(x, ...) {
 #' @export
 summary.movedesign_report <- function(object, ...) {
   
+  .target_map <- function(target) {
+    switch(target,
+           hr = "Home range estimation",
+           ctsd = "Movement speed estimation",
+           target)
+  }
+  
   .line <- function(label, value, width = 20L) {
     
     pad <- width - nchar(label)
@@ -1375,8 +1363,6 @@ summary.movedesign_report <- function(object, ...) {
   
   error_threshold <- object$info$error_threshold
   has_groups <- object$info$grouped
-  target_map <- c(hr = "Home range estimation",
-                  ctsd = "Movement speed estimation")
   
   set_targets <- unique(joint_winners$type)
   
@@ -1467,7 +1453,7 @@ summary.movedesign_report <- function(object, ...) {
           if (has_groups) {
             message(crayon::yellow("     For group", w$group))
           }
-
+          
           if (is.na(w$error_lci) || is.na(w$error_uci)) {
             .line("Relative error", 
                   .msg(paste0(.err_to_txt(w$error), "%"), "danger"))
