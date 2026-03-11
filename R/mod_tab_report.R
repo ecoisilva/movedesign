@@ -1489,147 +1489,148 @@ mod_tab_report_server <- function(id, rv) {
       req(rv$active_tab == "report",
           rv$which_m, rv$which_meta != "none")
       
-      n <- group <- error_sd <- NULL
-      
       rv$report$meta <- out_meta <- span("")
       
       req(!is.null(rv$add_ind_var), rv$metaList)
-      
-      if (rv$which_meta == "none") {
-        req(!rv$grouped)
-      }
-      
+      if (rv$which_meta == "none") req(!rv$grouped)
       if (rv$which_meta == "compare") {
-        req(rv$grouped, rv$groups,
-            rv$metaErr, rv$metaList, rv$metaList_groups[["is_final"]])
+        req(
+          rv$grouped, rv$groups, rv$metaErr,
+          rv$metaList, rv$metaList_groups[["is_final"]])
       }
       
-      type <- NULL
-      out_targets <- out_truth <- NULL
-      out_coi <- NULL
-      out_cri <- NULL
-      txt_target <- txt_title <- NULL
-      txt_meta_link <- txt_ratio_order <- NULL
-      all_within_threshold <- NULL
+      n <- group <- NULL
+      out_targets <- out_truth <- out_cri <- NULL
+      txt_target <- txt_ratio_order <- txt_title <- NULL
+      txt_meta_link <- NULL
       css_title <- NULL
       
-      css_bold <- "font-weight: bold;"
-      css_mono <- "font-family: var(--monosans);"
+      .errors_at_max <- function(tbl, target, threshold) {
+        tbl %>%
+          dplyr::filter(
+            .data$type == target,
+            .data$m == max(.data$m)) %>%
+          dplyr::pull(.data$error)
+      }
       
-      n_tags <- switch(
-        rv$which_m, 
-        get_all = rv$n_units, rv$n_sims)
+      .add_threshold_columns <- function(df, threshold) {
+        df %>%
+          dplyr::mutate(
+            within_threshold = abs(.data$err) <= threshold,
+            overlaps_with_threshold = 
+              max(.data$err_lci, -threshold) <=
+              min(.data$err_uci, threshold),
+            status = dplyr::case_when(
+              within_threshold ~ "Yes",
+              TRUE ~ "No"))
+      }
+      
+      css_bold <- "font-weight:bold;"
+      css_mono <- "font-family:var(--monosans);"
+      css_bold_mono <- paste(css_mono, css_bold)
+      
+      type <- NULL
+      txt_target <- txt_title <- NULL
+      txt_meta_link <- txt_ratio_order <- NULL
+      all_within_threshold <- css_title <- NULL
+      out_targets <- out_truth <- out_coi <- out_cri <- NULL
+      
+      n_tags <- switch(rv$which_m, get_all = rv$n_units, rv$n_sims)
+      threshold <- rv$error_threshold
       
       list2env(.format_outputs(rv), envir = environment())
       
-      i <- 0
-      for (target in out_targets) {
-        i <- i + 1
+      txt_threshold <- span("error threshold of",
+                            wrap_none(threshold * 100, "%"))
+      
+      if (rv$which_m == "set_m") {
+        txt_meta_word <- "set population sample size"
+        txt_meta_icon <- "compass-drafting"
+        txt_meta_tabs <- "Analyses"
+      } else if (rv$which_m == "get_m") {
+        txt_meta_word <- "maximum population sample size"
+        txt_meta_icon <- "layer-group"
+        txt_meta_tabs <- "Meta-analyses"
+      } else if (rv$which_m == "get_all") {
+        txt_meta_word <- "maximum budget"
+        txt_meta_icon <- "layer-group"
+        txt_meta_tabs <- "Meta-analyses"
+      }
+      
+      txt_meta_extra <- span(
+        style = "font-weight: 800; font-family: var(--monosans);",
+        "If the", txt_meta_word, "was deemed",
+        "insufficient, run additional tags in the",
+        shiny::icon(txt_meta_icon, class = "cl-sea"),
+        span(txt_meta_tabs, class = "cl-sea"), "tab.")
+      
+      for (t in seq_along(out_targets)) {
+        target <- out_targets[[t]]
         
         if (is.null(rv$meta_tbl_replicates)) {
-          
           meta <- as.data.frame(rv$metaList[[target]]$meta)
-          tmpunit <- extract_units(rownames(
-            meta[grep("mean", rownames(meta)), ]))
+          tmpunit <- extract_units(
+            rownames(meta[grep("mean", rownames(meta)), ]))
           truth <- tmpunit %#% out_truth[[target]]
           
           meta_dt <- meta[1, ] %>%
             dplyr::mutate(
-              err = (.data$est - truth)/truth,
-              err_lci = (.data$low - truth)/truth,
-              err_uci = (.data$high - truth)/truth) %>% 
-            dplyr::select(.data$err,
-                          .data$err_lci,
-                          .data$err_uci) %>% 
+              err = (.data$est - truth) / truth,
+              err_lci = (.data$low - truth) / truth,
+              err_uci = (.data$high - truth) / truth) %>%
+            dplyr::select(
+              .data$err, .data$err_lci, .data$err_uci) %>%
             dplyr::rowwise() %>%
-            dplyr::mutate(
-              within_threshold = 
-                abs(.data$err) <= rv$error_threshold,
-              overlaps_with_threshold = 
-                max(.data$err_lci, -rv$error_threshold) <=
-                min(.data$err_uci, rv$error_threshold),
-              status = dplyr::case_when(
-                within_threshold ~ "Yes",
-                TRUE ~ "No"))
+            .add_threshold_columns(threshold)
           
-          is_stable <- all(abs(
-            tail(rv$err_prev[[target]], 5)) <= rv$error_threshold)
+          is_stable_base <- all(
+            abs(tail(rv$err_prev[[target]], 5)) <= threshold)
           
         } else {
-          req(rv$meta_tbl_replicates)
-          
           meta_dt <- rv$meta_tbl_replicates %>%
-            dplyr::filter(type == target) %>%
-            dplyr::filter(group == "All") %>%
-            dplyr::mutate(
-              dplyr::across(
-                "type", ~factor(., levels = c("hr", "ctsd")))) %>%
+            dplyr::filter(
+              .data$type == target, .data$group == "All") %>%
+            dplyr::mutate(dplyr::across(
+              "type", ~factor(., levels = c("hr", "ctsd")))) %>%
             dplyr::select(
               "type", "m", "group",
               "error", "error_lci", "error_uci") %>%
             dplyr::distinct() %>%
-            dplyr::group_by(.data$type, .data$group, .data$m) %>% 
+            dplyr::group_by(.data$type, .data$group, .data$m) %>%
             dplyr::summarize(
               n = dplyr::n(),
-              error_sd = stats::sd(.data$error, na.rm = TRUE),
+              err_sd = stats::sd(.data$error, na.rm = TRUE),
               err = mean(.data$error, na.rm = TRUE),
-              err_lci = err - stats::qt(
-                0.975, df = n - 1) * error_sd / sqrt(n),
-              err_uci = err + stats::qt(
-                0.975, df = n - 1) * error_sd / sqrt(n),
+              err_lci = err - stats::qt(0.975, df = n - 1) *
+                .data$err_sd / sqrt(n),
+              err_uci = err + stats::qt(0.975, df = n - 1) *
+                .data$err_sd / sqrt(n),
               .groups = "drop") %>%
-            dplyr::filter(m == max(.data$m)) %>%
+            dplyr::filter(.data$m == max(.data$m)) %>%
             dplyr::select("err", "err_lci", "err_uci") %>%
-            dplyr::mutate(
-              within_threshold = 
-                abs(.data$err) <= rv$error_threshold,
-              overlaps_with_threshold = 
-                max(.data$err_lci, -rv$error_threshold) <=
-                min(.data$err_uci, rv$error_threshold),
-              status = dplyr::case_when(
-                within_threshold ~ "Yes",
-                TRUE ~ "No"))
+            .add_threshold_columns(threshold)
           
-          is_stable <- (function(x) 
-            all(abs(x) <= rv$error_threshold))(
-              rv$meta_tbl_replicates %>%
-                dplyr::filter(.data$type == target,
-                              .data$m == max(.data$m)) %>%
-                dplyr::pull(.data$error))
+          is_stable_base <- all(abs(meta_dt$err) <= threshold)
         }
         
         if (rv$which_m == "set_m" &&
             !is.null(rv$meta_tbl_resample)) {
-          is_stable <- (function(x) 
-            all(abs(x) <= rv$error_threshold))(
-              rv$meta_tbl_resample %>%
-                dplyr::filter(.data$type == target,
-                              .data$m == max(.data$m)) %>%
-                dplyr::pull(.data$error))
+          is_stable <- all(abs(.errors_at_max(
+            rv$meta_tbl_resample, target, threshold)) <= threshold)
           
-        }
-        
-        if (rv$which_m == "get_all") {
-          is_stable <- (function(x) 
-            all(abs(x) <= rv$error_threshold))(
-              rv$meta_tbl %>%
-              dplyr::filter(.data$type == target,
-                            .data$m == max(.data$m)) %>%
-              dplyr::pull(.data$error))
-        }
-        
-        txt_stable <- NULL
-        if (is_stable && rv$which_m == "get_m") {
-          txt_stable <- span(
-            "If the recommended number of tags",
-            "is close to (or equal to) the maximum number of",
-            "tags, consider increasing the number of tags to",
-            "reduce uncertainty.")
+        } else if (rv$which_m == "get_all") {
+          is_stable <- all(abs(.errors_at_max(
+            rv$meta_tbl, target, threshold)) <= threshold)
+          
         } else {
-          # txt_stable <- span(
-          #   "Please increase the", 
-          #   ifelse(rv$which_m == "set_m", "set", "maximum"),
-          #   "number of tags to reduce uncertainty.")
+          is_stable <- is_stable_base
+        }
+        
+        txt_stable <- if (is_stable && rv$which_m == "get_m") {
+          span(
+            "If the recommended number of tags is close to",
+            "(or equal to) the maximum, consider increasing",
+            "the number of tags to reduce uncertainty.")
         }
         
         txt_meta_groups <- NULL
@@ -1639,341 +1640,229 @@ mod_tab_report_server <- function(id, rv) {
           
           is_subpop_detected <- meta_group$logs$subpop_detected
           is_subpop <- meta_group_truth$logs$subpop_detected
+          is_uncertain <- if (rv$data_type == "simulated") {
+            FALSE
+          } else {
+            meta_group_truth$mods$subpop_detected[[2, 2]] < 2
+          }
           
-          txt_subpop_cont <- if (is_subpop == is_subpop_detected) {
-            "With the current parameters, sub-populations were indeed"
+          txt_subpop <- if (is_uncertain) {
+            span(
+              "There was insufficient evidence in the",
+              rv$data_type, "dataset to detect sub-populations.")
+          } else if (is_subpop) {
+            span("We expected to detect a sub-population",
+                 "through meta-analyses.")
+          } else {
+            span("We expected no sub-populations to be detected",
+                 "through meta-analyses.")
+          }
+          
+          txt_subpop_cont <- if (is_uncertain) {
+            "With the current parameters, sub-populations were"
+          } else if (is_subpop == is_subpop_detected) {
+            paste(
+              "With the current parameters,",
+              "sub-populations were indeed")
           } else {
             "However, sub-populations were"
           }
           
-          if (rv$data_type == "simulated") {
-            is_uncertain <- FALSE
+          col_subpop <- if (is_subpop == is_subpop_detected) {
+            "cl-sea-d"
           } else {
-            is_uncertain <- meta_group_truth$
-              mods$subpop_detected[[2,2]] < 2
+            "cl-dgr"
           }
           
-          if (is_uncertain) {
-            txt_subpop <- span(
-              "There was insufficient evidence in the", rv$data_type,
-              "dataset to detect sub-populations.")
-            txt_subpop_cont <- 
-              "With the current parameters, sub-populations were"
-          } else if (is_subpop) {
-            txt_subpop <- span(
-              "We expected to detect a sub-population",
-              "through meta-analyses.")
+          det_label <- if (is_subpop_detected) {
+            "detected"
           } else {
-            txt_subpop <- span(
-              "We expected no sub-populations to be detected",
-              "through meta-analyses.")
+            "not detected"
           }
           
-          col_subpop <- dplyr::case_when(
-            is_subpop == is_subpop_detected ~ "cl-sea-d",
-            is_uncertain ~ "cl-dgr",
-            TRUE ~ "cl-dgr")
-          
-          if (rv$data_type == "simulated") {
-            txt_subpop_detected <- span(
-              txt_subpop_cont, wrap_none(span(
-                if (is_subpop_detected) "detected" else "not detected",
-                class = col_subpop), "."))
+          txt_subpop_detected <- if (rv$data_type == "simulated") {
+            span(txt_subpop_cont,
+                 wrap_none(span(det_label, class = col_subpop), "."))
           } else {
-            txt_subpop_detected <- span(
-              txt_subpop_cont, span(
-                if (is_subpop_detected) "detected" else "not detected",
-                class = col_subpop),
-              ifelse(is_uncertain,
-                     "(though with \u0394AICc \uFF1C 2).",
-                     "(\u0394AICc \uFF1E 2)."))
+            span(txt_subpop_cont,
+                 span(det_label, class = col_subpop),
+                 ifelse(is_uncertain,
+                        "(though with \u0394AICc \uFF1C 2).",
+                        "(\u0394AICc \uFF1E 2)."))
           }
           
           expected_ratio <- .get_ratios(meta_group_truth)
           observed_ratio <- .get_ratios(meta_group)
-          
           ratio <- paste0(round(observed_ratio$est, 2), ":1")
+          
           status_ratio <- list(
-            "truth" = dplyr::between(observed_ratio$est,
-                                     expected_ratio$lci, 
-                                     expected_ratio$uci),
-            "one_expected" = expected_ratio$lci <= 1 &
-              expected_ratio$uci >= 1,
-            "one_observed" = observed_ratio$lci <= 1 &
-              observed_ratio$uci >= 1)
+            truth =
+              dplyr::between(
+                observed_ratio$est,
+                expected_ratio$lci,
+                expected_ratio$uci),
+            one_expected =
+              expected_ratio$lci <= 1 & expected_ratio$uci >= 1,
+            one_observed =
+              observed_ratio$lci <= 1 & observed_ratio$uci >= 1)
           
           txt_ratio <- span(
             "The", txt_target[[target]], "ratio", txt_ratio_order,
             ifelse(
               status_ratio$one_observed,
-              paste0("overlapped with one (i.e., ",
-                     "no difference between groups)."),
-              paste0("did not overlap with one (ratio point estimate of ",
-                     wrap_none(ratio, ")."))))
+              paste(
+                "overlapped with one",
+                "(t.e., no difference between groups)."),
+              paste0(
+                "did not overlap with one ",
+                "(ratio point estimate of ",
+                wrap_none(ratio, ")."))))
           
-          sufficient_simulations <- status_ratio$truth && 
+          sufficient_simulations <-
+            status_ratio$truth &&
             (status_ratio$one_expected == status_ratio$one_observed) &&
-            !is.na(out_cri[[target]][["lci"]]) && 
+            !is.na(out_cri[[target]][["lci"]]) &&
             !is.na(out_cri[[target]][["uci"]])
+          
+          suf_col <- if (sufficient_simulations) pal$sea else pal$dgr
+          suf_txt <- ifelse(sufficient_simulations,
+                            "sufficient", "insufficient")
           
           txt_simulations <- span(
             style = paste(css_mono, css_bold),
-            
-            if (sufficient_simulations) {
-              tagList("The number of individuals appears sufficient", 
-                      "to obtain valid", wrap_none(
-                        txt_target[[target]], 
-                        color = pal$sea, " ratios."))
-            } else {
-              tagList("The number of individuals appears insufficient", 
-                      "to obtain valid", wrap_none(
-                        txt_target[[target]],
-                        color = pal$dgr, " ratios."))
-            }
-          )
+            "The number of individuals appears", suf_txt,
+            "to obtain valid",
+            wrap_none(txt_target[[target]], color = suf_col, " ratios."))
           
-          txt_meta_groups <- p(txt_subpop,
-                               txt_subpop_detected,
-                               txt_ratio, txt_simulations)
+          txt_meta_groups <- p(
+            txt_subpop, txt_subpop_detected,
+            txt_ratio, txt_simulations)
+        }
+        
+        txt_opener <- switch(
+          rv$which_m,
+          set_m = paste("You specified", n_tags, "tags"),
+          get_m = paste(
+            "You specified a maximum of", n_tags, "tags"),
+          get_all = paste(
+            "You specified", n_tags, "tags and",
+            paste0(rv$n_replicates, " replicates")))
+        
+        if (meta_dt$status == "Yes" && is_stable) {
           
-        } # end of if (rv$which_meta == "compare")
+          # if (!is.null(rv$n_replicates)) {
+          #   if (rv$n_replicates > 10)
+          #   out_diag$stabilized_at
+          # }
+          
+          if (!is.null(rv$n_replicates)) {
+            txt_meta_type <- "replicates"
+          } else {
+            txt_meta_type <- "resamples"
+          }
+          
+          txt_meta <- tagList(p(
+            paste0(txt_opener, "."),
+            "Under the current assumptions and an",
+            wrap_none(txt_threshold, end = ","),
+            "a stable estimate of mean", txt_target[[target]],
+            "may be achieved with", n_tags, "tags.",
+            "Running additional", txt_meta_type, "beyond this point",
+            "is unlikely to meaningfully change the estimate."))
+        } else {
+          txt_meta <- tagList(p(
+            wrap_none(txt_opener, ","),
+            "which is", span("insufficient", class = "cl-dgr"),
+            "to produce a stable estimate of mean",
+            txt_target[[target]],
+            "within the", wrap_none(txt_threshold, end = "."),
+            "The estimate is still shifting as", txt_meta_type,
+            "increase, meaning results cannot yet be",
+            "considered reliable."))
+        }
         
         txt_mean <- .format_mean_error(rv, set_target = target)
         
-        switch(
-          meta_dt$status,
-          
-          "Yes" = {
-            
-            if (is_stable) {
-              if (rv$which_m == "set_m") {
-                txt_meta <- tagList(p(
-                  "Under the current assumptions and an error",
-                  "threshold of", wrap_none(
-                    rv$error_threshold * 100, "%,"),
-                  "a stable estimate of the mean",
-                  txt_target[[target]], "may be achieved by",
-                  "deploying", n_tags, "tags."))
-              } else if (rv$which_m == "get_m") {
-                txt_meta <- tagList(p(
-                  "You specified a maximum of", n_tags, "tags.",
-                  "Under the current assumptions and an error",
-                  "threshold of", wrap_none(
-                    rv$error_threshold * 100, "%,"),
-                  "a stable estimate of the mean",
-                  txt_target[[target]], "may be achieved by",
-                  "deploying", n_tags, "tags."))
-              } else if (rv$which_m == "get_m" ||
-                         rv$which_m == "get_all") {
-                txt_meta <- tagList(p(
-                  "You specified a maximum of", n_tags, "tags",
-                  "and", rv$n_replicates, "replicates.",
-                  "Under the current assumptions and an error",
-                  "threshold of", wrap_none(
-                    rv$error_threshold * 100, "%,"),
-                  "a stable estimate of the mean",
-                  txt_target[[target]], "may be achieved by",
-                  "deploying", n_tags, "tags."))
-              }
-              
-            } else {
-              
-              if (rv$which_m == "get_all") {
-                txt_meta <- tagList(p(
-                  "You specified", n_tags, "tags",
-                  "and", rv$n_replicates, "replicates,",
-                  "which was", span("not", class = "cl-dgr"),
-                  "sufficient to achieve a stable",
-                  "estimate of the mean", txt_target[[target]],
-                  "within the threshold of", 
-                  wrap_none(rv$error_threshold * 100, "%.")))
-              } else {
-                if (rv$which_m == "set_m") {
-                  txt_m_type <- "You specified"
-                } else {
-                  txt_m_type <- "You specified a maximum of"
-                }
-                txt_meta <- tagList(p(
-                  txt_m_type, n_tags, "tags,",
-                  "which was", span("not", class = "cl-dgr"),
-                  "sufficient to achieve a stable",
-                  "estimate of the mean", txt_target[[target]],
-                  "within the threshold of", 
-                  wrap_none(rv$error_threshold * 100, "%.")))
-              }
-            }
-          },
-          
-          "Near" = {
-            
-            if (rv$which_m == "get_all") {
-              txt_meta <- tagList(p(
-                "You specified", n_tags, "tags",
-                "and", rv$n_replicates, "replicates,",
-                "which was", span("not", class = "cl-dgr"),
-                "sufficient to achieve a stable",
-                "estimate of the mean", txt_target[[target]],
-                "within the threshold of", 
-                wrap_none(rv$error_threshold * 100, "%.")))
-            } else {
-              if (rv$which_m == "set_m") {
-                txt_m_type <- "You specified"
-              } else {
-                txt_m_type <- "You specified a maximum of"
-              }
-              txt_meta <- tagList(p(
-                txt_m_type, n_tags, "tags,",
-                "which was", span("not", class = "cl-dgr"),
-                "sufficient to achieve a stable",
-                "estimate of the mean", txt_target[[target]],
-                "within the threshold of", 
-                wrap_none(rv$error_threshold * 100, "%.")))
-            }
-          },
-          
-          "No" = {
-            
-            if (rv$which_m == "get_all") {
-              txt_meta <- tagList(p(
-                "You specified", n_tags, "tags",
-                "and", rv$n_replicates, "replicates,",
-                "which was", span("not", class = "cl-dgr"),
-                "sufficient to achieve a stable",
-                "estimate of the mean", txt_target[[target]],
-                "within the threshold of", 
-                wrap_none(rv$error_threshold * 100, "%.")))
-            } else {
-              if (rv$which_m == "set_m") {
-                txt_m_type <- "You specified"
-              } else {
-                txt_m_type <- "You specified a maximum of"
-              }
-              txt_meta <- tagList(p(
-                txt_m_type, n_tags, "tags,",
-                "which was", span("not", class = "cl-dgr"),
-                "sufficient to achieve a stable",
-                "estimate of the mean", txt_target[[target]],
-                "within the threshold of", 
-                wrap_none(rv$error_threshold * 100, "%.")))
-            }
-           
-          })
-        
-        # if (is.na(out_coi[[target]][["lci"]]) &&
-        #     is.na(out_coi[[target]][["uci"]])) {
-        #   txt_uncertainty <- span(
-        #     "Please increase the",
-        #     span("maximum number of tags",
-        #          style = css_bold), "to confirm.")
-        # } else {
-        #   txt_uncertainty <- ifelse(
-        #     out_coi[[target]][["uci"]] < .3 && 
-        #       out_coi[[target]][["lci"]] > -.3,
-        #     "with low uncertainty.",
-        #     "with high uncertainty.")
-        # }
-        
-        switch(
-          meta_dt$status,
-          "Yes" = {
-            txt_meta_cont <- p(
-              style = paste(css_mono, css_bold),
-              txt_mean,
-              "Current study design is",
-              wrap_none("sufficient", color = pal$sea),
-              "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], "."),
-              if (length(rv$which_question) == 1)
-                txt_stable else NULL) # txt_uncertainty
-          },
-          "Near" = {
-            txt_meta_cont <- p(
-              style = paste(css_mono, css_bold),
-              txt_mean,
-              "Current study design may be",
-              wrap_none("insufficient", color = pal$dgr),
-              "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], "."),
-              if (length(rv$which_question) == 1)
-                txt_stable else NULL) # txt_uncertainty
-          },
-          "No" = {
-            txt_meta_cont <- p(
-              style = paste(css_mono, css_bold),
-              txt_mean,
-              "Current study design is",
-              wrap_none("insufficient", color = pal$dgr),
-              "to accurately estimate mean", 
-              wrap_none(txt_target[[target]], "."),
-              if (length(rv$which_question) == 1)
-                txt_stable else NULL) # txt_uncertainty
-          })
-        
-        if (length(out_cri) > 0) {
-          if ((!is.na(out_cri[[target]][["lci"]]) &&
-              !is.na(out_cri[[target]][["uci"]])) &&
-              rv$which_m != "get_all") {
-            
-            txt_meta_cont <- tagList(
-              txt_meta_cont,
-              if (length(rv$which_question) == 1)
-                span(
-                  style = paste("font-weight: 800;",
-                                "font-family: var(--monosans);"),
-                  "Run more simulations in the corresponding",
-                  shiny::icon("compass-drafting", class = "cl-sea"),
-                  span("Analyses", class = "cl-sea"),
-                  "tab to confirm.")
-              else NULL
-            )
-          }
-        }
-        
-        index <- which(out_targets == target)
-        
-        if (index == 1) {
-          out_meta <- tagList(
-            span(txt_title[[target]],
-                 style = css_title),
-            br(),
-            p(txt_meta,
-              txt_meta_cont,
-              txt_meta_groups))
-          
+        if (length(rv$which_question) == 1) {
+          show_stable <- txt_stable
         } else {
-          out_meta <- tagList(
-            out_meta,
-            br(),
-            tagList(
-              span(txt_title[[target]],
-                   style = css_title),
-              br(),
-              p(
-                txt_meta,
-                txt_meta_cont,
-                txt_meta_groups)))
+          show_stable <- NULL
         }
         
-      } # end of [target] loop
+        txt_bias_direction <- if (meta_dt$err < 0) {
+          "positive"
+        } else if (meta_dt$err > 0) {
+          "negative"
+        } else {
+          ""
+        }
+        
+        txt_meta_cont <- switch(
+          meta_dt$status,
+          "Yes" = p(
+            style = css_bold_mono,
+            txt_mean,
+            "Current study design is",
+            wrap_none("sufficient", color = pal$sea),
+            "to accurately estimate mean",
+            wrap_none(txt_target[[target]], "."),
+            show_stable),
+          "Near" = p(
+            style = css_bold_mono,
+            txt_mean,
+            "The current sample may be",
+            wrap_none("insufficient", color = pal$dgr),
+            "to accurately estimate mean",
+            wrap_none(txt_target[[target]], "."),
+            "The estimate is close to the acceptable error",
+            "threshold \u2014 consider increasing the number",
+            "of tagged individuals to reduce bias.",
+            show_stable),
+          "No" = p(
+            style = css_bold_mono,
+            txt_mean,
+            "Current study design is",
+            wrap_none("insufficient", color = pal$dgr),
+            "to accurately estimate", 
+            wrap_none(txt_target[[target]], "."),
+            "Increase the number of tags to obtain a more",
+            "reliable estimate of the population mean.",
+            show_stable))
+        
+        cri_available <-
+          length(out_cri) > 0 &&
+          !is.na(out_cri[[target]][["lci"]]) &&
+          !is.na(out_cri[[target]][["uci"]]) &&
+          rv$which_m != "get_all"
+        
+        if (cri_available && length(rv$which_question) == 1) {
+          txt_meta_cont <- tagList(txt_meta_cont,
+                                   br(), txt_meta_extra)
+        }
+        
+        target_block <- tagList(
+          span(txt_title[[target]], style = css_title),
+          br(),
+          p(txt_meta, txt_meta_cont, txt_meta_groups))
+        
+        if (t == 1) {
+          out_meta <- target_block
+        } else {
+          out_meta <- tagList(out_meta, br(), target_block)
+        }
+        
+      } # end of [t] loop
       
       if (rv$which_m != "get_all" &&
-          length(rv$which_question) > 1) {
-        txt_stable <- tagList(
-          txt_stable, span(
-            style = paste("font-weight: 800;",
-                          "font-family: var(--monosans);"),
-            "Run more simulations in the corresponding",
-            shiny::icon("compass-drafting", class = "cl-sea"),
-            span("Analyses", class = "cl-sea"), "tab to confirm."))
-      } else { 
-        txt_stable <- NULL
+        length(rv$which_question) > 1) {
+        txt_stable_footer <- tagList(txt_stable,
+                                     br(), txt_meta_extra)
       }
       
       rv$report$meta <- tagList(
         out_meta,
-        p(style = paste("font-weight: 800;",
-                        "font-family: var(--monosans);"),
-          txt_stable,
+        p(style = "font-weight: 800; font-family: var(--monosans);",
+          txt_stable_footer,
           txt_meta_link))
       
     }) # end of observe
@@ -4084,23 +3973,30 @@ mod_tab_report_server <- function(id, rv) {
     ## Final report table (combining previous results): -------------------
     
     build_tbl_report <- reactive({
-      n_sims <- length(rv$simList)
       
+      n_sims <- length(rv$simList)
       dt_dv <- rv$dev$tbl
-      dt_dv <- dt_dv %>% dplyr::slice_tail(n = n_sims)
+      
+      if (is.null(rv$n_replicates)) {
+        dt_dv <- dt_dv %>% dplyr::slice_tail(n = n_sims)
+      }
       
       if ("Home range" %in% rv$which_question) {
         req(rv$hr$tbl)
         dt_hr <- rv$hr$tbl
-        dt_hr <- dplyr::filter(dt_hr, .data$data == "Initial") 
-        dt_hr <- dplyr::slice_tail(dt_hr, n = n_sims)
+        dt_hr <- dplyr::filter(dt_hr, .data$data == "Initial")
+        if (is.null(rv$n_replicates)) {
+          dt_hr <- dplyr::slice_tail(dt_hr, n = n_sims)
+        }
       }
       
       if ("Speed & distance" %in% rv$which_question) {
         req(rv$sd$tbl)
         dt_sd <- rv$sd$tbl
-        dt_sd <- dplyr::filter(dt_sd, .data$data == "Initial") 
-        dt_sd <- dplyr::slice_tail(dt_sd, n = n_sims)
+        dt_sd <- dplyr::filter(dt_sd, .data$data == "Initial")
+        if (is.null(rv$n_replicates)) {
+          dt_sd <- dplyr::slice_tail(dt_sd, n = n_sims)
+        }
       }
       
       dat <- data.frame(
@@ -4115,29 +4011,35 @@ mod_tab_report_server <- function(id, rv) {
         N1 = numeric(0),
         N2 = numeric(0))
       
-      tmpdat <- suppressMessages(dplyr::full_join(dat, dt_dv))
+      out <- suppressMessages(dplyr::full_join(dat, dt_dv))
       
       if ("Home range" %in% rv$which_question) {
         tmphr <- dt_hr %>% dplyr::select(-c(.data$device))
-        tmpdat <- suppressMessages(
-          tmpdat %>%
+        out <- suppressMessages(
+          out %>%
             dplyr::group_by(.data$seed) %>% 
             dplyr::full_join(dt_hr))
       }
       
       if ("Speed & distance" %in% rv$which_question) {
-        tmpdat <- suppressMessages(
-          tmpdat %>%
+        out <- suppressMessages(
+          out %>%
             dplyr::full_join(dt_sd))
       }
       
-      tmpdat <- tmpdat %>%
+      out <- out %>%
         dplyr::distinct() %>% 
         dplyr::group_by(.data$seed) %>%
         dplyr::summarize(dplyr::across(
           dplyr::everything(), 
           ~ifelse(all(is.na(.)), NA, .[!is.na(.)][1])))
-      return(tmpdat)
+      
+      if (!is.null(rv$n_replicates)) {
+        out$replicate <- rep(1:rv$n_replicates,
+                                each = nrow(out) / rv$n_replicates)
+      }
+      
+      return(out)
       
     }) # end of reactive
     
@@ -4160,7 +4062,6 @@ mod_tab_report_server <- function(id, rv) {
       
       rv$report$tbl <- dplyr::distinct(dat)
       rv$is_report <- TRUE
-      set.seed(NULL)
       
     }) # end of observe
     
@@ -4173,217 +4074,133 @@ mod_tab_report_server <- function(id, rv) {
       if (length(rv$which_question) == 2)
         req(rv$hr_completed, rv$sd_completed)
       
-      choices <- choices_subset <- c(
-        "group",
-        "taup",
-        "tauv",
-        "sigma",
-        "dur",
-        "dti",
-        "n",
-        "N1",
-        "N2",
-        "area",
-        "area_err",
-        "area_err_min",
-        "area_err_max",
-        "ctsd",
-        "ctsd_err",
-        "ctsd_err_min",
-        "ctsd_err_max",
-        "dist",
-        "dist_err")
+      # Column metadata:
+      # i.e. each entry: list(label, min_width, bold, format)
+      col_metadata <- list(
+        replicate = list("Replicate", 80, FALSE, NULL),
+        group = list("Group", 80, FALSE, NULL),
+        taup = list("\u03C4\u209A", 100, TRUE, NULL),
+        tauv = list("\u03C4\u1D65", 100, TRUE, NULL),
+        sigma = list("\u03C3\u209A", 100, FALSE, NULL),
+        dur = list("Duration", 80, TRUE, NULL),
+        dti = list("Interval", 80, TRUE, NULL),
+        n = list("n", 50, FALSE, "num_dig0"),
+        N1 = list("N (area)", 80, FALSE, "num_dig1"),
+        N2 = list("N (speed)", 80, FALSE, "num_dig1"),
+        area = list("Area", 100, FALSE, NULL),
+        area_err = list("Error", 80, FALSE, "pct_dig1"),
+        area_err_min = list("95% LCI", 80, FALSE, "pct_dig1"),
+        area_err_max = list("95% UCI", 80, FALSE, "pct_dig1"),
+        ctsd = list("Speed", 100, FALSE, NULL),
+        ctsd_err = list("Error", 80, FALSE, "pct_dig1"),
+        ctsd_err_min = list("95% LCI", 80, FALSE, "pct_dig1"),
+        ctsd_err_max = list("95% UCI", 80, FALSE, "pct_dig1"),
+        dist = list("Distance", 100, FALSE, NULL),
+        dist_err = list("Error", 80, FALSE, "pct_dig1"))
       
-      if (length(rv$which_question) == 1) {
-        if (rv$which_question == "Home range")
-          choices_subset <- choices[c(1:8, 10:13)]
+      format_map <- list(
+        num_dig0 = reactable::colFormat(
+          separators = TRUE, locale = "en-US", digits = 0),
+        num_dig1 = reactable::colFormat(
+          separators = TRUE, locale = "en-US", digits = 1),
+        pct_dig1 = reactable::colFormat(
+          separators = TRUE, locale = "en-US",
+          percent = TRUE, digits = 1))
+      
+      .make_reactable_col <- function(id) {
         
-        if (rv$which_question == "Speed & distance")
-          choices_subset <- choices[c(1:7, 9, 14:19)]
+        m <- col_metadata[[id]]
+        label <- m[[1]]
+        width <- m[[2]]
+        bold <- m[[3]]
+        fmt <- m[[4]]
+        
+        style_fn <- if (bold) {
+          list(fontWeight = "bold")
+        } else if (!is.null(fmt) && startsWith(fmt, "pct")) {
+          format_perc
+        } else if (!is.null(fmt) && startsWith(fmt, "num")) {
+          format_num
+        } else {
+          NULL
+        }
+        
+        return(reactable::colDef(
+          name = label,
+          minWidth = width,
+          style = style_fn,
+          format = if (!is.null(fmt)) format_map[[fmt]] else NULL))
       }
       
-      nms <- data.frame(
-        group = "Group",
-        taup = "\u03C4\u209A",
-        tauv = "\u03C4\u1D65",
-        sigma = "\u03C3\u209A",
-        dur = "Duration",
-        dti = "Interval",
-        n = "n",
-        N1 = "N (area)",
-        N2 = "N (speed)",
-        area = "Area",
-        area_err = "Error",
-        area_err_min = "95% LCI",
-        area_err_max = "95% UCI",
-        ctsd = "Speed",
-        ctsd_err = "Error",
-        ctsd_err_min = "95% LCI",
-        ctsd_err_max = "95% UCI",
-        dist = "Distance",
-        dist_err = "Error")
+      has_reps <- !is.null(rv$n_replicates)
       
-      dat <- dplyr::select(rv$report$tbl, 
+      base_columns <- c(
+        if (has_reps) "replicate",
+        "group", "taup", "tauv", "sigma",
+        "dur", "dti", "n",
+        "N1", "N2",
+        "area", "area_err", "area_err_min", "area_err_max",
+        "ctsd", "ctsd_err", "ctsd_err_min", "ctsd_err_max",
+        "dist", "dist_err")
+      
+      offset <- if (has_reps) 1L else 0L
+      
+      choices_subset <- switch(
+        paste(sort(rv$which_question), collapse = "+"),
+        "Home range" = base_columns[c(
+          seq_len(8L + offset),
+          (10L + offset):(13L + offset))],
+        "Speed & distance" = base_columns[c(
+          seq_len(7L + offset), 
+          9L + offset,
+          (14L + offset):(19L + offset))],
+        base_columns)
+      
+      out <- dplyr::select(rv$report$tbl,
                            -c(.data$device, .data$seed))
+      
       if (!rv$grouped) {
-        dat <- dplyr::select(dat, -.data$group)
-        choices_subset <- choices_subset[-1]
+        out <- dplyr::select(out, -.data$group)
+        choices_subset <- setdiff(choices_subset, "group")
       }
       
-      if (!is.null(choices_subset)) {
-        dat <- dplyr::select(dat, choices_subset)
+      out <- dplyr::select(out, dplyr::all_of(choices_subset))
+      
+      if (has_reps) out <- dplyr::select(
+        out, .data$replicate, dplyr::everything())
+      
+      grp_hr <- reactable::colGroup(
+        name = "Home range",
+        columns = c("area", "area_err", "area_err_min", "area_err_max"))
+      grp_sd <- reactable::colGroup(
+        name = "Speed",
+        columns = c("ctsd", "ctsd_err", "ctsd_err_min", "ctsd_err_max"))
+      grp_dist <- reactable::colGroup(
+        name = "Distance",
+        columns = c("dist", "dist_err"))
+      
+      grp_sizes_hr <- reactable::colGroup(
+        name = "Sample sizes", columns = c("n", "N1"))
+      grp_sizes_sd <- reactable::colGroup(
+        name = "Sample sizes", columns = c("n", "N2"))
+      grp_sizes_both <- reactable::colGroup(
+        name = "Sample sizes", columns = c("n", "N1", "N2"))
+      
+      column_groups <- if (length(rv$which_question) == 2) {
+        list(grp_sizes_both, grp_hr, grp_sd, grp_dist)
+      } else if (rv$which_question == "Home range") {
+        list(grp_sizes_hr, grp_hr)
+      } else {
+        list(grp_sizes_sd, grp_sd, grp_dist)
       }
       
-      if ("Home range" %in% rv$which_question) {
-        nms_sizes <- reactable::colGroup(
-          name = "Sample sizes", 
-          columns = c("n", "N1"))
-        nms_hr <- reactable::colGroup(
-          name = "Home range",
-          columns = c("area",
-                      "area_err",
-                      "area_err_min",
-                      "area_err_max"))
-        
-        colgroups <- list(nms_sizes,
-                          nms_hr)
-      }
+      column_names <- Filter(
+        Negate(is.null),
+        stats::setNames(lapply(choices_subset, .make_reactable_col),
+                        choices_subset))
       
-      if ("Speed & distance" %in% rv$which_question) {
-        nms_sizes <- reactable::colGroup(
-          name = "Sample sizes", 
-          columns = c("n", "N2"))
-        nms_ctsd <- reactable::colGroup(
-          name = "Speed",
-          columns = c("ctsd",
-                      "ctsd_err",
-                      "ctsd_err_min",
-                      "ctsd_err_max"))
-        nms_dist <- reactable::colGroup(
-          name = "Distance",
-          columns = c("dist", "dist_err"))
-        
-        colgroups <- list(nms_sizes,
-                          nms_ctsd,
-                          nms_dist)
-      }
-      
-      if (length(rv$which_question) == 2) {
-        nms_sizes <- reactable::colGroup(
-          name = "Sample sizes", 
-          columns = c("n", "N1", "N2"))
-        
-        colgroups <- list(nms_sizes,
-                          nms_hr,
-                          nms_ctsd,
-                          nms_dist)
-      }
-      
-      namedcolumns <- list(
-        group = if ("group" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "group"]) },
-        taup = if ("taup" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 100, name = nms[1, "taup"],
-            style = list(fontWeight = "bold")) },
-        tauv = if ("tauv" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 100, name = nms[1, "tauv"],
-            style = list(fontWeight = "bold")) },
-        sigma = if ("sigma" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 100, name = nms[1, "sigma"]) },
-        dur = if ("dur" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "dur"],
-            style = list(fontWeight = "bold")) },
-        dti = if ("dti" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "dti"],
-            style = list(fontWeight = "bold")) },
-        n = if ("n" %in% choices_subset) {
-          reactable::colDef(
-            name = nms[1, "n"],
-            style = format_num,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US", digits = 0)) },
-        N1 = if ("N1" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "N1"],
-            style = format_num,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US", digits = 1)) },
-        N2 = if ("N2" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "N2"],
-            style = format_num,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US", digits = 1)) },
-        area = if ("area" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 100, name = nms[1, "area"]) },
-        area_err = if ("area_err" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "area_err"],
-            style = format_perc,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US",
-              percent = TRUE, digits = 1)) },
-        area_err_min = if ("area_err_min" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "area_err_min"],
-            style = format_perc,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US",
-              percent = TRUE, digits = 1)) },
-        area_err_max = if ("area_err_max" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "area_err_max"],
-            style = format_perc,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US",
-              percent = TRUE, digits = 1)) },
-        ctsd = if ("ctsd" %in% choices_subset) {
-          reactable::colDef(
-            minWidth = 100, name = nms[1, "ctsd"]) },
-        ctsd_err = if ("ctsd_err" %in% choices_subset) { 
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "ctsd_err"],
-            style = format_perc,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US",
-              percent = TRUE, digits = 1)) },
-        ctsd_err_min = if ("ctsd_err_min" %in% choices_subset) { 
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "ctsd_err_min"],
-            style = format_perc,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US",
-              percent = TRUE, digits = 1)) },
-        ctsd_err_max = if ("ctsd_err_max" %in% choices_subset) { 
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "ctsd_err_max"],
-            style = format_perc,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US",
-              percent = TRUE, digits = 1)) },
-        dist = if ("dist" %in% choices_subset) { 
-          reactable::colDef(
-            minWidth = 100, name = nms[1, "dist"]) },
-        dist_err = if ("dist_err" %in% choices_subset) { 
-          reactable::colDef(
-            minWidth = 80, name = nms[1, "dist_err"],
-            style = format_perc,
-            format = reactable::colFormat(
-              separators = TRUE, locale = "en-US",
-              percent = TRUE, digits = 1)) }
-      )
-      
-      namedcolumns[sapply(namedcolumns, is.null)] <- NULL
-      
-      dt <- reactable::reactable(
-        dat,
+      tbl <- reactable::reactable(
+        out,
         compact = TRUE,
         highlight = TRUE,
         striped = TRUE,
@@ -4394,18 +4211,17 @@ mod_tab_report_server <- function(id, rv) {
         pageSizeOptions = c(5, 10, 20),
         showPageInfo = FALSE,
         
-        defaultColDef =
-          reactable::colDef(
-            headerClass = "rtable_header",
-            align = "center",
-            minWidth = 50),
+        defaultColDef = reactable::colDef(
+          headerClass = "rtable_header",
+          align = "center",
+          minWidth = 50),
         
-        columns = namedcolumns,
-        columnGroups = colgroups
+        columns = column_names,
+        columnGroups = column_groups
         
       ) # end of reactable
       
-      return(dt)
+      return(tbl)
       
     }) # end of renderReactable // endTable
     
@@ -4527,13 +4343,15 @@ mod_tab_report_server <- function(id, rv) {
     
     observe({
       req(rv$active_tab == 'report',
-          rv$ctsdList, rv$simList, rv$simfitList)
+          rv$simList, rv$ctsdList)
+      
+      req(length(rv$ctsdList) >= 1)
       
       mod_blocks_server(
         id = "repBlock_Nspeed", 
         rv = rv, 
         data = rv$simList,
-        obj = rv$simfitList, # obj = rv$ctsdList,
+        obj = rv$ctsdList,
         type = "N", name = "speed")
       
     }) # end of observe

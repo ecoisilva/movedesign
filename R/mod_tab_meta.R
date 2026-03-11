@@ -853,24 +853,47 @@ mod_tab_meta_server <- function(id, rv) {
               icon = icon("circle-question"),
               class = "btn-warning"),
             br(),
-            shiny::actionButton(
-              inputId = ns("run_meta_replicate"),
-              label = span("Replicate"),
-              icon =  icon("wand-sparkles"),
-              width = "100%",
-              class = "btn-sims"),
+            
+            if (length(rv$simList) <= 10) {
+              shiny::actionButton(
+                inputId = ns("run_meta_replicate"),
+                label = span("Replicate"),
+                icon =  icon("wand-sparkles"),
+                width = "100%",
+                class = "btn-sims")
+            } else {
+              shiny::actionButton(
+                inputId = ns("run_meta_resample"),
+                label = span("Resample"),
+                icon =  icon("wand-sparkles"),
+                width = "100%",
+                class = "btn-sims")
+            },
             br(),
-            shinyWidgets::autonumericInput(
-              inputId = ns("n_replicates"),
-              label = NULL,
-              currencySymbol = " replicate(s)",
-              currencySymbolPlacement = "s",
-              decimalPlaces = 0,
-              minimumValue = 5,
-              maximumValue = 1000,
-              value = 5,
-              wheelStep = 1)
-          )))
+            
+            if (length(rv$simList) <= 10) {
+              shinyWidgets::autonumericInput(
+                inputId = ns("n_replicates"),
+                label = NULL,
+                currencySymbol = " replicate(s)",
+                currencySymbolPlacement = "s",
+                decimalPlaces = 0,
+                minimumValue = 5,
+                maximumValue = 1000,
+                value = 5,
+                wheelStep = 1)
+            } else {
+              shinyWidgets::autonumericInput(
+                inputId = ns("n_resamples"),
+                label = NULL,
+                currencySymbol = " resamples(s)",
+                currencySymbolPlacement = "s",
+                decimalPlaces = 0,
+                minimumValue = 1,
+                maximumValue = 1000,
+                value = 5,
+                wheelStep = 5)
+            })))
       }
       
     }) # end of renderUI, "metaUI_summary_footer"
