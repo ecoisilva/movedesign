@@ -294,11 +294,6 @@ summary.movedesign_input <- function(object, ...) {
     
     if (object$which_m == "set_m") {
       
-      dur0 <- round(object$dur$value %#% object$dur$unit, 0)
-      dti0 <- round(object$dti$value %#% object$dti$unit, 0)
-      t0 <- seq(0, dur0, by = dti0)[-1]
-      
-      .line("Absolute sample size", length(t0))
       .line("Effective sample size (area)",
             round(mean(unlist(extract_dof(object$fitList, "area")),
                        na.rm = TRUE), 1))
@@ -344,6 +339,12 @@ summary.movedesign_input <- function(object, ...) {
         paste(object$dur$value, object$dur$unit))
   .line("Sampling interval requested",
         paste(object$dti$value, object$dti$unit))
+  
+  dur0 <- round(object$dur$value %#% object$dur$unit, 0)
+  dti0 <- round(object$dti$value %#% object$dti$unit, 0)
+  t0 <- seq(0, dur0, by = dti0)[-1]
+  
+  .line("Expected absolute sample size", length(t0))
   
   .line("Estimation target",
         paste(target_map[object$set_target], collapse = ", "))
