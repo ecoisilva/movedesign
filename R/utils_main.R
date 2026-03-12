@@ -437,18 +437,15 @@ print.movedesign_input <- function(x, ...) {
       .line("No. of individual used", length(x$data)))
     
     if (x$grouped) {
+      group_info <- paste0(
+        "\u2713 Yes\n",
+        "                       ", names(x$groups[[2]])[[1]], " = ",
+        paste0('"', x$groups[[1]][[1]], '"', collapse = ", "), "\n",
+        "                       ", names(x$groups[[2]])[[2]], " = ",
+        paste0('"', x$groups[[1]][[2]], '"', collapse = ", "), "\n")
       
-      lines <- c(
-        lines,
-        .line("Groups: ", paste0("\u2713 Yes"), "\n",
-              paste0("             ",
-                     names(x$groups[[2]])[[1]], " = ",
-                     paste0('"', x$groups[[1]][[1]], '"',
-                            collapse = ", "), "\n",
-                     "             ",
-                     names(x$groups[[2]])[[2]], " = ",
-                     paste0('"', x$groups[[1]][[2]], '"',
-                            collapse = ", "), "\n")))
+      lines <- c(lines,
+                 .line("Groups: ", group_info))
     }
     
     if (x$which_m == "set_m") {
