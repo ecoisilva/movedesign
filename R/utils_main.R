@@ -1752,11 +1752,33 @@ summary.movedesign_optimized <- function(object,
 
 
 #' Print method for `movedesign_optimized` objects
-#' 
-#' @param x An object of class `movedesign_optimized`
-#' @inheritParams summary.movedesign_optimized 
-#'     verbose m ci tol n_converge plot pal
-#' @param ... Unused
+#'
+#' @description
+#' Print a structured summary of a `movedesign_optimized` object produced
+#' by [md_optimize()]. This includes study design details, replication
+#' settings, estimation performance per target metric, and an optional
+#' convergence assessment.
+#'
+#' @param x An object of class `movedesign_optimized`.
+#' @param verbose Logical. If `TRUE`, run [md_check()] and print full
+#'   convergence diagnostics. Also displays a convergence plot if
+#'   `plot = TRUE`. Defaults to `FALSE`.
+#' @param m Numeric (optional). Restricts results to a specific population
+#'   sample size. Defaults to `NULL`, which uses the maximum sample size.
+#' @param ci Numeric. Confidence level for intervals (applied to narrow
+#'   confidence bars and wide prediction bands). Must be between `0` and `1`.
+#'   Default is `0.95`.
+#' @param tol Numeric. Tolerance threshold for absolute change in cumulative
+#'   mean to declare convergence. Default is `0.05`.
+#' @param n_converge Integer. Number of consecutive steps within tolerance
+#'   required to confirm convergence. Default is `9`.
+#' @param plot Logical. If `TRUE`, generates a convergence plot. Default is
+#'   `TRUE`.
+#' @param pal Character vector of colors for the convergence plot, e.g.
+#'   `c("#007d80", "#A12C3B")`. Default is `c("#007d80", "#A12C3B")`.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @method print movedesign_optimized
 #' @export
 print.movedesign_optimized <- function(x,
                                        verbose = TRUE,
