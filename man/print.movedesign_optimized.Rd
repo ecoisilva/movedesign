@@ -4,7 +4,17 @@
 \alias{print.movedesign_optimized}
 \title{Print method for \code{movedesign_optimized} objects}
 \usage{
-\method{print}{movedesign_optimized}(x, ...)
+\method{print}{movedesign_optimized}(
+  x,
+  verbose = TRUE,
+  m = NULL,
+  ci = 0.95,
+  tol = 0.05,
+  n_converge = 9,
+  plot = TRUE,
+  pal = c("#007d80", "#A12C3B"),
+  ...
+)
 }
 \arguments{
 \item{x}{An object of class \code{movedesign_optimized}}

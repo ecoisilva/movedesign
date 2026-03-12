@@ -8,7 +8,7 @@ md_check(
   obj,
   m = NULL,
   tol = 0.05,
-  n_converge = 10,
+  n_converge = 9,
   plot = TRUE,
   pal = c("#007d80", "#A12C3B")
 )
@@ -27,7 +27,7 @@ the cumulative mean to declare convergence. Defaults to
 \code{0.05}.}
 
 \item{n_converge}{Integer. Number of consecutive steps within
-tolerance required to confirm convergence. Defaults to \code{10}.}
+tolerance required to confirm convergence.}
 
 \item{plot}{Logical. If \code{TRUE} (default), generates a plot of
 stepwise changes in the cumulative mean, highlighting when

@@ -4,10 +4,40 @@
 \alias{print.movedesign_output}
 \title{Print method for \code{movedesign_output}}
 \usage{
-\method{print}{movedesign_output}(x, ...)
+\method{print}{movedesign_output}(
+  x,
+  verbose = FALSE,
+  m = NULL,
+  ci = 0.95,
+  tol = 0.05,
+  n_converge = 9,
+  plot = TRUE,
+  pal = c("#007d80", "#A12C3B"),
+  ...
+)
 }
 \arguments{
-\item{x}{An object of class \code{movedesign_output}}
+\item{x}{An object of class \code{movedesign_output}.}
+
+\item{verbose}{Logical. If \code{TRUE}, convergence diagnostics are evaluated
+using \code{\link[=md_check]{md_check()}} and included in the output.}
+
+\item{m}{Optional integer specifying the sample size used in convergence
+checks.}
+
+\item{ci}{Numeric value giving the confidence level used when summarizing
+estimator error. Default is \code{0.95}.}
+
+\item{tol}{Numeric tolerance used when assessing convergence. Default is
+\code{0.05}.}
+
+\item{n_converge}{Integer giving the number of convergence steps to
+evaluate.}
+
+\item{plot}{Logical indicating whether convergence diagnostics should
+produce plots when \code{verbose = TRUE}. Default is \code{TRUE}.}
+
+\item{pal}{Character vector specifying colors used in convergence plots.}
 
 \item{...}{Additional arguments}
 }
