@@ -1997,7 +1997,7 @@ md_plot_preview <- function(obj,
     max_draws <- max(unique(out$sample))
     if (grouped) out <- dplyr::filter(out, group != "All")
     
-    out_mean <- .summarize_error(out)
+    out_mean <- .summarize_error(out, error_threshold = error_threshold)
     label_ci <- sprintf("%g%%", unique(out_mean$ci) * 100)
     
     m_resampled <- out_mean$m[out_mean$n > 1L]
@@ -2971,7 +2971,7 @@ md_plot <- function(x,
 #'   the cumulative mean to declare convergence. Defaults to
 #'   `0.05`.
 #' @param n_converge Integer. Number of consecutive steps within
-#'   tolerance required to confirm convergence. Defaults to `10`.
+#'   tolerance required to confirm convergence.
 #' @param plot Logical. If `TRUE` (default), generates a plot of
 #'   stepwise changes in the cumulative mean, highlighting when
 #'   convergence is achieved.
@@ -3023,7 +3023,7 @@ md_plot <- function(x,
 md_check <- function(obj,
                      m = NULL,
                      tol = 0.05,
-                     n_converge = 10,
+                     n_converge = 9,
                      plot = TRUE,
                      pal = c("#007d80", "#A12C3B")) {
   
@@ -5371,7 +5371,8 @@ md_plot_replicates <- function(obj,
     set_shapes_manual <- c(16, 16)
   }
   
-  out_mean <- .summarize_error(out, conf_level = ci)
+  out_mean <- .summarize_error(out, conf_level = ci,
+                               error_threshold = error_threshold)
   
   set_target <- unique(out$type)
   max_m <- max(unique(out$m))
@@ -5860,7 +5861,7 @@ md_compare_preview <- function(x,
                    global_y_range[2],
                    min(out$error_uci, na.rm = TRUE))))
     } else {
-      out_mean <- .summarize_error(out)
+      out_mean <- .summarize_error(out, error_threshold = error_threshold)
       global_y_range <<- c(
         min(global_y_range[1], 
             ifelse(is.na(out_mean$pred_lci),
@@ -5881,6 +5882,7 @@ md_compare_preview <- function(x,
   })
   
   id <- 0
+  outList <- list()
   for (i in seq_along(processed_outs)) {
     id <- id + 1
     
@@ -5918,7 +5920,8 @@ md_compare_preview <- function(x,
       max_draws <- max(unique(out$sample))
       if (grouped) out <- dplyr::filter(out, group != "All")
       
-      out_mean <- .summarize_error(out)
+      out_mean <- .summarize_error(out, error_threshold = error_threshold)
+      outList[[i]] <- out_mean
       label_ci <- sprintf("%g%%", unique(out_mean$ci) * 100)
       
       only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
@@ -6063,6 +6066,7 @@ md_compare_preview <- function(x,
     } else {
       
       if (grouped) out <- dplyr::filter(out, group != "All")
+      outList[[i]] <- out
       
       only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
       if (only_one_m) { 
@@ -6227,14 +6231,20 @@ md_compare_preview <- function(x,
     "For more robust inferences, run additional replicates",
     "using `md_replicate()`.")
   
-  return(suppressWarnings(print(
+  suppressWarnings(print(
     patchwork::wrap_plots(
-        plots,
-        ncol = length(plots),
-        guides = "collect") +
-        patchwork::plot_annotation(
-          caption = caption,
-          theme = ggplot2::theme(legend.position = "bottom")))))
+      plots,
+      ncol = length(plots),
+      guides = "collect") +
+      patchwork::plot_annotation(
+        caption = caption,
+        theme = ggplot2::theme(legend.position = "bottom"))))
+  
+  if (is.null(n_resamples)) {
+    return(invisible(NULL))
+  } else {
+    return(invisible(outList))
+  }
   
 }
 
