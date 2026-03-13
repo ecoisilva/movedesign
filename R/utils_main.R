@@ -340,11 +340,13 @@ summary.movedesign_input <- function(object, ...) {
   .line("Sampling interval requested",
         paste(object$dti$value, object$dti$unit))
   
-  dur0 <- round(object$dur$value %#% object$dur$unit, 0)
-  dti0 <- round(object$dti$value %#% object$dti$unit, 0)
-  t0 <- seq(0, dur0, by = dti0)[-1]
-  
-  .line("Expected absolute sample size", length(t0))
+  if (!is.null(object$dur) && !is.null(object$dti)) {
+    dur0 <- round(object$dur$value %#% object$dur$unit, 0)
+    dti0 <- round(object$dti$value %#% object$dti$unit, 0)
+    t0 <- seq(0, dur0, by = dti0)[-1]
+    
+    .line("Expected absolute sample size", length(t0))
+  }
   
   .line("Estimation target",
         paste(target_map[object$set_target], collapse = ", "))
@@ -415,9 +417,11 @@ print.movedesign_input <- function(x, ...) {
   
   species <- x$get_species %||% "Unknown"
   
-  dur0 <- round(x$dur$value %#% x$dur$unit, 0)
-  dti0 <- round(x$dti$value %#% x$dti$unit, 0)
-  t0 <- seq(0, dur0, by = dti0)[-1]
+  if (!is.null(x$dur) && !is.null(x$dti)) {
+    dur0 <- round(x$dur$value %#% x$dur$unit, 0)
+    dti0 <- round(x$dti$value %#% x$dti$unit, 0)
+    t0 <- seq(0, dur0, by = dti0)[-1]
+  }
   
   sig <- fix_unit(
     x$sigma[["All"]]$value[2],
@@ -495,8 +499,9 @@ print.movedesign_input <- function(x, ...) {
           paste(x$dur$value, x$dur$unit)),
     .line("Sampling interval requested",
           paste(x$dti$value, x$dti$unit)),
-    .line("Expected absolute sample size", length(t0)),
-    
+    if (!is.null(x$dur) && !is.null(x$dti)) {
+      .line("Expected absolute sample size", length(t0))
+    } else NULL,
     .line("Estimation target",
           paste(target_map[x$set_target], collapse = ", ")),
     .line("Inference target",              meta_map),
