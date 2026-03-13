@@ -335,17 +335,27 @@ summary.movedesign_input <- function(object, ...) {
   .section("Study design parameters:")
   
   .line("No. of individuals requested", object$n_individuals)
-  .line("Sampling duration requested",
-        paste(object$dur$value, object$dur$unit))
-  .line("Sampling interval requested",
-        paste(object$dti$value, object$dti$unit))
-  
+
   if (!is.null(object$dur) && !is.null(object$dti)) {
+    
+    .line("Sampling duration requested",
+          paste(object$dur$value, object$dur$unit))
+    .line("Sampling interval requested",
+          paste(object$dti$value, object$dti$unit))
+    
     dur0 <- round(object$dur$value %#% object$dur$unit, 0)
     dti0 <- round(object$dti$value %#% object$dti$unit, 0)
     t0 <- seq(0, dur0, by = dti0)[-1]
     
     .line("Expected absolute sample size", length(t0))
+    
+  } else {
+    
+    message("     ",
+            "Optimizing both ",
+            crayon::yellow("sampling duration"), " and ",
+            crayon::yellow("interval"), ".\n")
+    
   }
   
   .line("Estimation target",
@@ -488,6 +498,21 @@ print.movedesign_input <- function(x, ...) {
                   fix_unit(x$tau_v[["All"]][2, ])$unit)))
   }
   
+  if (!is.null(x$dur) && !is.null(x$dti)) {
+    
+    sampling_parameters <- c(
+      .line("Sampling duration requested",
+            paste(x$dur$value, x$dur$unit)),
+      .line("Sampling interval requested",
+            paste(x$dti$value, x$dti$unit)))
+    
+  } else {
+    
+    sampling_parameters <- c(paste0(
+      "     ", "Optimizing both sampling duration and interval."),
+      "")
+  }
+  
   lines <- c(
     lines,
     .line("Location variance", paste(sig$value, sig$unit)),
@@ -495,10 +520,7 @@ print.movedesign_input <- function(x, ...) {
     "", "\u2500\u2500\u2500\u2500 Workflow requested:",
     .section("Study design parameters:"),
     .line("No. of individuals requested",  x$n_individuals),
-    .line("Sampling duration requested",
-          paste(x$dur$value, x$dur$unit)),
-    .line("Sampling interval requested",
-          paste(x$dti$value, x$dti$unit)),
+    sampling_parameters,
     if (!is.null(x$dur) && !is.null(x$dti)) {
       .line("Expected absolute sample size", length(t0))
     } else NULL,
@@ -1419,19 +1441,23 @@ summary.movedesign_check <- function(object,
                 paste(fail_reasons, collapse = "; "), ".")
       }
       
-      
-      txt_start <- ifelse(converged,
-                          "However, error",
-                          "Error")
-      
       if (within_threshold) {
+        
+        txt_start <- ifelse(converged,
+                            "Error",
+                            "However, error")
         message(.msg(
           paste0(
             "        \u2713 ", txt_start, 
             " within acceptable threshold ",
             "(\u2264 \u00B1", .err_to_txt(error_threshold),
             "%)."), "success"))
+        
       } else {
+        
+        txt_start <- ifelse(converged,
+                            "However, error",
+                            "Error")
         message(.msg(
           paste0(
             "        \u2717 ", txt_start, 
@@ -1635,11 +1661,22 @@ summary.movedesign_optimized <- function(object,
           crayon::bold(set_species),
           crayon::yellow(paste0(" [", set_source, "]")))
   
+  error_mean <- object$summary %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::slice_max(m) %>%
+    dplyr::ungroup()
+  
   for (target in set_target) {
     
     .section(paste0(.target_map(target), ":"))
     
-    if (object$sample_size_achieved) {
+    get_error <- error_mean %>%
+      dplyr::filter(type == target) %>%
+      .summarize_error(error_threshold = error_threshold) %>%
+      dplyr::pull(error)
+    
+    if (object$sample_size_achieved &&
+        abs(get_error) <= error_threshold) {
       
       .line("Minimum population sample size",
             .msg(object$minimum_population_sample_size, "success"))
@@ -1653,7 +1690,7 @@ summary.movedesign_optimized <- function(object,
         .msg("     \u2713 ", "success"),
         "Error within threshold of ",
         .msg(paste0("\u00B1", error_threshold * 100, "%"), "success"),
-        ". Minimum sample size achieved!"))
+        ". Parameters are sufficient!"))
       
     } else {
       
@@ -1883,7 +1920,7 @@ print.movedesign_optimized <- function(x,
         paste0(
           "     \u2713 Error within threshold of \u00B1",
           error_threshold * 100,
-          "%. Minimum sample size achieved!"))
+          "%. Parameters are sufficient!"))
       
     } else {
       
