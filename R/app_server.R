@@ -89,7 +89,8 @@ app_server <- function(input, output, session) {
     highlight_dti = "",
     var_fraction = .5,
     restored_rv = NULL,
-    restored = NULL
+    restored = NULL,
+    version = "0.3.3"
   )
   
   # DYNAMIC UI ELEMENTS ---------------------------------------------------
