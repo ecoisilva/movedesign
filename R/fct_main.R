@@ -4867,9 +4867,11 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   message(.msg(sprintf("  %s%s (total of %d sets)\n",
                        msg_seq, suffix, length(m_seq)), "success"))
   
+  
   start_meta_total <- Sys.time()
-  print(sprintf("Start time: %s",
-                format(start_meta_total, "%Y-%m-%d %H:%M:%S %Z")))
+  message("Execution started: ", 
+          crayon::cyan(crayon::bold(
+            format(start_meta_total, "%Y-%m-%d %H:%M:%S %Z"))))
   
   metaList <- list()
   for (i in seq_along(m_seq)) {
@@ -4903,7 +4905,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
                                 (elapsed_meta %% 3600) %/% 60,
                                 round(elapsed_meta %% 60))
     
-    message("Elapsed time: ",
+    message("  Elapsed time: ",
             .msg(crayon::bold(elapsed_meta_hms), "success"))
   }
   
@@ -5300,7 +5302,6 @@ md_optimize <- function(obj,
   message("      Total elapsed time: ",
           crayon::yellow(crayon::bold(elapsed_hms)))
   
-  
   return(out)
   
 }
@@ -5334,7 +5335,8 @@ md_optimize <- function(obj,
 #'
 #' Both panels share a common colour palette (within/outside the
 #' acceptable error threshold) and, when two groups are present,
-#' a common shape scale.
+#' a common shape scale. By default, the function plots only the
+#' second item listed above.
 #' 
 #' @param obj A movement design output object (returned by
 #'   either [`md_replicate()`] or [`md_optimize()`]).
