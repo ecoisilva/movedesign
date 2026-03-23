@@ -2530,9 +2530,7 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   pred_lci <- out$error - t_crit * out$sd_error * pred_scale
   pred_uci <- out$error + t_crit * out$sd_error * pred_scale
   
-  within_threshold <-
-    out$error >= -error_threshold &
-    out$error <=  error_threshold
+  within_threshold <- abs(out$error) <= error_threshold
   
   overlaps_with_threshold <-
     error_lci <=  error_threshold &
