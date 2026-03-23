@@ -1012,7 +1012,9 @@ md_run <- function(design,
   
   start_total <- Sys.time()
   
-  if (trace) message("Simulating data...")
+  if (trace) writeLines(paste0(
+    crayon::yellow("  \u2015\u2015\u2015\u2015\u2015\u2015"),
+    " Simulating ", crayon::yellow("data"), "..."))
   if (trace) start <- Sys.time()
   
   m <- as.integer(design$n_individuals)
@@ -1055,48 +1057,36 @@ md_run <- function(design,
   
   design$seedList <- nms
   names(design$simList) <- names(design$seedList) <- nms
-  if (trace) print(Sys.time() - start)
+  # if (trace) .msg_time(start, "        Run time: ")
   
-  if (trace) message("Fitting movement models...")
+  if (trace) writeLines(paste0(
+    crayon::yellow("  \u2015\u2015\u2015\u2015\u2015\u2015"),
+    " Fitting ", crayon::yellow("movement models"), "..."))
   if (trace) start <- Sys.time()
   design$simfitList <- fitting_models(
     design$simList, parallel = design$parallel)
   names(design$simfitList) <- names(design$simList)
-  if (trace) print(Sys.time() - start)
+  if (trace) .msg_time(start, "        Run time: ")
   gc()
   
   if ("hr" %in% design$set_target) {
-    if (trace) message("Estimating home range...")
-    start <- Sys.time()
+    
+    if (trace) writeLines(paste0(
+      crayon::yellow("  \u2015\u2015\u2015\u2015\u2015\u2015"),
+      " Estimating ", crayon::yellow("home range"), "..."))
+    if (trace) start <- Sys.time()
     design$akdeList <- estimate_hr(design)
-    if (trace) print(Sys.time() - start)
+    if (trace) .msg_time(start, "        Run time: ")
   }
   
   if ("ctsd" %in% design$set_target) {
-    if (trace) message("Estimating speed...")
-    start <- Sys.time()
+    if (trace) writeLines(paste0(
+      crayon::yellow("  \u2015\u2015\u2015\u2015\u2015\u2015"),
+      " Estimating ", crayon::yellow("speed"), "..."))
+    if (trace) start <- Sys.time()
     design$ctsdList <- estimate_speed(design)
-    if (trace) print(Sys.time() - start)
+    if (trace) .msg_time(start, "        Run time: ")
   }
-  
-  elapsed_sec <- as.numeric(difftime(
-    Sys.time(), start_total, units = "secs"))
-  
-  if (elapsed_sec < 60) {
-    value <- round(elapsed_sec, 1)
-    unit <- "second"
-  } else if (elapsed_sec < 3600) {
-    value <- round(elapsed_sec / 60, 1)
-    unit <- "minute"
-  } else {
-    value <- round(elapsed_sec / 3600, 2)
-    unit <- "hour"
-  }
-  
-  message("------------------- Elapsed time:")
-  message("Time difference of ", value, " ",
-          unit, ifelse(value == 1, "", "s"))
-  
   
   if ("ctsd" %in% design$set_target) {
     
@@ -1115,6 +1105,12 @@ md_run <- function(design,
         call. = FALSE)
     }
   }
+  
+  # message("\nExecution ended: ", 
+  #         crayon::yellow(crayon::bold(
+  #           format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"))))
+  
+  # .msg_time(start_total, " Elapsed time: ")
   
   return(movedesign_processed(list(
     data = design$data,
@@ -1671,18 +1667,20 @@ md_replicate <- function(obj,
   .worker <- function(i) {
     rep_id <- offset + i
     
-    if (trace) .header(sprintf("Replicate %s of %s",
-                               rep_id, offset + n_replicates), 2)
+    if (trace) writeLines(paste0(
+      crayon::yellow("  \u2015\u2015\u2015"),
+      " Replicate ", crayon::yellow(rep_id), " out of ",
+      crayon::yellow(offset + n_replicates)))
     
     out <- md_run(base_input, trace = trace)
-    set_m <- if (verbose) NULL else base_input$n_individuals
     
+    set_m <- if (verbose) NULL else base_input$n_individuals
     meta <- run_meta_resamples(out,
                                set_target = base_input$set_target,
                                subpop = base_input$grouped,
                                .m = set_m)
     
-    list(out = out, meta = meta)
+    return(list(out = out, meta = meta))
   }
   
   outList <- vector("list", n_replicates)
@@ -1690,9 +1688,9 @@ md_replicate <- function(obj,
   completed <- 0
   
   start_total <- Sys.time()
-  print(sprintf(
-    "Start time: %s", 
-    format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
+  message("Execution started: ", 
+          crayon::yellow(crayon::bold(
+            format(start_total, "%Y-%m-%d %H:%M:%S %Z"))))
   
   tryCatch({
     
@@ -1815,15 +1813,11 @@ md_replicate <- function(obj,
   if (!is.null(merged))
     merged$n_replicates <- offset + completed
   
-  print(
-    sprintf(
-      "End time: %s",
-      format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")))
+  message("\nExecution ended: ",
+          crayon::yellow(crayon::bold(
+            format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"))))
   
-  elapsed <- difftime(Sys.time(), start_total)
-  message("Total elapsed time: ",
-          paste(round(as.numeric(elapsed[[1]]), 1),
-                attr(elapsed, "units")))
+  .msg_time(start_total, " Elapsed time: ")
   
   out <- structure(
     list(input = base_input,
@@ -3932,102 +3926,61 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
 .md_plot_meta <- function(x,
                           error_threshold = NULL,
                           set_target = c("hr", "ctsd"),
-                          grouped = FALSE) {
+                          has_groups = FALSE) {
   
-  n <- type <- top_facet <- NULL
-  error_mean <- error_sd <- NULL
-  
+  ci <- 0.95
   pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
   
-  if (grouped) {
-    dt_plot <- x[x$group != "All", ]
+  if (has_groups) {
+    out <- x[x$group != "All", ]
     set_shapes <- c(21, 24)
     set_shapes_manual <- c(16, 17)
   } else {
-    dt_plot <- x[x$group == "All", ]
+    out <- x[x$group == "All", ]
     set_shapes <- c(21, 21)
     set_shapes_manual <- c(16, 16)
   }
   
   if (!is.null(error_threshold)) {
-  dt_plot <- dt_plot %>%
-    dplyr::mutate(
-      error_threshold = error_threshold,
-      overlaps = dplyr::between(
-        abs(.data$error), 0, error_threshold))
-  } else {
-    dt_plot <- dt_plot %>%
+    out <- out %>%
       dplyr::mutate(
-        error_threshold = NA,
-        overlaps = TRUE)
+        overlaps = factor(
+          abs(.data$error) <= error_threshold,
+          levels = c(TRUE, FALSE)),
+        highlight = FALSE)
+  } else {
+    out <- out %>%
+      dplyr::mutate(overlaps = TRUE)
   }
   
-  dt_plot_means <- dt_plot %>%
-    dplyr::mutate(type = factor(
-      .data$type, levels = c("hr", "ctsd"))) %>%
-    dplyr::select(
-      "type", "m", "group",
-      "error", "error_lci", "error_uci") %>% 
-    dplyr::distinct() %>%
-    dplyr::group_by(.data$type, .data$group, .data$m) %>% 
-    dplyr::summarize(
-      n = dplyr::n(),
-      error_sd = stats::sd(.data$error, na.rm = TRUE),
-      error_mean = mean(.data$error, na.rm = TRUE),
-      error_mean_lci = error_mean - stats::qt(
-        0.975, df = n - 1) * error_sd / sqrt(n),
-      error_mean_uci = error_mean + stats::qt(
-        0.975, df = n - 1) * error_sd / sqrt(n),
-      pred_lci = error_mean - stats::qt(
-        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
-      pred_uci = error_mean + stats::qt(
-        0.975, df = n - 1) * error_sd * sqrt(1 + 1 / n),
-      .groups = "drop")
+  out_mean <- .summarize_error(out, conf_level = ci,
+                               error_threshold = error_threshold)
   
   if (!is.null(error_threshold)) {
-    dt_plot_means <- dt_plot_means %>%
-      dplyr::mutate(
-        overlaps = dplyr::between(
-          abs(.data$error_mean), 0, error_threshold),
-        overlaps = factor(.data$overlaps,
-                          levels = c("TRUE", "FALSE")),
-        top_facet = .data$type == "hr") %>%
+    out_mean <- out_mean %>%
+      dplyr::mutate(top_facet = .data$type == "hr") %>%
       dplyr::ungroup()
   } else {
-    dt_plot_means <- dt_plot_means %>%
+    out_mean <- out_mean %>%
       dplyr::mutate(top_facet = .data$type == "hr",
                     overlaps = TRUE) %>%
       dplyr::ungroup()
   }
   
-  p <- dt_plot_means %>%
+  label_ci <- paste0(ci * 100, "%")
+  label_threshold <- sprintf("%s%%", error_threshold * 100)
+  labels_target <- c("hr" = "Home range area estimation",
+                     "ctsd" = "Speed \u0026 distance estimation")
+  
+  only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
+  if (only_one_m) out$m <- factor(out$m)
+  
+  m_resampled <- out_mean$m[out_mean$n > 1L]
+  
+  p <- out_mean %>%
     ggplot2::ggplot(
       ggplot2::aes(
-        x = if (grouped &&
-                length(unique(.data$m)) == 1) {
-          as.factor(.data$m) 
-        } else { 
-          .data$m 
-        },
-        y = .data$error_mean,
-        group = .data$group,
-        shape = .data$group,
-        fill = .data$overlaps)) +
-    
-    { if (length(set_target) > 1)
-      ggplot2::facet_grid(
-        cols = ggplot2::vars(type),
-        scales = "free",
-        labeller = ggplot2::labeller(
-          type = c(
-            "hr" = "Home range estimation", 
-            "ctsd" = "Speed \u0026 distance estimation"))) } +
-    
-    ggplot2::geom_jitter(
-      dt_plot,
-      mapping = ggplot2::aes(
-        x = if (grouped &&
-                length(unique(.data$m)) == 1) {
+        x = if (has_groups && length(unique(.data$m)) == 1) {
           as.factor(.data$m) 
         } else { 
           .data$m 
@@ -4035,56 +3988,83 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         y = .data$error,
         group = .data$group,
         shape = .data$group,
-        fill = .data$overlaps),
-      position = ggplot2::position_jitterdodge(dodge.width = 0.4),
-      size = 3, alpha = 0.5, color = "transparent") +
+        color = .data$overlaps)) +
     
-    ggplot2::geom_hline(
-      yintercept = 0,
-      linewidth = 0.3,
-      linetype = "solid") +
+    { !is.null(error_threshold)
+      ggplot2::geom_hline(
+        yintercept = 0,
+        linewidth = 0.3,
+        linetype = "solid") } +
+    { !is.null(error_threshold)
+      ggplot2::annotate(
+        "rect",
+        xmin = -Inf, xmax = Inf,
+        ymin = -error_threshold,
+        ymax = error_threshold,
+        alpha = 0.05)} +
+    { !is.null(error_threshold)
+      ggplot2::geom_hline(
+        yintercept = c(-error_threshold, error_threshold),
+        linetype = "dashed",
+        linewidth = 0.35, alpha = 0.8) } +
+    { !is.null(error_threshold)
+      ggplot2::annotate(
+        "text",
+        x = Inf, y = error_threshold,
+        label = paste0("+", label_threshold),
+        hjust = 1.08, vjust = -0.5,
+        size = 3.2) } +
+    { !is.null(error_threshold)
+      ggplot2::annotate(
+        "text",
+        x = Inf, y = -error_threshold,
+        label = paste0("\u2212", label_threshold),
+        hjust = 1.08, vjust = 1.5,
+        size = 3.2) } +
     
-    { if (!is.null(error_threshold))
-      ggplot2::geom_hline(
-        data = subset(dt_plot_means, top_facet),
-        ggplot2::aes(yintercept = error_threshold),
-        linewidth = 0.7,
-        linetype = "dotted") } +
-    { if (!is.null(error_threshold))
-      ggplot2::geom_hline(
-        data = subset(dt_plot_means, top_facet),
-        ggplot2::aes(yintercept = -error_threshold),
-        linewidth = 0.7,
-        linetype = "dotted") } +
-    { if (!is.null(error_threshold))
-      ggplot2::geom_hline(
-        data = subset(dt_plot_means, !top_facet),
-        ggplot2::aes(yintercept = error_threshold),
-        linewidth = 0.7,
-        linetype = "dotted") } +
-    { if (!is.null(error_threshold)) 
-      ggplot2::geom_hline(
-        data = subset(dt_plot_means, !top_facet),
-        ggplot2::aes(yintercept = -error_threshold),
-        linewidth = 0.7,
-        linetype = "dotted") } +
+    { if (!only_one_m)
+      ggplot2::geom_jitter(
+        data = dplyr::filter(out, .data$m %in% m_resampled),
+        mapping = ggplot2::aes(
+          .data$m,
+          y = .data$error,
+          group = .data$group,
+          shape = .data$group,
+          color = .data$overlaps,
+          fill = .data$overlaps),
+        position = ggplot2::position_jitterdodge(
+        dodge.width = 1.5),
+      size = 3, alpha = 0.25) } +
     
-    ggplot2::geom_linerange(
-      ggplot2::aes(ymin = .data$error_mean_lci,
-                   ymax = .data$error_mean_uci),
-      show.legend = TRUE,
-      position = ggplot2::position_dodge(width = 0.4),
-      color = "black", linewidth = 1) +
+    # Prediction intervals:
     ggplot2::geom_linerange(
       ggplot2::aes(ymin = .data$pred_lci,
                    ymax = .data$pred_uci),
-      show.legend = TRUE,
-      position = ggplot2::position_dodge(width = 0.4),
-      color = "black", linewidth = 0.4) +
+      position = ggplot2::position_dodge(width = 0.5),
+      color = "grey20",
+      linewidth = 3,
+      alpha = 0.18,
+      show.legend = FALSE) +
+    
+    # Confidence intervals:
+    ggplot2::geom_linerange(
+      ggplot2::aes(ymin = .data$error_lci,
+                   ymax = .data$error_uci),
+      position = ggplot2::position_dodge(width = 0.5),
+      linewidth = 1.1,
+      alpha = 0.55,
+      show.legend = FALSE) +
     
     ggplot2::geom_point(
-      position = ggplot2::position_dodge(width = 0.4),
-      stroke = 1.05, size = 5) +
+      position = ggplot2::position_dodge(width = 0.5),
+      size = 6,
+      show.legend = TRUE) +
+    
+    { if (length(set_target) > 1)
+      ggplot2::facet_wrap(
+        . ~ .data$type, scales = "free_y",
+        labeller = ggplot2::labeller(labels_target))
+    } +
     
     ggplot2::labs(
       x = "Population sample size",
@@ -4104,45 +4084,50 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       ggplot2::scale_fill_manual(values = pal[1])
     }} +
     
-    { if (!grouped) {
-      ggplot2::scale_shape_manual(
-        name = "Groups:",
-        values = set_shapes)
-    } else {
-      ggplot2::scale_shape_manual(
-        name = "Groups:",
-        values = set_shapes,
-        guide = ggplot2::guide_legend(
-          override.aes = list(shape = set_shapes_manual, size = 3)))
+    { if (length(unique(out$m)) == 2) {
+      ggplot2::scale_x_continuous(
+        breaks = unique(out$m))
+    } else if (!only_one_m) {
+      ggplot2::scale_x_continuous(
+        breaks = scales::breaks_pretty())
     }
     } +
     
-    { if (!grouped || length(unique(dt_plot$m)) > 1)
-      ggplot2::scale_x_continuous(
-        breaks = scales::breaks_pretty()) } +
     ggplot2::scale_y_continuous(
-      labels = scales::percent, breaks = scales::breaks_pretty()) +
+      labels = scales::percent,
+      breaks = scales::breaks_pretty(),
+      expand = ggplot2::expansion(mult = c(0.05, 0.10))) +
     
-    ggplot2::theme_classic() +
-    ggplot2::theme(
-      text = ggplot2::element_text(size = 13),
-      legend.position = "bottom",
-      strip.text = ggplot2::element_text(size = 16),
-      strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
-      strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
-      plot.margin = ggplot2::unit(c(1, 1, 1, 1), "cm"))
+    ggplot2::scale_color_manual(
+      values = c(pal[1], pal[2]), drop = FALSE) +
+    
+    { if (has_groups)
+      ggplot2::scale_shape_manual(
+        "Groups:", values = c(16, 17)) } +
+    
+    ggplot2::scale_alpha_continuous(
+        range = c(0.3, 0.3)) +
+    
+    { if (has_groups)
+      ggplot2::guides(
+        color = ggplot2::guide_legend(
+          override.aes = list(
+            shape = 22, size = 4,
+            fill = c(pal[1], pal[2])))) } +
+    
+    .theme_movedesign_report()
   
-  if (!grouped) {
-    p <- p + ggplot2::guides(shape = "none")
+  if (!has_groups) {
+    p <- p + ggplot2::guides(shape = "none", color = "none")
   }
   
   if (is.null(error_threshold)) {
-    p <- p + ggplot2::guides(fill = "none")
+    p <- p + ggplot2::guides(fill = "none", color = "none")
   }
   
   return(list(plot = p,
-              dt_plot = dt_plot,
-              dt_plot_means = dt_plot_means))
+              dt_plot = out,
+              dt_plot_means = out_mean))
   
 }
 
@@ -4194,15 +4179,33 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   }
   
   error_label <- paste0(round(error_threshold * 100, 0), "%")
+  
+  .get_ess <- function(target_error) {
+    
+    if (abs(target_error) >= 0.6791068) return(1)
+    target_error <- target_error * 0.5
+    if (abs(target_error) <= 0.0125) return(1000)
+    
+    target_error <- -abs(target_error)
+    a_hat <- -0.01084036
+    b_hat <- -0.66826640
+    c_hat <-  0.86579770
+    
+    N1 <- (b_hat / (target_error - a_hat))^(1 / c_hat)
+    
+    return(N1)
+  }
+  
+  N1 <- .get_ess(error_threshold)
+                    
   thresholdList <- list(
-    "0.01" = c(350, 10000), "0.05" = c(200, 5000),
+    "0.01" = c(350, 5000), "0.05" = c(200, 2000),
     "0.10" = c(80, 1000), "0.25" = c(30, 500),
-    "0.50" = c(10, 200), "default" = c(5, 100)
-  )
+    "0.50" = c(10, 200), "default" = c(5, 100))
   numeric_keys <- setdiff(names(thresholdList), "default")
   idx <- which(error_threshold <= as.numeric(numeric_keys))[1]
   threshold_key <- if (!is.na(idx)) numeric_keys[idx] else "default"
-  N1 <- thresholdList[[threshold_key]][1]
+  
   N2 <- thresholdList[[threshold_key]][2]
   
   .warn <- function(total_years, error_threshold_label) {
@@ -4259,14 +4262,16 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     return(invisible(NULL))
   }
   
-  .adjust_percent <- function(x, percent) x * (1 + percent / 100)
+  .adjust_percent <- function(x, percent) {
+    x * (1 + percent / 100)
+  }
   
   .configure_sampling <- function(obj,
                                   optimal_dur,
                                   optimal_dti,
                                   tauv = NULL,
                                   max_hr_obs = 2000,
-                                  max_ctsd_obs = 1100,
+                                  max_sd_obs = 1100,
                                   max_iter = 20) {
     
     set_target <- obj$set_target
@@ -4280,11 +4285,13 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         
         dti <- 1 %#% "day"
         dur <- optimal_dur
+        if (dur <= dti) dti <- 1 %#% "hour"
+        if (floor(dur / dti) < 5) dti <- 15 %#% "minutes"
         
         repeat {
           n_obs <- floor(dur / dti)
           if (n_obs <= max_hr_obs || count > max_iter) break
-          dti   <- dti * 2
+          dti <- dti * 2
           count <- count + 1
         }
         
@@ -4302,7 +4309,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         
         repeat {
           n_obs <- floor(dur / dti)
-          if (n_obs <= max_ctsd_obs || count > max_iter) break
+          if (n_obs <= max_sd_obs || count > max_iter) break
           dur <- dur / 2
           count <- count + 1
           if (dur < 2 %#% "days") break
@@ -4336,14 +4343,16 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   
   .worker <- function(r, m, obj, seeds = NULL, trace = FALSE) {
     
-    if (trace) .header(sprintf(
-      "Replicate %s of %s", r, n_replicates), 2)
-    if (trace) cat("\n")
+    if (trace) writeLines(paste0(
+      crayon::yellow("  \u2015\u2015\u2015\u2015\u2015\u2015"),
+      " Replicate ", crayon::yellow(r), " out of ",
+      crayon::yellow(n_replicates)))
     
     obj$n_individuals <- ifelse(obj$grouped, m * 2, m)
     
     if (is.null(.seeds)) {
-      out <- md_run(obj, trace = FALSE)
+      return(md_run(obj, trace = FALSE))
+      
     } else {
       
       if (has_groups) {
@@ -4355,10 +4364,8 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       }
       
       tmp <- seeds[idx_start:idx_end]
-      out <- md_run(obj, .seeds = tmp, trace = FALSE)
+      return(md_run(obj, .seeds = tmp, trace = FALSE))
     }
-    
-    return(out)
   }
   
   obj <- prep$obj
@@ -4374,6 +4381,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   .console_alert <- prep$.console_alert
   
   .seeds <- prep$.seeds
+  
   ncores <- prep$ncores
   plot <- prep$plot
   verbose <- prep$verbose
@@ -4399,7 +4407,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   tau_v <- obj$tau_v
   
   .max_m <- obj$n_individuals
-  .iter_step <- 2
+  if (.max_m <= 8) .iter_step <- 2 else .iter_step <- 4
   
   if (obj$add_ind_var) {
     taup <- tau_p[[1]][3, "value"] %#% tau_p[[1]][3, "unit"]
@@ -4447,80 +4455,24 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       round(tmp_N_speed, 1), "). Evaluate outputs with caution."))
   }
   
-  if ("hr" %in% set_target) {
-    N <- N1
-    N_adj <- N1
-  }
-  if ("ctsd" %in% set_target) {
-    N <- N2
-    N_adj <- N2
-  }
+  N1_adj <- N1
+  N2_adj <- N2
   
-  message("Optimizing parameters...")
-  
-  max_iter <- 5
-  iter_count <- 0
-  target_tol <- 0.35
-  err <- rel_diff <- Inf
+  message(crayon::yellow("Selecting"), " initial parameters...")
   
   if ("hr" %in% set_target) {
     
-    while (abs(rel_diff) > target_tol && iter_count < max_iter) {
-      
-      iter_count <- iter_count + 1
-      
-      if (iter_count > 1) {
-        error <- mean_N - N
-        direction <- ifelse(error > 0, -1, 1)
-        
-        rel_error <- error / N * 100
-        percent_adj <- min(40, max(10, abs(rel_error) * 0.5))
-        N_adj <- .adjust_percent(N_adj, percent = direction * percent_adj)
-      }
-      
-      optimal_dur <- round(taup * N_adj)
-      obj_updated <- .configure_sampling(obj = obj,
-                                         optimal_dur = optimal_dur,
-                                         optimal_dti = optimal_dti)
-      obj_updated$add_ind_var <- FALSE
-      
-      r_tmp <- 1:5
-      m_tmp <- 4
-      
-      if (has_groups) {
-        seeds_tmp <- sapply(seq_len(max(r_tmp) * m_tmp * 2),
-                            function(x) seedInit + x)
-      } else {
-        seeds_tmp <- sapply(seq_len(max(r_tmp) * m_tmp),
-                            function(x) seedInit + x)
-      }
-      
-      sysname <- Sys.info()[["sysname"]]
-      if (sysname != "Windows" && parallel) {
-        tmpList_updated <- suppressMessages(
-          parallel::mclapply(r_tmp, function(r) 
-            .worker(r, m_tmp, obj_updated, seeds_tmp, trace = FALSE),
-          mc.cores = ncores))
-      } else {
-        tmpList_updated <- suppressMessages(
-          lapply(r_tmp, function(r) 
-            .worker(r, m_tmp, obj_updated, seeds_tmp, trace = FALSE)))
-      }
-      
-      out_N <- unlist(
-        lapply(tmpList_updated, function(x)
-          extract_dof(x$akdeList, "area")))
-      mean_N <- mean(out_N, na.rm = TRUE)
-      rel_diff <- (mean_N - N) / N
-      
-    } # end of while
+    optimal_dur <- round(taup * N1_adj)
+    obj_updated <- .configure_sampling(obj = obj,
+                                       optimal_dur = optimal_dur,
+                                       optimal_dti = optimal_dti)
+    
   } # end of hr
   
   if ("ctsd" %in% set_target) {
     
-    
     tauv <- tau_v[[1]][2, "value"] %#% tau_v[[1]][2, "unit"]
-    optimal_dur <- round(taup * N_adj)
+    optimal_dur <- round(taup * N1_adj)
     optimal_dti <- round(tauv / 3)
     
     obj_updated <- .configure_sampling(
@@ -4531,21 +4483,25 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     
   } # end of ctsd
   
-  message("...Parameters adjusted.")
+  message("...Parameters ", crayon::yellow("selected"), ".")
+  
+  message(paste0(
+    "Running ", crayon::yellow("simulations"), " ",
+    "for the following ", crayon::cyan("population"), " ",
+    "sample sizes:"))
   
   obj <- obj_updated
   obj$add_ind_var <- add_ind_var
   
-  message(.msg(paste(
-    "Running simulations",
-    "for the following population sample sizes:"), "success"))
-  msg_seq <- format(m_seq, big.mark = ",", trim = TRUE)
-  msg_seq <- paste(msg_seq, collapse = ", ")
-  msg_seq <- sub(", ([^,]+)$", " and \\1", msg_seq)
+  msg_seq_txt <- format(m_seq, big.mark = ",", trim = TRUE)
+  msg_seq_txt <- paste(crayon::cyan(msg_seq_txt), collapse = ", ")
+  msg_seq_txt <- sub(", ([^,]+)$", " and \\1", msg_seq_txt)
   suffix <- ifelse(has_groups, " individuals per group", " individuals")
-  message(.msg(sprintf("  %s%s (total of %d sets)\n",
-                       msg_seq, suffix, length(m_seq)), "success"))
   
+  message(paste0(
+    "  ", msg_seq_txt, suffix,
+    " (total of ", crayon::yellow(length(m_seq)), " sets)\n"))
+
   broke <- FALSE
   outList <- vector("list", length(m_seq))
   summaryList <- vector("list", length(m_seq))
@@ -4555,12 +4511,16 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     m_current <- m_seq[[i]]
     m <- m_current - ifelse(i == 1, 0, m_seq[[i - 1]])
     
-    message(.msg(
-      sprintf("Set %s out of %s...", i, length(m_seq)),
-      "success"))
-    print(paste(
+    writeLines(paste0(
+      crayon::yellow("\u2015\u2015\u2015"),
+      " Set ", crayon::yellow(i), " out of ",
+      crayon::yellow(length(m_seq))))
+    
+    message(paste(
+      crayon::cyan("\u2015\u2015\u2015"),
       "Current sampled population:", 
-      if (!is.null(groups)) m_current * 2 else m_current, 
+      if (!is.null(groups))
+        crayon::cyan(m_current * 2) else crayon::cyan(m_current), 
       "individual(s)"))
     
     seeds <- NULL
@@ -4570,10 +4530,16 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     if (sysname != "Windows" && parallel) {
       tmpList <- parallel::mclapply(
         seq_len(n_replicates), function(r) 
-          .worker(r, m, obj, seeds), mc.cores = ncores)
+          .worker(r, m, obj, seeds, trace = TRUE), mc.cores = ncores)
+    } else if (sysname != "Windows" && parallel) {
+      cl <- parallel::makeCluster(ncores)
+      tmpList <- tryCatch(parallel::parLapply(
+        cl, seq_len(n_replicates), function(r)
+          .worker(r, m, obj, seeds, trace = TRUE)),
+        finally = parallel::stopCluster(cl))
     } else {
       tmpList <- lapply(seq_len(n_replicates), function(r)
-        .worker(r, m, obj, seeds))
+        .worker(r, m, obj, seeds, trace = TRUE))
     }
     
     if (i == 1) {
@@ -4618,7 +4584,8 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       run_meta_resamples(x,
                          set_target = obj$set_target,
                          subpop = obj$grouped,
-                         .m = m_seq[[i]])
+                         .m = m_seq[[i]],
+                         .only_max_m = TRUE)
     })
     
     if (length(metaList) > 0) {
@@ -4676,18 +4643,60 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     err_values <- lapply(err_prev, tail, n = 3)
     err_values <- unlist(err_values)
     
+    tmp <- .md_plot_meta(summary,
+                         error_threshold = error_threshold,
+                         set_target = set_target,
+                         has_groups = has_groups)
+    
+    all_broke_when <- tmp$dt_plot_means %>%
+      dplyr::mutate(m = as.numeric(as.character(.data$m))) %>%
+      dplyr::inner_join(
+        tmp$dt_plot %>%
+          dplyr::mutate(m = as.numeric(as.character(.data$m))) %>%
+          dplyr::group_by(.data$type, .data$group, .data$m) %>%
+          dplyr::summarize(
+            all_within_threshold = all(
+              abs(.data$error) <= error_threshold),
+            .groups = "drop"),
+        by = c("type", "group", "m")) %>%
+      dplyr::filter(.data$overlaps == TRUE,
+                    .data$all_within_threshold == TRUE) %>%
+      dplyr::group_by(.data$type, .data$group) %>%
+      dplyr::filter(.data$type == set_target) %>%
+      # dplyr::filter(.data$group == groups[[g]]) %>%
+      dplyr::slice_min(.data$m, n = 1) %>%
+      dplyr::ungroup()
+    
+    broke_when <- tmp$dt_plot_means %>%
+      dplyr::filter(abs(.data$error) <= error_threshold) %>%
+      dplyr::group_by(.data$type, .data$group) %>%
+      dplyr::arrange(.data$m, .by_group = TRUE) %>%
+      dplyr::filter(.data$type == set_target) %>%
+      # dplyr::filter(.data$group == groups[[g]]) %>%
+      dplyr::slice_head(n = 1) %>%
+      dplyr::ungroup()
+    
+    error <- tmp$dt_plot_means %>%
+      dplyr::filter(.data$type == set_target) %>%
+      # dplyr::filter(.data$group == groups[[g]]) %>%
+      .summarize_error(error_threshold = error_threshold) %>%
+      dplyr::slice_max(.data$m) %>%
+      dplyr::pull(.data$error)
+    
+    error_ok <- abs(error) <= error_threshold
+    all_error_ok <- !all(is.na(all_broke_when$m))
+    if (length(all_error_ok) == 0) all_error_ok <- FALSE
+    
     if (obj$which_meta == "mean") {
       
-      overlaps_with_truth <- dplyr::between(
-        unique(data$truth),
-        mean(data$lci, na.rm = TRUE),
-        mean(data$uci, na.rm = TRUE))
+      # overlaps_with_truth <- dplyr::between(
+      #   unique(data$truth),
+      #   mean(data$lci, na.rm = TRUE),
+      #   mean(data$uci, na.rm = TRUE))
       
-      if (all(err_values < error_threshold) &&
-          all(unlist(err_replicates) < error_threshold) &&
-          overlaps_with_truth && diag$has_converged) {
+      if (error_ok && all_error_ok && diag$has_converged) {
         broke <- TRUE
-        # break
+        break
       }
       
     } # end of if (which_meta == "mean")
@@ -4695,9 +4704,11 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     if (obj$which_meta == "compare") {
       
       cov <- Inf
-      if (all(err_values < error_threshold)) {
+      if (all(error_ok) && all(all_error_ok) &&
+          all(diag$has_converged)) {
         
-        input <- .get_groups(obj$fitList, groups = obj$groups[[1]])
+        input <- .get_groups(obj$fitList,
+                             groups = obj$groups[[1]])
         
         out_cov <- list()
         overlaps_with_truth <- list()
@@ -4725,7 +4736,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
           for (tmp in tmpList) {
             
             if (target == "hr") tmp_input <- tmp$akdeList
-            if (target == "ctsd") tmp_input <- tmp$akdeList
+            if (target == "ctsd") tmp_input <- tmp$ctsdList
             
             tmp_input <- list(
               tmp_input,
@@ -4781,10 +4792,9 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         
         # if cov -> infinity,
         # still sensitive to small changes in the mean.
-        if (!all(is.infinite(unlist(cov))) &&
-            all(unlist(overlaps_with_truth))) {
+        if (!all(is.infinite(unlist(cov)))) {
           broke <- TRUE
-          # break
+          break
         }
       }
       
@@ -4846,6 +4856,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     merged$ctsdList <- merged$ctsdList[target_names]
   }
   
+  message(" ")
   message(.msg(paste(
     "Running meta-analyses",
     "for the following population sample sizes:"), "success"))
@@ -4885,171 +4896,215 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     
     message(.msg("...done.", "success"))
     
-    message("Elapsed time:")
-    print(difftime(Sys.time(), start_meta_total))
+    elapsed_meta <- as.numeric(difftime(
+      Sys.time(), start_meta_total, units = "secs"))
+    elapsed_meta_hms <- sprintf("%02d:%02d:%02d (hh:mm:ss)",
+                                elapsed_meta %/% 3600,
+                                (elapsed_meta %% 3600) %/% 60,
+                                round(elapsed_meta %% 60))
+    
+    message("Elapsed time: ",
+            .msg(crayon::bold(elapsed_meta_hms), "success"))
   }
   
   summary_full <- data.table::rbindlist(metaList, fill = TRUE)
   out_plot <- .md_plot_meta(summary_full,
-                            # error_threshold,
+                            error_threshold = error_threshold,
                             set_target = set_target,
-                            grouped = has_groups)
+                            has_groups = has_groups)
   if (plot) print(out_plot$plot)
   
-  broke_when <- out_plot$dt_plot_means %>%
-    dplyr::inner_join(
-      out_plot$dt_plot %>%
-        dplyr::group_by(.data$type, .data$group, .data$m) %>%
-        dplyr::summarize(
-          all_within_threshold =
-            all(abs(.data$error) <= unique(.data$error_threshold)),
-          .groups = "drop"),
-      by = c("type", "group", "m")
-    ) %>%
-    dplyr::group_by(.data$type, .data$group) %>%
-    dplyr::arrange(.data$m, .by_group = TRUE) %>%
-    dplyr::filter(
-      .data$overlaps == TRUE,
-      .data$all_within_threshold == TRUE
-    ) %>%
-    dplyr::slice_head(n = 1) %>%
-    dplyr::ungroup()
-  
-  broke_when_m <- if (length(broke_when$m) >= 1) {
-    broke_when$m[[1]]
-  } else {
-    NA
-  }
-  
   if (trace) {
-    cat("\n")
-    .header("Final parameters", 4)
     
-    if (broke && is.na(broke_when_m)) {
+    .make_header <- function(title, n_dash = 10) {
+      header_line <- paste0(strrep("\u2500", n_dash), " ", title, ":")
+      return(crayon::bold(header_line))
+    }
+    
+    .make_line <- function(label, value, width = 45L) {
+      pad <- width - nchar(crayon::strip_style(label))
+      dots <- paste(rep(".", max(pad, 1L)), collapse = "")
+      paste0("     ", label, dots, " ", value)
+    }
+    
+    .color <- function(x, ok) {
+      if (ok) crayon::yellow(x) else crayon::red(x)
+    }
+    
+    groups <- if (has_groups) c("A", "B") else c("All")
+    
+    report <- c(
+      "", .make_header("Study design performance", 4), "")
+    
+    for (g in seq_along(groups)) {
       
-      n_outside_threshold <- out_plot$dt_plot %>%
+      all_broke_when <- out_plot$dt_plot_means %>%
+        dplyr::inner_join(
+          out_plot$dt_plot %>%
+            dplyr::mutate(m = as.numeric(as.character(.data$m))) %>%
+            dplyr::group_by(.data$type, .data$group, .data$m) %>%
+            dplyr::summarize(
+              all_within_threshold = all(
+                abs(.data$error) <= error_threshold),
+              .groups = "drop"),
+          by = c("type", "group", "m")) %>%
+        dplyr::filter(.data$overlaps == TRUE,
+                      .data$all_within_threshold == TRUE) %>%
         dplyr::group_by(.data$type, .data$group) %>%
-        dplyr::filter(.data$m == max(.data$m, na.rm = TRUE)) %>%
-        dplyr::summarise(
-          n_outside_threshold = sum(
-            abs(.data$error) > .data$error_threshold,
-            na.rm = TRUE),
-          n_replicates = dplyr::n(),
-          .groups = "keep") %>%
-        dplyr::pull(n_outside_threshold)
+        dplyr::filter(.data$type == set_target) %>%
+        dplyr::filter(.data$group == groups[[g]]) %>%
+        dplyr::slice_min(.data$m, n = 1) %>%
+        dplyr::ungroup()
       
-      message(format(
-        .msg(paste0("   Maximum population sample size evaluated: "),
-             "danger"), width = 3, justify = "left"),
-        .max_m)
-      message(format(
-        .msg(paste0("   Sampling duration: "),
-             "success"), width = 3, justify = "left"),
-        round(obj$dur$value, 1), " ", obj$dur$unit)
-      if ("ctsd" %in% set_target) {
-        message(format(
-          .msg(paste0("   Sampling interval: "), 
-               "success"), width = 3, justify = "left"),
-          round(obj$dti$value, 0), " ", 
-          fix_unit(round(obj$dti$value, 0), obj$dti$unit)$unit) }
-      message(sprintf(
-        " \u2713 Mean error below threshold of %.1f%%.",
-        error_threshold * 100))
-      message(sprintf(
-        paste0(" However, with %d individuals, ",
-               .msg("%d replicate%s ", "danger"), 
-               "fell outside the ",
-               .msg("error threshold", "danger"), "."),
-        .max_m,
-        n_outside_threshold,
-        ifelse(n_outside_threshold == 1, "", "s")))
+      broke_when <- out_plot$dt_plot_means %>%
+        dplyr::filter(abs(.data$error) <= error_threshold) %>%
+        dplyr::group_by(.data$type, .data$group) %>%
+        dplyr::arrange(.data$m, .by_group = TRUE) %>% 
+        dplyr::filter(.data$type == set_target) %>%
+        dplyr::filter(.data$group == groups[[g]]) %>%
+        dplyr::slice_head(n = 1) %>%
+        dplyr::ungroup()
+    
+      # Population size that achieves mean error below threshold:
+      error_ok <- !is.na(broke_when$m)
+      if (length(error_ok) == 0) error_ok <- FALSE
+      error_ok_m <- if (error_ok) broke_when$m else NA
       
-    } else if (broke) {
-      message(format(
-        .msg(paste0("   Maximum population sample size evaluated: "),
-             "success"), width = 3, justify = "left"),
-        .max_m)
-      message(format(
-        .msg(paste0("   Minimum population sample size needed: "),
-             "success"), width = 3, justify = "left"),
-        broke_when_m)
-      message(format(
-        .msg(paste0("   Sampling duration: "),
-             "success"), width = 3, justify = "left"),
-        round(obj$dur$value, 1), " ", obj$dur$unit)
-      if ("ctsd" %in% set_target) {
-        message(format(
-          .msg(paste0("   Sampling interval: "), 
-               "success"), width = 3, justify = "left"),
-          round(obj$dti$value, 0), " ", 
-          fix_unit(round(obj$dti$value, 0), obj$dti$unit)$unit) }
-      message(sprintf(
-        " \u2713 Error below threshold of %.1f%%. %s",
-        error_threshold * 100,
-        "Minimum sample size achieved!"))
+      # Population size that achieves all replicates below threshold:
+      all_error_ok <- !is.na(all_broke_when$m)
+      if (length(all_error_ok) == 0) all_error_ok <- FALSE
+      all_error_ok_m <- if (all_error_ok) all_broke_when$m else NA
       
-    } else {
-      message(format(
-        .msg(paste0("   Maximum population sample size evaluated: "),
-             "danger"), width = 3, justify = "left"),
-        .max_m)
-      if (has_groups)
-        message(paste0(
-          "   With ", .max_m/2, " individuals per group."))
-      message(format(
-        .msg(paste0("   Sampling duration: "),
-             "danger"), width = 3, justify = "left"),
-        round(obj$dur$value, 1), " ", obj$dur$unit)
-      if ("ctsd" %in% set_target) {
-        message(format(
-          .msg(paste0("   Sampling interval: "), 
-               "danger"), width = 3, justify = "left"),
-          round(obj$dti$value, 0), " ", 
-          fix_unit(round(obj$dti$value, 0), obj$dti$unit)$unit) }
-      
-      if (!is.na(broke_when_m)) {
-        if (has_groups) {
-          current_error <- max(abs(broke_when$error_mean))
-        } else {
-          current_error <- abs(broke_when$error_mean)
+      if (error_ok && all_error_ok) {
+        start_text <- "Recommended sampling"
+        if (g == 1) {
+          report <- c(
+            report,
+            .make_line(
+              paste("Minimum",
+                    .color("population", all_error_ok), "sample size"),
+              .color(all_error_ok_m, all_error_ok)))
         }
+      } else if (error_ok && !all_error_ok) {
+        start_text <- "Sampling"
+        if (g == 1) {
+          report <- c(
+            report,
+            .make_line(
+              paste("Minimum",
+                    .color("population", error_ok), "sample size"),
+              .color(error_ok_m, error_ok)))
+        }
+      } else {
+        start_text <- "Sampling"
+        if (g == 1) {
+          report <- c(
+            report,
+            .make_line(
+              paste(crayon::red("Population"), "sample size"),
+              paste(crayon::red(.max_m),
+                    crayon::red("[insufficient]"))))
+        }
+      }
+      
+      if (g == 1) {
+        report <- c(
+          report,
+          .make_line(
+            paste(start_text,
+                  .color("duration", error_ok)),
+            .color(paste0(round(obj$dur$value, 1),
+                          " ", obj$dur$unit), error_ok)),
+          .make_line(
+            paste(start_text, 
+                  .color("interval", error_ok)),
+            .color(paste0(round(obj$dti$value, 1),
+                          " ", obj$dti$unit), error_ok)))
+      }
+      
+      if (length(groups) > 1) {
+        report <- c(
+          report,
+          c("",
+            paste0("                               ",
+                   "                                ", 
+                   crayon::yellow("Group", groups[[g]])),
+            paste0("     ", crayon::yellow(
+              paste(rep("\u2500", 65L), collapse = "")))))
+      }
+      
+      if (error_ok && all_error_ok) {
+        report <- c(
+          report,
+          "",
+          paste0("     ",
+                 crayon::yellow("\u2713 "), "Mean relative error ",
+                 crayon::yellow("within threshold"), " (\u00B1",
+                 round(error_threshold * 100, 0), "%) achieved at m = ",
+                 crayon::yellow(error_ok_m)))
         
-        if (current_error < error_threshold) {
-          message(sprintf(
-            " \u2713 Error below threshold of %.1f%%.",
-            error_threshold * 100))
-          message(paste0(
-            "   However, more replicates are needed to verify ",
-            .msg("population sample size", "danger"), "."))
-          
-        } else {
-          message(sprintf(
-            " \u2717 Error above threshold of %.1f%%. %s",
-            error_threshold * 100,
-            "More individuals needed!"))
-          message(paste(
-            "   Increase", .msg("number of tags", "danger"),
-            "or", .msg("budget", "danger"),
-            "and try again."))
-        }
+        n_outside_threshold <- out_plot$dt_plot %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::filter(.data$m == error_ok_m) %>%
+          dplyr::summarise(
+            n_outside_threshold = sum(
+              abs(.data$error) > error_threshold, na.rm = TRUE),
+            n_replicates = dplyr::n(),
+            .groups = "keep") %>%
+          dplyr::pull(n_outside_threshold)
+        set_m <- error_ok_m
         
       } else {
-        message(sprintf(
-          " \u2717 Error above threshold of %.1f%%. %s",
-          error_threshold * 100,
-          "More individuals needed!"))
-        message(paste(
-          "   Increase", .msg("number of tags", "danger"),
-          "or", .msg("budget", "danger"),
-          "and try again."))
+        report <- c(
+          report,
+          if (!has_groups) "" else NULL,
+          paste0("     ",
+                 crayon::red("\u2717 "), "Mean relative error ",
+                 crayon::red("outside threshold"), " (\u00B1",
+                 round(error_threshold * 100, 0), "%)"),
+          paste0("     ", "Increase ",
+                 crayon::red("population"), " sample size!"))
+        
+        n_outside_threshold <- out_plot$dt_plot %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::mutate(m = as.numeric(.data$m)) %>%
+          dplyr::filter(.data$m == max(.data$m, na.rm = TRUE)) %>%
+          dplyr::summarise(
+            n_outside_threshold = sum(
+              abs(.data$error) > error_threshold, na.rm = TRUE),
+            n_replicates = dplyr::n(),
+            .groups = "keep") %>%
+          dplyr::pull(n_outside_threshold)
+        set_m <- .max_m
+      }
+      
+      if (all_error_ok) {
+        extra_words <- ifelse(error_ok, "All", "However, all")
+        report <- c(
+          report,
+          paste0("     ",
+                 crayon::yellow("\u2713 "), extra_words, " replicates ",
+                 crayon::yellow("within threshold"), " (\u00B1",
+                 round(error_threshold * 100, 0), "%) achieved at m = ",
+                 crayon::yellow(all_error_ok_m)))
+        
+      } else {
+        
+        set_m <- if (has_groups) set_m/2 else set_m
+        extra_words <- ifelse(error_ok, "However, with", "With")
+        report <- c(
+          report,
+          paste0("     ",
+                 crayon::red("\u2717 "), extra_words, " ",
+                 crayon::red(set_m), " individuals, ",
+                 crayon::red(n_outside_threshold[[g]]),
+                 " of ", crayon::red(n_replicates),
+                 " replicates exceeded threshold."))
       }
     }
+    
+    writeLines(report)
   }
-  
-  print(
-    sprintf(
-      "End time: %s",
-      format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")))
   
   if (has_groups) {
     out_summary <- summary_full %>%
@@ -5093,8 +5148,9 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
 #' Repeatedly simulates movement datasets across a range of
 #' candidate population sample sizes to identify the minimal sample size
 #' and associated sampling parameters (i.e., duration, sampling interval)
-#' required to achieve a predefined error threshold for key space use and
-#' movement metrics (i.e., home range area, speed).
+#' needed to achieve estimates for key movement and space-use metrics 
+#' (e.g., home range area, speed) within the specified relative error
+#' threshold.
 #'
 #' The function quantifies estimation error for each metric and sample
 #' size, evaluating which population sample size reliably meet target
@@ -5130,8 +5186,10 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
 #'   or [`md_configure()`]).
 #' @param n_replicates Integer. Number of simulation replicates at each
 #'   candidate sample size.
-#' @param error_threshold Numeric. Error threshold (e.g. `0.05` for 5%)
-#'   used as a reference point.
+#' @param error_threshold Numeric. Upper limit of the relative error
+#'   in estimation (e.g., `0.05` for 5%) deemed acceptable by the user.
+#'   The function will attempt to find sampling parameters and sample 
+#'   sizes that keep errors below this threshold.
 #' @param verbose Logical. If `TRUE` (default), prints a summary
 #'   of the convergence check to the console.
 #' @param trace Logical; if `TRUE` (default), prints progress and
@@ -5187,20 +5245,28 @@ md_optimize <- function(obj,
     stop("Input must have class 'movedesign_input'.")
   }
   
-  .check_numeric(error_threshold, lower = 0, upper = 1)
+  if (length(obj$set_target) != 1 ||
+      !obj$set_target %in% c("hr", "ctsd")) {
+    stop("Invalid `set_target`: expected only one of {'hr', 'ctsd'}",
+      call. = FALSE)
+  }
+  
+  .check_numeric(error_threshold, lower = 0.01, upper = 0.99)
   .check_integer(ncores)
   .check_logical(plot)
   .check_logical(verbose)
   .check_logical(parallel)
   .check_logical(trace)
-  stopifnot(is.numeric(n_replicates) && n_replicates > 0)
   
-  if (n_replicates < 5)
-    stop("`n_replicates` must be set to at least 5.")
+  stopifnot(is.numeric(n_replicates) && n_replicates > 0)
+
+  if (n_replicates < 10)
+    stop("`n_replicates` must be set to at least 10.")
   
   start_total <- Sys.time()
-  print(sprintf("Start time: %s",
-                format(start_total, "%Y-%m-%d %H:%M:%S %Z")))
+  message("Execution started: ", 
+          crayon::yellow(crayon::bold(
+            format(start_total, "%Y-%m-%d %H:%M:%S %Z"))))
   
   init <- .md_optimize_setup(obj = obj,
                              n_replicates = n_replicates,
@@ -5220,8 +5286,20 @@ md_optimize <- function(obj,
   
   out <- .md_optimize_execute(init, trace = trace)
   
-  message("Total elapsed time:")
-  print(difftime(Sys.time(), start_total))
+  message("\nExecution ended: ", 
+          crayon::yellow(crayon::bold(
+            format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"))))
+  
+  elapsed <- as.numeric(difftime(
+    Sys.time(), start_total, units = "secs"))
+  elapsed_hms <- sprintf("%02d:%02d:%02d (hh:mm:ss)",
+                         elapsed %/% 3600,
+                         (elapsed %% 3600) %/% 60,
+                         round(elapsed %% 60))
+  
+  message("      Total elapsed time: ",
+          crayon::yellow(crayon::bold(elapsed_hms)))
+  
   
   return(out)
   
@@ -5304,18 +5382,24 @@ md_optimize <- function(obj,
 #' [md_replicate()] to produce a `movedesign_output`. \cr
 #' [md_optimize()] to produce a `movedesign_optimized`.
 #' 
+#' @importFrom dplyr %>%
+#' 
 #' @export
 md_plot_replicates <- function(obj,
                                ci = 0.95,
-                               view = c("both",
-                                        "summary_only"),
+                               view = "summary_only",
                                pal = c("#007d80", "#A12C3B"),
                                ...) {
   
   dots <- list(...)
   .font <- dots[[".font"]] %||% NULL
   
-  view <- match.arg(view)
+  view_opts <- c("both", "summary_only")
+  if (!view %in% view_opts) {
+    stop(sprintf(
+        "Invalid 'view'. Must be one of: %s",
+        paste(view_opts, collapse = ", ")), call. = FALSE)
+  }
   
   if (!is.character(pal) || length(pal) != 2) {
     stop("`pal` must be a character vector of exactly two colors.", 

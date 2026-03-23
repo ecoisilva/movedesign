@@ -3,65 +3,64 @@
 # that have been imported into this package in case they change
 # in future versions.
 
-DOP.LIST <- list(
-  unknown = list(
-    axes = NA,
-    geo = NA,
-    DOP = NA,
-    VAR = NA,
-    COV = NA,
-    COV.geo = NA,
-    units = NA
-  ),
-  horizontal = list(
-    axes = c("x", "y"),
-    geo = c("longitude", "latitude"),
-    DOP = "HDOP",
-    VAR = "VAR.xy",
-    COV = c("COV.x.x", "COV.x.y", "COV.y.y"),
-    COV.geo = c("COV.major", "COV.minor", "COV.angle"),
-    units = "distance"
-  ),
-  vertical = list(
-    axes = "z",
-    geo = "z",
-    DOP = "VDOP",
-    VAR = "VAR.z",
-    COV = NA,
-    COV.geo = NA,
-    units = "distance"
-  ),
-  speed = list(
-    axes = c("vx", "vy"),
-    geo = c("speed", "heading"),
-    DOP = "SDOP",
-    VAR = "VAR.v",
-    COV = c("COV.vx.vx", "COV.vx.vy", "COV.vy.vy"),
-    COV.geo = NA,
-    units = "speed"
-  ),
-  frequency = list(
-    axes = 'f',
-    geo = NA,
-    DOP = NA,
-    VAR = NA,
-    COV = NA,
-    COV.geo = NA,
-    units = 'frequency'
-  ),
-  mass = list(
-    axes = 'm',
-    geo = NA,
-    DOP = NA,
-    VAR = NA,
-    COV = NA,
-    COV.geo = NA,
-    units = 'mass'
-  )
-)
-
-
 DOP.match <- function (axes) {
+  DOP.LIST <- list(
+    unknown = list(
+      axes = NA,
+      geo = NA,
+      DOP = NA,
+      VAR = NA,
+      COV = NA,
+      COV.geo = NA,
+      units = NA
+    ),
+    horizontal = list(
+      axes = c("x", "y"),
+      geo = c("longitude", "latitude"),
+      DOP = "HDOP",
+      VAR = "VAR.xy",
+      COV = c("COV.x.x", "COV.x.y", "COV.y.y"),
+      COV.geo = c("COV.major", "COV.minor", "COV.angle"),
+      units = "distance"
+    ),
+    vertical = list(
+      axes = "z",
+      geo = "z",
+      DOP = "VDOP",
+      VAR = "VAR.z",
+      COV = NA,
+      COV.geo = NA,
+      units = "distance"
+    ),
+    speed = list(
+      axes = c("vx", "vy"),
+      geo = c("speed", "heading"),
+      DOP = "SDOP",
+      VAR = "VAR.v",
+      COV = c("COV.vx.vx", "COV.vx.vy", "COV.vy.vy"),
+      COV.geo = NA,
+      units = "speed"
+    ),
+    frequency = list(
+      axes = 'f',
+      geo = NA,
+      DOP = NA,
+      VAR = NA,
+      COV = NA,
+      COV.geo = NA,
+      units = 'frequency'
+    ),
+    mass = list(
+      axes = 'm',
+      geo = NA,
+      DOP = NA,
+      VAR = NA,
+      COV = NA,
+      COV.geo = NA,
+      units = 'mass'
+    )
+  )
+  
   DOP.LIST <- DOP.LIST[-1]
   NAMES <- names(DOP.LIST)
   for (i in seq_along(DOP.LIST)) {
@@ -120,6 +119,64 @@ get.error <- function(data,
                       circle = FALSE,
                       DIM = FALSE, 
                       calibrate = TRUE) {
+  
+  DOP.LIST <- list(
+    unknown = list(
+      axes = NA,
+      geo = NA,
+      DOP = NA,
+      VAR = NA,
+      COV = NA,
+      COV.geo = NA,
+      units = NA
+    ),
+    horizontal = list(
+      axes = c("x", "y"),
+      geo = c("longitude", "latitude"),
+      DOP = "HDOP",
+      VAR = "VAR.xy",
+      COV = c("COV.x.x", "COV.x.y", "COV.y.y"),
+      COV.geo = c("COV.major", "COV.minor", "COV.angle"),
+      units = "distance"
+    ),
+    vertical = list(
+      axes = "z",
+      geo = "z",
+      DOP = "VDOP",
+      VAR = "VAR.z",
+      COV = NA,
+      COV.geo = NA,
+      units = "distance"
+    ),
+    speed = list(
+      axes = c("vx", "vy"),
+      geo = c("speed", "heading"),
+      DOP = "SDOP",
+      VAR = "VAR.v",
+      COV = c("COV.vx.vx", "COV.vx.vy", "COV.vy.vy"),
+      COV.geo = NA,
+      units = "speed"
+    ),
+    frequency = list(
+      axes = 'f',
+      geo = NA,
+      DOP = NA,
+      VAR = NA,
+      COV = NA,
+      COV.geo = NA,
+      units = 'frequency'
+    ),
+    mass = list(
+      axes = 'm',
+      geo = NA,
+      DOP = NA,
+      VAR = NA,
+      COV = NA,
+      COV.geo = NA,
+      units = 'mass'
+    )
+  )
+  
   n <- nrow(data)
   axes <- CTMM$axes
   COLS <- names(data)

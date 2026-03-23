@@ -1,18 +1,16 @@
 
-# Internal utility for styled message header.
+#' @title Internal utility for styled message header
 #' @noRd
 .header <- function(title, n_dash = 5) {
-  
   emdash <- "\u2500"
   header_line <- paste0(
-    strrep(emdash, n_dash), " ", title,
-    ":") # " ", strrep(emdash, n_dash), "\n")
-  cat(crayon::bold(header_line))
+    strrep(emdash, n_dash), " ", title, ":")
+  message(crayon::bold(header_line))
   
 }
 
 
-# Internal utility for styled message output.
+#' @title Internal utility for styled message output
 #' @noRd
 .msg <- function(txt, type = "main") {
   
@@ -1582,7 +1580,7 @@ print.movedesign_check <- function(x, ...) {
 #' @method summary movedesign_optimized
 #' @export
 summary.movedesign_optimized <- function(object,
-                                         verbose = TRUE,
+                                         verbose = FALSE,
                                          m = NULL,
                                          ci = 0.95,
                                          tol = 0.05,
@@ -1591,8 +1589,6 @@ summary.movedesign_optimized <- function(object,
                                          pal = c("#007d80",
                                                  "#A12C3B"),
                                          ...) {
-  
-  grouped <- NULL
   
   if (!verbose) {
     extra_args_used <- !missing(m) ||
@@ -1604,15 +1600,17 @@ summary.movedesign_optimized <- function(object,
       length(list(...)) > 0
     
     if (extra_args_used) {
-      stop("Additional arguments are only allowed when verbose = TRUE.",
+      stop("Additional arguments require verbose = TRUE.",
            call. = FALSE)
     }
   }
   
-  type <- NULL
   has_groups <- object$data$grouped
   set_target <- object$data$set_target
   error_threshold <- object$error_threshold
+  n_replicates <- object$data$n_replicates
+  
+  groups <- if (has_groups) c("A", "B") else c("All")
   
   .target_map <- function(target) {
     switch(target,
@@ -1625,22 +1623,26 @@ summary.movedesign_optimized <- function(object,
     paste0(round(abs(x) * 100, 1L), "%")
   }
   
-  .line <- function(label, value, width = 46L) {
-    
-    pad <- width - nchar(label)
-    dots <- paste(rep(".", max(pad, 1L)), collapse = "")
-    
-    return(message("     ", crayon::silver(label),
-                   crayon::silver(dots), " ", value))
+  .color <- function(x, ok) {
+    if (ok) crayon::yellow(x) else crayon::red(x)
   }
   
-  .section <- function(title) {
-    
-    rule <- paste(rep("\u2500", 65L), collapse = "" )
-    message("")
-    message("     ",crayon::bold(title))
-    message("     ", rule)
-    
+  .make_header <- function(title, n_dash = 10) {
+    header_line <- paste0(strrep("\u2500", n_dash), " ", title, ":")
+    return(crayon::bold(header_line))
+  }
+  
+  .make_section <- function(title, width = 65L) {
+    rule <- paste(rep("\u2500", width), collapse = "")
+    c("",
+      paste0("     ", title),
+      paste0("     ", rule))
+  }
+  
+  .make_line <- function(label, value, width = 45L) {
+    pad <- width - nchar(crayon::strip_style(label))
+    dots <- paste(rep(".", max(pad, 1L)), collapse = "")
+    paste0("     ", label, dots, " ", value)
   }
   
   set_species <- object$data$get_species %||% "Unknown"
@@ -1655,70 +1657,206 @@ summary.movedesign_optimized <- function(object,
     compare = "Group comparison",
     "Individual")
   
-  .header("Workflow summary", 5)
+  m_max <- object$data$n_individuals /
+    object$data$n_replicates
   
-  message(.msg(paste0("     Species: "), "main"),
-          crayon::bold(set_species),
-          crayon::yellow(paste0(" [", set_source, "]")))
+  out <- .md_plot_meta(object$summary,
+                       error_threshold = error_threshold,
+                       set_target = set_target,
+                       has_groups = has_groups)
   
-  error_mean <- object$summary %>%
-    dplyr::group_by(.data$type, .data$group) %>%
-    dplyr::slice_max(m) %>%
-    dplyr::ungroup()
+  # Begin report:
+  
+  report <- c(
+    " ", .make_header("Workflow summary", 4))
+  
+  report <- c(
+    report,
+    .make_line("Species",
+               paste(crayon::bold(set_species),
+                     crayon::yellow(paste0("[", set_source, "]")))),
+    .make_line("Population sample size evaluated",
+               crayon::yellow(m_max)))
+  
+  report <- c(
+    report,
+    " ", .make_header("Study design performance", 4))
   
   for (target in set_target) {
     
-    .section(paste0(.target_map(target), ":"))
+    report <- c(report,
+                .make_section(.target_map(target)))
     
-    get_error <- error_mean %>%
-      dplyr::filter(type == target) %>%
-      .summarize_error(error_threshold = error_threshold) %>%
-      dplyr::pull(error)
-    
-    if (object$sample_size_achieved &&
-        abs(get_error) <= error_threshold) {
+    for (g in seq_along(groups)) {
       
-      .line("Minimum population sample size",
-            .msg(object$minimum_population_sample_size, "success"))
+      all_broke_when <- out$dt_plot_means %>%
+        dplyr::inner_join(
+          out$dt_plot %>%
+            dplyr::group_by(.data$type, .data$group, .data$m) %>%
+            dplyr::summarize(
+              all_within_threshold = all(
+                abs(.data$error) <= error_threshold),
+              .groups = "drop"),
+          by = c("type", "group", "m")) %>%
+        dplyr::filter(.data$overlaps == TRUE,
+                      .data$all_within_threshold == TRUE) %>%
+        dplyr::group_by(.data$type, .data$group) %>%
+        dplyr::filter(.data$type == target) %>%
+        dplyr::filter(.data$group == groups[[g]]) %>%
+        dplyr::slice_min(.data$m, n = 1) %>%
+        dplyr::ungroup()
       
-      .line("Recommended sampling duration",
-            object$sampling_duration)
-      .line("Recommended sampling interval",
-            object$sampling_interval)
+      broke_when <- out$dt_plot_means %>%
+        dplyr::filter(abs(.data$error) <= error_threshold) %>%
+        dplyr::group_by(.data$type, .data$group) %>%
+        dplyr::arrange(.data$m, .by_group = TRUE) %>%
+        dplyr::filter(.data$type == target) %>%
+        dplyr::filter(.data$group == groups[[g]]) %>%
+        dplyr::slice_head(n = 1) %>%
+        dplyr::ungroup()
       
-      message(paste0(
-        .msg("     \u2713 ", "success"),
-        "Error within threshold of ",
-        .msg(paste0("\u00B1", error_threshold * 100, "%"), "success"),
-        ". Parameters are sufficient!"))
+      error <- out$dt_plot_means %>%
+        dplyr::filter(.data$type == target) %>%
+        dplyr::filter(.data$group == groups[[g]]) %>%
+        .summarize_error(error_threshold = error_threshold) %>%
+        dplyr::slice_max(.data$m) %>%
+        dplyr::pull(.data$error)
       
-    } else {
+      error_ok <- abs(error) <= error_threshold
+      # Population size that achieves mean error below threshold:
+      error_ok_m <- if (error_ok) broke_when$m else NA
       
-      .line("Population sample size evaluated",
-            .msg(object$minimum_population_sample_size, "danger"))
+      all_error_ok <- !is.na(all_broke_when$m)
+      if (length(all_error_ok) == 0) all_error_ok <- FALSE
+      # Population size that achieves all replicates below threshold:
+      all_error_ok_m <- if (all_error_ok) all_broke_when$m else NA
       
-      .line("Recommended sampling duration",
-            object$sampling_duration)
-      .line("Recommended sampling interval",
-            object$sampling_interval)
+      if (error_ok && all_error_ok) {
+        if (g == 1) {
+          report <- c(
+            report,
+            .make_line(
+              paste("Minimum",
+                    .color("population", all_error_ok), "sample size"),
+              .color(all_error_ok_m, all_error_ok)))
+        }
+      } else if (error_ok && !all_error_ok) {
+        if (g == 1) {
+          report <- c(
+            report,
+            .make_line(
+              paste("Minimum",
+                    .color("population", error_ok), "sample size"),
+              .color(error_ok_m, error_ok)))
+        }
+      } else {
+        if (g == 1) {
+          report <- c(
+            report,
+            .make_line(
+              paste(crayon::red("Population"), "sample size"),
+              paste(crayon::red(m_max),
+                    crayon::red("[insufficient]"))))
+        }
+      }
       
-      message("")
-      message(paste0(
-        .msg("     \u2718 ", "danger"),
-        "Error outside threshold of ",
-        .msg(paste0("\u00B1", error_threshold * 100, "%"), "danger"),
-        ". More individuals needed!"))
+      if (g == 1) {
+        report <- c(
+          report,
+          .make_line(
+            paste("Recommended sampling",
+                  crayon::yellow("duration")),
+            paste("at least",
+                  crayon::yellow(object$sampling_duration))),
+          .make_line(
+            paste("Recommended sampling", 
+                  crayon::yellow("interval")),
+            paste("no more than", crayon::yellow(
+              object$sampling_interval))))
+      }
       
-      message(paste(
-        "     Increase",
-        .msg("maximum population sample size", "danger"),
-        "and try again."))
+      if (length(groups) > 1) {
+        report <- c(
+          report,
+          c("",
+            paste0("                               ",
+                   "                                ", 
+                   crayon::yellow("Group", groups[[g]])),
+            paste0("     ", crayon::yellow(
+              paste(rep("\u2500", 65L), collapse = "")))))
+      }
+      
+      if (error_ok) {
+        report <- c(
+          report,
+          "",
+          paste0("     ",
+                 crayon::yellow("\u2713 "), "Mean relative error ",
+                 crayon::yellow("within threshold"), " (\u00B1",
+                 round(error_threshold * 100, 0), "%) achieved at m = ",
+                 crayon::yellow(error_ok_m)))
+        
+        n_outside_threshold <- out$dt_plot %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::filter(.data$m == error_ok_m) %>%
+          dplyr::summarise(
+            n_outside_threshold = sum(
+              abs(.data$error) > error_threshold, na.rm = TRUE),
+            n_replicates = dplyr::n(),
+            .groups = "keep") %>%
+          dplyr::pull(n_outside_threshold)
+        set_m <- error_ok_m
+        
+      } else {
+        report <- c(
+          report,
+          if (!has_groups) "" else NULL,
+          paste0("     ",
+                 crayon::red("\u2717 "), "Mean relative error ",
+                 crayon::red("outside threshold"), " (\u00B1",
+                 round(error_threshold * 100, 0), "%)"),
+          paste0("     ", "Increase ",
+                 crayon::red("population"), " sample size!"))
+        
+        n_outside_threshold <- out$dt_plot %>%
+          dplyr::group_by(.data$type, .data$group) %>%
+          dplyr::filter(.data$m == max(.data$m, na.rm = TRUE)) %>%
+          dplyr::summarise(
+            n_outside_threshold = sum(
+              abs(.data$error) > error_threshold, na.rm = TRUE),
+            n_replicates = dplyr::n(),
+            .groups = "keep") %>%
+          dplyr::pull(n_outside_threshold)
+        set_m <- m_max
+      }
+      
+      if (all_error_ok) {
+        extra_words <- ifelse(error_ok, "All", "However, all")
+        report <- c(
+          report,
+          paste0("     ",
+                 crayon::yellow("\u2713 "), extra_words, " replicates ",
+                 crayon::yellow("within threshold"), " (\u00B1",
+                 round(error_threshold * 100, 0), "%) achieved at m = ",
+                 crayon::yellow(all_error_ok_m), "."))
+        
+      } else {
+        
+        set_m <- if (has_groups) set_m/2 else set_m
+        extra_words <- ifelse(error_ok, "However, with", "With")
+        report <- c(
+          report,
+          paste0("     ",
+                 crayon::red("\u2717 "), extra_words, " ",
+                 crayon::red(set_m), " individuals, ",
+                 crayon::red(n_outside_threshold[[g]]),
+                 " of ", crayon::red(n_replicates),
+                 " replicates exceeded threshold."))
+      }
     }
     
+    
     if (verbose) {
-      
-      message(" ")
-      .section("Convergence:")
       
       out_check <- tryCatch(
         md_check(object,
@@ -1729,10 +1867,16 @@ summary.movedesign_optimized <- function(object,
                  pal = pal),
         error = function(e) e)
       
+      report <- c(
+        report,
+        .make_section("Convergence:"))
+      
       if (inherits(out_check, "error")) {
         
-        .line("Status",
-              crayon::red("\u2718 Could not assess"))
+        report <- c(
+          report,
+          .make_line("Status",
+                     crayon::red("\u2718 Could not assess")))
         
         if (grepl("Not enough replicates",
                   conditionMessage(out_check))) {
@@ -1742,50 +1886,62 @@ summary.movedesign_optimized <- function(object,
             n_converge), call. = FALSE)
         }
         
-        message("\n  ", paste0(
-          "\u2015\u2015\u2015 Add more replicates: ",
-          crayon::silver(
-            "md_optimize(input, n_replicates = n)")))
+        report <- c(
+          report,
+          "",
+          paste0(
+            "     \u2015\u2015\u2015 Add more replicates: ",
+            crayon::silver("md_optimize(input, n_replicates = n)")))
         
       } else {
         
         diag <- out_check$diagnostics_table
         
-        status <- if (all(diag$has_converged)) {
-          crayon::yellow("\u2713 Converged")
-          
+        if (all(diag$has_converged)) {
+          status <- crayon::yellow("\u2713 Converged")
+          status_ok <- TRUE
         } else {
+          status_ok <- FALSE
           if (nrow(diag) == 1 && !has_groups) {
-            crayon::red("\u2718 Not yet converged")
+            status <- crayon::red(
+              "\u2718 Not yet converged")
           } else if (has_groups) {
-            crayon::red("\u2718 Not yet converged for all groups")
+            status <- crayon::red(
+              "\u2718 Not yet converged for all groups")
           } else {
-            crayon::red("\u2718 Not yet converged for all targets")
+            status <- crayon::red(
+              "\u2718 Not yet converged for all targets")
           }
         }
         
-        .line("Steps evaluated", n_converge)
-        .line("Tolerance set to", paste0(tol * 100, "%"))
-        .line("Acceptable error threshold",
-              .format_pct(error_threshold))
-        .line("Status", status)
-        
-        message("\n  ", paste0(
-          "\u2015\u2015\u2015 See further details on convergence: ",
-          crayon::silver(
-            "md_check(output)")))
+        report <- c(
+          report,
+          .make_line("Steps evaluated",
+                     .color(n_converge, status_ok)),
+          .make_line("Tolerance set to", paste0(tol * 100, "%")),
+          .make_line("Acceptable error threshold",
+                     .format_pct(error_threshold)),
+          .make_line("Status", status),
+          "",
+          paste0(
+            "  \u2015\u2015\u2015",
+            " See further details on convergence: ",
+            crayon::silver("md_check(output)")))
         
         if (any(!diag$has_converged)) {
-          message(paste0(
-            "  \u2015\u2015\u2015 Add more replicates: ",
-            crayon::silver(
-              "md_optimize(input, n_replicates = n)")))
+          
+          report <- c(
+            report,
+            paste0(
+              "  \u2015\u2015\u2015 Add more replicates: ",
+              crayon::silver("md_optimize(input, n_replicates = n)")))
         }
       }
     }
     
   } # end of [target] loop
   
+  writeLines(report)
   invisible(object)
 }
 
@@ -1805,14 +1961,14 @@ summary.movedesign_optimized <- function(object,
 #' @param m Numeric (optional). Restricts results to a specific population
 #'   sample size. Defaults to `NULL`, which uses the maximum sample size.
 #' @param ci Numeric. Confidence level for intervals (applied to narrow
-#'   confidence bars and wide prediction bands). Must be between `0` and `1`.
-#'   Default is `0.95`.
-#' @param tol Numeric. Tolerance threshold for absolute change in cumulative
-#'   mean to declare convergence. Default is `0.05`.
-#' @param n_converge Integer. Number of consecutive steps within tolerance
-#'   required to confirm convergence. Default is `9`.
-#' @param plot Logical. If `TRUE`, generates a convergence plot. Default is
-#'   `TRUE`.
+#'   confidence bars and wide prediction bands). Must be between
+#'   `0` and `1`. Default is `0.95`.
+#' @param tol Numeric. Tolerance threshold for absolute change in
+#'   cumulative mean to declare convergence. Default is `0.05`.
+#' @param n_converge Integer. Number of consecutive steps within
+#'   tolerance required to confirm convergence. Default is `9`.
+#' @param plot Logical. If `TRUE`, generates a convergence plot. Default
+#'   is `TRUE`.
 #' @param pal Character vector of colors for the convergence plot, e.g.
 #'   `c("#007d80", "#A12C3B")`. Default is `c("#007d80", "#A12C3B")`.
 #' @param ... Additional arguments (currently unused).
@@ -2002,7 +2158,8 @@ print.movedesign_optimized <- function(x,
                 .format_pct(error_threshold)),
           .line("Status", status),
           "",
-          paste("  \u2015\u2015\u2015 See further details on convergence:",
+          paste("  \u2015\u2015\u2015",
+                "See further details on convergence:",
                 "`md_check(output)`"))
         
         if (any(!diag$has_converged)) {
@@ -2091,8 +2248,8 @@ summary.movedesign_report <- function(object, ...) {
   } else {
     for (target in set_targets) {
       
-      cat("\n")
-      cat(crayon::bold(paste0(
+      message("\n")
+      message(crayon::bold(paste0(
         strrep("\u2500", 8), " ", .target_map(target))))
       
       # Get joint winners for this target:
@@ -2188,10 +2345,12 @@ summary.movedesign_report <- function(object, ...) {
           } else if (w$overlaps_with_zero) {
             paste0("Absolute error ",
                    .msg("minimized", "success"),
-                   ", and CI overlaps with ", .msg("0", "success"), ".")
+                   ", and CI overlaps with ",
+                   .msg("0", "success"), ".")
           } else {
             paste0("Absolute error ",
-                   .msg("minimized", "success"), ", and CI closest to 0.")
+                   .msg("minimized", "success"), 
+                   ", and CI closest to 0.")
           }
           
           .line("Reason", reason)
@@ -2256,7 +2415,8 @@ print.movedesign_report <- function(x, ...) {
       
       lines <- c(
         lines,
-        paste0(" ", strrep("\u2500", 3), " ", .target_map(target), ":"))
+        paste0(" ", strrep("\u2500", 3),
+               " ", .target_map(target), ":"))
       
       jw_rows <- joint_winners[
         joint_winners$type == target, , drop = FALSE]
@@ -2266,8 +2426,11 @@ print.movedesign_report <- function(x, ...) {
         
         lines <- c(
           lines,
-          "     Multiple designs are equally optimal for this target;",
-          "     No single design outperforms the others across all groups.")
+          paste0("     Multiple designs are ",
+                 "equally optimal for this target;"),
+          paste0("     ",
+                 "No single design outperforms the ",
+                 "others across all groups."))
         
         next
       }
