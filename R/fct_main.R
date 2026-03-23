@@ -6704,3 +6704,133 @@ md_compare <- function(x,
   
 }
 
+
+#' Read a `movedesign` session file
+#'
+#' @description
+#' Reads a `.rds` file exported from the \pkg{movedesign}
+#' Shiny application, validates its structure, and reconstitutes
+#' each component to its corresponding `movedesign` class.
+#' 
+#' The returned list always contains:
+#' \describe{
+#'   \item{\code{design_input}}{
+#'     A \code{movedesign_input} object: sampling design
+#'     parameters as specified by the user.
+#'   }
+#'   \item{\code{design_processed}}{
+#'     A \code{movedesign_processed} object: results from a
+#'     single simulation replicate.
+#'   }
+#' }
+#' 
+#' (Optional) If multiple replicates have been run:
+#' \describe{
+#'   \item{\code{design_output}}{
+#'     A \code{movedesign_output} object: aggregated results
+#'     across all simulation replicates.
+#'   }
+#' }
+#' 
+#' @param filepath Path to an `.rds` session file.
+#' 
+#' @return A named list of three \pkg{movedesign} objects.
+#' 
+#' @examples
+#' \dontrun{
+#' md_objects <- read_md("path/to/my_file.rds")
+#' 
+#' md_objects$design_input      # movedesign_input object
+#' md_objects$design_processed  # movedesign_processed object
+#' md_objects$design_output     # movedesign_output (if available)
+#' }
+#' 
+#' @export
+read_md <- function(filepath) {
+  
+  if (!is.character(filepath) ||
+      length(filepath) != 1L  ||
+      !nzchar(filepath)) {
+    stop(paste0(
+      crayon::bold("`filepath`"),
+      " must be a single character string.\n",
+      "  Received class: ",
+      crayon::red(paste(class(filepath), collapse = ", "))))
+  }
+  
+  if (!file.exists(filepath)) {
+    stop(paste0(
+      crayon::red("\u2716 "), 
+      "File ", crayon::red("not found.\n"),
+      "     Path: ", crayon::red(filepath), "\n",
+      "     Check for typos or a missing file extension."))
+  }
+  
+  if (tolower(tools::file_ext(filepath)) != "rds") {
+    writeLines(c(
+      paste0(
+        crayon::red("\u26a0 "), crayon::red(filepath),
+        " does not have a ", crayon::red(".rds"), " extension."),
+      crayon::silver("  Attempting to read anyway.")))
+  }
+  
+  obj <- tryCatch(
+    readRDS(filepath),
+    error = function(e) {
+      stop(paste0(
+        "Failed to read: ",
+        crayon::yellow(filepath), "\n",
+        "  ", conditionMessage(e)))
+    }
+  )
+  
+  if (is.null(obj)) {
+    stop(paste0(
+      crayon::red("\u2716 File loaded but returned NULL.\n"),
+      crayon::silver("  Verify that "),
+      crayon::yellow(filepath),
+      crayon::silver(" contains a valid object.")
+    ))
+  }
+  
+  out <- tryCatch(
+    .as_md(obj),
+    error = function(e) {
+      stop(paste(
+        "Could not extract",
+        crayon::bold("movedesign"), "objects.\n",
+        conditionMessage(e)))
+    }
+  )
+  
+  message <- c(
+    crayon::cyan("\u2713 File", 
+                 crayon::bold(basename(filepath)),
+                 "read successfully."),
+    "",
+    paste0(
+      "  Objects now available within ",
+      crayon::cyan("returned object"), ":\n",
+      "    ", crayon::cyan("design_input"),
+      " -> an 'movedesign_input' object (initial parameters)\n",
+      "    ", crayon::cyan("design_processed"), 
+      " -> an 'movedesign_processed' object (single replicate)",
+      if ("design_output" %in% names(out)) {
+        paste0("\n    ", crayon::cyan("design_output"),
+               " -> an 'movedesign_output' object ",
+               "(multiple replicates)")
+      } else ""))
+  
+  writeLines(message)
+  
+  if ("design_output" %in% names(out)) {
+    return(list(design_input = out$design_input,
+                design_processed = out$design_processed,
+                design_output = out$design_output))
+  } else {
+    
+    return(list(design_input = out$design_input,
+                design_processed = out$design_processed))
+  }
+}
+

@@ -22,6 +22,21 @@
          txt)
 }
 
+#' @title Function to calculate elapsed time in hh:mm:ss
+#' @noRd
+.msg_time <- function(start, text) {
+  
+  elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+  
+  elapsed_hms <- sprintf("%02d:%02d:%02d (hh:mm:ss)",
+                 elapsed %/% 3600,
+                 (elapsed %% 3600) %/% 60,
+                 round(elapsed %% 60))
+  
+  return(message(text,
+                 crayon::yellow(crayon::bold(elapsed_hms))))
+  
+}
 
 #' @title Coerce object to a `movedesign` object
 #'
@@ -41,60 +56,31 @@
     stop("Object must be a list.")
   }
   
-  if (is.null(dots[[".ignore_mismatch"]])) {
-    .ignore_mismatch <- FALSE
-  } else {
-    .ignore_mismatch <- dots[[".ignore_mismatch"]]
+  # For input object:
+  
+  missing_fields <- setdiff(c("datList",
+                              "species",
+                              "n_sims"), names(obj))
+  if (length(missing_fields) > 0) {
+    stop("The provided file is not a valid `movedesign` output.",
+         call. = FALSE)
   }
   
-  if (!is.null(outputs)) {
-    
-    n_replicates <- length(obj)
-    
-    if (length(outputs) > 0) {
-      summary <- data.table::rbindlist(
-        outputs, fill = TRUE, idcol = "replicate")
-    } else {
-      summary <- data.table::data.table()
-    }
-    
-    if (length(obj) > 0) {
-      
-      if (obj[[1]]$grouped) {
-        group_keys <- c("A", "B")
-        common_names <- obj[[1]]$groups[[1]]
-        merged_ids <- lapply(obj, function(x) x$groups[[2]])
-        merged_ids <- Reduce(
-          function(x, y) Map(c, x, y), merged_ids)
-        
-        for (x in seq_along(obj)) {
-          obj[[x]]$groups <- list(common_names, merged_ids)
-        }
-      }
-      
-      merged <- md_merge(obj, .ignore_mismatch = .ignore_mismatch)
-      class(merged) <- unique(c("movedesign_output", class(merged)))
-    } else {
-      merged <- NULL
-    }
-    
-    merged$n_replicates <- n_replicates
-    
-    out <- structure(
-      list(data = merged, summary = summary), class = "movedesign")
-    class(out) <- unique(c("movedesign_output", class(out)))
-    return(out)
-  }
+  names(obj)[names(obj) == "datList"] <- "data"
+  names(obj)[names(obj) == "species"] <- "get_species"
+  names(obj)[names(obj) == "n_sims"] <- "n_individuals"
+  
+  if (is.null(obj$version)) obj$seedInit <- obj$seedList[[1]]
   
   metadata_fields <- c(
     "data", "data_type",
     "get_species", "n_individuals",
     "dur", "dti", "add_ind_var",
     "grouped", "groups",
-    "set_target", "which_meta", "parallel",
+    "set_target", "which_meta", "which_m", "parallel",
+    "fitList", "meanfitList",
     "sigma", "tau_p", "tau_v", "mu",
-    "meanfitList"
-  )
+    "seedInit")
   
   missing_fields <- setdiff(metadata_fields, names(obj))
   if (length(missing_fields) > 0) {
@@ -107,8 +93,84 @@
     stop("Object must contain either 'akdeList' or 'ctsdList'.")
   }
   
-  class(obj) <- unique(c("movedesign_processed", class(obj)))
-  return(obj)
+  use_global_parameters <- is.list(obj$dur) &&
+    all(c("value", "unit") %in% names(obj$dur)) &&
+    !any(sapply(obj$dur, is.list))
+  
+  design_input <- movedesign_input(list(
+    data = obj$data,
+    data_type = obj$data_type,
+    get_species = obj$get_species,
+    n_individuals = as.numeric(obj$n_individuals),
+    dur = obj$dur,
+    dti = obj$dti,
+    use_global_parameters = use_global_parameters,
+    add_ind_var = obj$add_ind_var,
+    grouped = obj$grouped,
+    groups = if (obj$grouped) obj$groups else NULL,
+    set_target = obj$set_target,
+    which_meta = obj$which_meta,
+    which_m = obj$which_m,
+    parallel = obj$parallel,
+    fitList = obj$fitList,
+    meanfitList = obj$meanfitList,
+    sigma = obj$sigma,
+    tau_p = obj$tau_p,
+    tau_v = obj$tau_v,
+    mu = obj$mu,
+    seed = obj$seedInit))
+  
+  # For processed object:
+  
+  design_processed <- movedesign_processed(list(
+    data = design_input$data,
+    get_species = design_input$get_species,
+    data_type = design_input$data_type,
+    n_individuals = design_input$n_individuals,
+    dur = design_input$dur,
+    dti = design_input$dti,
+    use_global_parameters = design_input$use_global_parameters,
+    add_ind_var = design_input$add_ind_var,
+    grouped = design_input$grouped,
+    groups = design_input$groups,
+    set_target = design_input$set_target,
+    which_meta = design_input$which_meta,
+    parallel = design_input$parallel,
+    fitList = design_input$fitList,
+    meanfitList = design_input$meanfitList,
+    sigma = design_input$sigma,
+    tau_p = design_input$tau_p,
+    tau_v = design_input$tau_v,
+    mu = design_input$mu,
+    simList = design_input$simList,
+    seedInit = design_input$seed,
+    seedList = obj$seedList,
+    simfitList = obj$simfitList,
+    akdeList = obj$akdeList,
+    ctsdList = obj$ctsdList))
+  
+  if (!is.null(obj$merged)) {
+    
+    # For output object:
+    design_output <- structure(
+      list(input = design_processed,
+           data = obj$merged,
+           summary = obj$meta_tbl_replicates,
+           error_threshold = obj$error_threshold,
+           verbose = TRUE), class = "movedesign")
+    class(design_output) <- unique(c("movedesign_output",
+                                     class(design_output)))
+    
+    outList <- list(design_input = design_input,
+                    design_processed = design_processed,
+                    design_output = design_output)
+  } else {
+    
+    outList <- list(design_input = design_input,
+                    design_processed = design_processed)
+  }
+  
+  return(invisible(outList))
 }
 
 
