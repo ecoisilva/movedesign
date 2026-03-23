@@ -7,7 +7,7 @@
 md_plot_replicates(
   obj,
   ci = 0.95,
-  view = c("both", "summary_only"),
+  view = "summary_only",
   pal = c("#007d80", "#A12C3B"),
   ...
 )
@@ -68,7 +68,8 @@ sampling parameters and population sample size.
 
 Both panels share a common colour palette (within/outside the
 acceptable error threshold) and, when two groups are present,
-a common shape scale.
+a common shape scale. By default, the function plots only the
+second item listed above.
 }
 \examples{
 if(interactive()) {

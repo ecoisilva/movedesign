@@ -6,7 +6,7 @@
 \usage{
 \method{summary}{movedesign_optimized}(
   object,
-  verbose = TRUE,
+  verbose = FALSE,
   m = NULL,
   ci = 0.95,
   tol = 0.05,

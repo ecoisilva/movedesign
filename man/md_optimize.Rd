@@ -23,8 +23,10 @@ or \code{\link[=md_configure]{md_configure()}}).}
 \item{n_replicates}{Integer. Number of simulation replicates at each
 candidate sample size.}
 
-\item{error_threshold}{Numeric. Error threshold (e.g. \code{0.05} for 5\%)
-used as a reference point.}
+\item{error_threshold}{Numeric. Upper limit of the relative error
+in estimation (e.g., \code{0.05} for 5\%) deemed acceptable by the user.
+The function will attempt to find sampling parameters and sample
+sizes that keep errors below this threshold.}
 
 \item{plot}{Logical. If TRUE, displays a diagnostic plot of
 the final results.}
@@ -63,8 +65,9 @@ achieving the threshold (or maximum evaluated if
 Repeatedly simulates movement datasets across a range of
 candidate population sample sizes to identify the minimal sample size
 and associated sampling parameters (i.e., duration, sampling interval)
-required to achieve a predefined error threshold for key space use and
-movement metrics (i.e., home range area, speed).
+needed to achieve estimates for key movement and space-use metrics
+(e.g., home range area, speed) within the specified relative error
+threshold.
 
 The function quantifies estimation error for each metric and sample
 size, evaluating which population sample size reliably meet target

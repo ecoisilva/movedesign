@@ -27,17 +27,17 @@ convergence diagnostics. Also displays a convergence plot if
 sample size. Defaults to \code{NULL}, which uses the maximum sample size.}
 
 \item{ci}{Numeric. Confidence level for intervals (applied to narrow
-confidence bars and wide prediction bands). Must be between \code{0} and \code{1}.
-Default is \code{0.95}.}
+confidence bars and wide prediction bands). Must be between
+\code{0} and \code{1}. Default is \code{0.95}.}
 
-\item{tol}{Numeric. Tolerance threshold for absolute change in cumulative
-mean to declare convergence. Default is \code{0.05}.}
+\item{tol}{Numeric. Tolerance threshold for absolute change in
+cumulative mean to declare convergence. Default is \code{0.05}.}
 
-\item{n_converge}{Integer. Number of consecutive steps within tolerance
-required to confirm convergence. Default is \code{9}.}
+\item{n_converge}{Integer. Number of consecutive steps within
+tolerance required to confirm convergence. Default is \code{9}.}
 
-\item{plot}{Logical. If \code{TRUE}, generates a convergence plot. Default is
-\code{TRUE}.}
+\item{plot}{Logical. If \code{TRUE}, generates a convergence plot. Default
+is \code{TRUE}.}
 
 \item{pal}{Character vector of colors for the convergence plot, e.g.
 \code{c("#007d80", "#A12C3B")}. Default is \code{c("#007d80", "#A12C3B")}.}
