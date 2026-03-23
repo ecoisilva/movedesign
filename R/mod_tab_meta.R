@@ -1493,7 +1493,7 @@ mod_tab_meta_server <- function(id, rv) {
                      error_threshold = rv$error_threshold,
                      .override = TRUE)
       }, error = function(e) { e })
-
+      
       if (inherits(out_replicate, "error")) {
 
         msg_log(
@@ -1506,9 +1506,9 @@ mod_tab_meta_server <- function(id, rv) {
       } else {
         
         data <- out_replicate$data
-        if (rv$grouped) {
-          groups <- out_replicate$data$groups
-        }
+        if (rv$grouped) groups <- out_replicate$data$groups
+        
+        rv$merged <- out_replicate$data
         
         rv$metaEst <- NULL
         rv$metaErr <- NULL

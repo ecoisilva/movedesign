@@ -1499,6 +1499,13 @@ mod_tab_report_server <- function(id, rv) {
           rv$metaList, rv$metaList_groups[["is_final"]])
       }
       
+      is_rep <- FALSE
+      if (!is.null(rv$n_replicates)) {
+        if (!is.null(rv$meta_tbl_replicates)) {
+          is_rep <- TRUE
+        }
+      }
+      
       n <- group <- NULL
       out_targets <- out_truth <- out_cri <- NULL
       txt_target <- txt_ratio_order <- txt_title <- NULL
@@ -1525,6 +1532,8 @@ mod_tab_report_server <- function(id, rv) {
               TRUE ~ "No"))
       }
       
+      rv$is_report <- FALSE
+      
       css_bold <- "font-weight:bold;"
       css_mono <- "font-family:var(--monosans);"
       css_bold_mono <- paste(css_mono, css_bold)
@@ -1542,6 +1551,17 @@ mod_tab_report_server <- function(id, rv) {
       
       txt_threshold <- span("error threshold of",
                             wrap_none(threshold * 100, "%"))
+      
+      # if (!is.null(rv$n_replicates)) {
+      #   out <- structure(
+      #     list(data = reactiveValuesToList(rv),
+      #          summary = rv$meta_tbl_replicates,
+      #          error_threshold = threshold),
+      #     class = "movedesign")
+      #   class(out) <- unique(c("movedesign_output", class(out)))
+      #   out_diag <- quiet(md_check(
+      #     out, n_converge = rv$n_replicates - 1, plot = FALSE))
+      # }
       
       if (rv$which_m == "set_m") {
         txt_meta_word <- "set population sample size"
@@ -1748,18 +1768,17 @@ mod_tab_report_server <- function(id, rv) {
             "You specified", n_tags, "tags and",
             paste0(rv$n_replicates, " replicates")))
         
+        txt_meta_type <- "resamples"
+        if (!is.null(rv$n_replicates)) {
+          txt_meta_type <- "replicates"
+        }
+        
         if (meta_dt$status == "Yes" && is_stable) {
           
           # if (!is.null(rv$n_replicates)) {
           #   if (rv$n_replicates > 10)
           #   out_diag$stabilized_at
           # }
-          
-          if (!is.null(rv$n_replicates)) {
-            txt_meta_type <- "replicates"
-          } else {
-            txt_meta_type <- "resamples"
-          }
           
           txt_meta <- tagList(p(
             paste0(txt_opener, "."),
@@ -1853,6 +1872,7 @@ mod_tab_report_server <- function(id, rv) {
         
       } # end of [t] loop
       
+      txt_stable_footer <- NULL
       if (rv$which_m != "get_all" &&
         length(rv$which_question) > 1) {
         txt_stable_footer <- tagList(txt_stable,
@@ -3978,7 +3998,9 @@ mod_tab_report_server <- function(id, rv) {
       dt_dv <- rv$dev$tbl
       
       if (is.null(rv$n_replicates)) {
-        dt_dv <- dt_dv %>% dplyr::slice_tail(n = n_sims)
+        if (is.null(rv$meta_tbl_replicates)) {
+          dt_dv <- dt_dv %>% dplyr::slice_tail(n = n_sims)
+        }
       }
       
       if ("Home range" %in% rv$which_question) {
@@ -4035,8 +4057,10 @@ mod_tab_report_server <- function(id, rv) {
           ~ifelse(all(is.na(.)), NA, .[!is.na(.)][1])))
       
       if (!is.null(rv$n_replicates)) {
-        out$replicate <- rep(1:rv$n_replicates,
-                                each = nrow(out) / rv$n_replicates)
+        if (!is.null(rv$meta_tbl_replicates)) {
+          out$replicate <- rep(1:rv$n_replicates,
+                               each = nrow(out) / rv$n_replicates)
+        }
       }
       
       return(out)
@@ -4132,7 +4156,8 @@ mod_tab_report_server <- function(id, rv) {
           format = if (!is.null(fmt)) format_map[[fmt]] else NULL))
       }
       
-      has_reps <- !is.null(rv$n_replicates)
+      has_reps <- !is.null(rv$meta_tbl_replicates)
+      if (has_reps) req(!is.null(rv$report$tbl$replicate))
       
       base_columns <- c(
         if (has_reps) "replicate",
@@ -4696,9 +4721,10 @@ mod_tab_report_server <- function(id, rv) {
             r_code <- paste0(
               r_code,
               "# Run more replicates to stabilize outputs:\n",
-              "n_replicates <- 20 # adjust if needed\n",
+              "n_replicates <- 10 # adjust if needed\n",
               "output_run_rep <- md_replicate(input, ",
               "n_replicates = n_replicates)\n",
+              "md_check(output_run_rep)\n",
               " \n",
               "# Plot final study design evaluation:\n",
               "md_plot(output_run_rep)\n",

@@ -15,6 +15,16 @@ mod_comp_settings_ui <- function(id) {
       width = 12, align = "center",
       
       p(),
+      h5("Save settings:", style = "color: #fff;"),
+      p(style = "font-size: 14px; text-align: justify; color: #ffffff;",
+        
+        "After using this app for the first time, you can save",
+        "your progress (and any previously defined values) to",
+        "your local environment."
+        # by accessing the",
+        # icon("gears", class = "cl-sea"), "symbol on the",
+        # HTML(paste0(span("upper right corner", class = "cl-sea"), "."))
+      ),
       shiny::downloadButton(
         outputId = ns("download_settings"),
         label = "Save settings",
@@ -26,16 +36,6 @@ mod_comp_settings_ui <- function(id) {
       tags$hr(style = "border-color: #ffffff;"),
       
       h5("Restore settings:", style = "color: #fff;"),
-      p(style = "font-size: 14px; text-align: justify; color: #ffffff;",
-        
-        "After using this app for the first time, you can save",
-        "your progress (and any previously defined values) to",
-        "your local environment, by accessing the",
-        icon("gears", class = "cl-sea"),
-        "symbol on the",
-        HTML(paste0(span("upper right corner", class = "cl-sea"), "."))
-      ),
-      
       uiOutput(ns("saving_vals")),
       
       fileInput(ns("restore_state"),
