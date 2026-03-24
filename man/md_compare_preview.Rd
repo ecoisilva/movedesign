@@ -5,19 +5,18 @@
 \title{Compare estimation error across designs (single replicate)}
 \usage{
 md_compare_preview(
-  x,
+  ...,
   n_resamples = NULL,
   error_threshold = 0.05,
-  pal = c("#007d80", "#A12C3B"),
-  ...
+  pal = c("#007d80", "#A12C3B")
 )
 }
 \arguments{
-\item{x}{A list of at least two \code{movedesign_processed} objects,
-each returned by \code{\link[=md_run]{md_run()}}. Each element represents one study
-design to compare. Designs typically differ in sampling
-parameters such as \code{dur}, \code{dti}, or \code{n_individuals}, but any
-valid \code{\link[=md_prepare]{md_prepare()}} or \code{\link[=md_simulate]{md_simulate()}} inputs can be compared.}
+\item{...}{One or more \code{movedesign_processed} objects, each
+returned by \code{\link[=md_run]{md_run()}}, or a single list containing such objects.
+Each element represents one study design to compare. Designs
+typically differ in sampling parameters such as \code{dur}, \code{dti},
+or \code{n_individuals}, but any valid inputs can be compared.}
 
 \item{n_resamples}{A single positive integer. The number of
 random combinations of individuals generated at each population
@@ -31,8 +30,6 @@ as a horizontal reference line in the plot (e.g. \code{0.05} for 5\%).}
 \item{pal}{A character vector of two colours, used for estimates
 within and outside the error threshold respectively.
 Defaults to \code{c("#007d80", "#A12C3B")}.}
-
-\item{...}{Reserved for internal use.}
 }
 \value{
 A \code{ggplot} object. Displays relative error as a function of
