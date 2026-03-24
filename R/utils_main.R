@@ -1526,11 +1526,15 @@ summary.movedesign_check <- function(object,
             "%)."), "danger"))
       }
       
-      message(" ")
-      cat("\n")
-      if (!verbose) next
+      if (!verbose) {
+        message(" ")
+        cat("\n")
+        next
+      } else {
+        message(" ")
+      }
       
-      .header("Interpretation", 5)
+      .header("Interpretation", 15)
       
       if (converged) {
         message(paste(
@@ -1541,15 +1545,17 @@ summary.movedesign_check <- function(object,
         message(paste(
           "Cumulative mean error is", .msg("unstable", "danger"),
           "within specified tolerance and steps.\n    ",
-          crayon::bold("Increase replicates for more robust inferences.")))
+          crayon::bold(
+            "Increase replicates for more robust inferences.")))
       }
       
       if (!is.null(error_threshold)) {
         message("")
+        
         if (within_threshold) {
           message(paste0(
             "Error is within the ",
-            .msg("predefined", "success"), " error_threshold.\n     ",
+            .msg("predefined", "success"), " error threshold.\n     ",
             crayon::bold("Design parameters meet target.")))
           
         } else {
@@ -2275,6 +2281,12 @@ summary.movedesign_report <- function(object, ...) {
            target)
   }
   
+  .make_header <- function(title, n_dash = 10) {
+    header_line <- paste0(
+      crayon::yellow(strrep("\u2500", n_dash)), " ", title, ":")
+    return(crayon::bold(header_line))
+  }
+  
   .line <- function(label, value, width = 20L) {
     
     pad <- width - nchar(label)
@@ -2301,7 +2313,7 @@ summary.movedesign_report <- function(object, ...) {
   
   set_targets <- unique(joint_winners$type)
   
-  .header("Design comparison for", 5)
+  .header("Design comparison for", 3)
   
   if (nrow(joint_winners) == 0) {
     message(.msg("   No designs achieved rank 1 for any target.",
@@ -2310,7 +2322,6 @@ summary.movedesign_report <- function(object, ...) {
   } else {
     for (target in set_targets) {
       
-      message("\n")
       message(crayon::bold(paste0(
         strrep("\u2500", 8), " ", .target_map(target))))
       

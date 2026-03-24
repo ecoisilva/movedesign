@@ -1057,7 +1057,7 @@ md_run <- function(design,
   
   design$seedList <- nms
   names(design$simList) <- names(design$seedList) <- nms
-  # if (trace) .msg_time(start, "        Run time: ")
+  if (trace) .msg_time(start, "        Run time: ")
   
   if (trace) writeLines(paste0(
     crayon::yellow("  \u2015\u2015\u2015\u2015\u2015\u2015"),
@@ -2551,7 +2551,7 @@ md_plot <- function(x,
                                        pad = 0.08,
                                        x_tol = NULL,
                                        y_tol = NULL,
-                                       y_step = 0.05) {
+                                       y_step = 0.1) {
     
     if (is.null(text_data) || nrow(text_data) == 0L)
       return(text_data)
@@ -2899,7 +2899,7 @@ md_plot <- function(x,
     warning(
       "\n",
       "  The requested credible interval could not be computed.\n",
-      "  This can occur if `ci` is too high or `n_replicates` low.\n",
+      "  This can occur if `ci` is too high or `n_replicates` too low.\n",
       "  ", crayon::yellow$bold("Reduce `ci`"), 
       " or ", crayon::yellow$bold("increase `n_replicates`"),
       " for more reliable results.\n",
@@ -3118,8 +3118,8 @@ md_check <- function(obj,
       cummean = cumsum(.data[[variable]]) / index,
       cumvar = cumsum((.data[[variable]] - cummean)^2) / index,
       delta_cummean = c(NA, diff(cummean)),
-      has_converged = abs(delta_cummean) < tol,
-      roll_sd = .roll_sd(cummean, n = n_converge)) %>%
+      roll_sd = .roll_sd(cummean, n = n_converge),
+      has_converged = abs(delta_cummean) < tol) %>%
     dplyr::mutate(
       color_state = dplyr::case_when(
         .data$index <= max(.data$index) - n_converge ~ "early",
@@ -3206,8 +3206,7 @@ md_check <- function(obj,
         dplyr::case_when(
           .data$type == "hr" ~ "mean home range",
           .data$type == "ctsd" ~ "mean speed",
-          TRUE ~ as.character(.data$type)
-        )
+          TRUE ~ as.character(.data$type))
       }) %>%
     dplyr::pull(.data$group_label)
   
@@ -5598,6 +5597,18 @@ md_plot_replicates <- function(obj,
   
   # Plot with all the replicates:
   
+  out_resampled <- dplyr::filter(out, .data$m %in% m_resampled)
+  
+  if (length(set_target) > 1) {
+    ordered_types <- intersect(
+      c("hr", "ctsd"), unique(c(out_one$type, out_mean$type)))
+    
+    out_resampled$type <- factor(
+      out_resampled$type, levels = ordered_types)
+    out_mean$type <- factor(
+      out_mean$type, levels = ordered_types)
+  }
+  
   p.replicates <- out_mean %>%
     ggplot2::ggplot(
       ggplot2::aes(x = .data$m,
@@ -5635,7 +5646,7 @@ md_plot_replicates <- function(obj,
     
     { if (!only_one_m)
       ggplot2::geom_jitter(
-        data = dplyr::filter(out, .data$m %in% m_resampled),
+        data = out_resampled,
         mapping = ggplot2::aes(x = .data$m,
                                y = .data$error,
                                group = .data$group,
@@ -5778,11 +5789,11 @@ md_plot_replicates <- function(obj,
 #' comparisons, run [md_replicate()] for each design and compare
 #' with [md_compare()].
 #'
-#' @param x A list of at least two `movedesign_processed` objects,
-#'   each returned by [md_run()]. Each element represents one study
-#'   design to compare. Designs typically differ in sampling
-#'   parameters such as `dur`, `dti`, or `n_individuals`, but any
-#'   valid [md_prepare()] or [md_simulate()] inputs can be compared.
+#' @param ... One or more `movedesign_processed` objects, each
+#'   returned by [md_run()], or a single list containing such objects.
+#'   Each element represents one study design to compare. Designs
+#'   typically differ in sampling parameters such as `dur`, `dti`,
+#'   or `n_individuals`, but any valid inputs can be compared.
 #'   
 #' @param n_resamples A single positive integer. The number of
 #'   random combinations of individuals generated at each population
@@ -5797,8 +5808,6 @@ md_plot_replicates <- function(obj,
 #'   within and outside the error threshold respectively.
 #'   Defaults to `c("#007d80", "#A12C3B")`.
 #'   
-#' @param ... Reserved for internal use.
-#' 
 #' @return
 #' A `ggplot` object. Displays relative error as a function of
 #' population sample size, with one panel (or two if two target) 
@@ -5857,23 +5866,36 @@ md_plot_replicates <- function(obj,
 #'   [md_check()] to assess convergence across replicates.
 #'   
 #' @export
-md_compare_preview <- function(x,
+md_compare_preview <- function(...,
                                n_resamples = NULL,
                                error_threshold = 0.05,
-                               pal = c("#007d80", "#A12C3B"),
-                               ...) {
+                               pal = c("#007d80", "#A12C3B")) {
+  
+  n <- group <- error <- error_sd <- NULL
   
   dots <- list(...)
   .seed <- dots[[".seed"]] %||% NULL
   
-  n <- group <- error <- error_sd <- NULL
-  single_obj <- FALSE
+  if (!is.null(.seed)) dots[[".seed"]] <- NULL
   
-  if (inherits(x, "movedesign_processed") &&
-      inherits(x, "movedesign")) {
-    x <- list(x) 
-    single_obj <- TRUE
+  if (length(dots) == 1 && is.list(dots[[1]]) &&
+      !inherits(dots[[1]], "movedesign_processed")) {
+    x <- dots[[1]]
+  } else {
+    x <- dots
   }
+  
+  ok <- vapply(x, function(obj)
+    inherits(obj, "movedesign_processed") &&
+      inherits(obj, "movedesign"),
+    logical(1))
+  
+  if (!all(ok)) {
+    stop("All inputs must be 'movedesign_processed' ",
+         "and 'movedesign' objects.")
+  }
+  
+  single_obj <- length(x) == 1
   
   if (!is.null(n_resamples)) {
     stopifnot(is.numeric(n_resamples) && n_resamples > 0)
@@ -5884,18 +5906,13 @@ md_compare_preview <- function(x,
   # Check that all objects have the same target:
   
   set_targets <- vapply(x, function(obj) {
-    if (!inherits(obj, "movedesign_processed")) {
-      stop(paste(
-        "All elements must be 'movedesign_processed' objects.",
-        "Use output from md_run()."))
-    }
     paste(sort(unique(obj$set_target)), collapse = ",")
   }, character(1))
 
   if (length(unique(set_targets)) > 1) {
     stop("All input objects must have identical",
          " `set_target` values.\n ",
-         " Found differing `set_target` values across objects: ",
+         " Found differing values across objects: ",
          paste(unique(set_targets), collapse = " | "))
   }
   
@@ -5906,12 +5923,6 @@ md_compare_preview <- function(x,
   global_y_range <- c(Inf, -Inf)
   
   .worker <- function(obj, name) {
-    
-    if (!inherits(obj, "movedesign_processed")) {
-      stop(paste(
-        "Each object must be a 'movedesign_processed' object.\n",
-        "Use the output of md_run()."))
-    }
     
     iter_step <- ifelse(length(obj$simList) <= 10, 2, 4)
     
@@ -5936,43 +5947,38 @@ md_compare_preview <- function(x,
           abs(.data$error) <= error_threshold,
           levels = c(TRUE, FALSE)))
     
-    if (is.null(n_resamples)) {
+    if (resampled) {
+      out_mean <- .summarize_error(
+        out, error_threshold = error_threshold)
       global_y_range <<- c(
-        min(global_y_range[1], 
-            ifelse(is.na(out$error_lci),
-                   global_y_range[1],
-                   min(out$error_lci, na.rm = TRUE))),
-        max(global_y_range[2],
-            ifelse(is.na(out$error_uci),
-                   global_y_range[2],
-                   min(out$error_uci, na.rm = TRUE))))
+        min(global_y_range[1], min(out_mean$pred_lci, na.rm = TRUE)),
+        max(global_y_range[2], max(out_mean$pred_uci, na.rm = TRUE)))
     } else {
-      out_mean <- .summarize_error(out, error_threshold = error_threshold)
       global_y_range <<- c(
-        min(global_y_range[1], 
-            ifelse(is.na(out_mean$pred_lci),
-                   global_y_range[1],
-                   min(out_mean$pred_lci, na.rm = TRUE))),
-        max(global_y_range[2],
-            ifelse(is.na(out_mean$pred_uci),
-                   global_y_range[2],
-                   min(out_mean$pred_uci, na.rm = TRUE))))
+        min(global_y_range[1], min(out$error_lci, na.rm = TRUE)),
+        max(global_y_range[2], max(out$error_uci, na.rm = TRUE)))
     }
     
     return(out)
   }
   
   processed_outs <- lapply(seq_along(x), function(i) {
-    .header(paste("Design", i), 3)
+    
+    writeLines(paste0(
+      crayon::cyan("  \u2015\u2015\u2015"),
+      " Design ", crayon::cyan(i)))
+    
     .worker(x[[i]], paste0("Obj", i))
   })
   
   id <- 0
-  outList <- list()
+  outList <- vector("list", length(x))
+  
   for (i in seq_along(processed_outs)) {
-    id <- id + 1
     
+    id <- id + 1
     out <- processed_outs[[i]]
+    
     only_one_m <- length(unique(out$m)) == 1
     if (only_one_m) { 
       out$m <- factor(out$m)
@@ -5990,8 +5996,8 @@ md_compare_preview <- function(x,
     set_subtitles <- c(
       set_subtitles, paste0(
         max_m, " tags, tracked for ",
-        paste(x[[id]]$dur$value, x[[id]]$dur$unit), " every ",
-        txt_tdi))
+        paste(x[[id]]$dur$value, x[[id]]$dur$unit),
+        " every ", txt_tdi))
     
     grouped <- unique(out$is_grouped)
     set_target <- unique(out$type)
@@ -6006,8 +6012,10 @@ md_compare_preview <- function(x,
       max_draws <- max(unique(out$sample))
       if (grouped) out <- dplyr::filter(out, group != "All")
       
-      out_mean <- .summarize_error(out, error_threshold = error_threshold)
+      out_mean <- .summarize_error(
+        out, error_threshold = error_threshold)
       outList[[i]] <- out_mean
+      
       label_ci <- sprintf("%g%%", unique(out_mean$ci) * 100)
       
       only_one_m <- ifelse(length(unique(out$m)) == 1, TRUE, FALSE)
@@ -6544,8 +6552,14 @@ md_compare <- function(x,
   target_map <- c(hr = "Home range estimation",
                   ctsd = "Movement speed estimation")
   has_groups <- x[[1]]$input$grouped
-  # error thresholds much match?
-  error_threshold <- x[[1]]$error_threshold
+  
+  error_thresholds <- vapply(x, function(obj)
+    obj$error_threshold, numeric(1))
+  if (length(unique(error_thresholds)) > 1) {
+    stop("All designs must have the same error_threshold values: ",
+         paste(unique(error_thresholds), collapse = " | "))
+  }
+  error_threshold <- error_thresholds[1]
   
   # Generate plots and processed outputs:
   
