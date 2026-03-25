@@ -2466,6 +2466,7 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   return(list(k = k, e = e))
 }
 
+
 #' Summarize error metrics with confidence and prediction intervals
 #'
 #' @noRd
@@ -2491,10 +2492,23 @@ ellipke <- function(m, tol = .Machine$double.eps) {
     stop("`error_col` must exist in `data`.")
   }
   
+  # if (!is.numeric(error_threshold) ||
+  #     length(error_threshold) != 1L) {
+  #   stop("`error_threshold` must be a single numeric value.")
+  # }
+  
   if (!is.numeric(error_threshold) ||
-      length(error_threshold) != 1L) {
-    stop("`error_threshold` must be a single numeric value.")
+      !(length(error_threshold) %in% c(1, 2))) {
+    stop("`error_threshold` must be a single numeric value",
+         " or a numeric vector of length 2.")
   }
+  
+  if (length(error_threshold) == 2L &&
+      error_threshold[1] >= error_threshold[2]) {
+    stop("If `error_threshold` is a vector of length 2,",
+         "the first element must be smaller than the second.")
+  }
+  
   
   if (!is.numeric(conf_level) ||
       conf_level <= 0 ||
@@ -2530,11 +2544,20 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   pred_lci <- out$error - t_crit * out$sd_error * pred_scale
   pred_uci <- out$error + t_crit * out$sd_error * pred_scale
   
-  within_threshold <- abs(out$error) <= error_threshold
+  if (length(error_threshold) == 1L) {
+    within_threshold <- abs(out$error) <= error_threshold
+  } else {
+    within_threshold <- out$error >= error_threshold[1] &
+      out$error <= error_threshold[2]
+  }
   
-  overlaps_with_threshold <-
-    error_lci <=  error_threshold &
-    error_uci >= -error_threshold
+  if (length(error_threshold) == 1L) {
+    overlaps_with_threshold <- error_lci <= error_threshold &
+      error_uci >= -error_threshold
+  } else {
+    overlaps_with_threshold <- error_lci <= error_threshold[2] &
+      error_uci >= error_threshold[1]
+  }
   
   overlaps <- factor(
     ifelse(within_threshold, TRUE, FALSE),
@@ -2551,7 +2574,5 @@ ellipke <- function(m, tol = .Machine$double.eps) {
       within_threshold = within_threshold,
       overlaps_with_threshold = overlaps_with_threshold,
       overlaps = overlaps)))
-  
 }
-
 
