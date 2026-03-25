@@ -1373,64 +1373,71 @@ summary.movedesign_check <- function(object,
   
   . <- type <- group <- NULL
   
-  .line <- function(label, value, width = 40L) {
-    
-    pad <- width - nchar(label)
+  .make_header <- function(title, n_dash = 10) {
+    header_line <- paste0(strrep("\u2500", n_dash), " ", title, ":")
+    return(crayon::bold(header_line))
+  }
+  
+  .make_section <- function(title, indent = 5) {
+    rule <- paste(rep("\u2500", 60L), collapse = "")
+    pad <- paste(rep(" ", indent), collapse = "")
+    title <- trimws(title, which = "left")
+    return(c(paste0(pad, title),
+             paste0(pad, rule)))
+  }
+  
+  .make_line <- function(label, value, width = 40L) {
+    pad <- width - nchar(crayon::strip_style(label))
     dots <- paste(rep(".", max(pad, 1L)), collapse = "")
-    
-    return(message("     ", crayon::silver(label),
-                   crayon::silver(dots), " ", value))
+    return(paste0("     ", label, dots, " ", value))
   }
   
-  .section <- function(title) {
-    
-    rule <- paste(rep("\u2500", 60L), collapse = "" )
-    message("")
-    message("     ",crayon::bold(title))
-    message("     ", rule)
-    
+  .make_subline <- function(text, indent = 8) {
+    return(paste0(strrep(" ", indent), text))
   }
   
-  .target_map <- function(target) {
+  .color <- function(x, ok) {
+    if (ok) crayon::yellow(x) else crayon::red(x)
+  }
+  
+  .map_target <- function(target) {
     switch(target,
            hr = "Home range estimation",
            ctsd = "Movement speed estimation",
            target)
   }
   
-  .stable_at <- function(type, group) {
+  .find_stable <- function(type, group) {
     idx <- object$stabilized_at
     idx <- idx[idx$type == type, ]
     if (object$grouped) idx <- idx[idx$group == group, ]
     idx$idx_stable_start
   }
   
+  .tol <- object$tolerance
+  
   diag <- object$diagnostics_table
-  tol <- object$tolerance
   error_threshold <- object$error_threshold
   
-  types <- unique(diag$type)
+  targets <- unique(diag$type)
   has_groups <- object$grouped
+  has_converged <- object$has_converged
   
-  cat("\n")
-  .header("Convergence diagnostics", 5)
+  report <- c(
+    "", .make_header("Convergence diagnostics", 4), "")
   
-  message(format(crayon::yellow("Steps evaluated: "),
-                 width = 3, justify = "left"),
-          length(diag$recent_cummean[[1]]))
-  message("Tolerance set to ",
-          crayon::yellow(paste0(.err_to_txt(tol), "%")))
+  report <- c(
+    report,
+    .make_line(
+      paste("Number of", .color("steps", has_converged), "evaluated"),
+      .color(length(diag$recent_cummean[[1]]), has_converged)),
+    .make_line(
+      paste(.color("Convergence tolerance", has_converged), "set to"),
+      .color(paste0(.err_to_txt(.tol), "%"), has_converged)))
   
-  if (!is.null(error_threshold)) {
-    message("Acceptable error threshold: ",
-            crayon::yellow(paste0(.err_to_txt(error_threshold), "%")))
-  }
-  
-  for (type_i in types) {
+  for (t in targets) {
     
-    .section(paste0(.target_map(type_i), ":"))
-    
-    rows <- diag[diag$type == type_i, ]
+    rows <- diag[diag$type == t, ]
     
     for (i in seq_len(nrow(rows))) {
       
@@ -1456,83 +1463,118 @@ summary.movedesign_check <- function(object,
       within_threshold <- if (!is.null(error_threshold)) {
         abs(mean_err) <= error_threshold
       } else {
-        NA
+        FALSE
       }
       
-      message(sprintf(
-        "     Convergence check for %s", tg))
+      if (i == 1) {
+        
+        if (!is.null(error_threshold)) {
+          report <- c(
+            report,
+            .make_line(
+              paste(.color("Error threshold",
+                           within_threshold), "set to"),
+              .color(paste0("\u00B1", .err_to_txt(error_threshold),
+                            "%"), within_threshold)))
+        }
+        
+        report <- c(
+          report,
+          "", .make_section(paste0(.map_target(t), ":"), 5))
+      }
+      
+      report <- c(
+        report,
+        .make_subline(paste0(
+          .color("Convergence check", has_converged),
+                 " for ", tg), 5))
+      
+      report <- c(
+        report,
+        .make_line(
+          paste(.color("Mean", within_threshold), "relative error"),
+          .color(paste0(.err_to_txt(mean_err), "%"),
+                 within_threshold)))
       
       if (converged) {
-        
-        message("        Mean estimate error: ",
-                .msg(paste0(.err_to_txt(mean_err), "%"),
-                     "success"))
-        
-        stable <- .stable_at(type_i, row$group)
-        message(sprintf(
-          "        \u2713 Converged at replicate %d.", stable))
+        stable <- .find_stable(t, row$group)
+        report <- c(
+          report,
+          .make_line(
+            "Status",
+            paste0(.color(
+              "\u2713 Converged ", has_converged))),
+          .make_subline(
+              "At replicate ", .color(stable, has_converged), "."))
         
       } else {
-        
-        message("        Mean estimate error: ",
-                .msg(paste0(.err_to_txt(mean_err), "%"),
-                     "danger"))
         
         # Identify which criteria failed:
         
         failed_delta <- any(sapply(
           diag$recent_delta_cummean,
-          function(x) any(abs(x) > tol, na.rm = TRUE)))
+          function(x) any(abs(x) > .tol, na.rm = TRUE)))
         
         failed_sd <- any(sapply(
           diag$recent_roll_sd,
-          function(x) any(x > tol, na.rm = TRUE)))
+          function(x) any(x > .tol, na.rm = TRUE)))
         
         # Construct informative message:
         
         fail_reasons <- c()
         if (failed_delta) fail_reasons <- c(
-          "\n           \u2500 stepwise change exceeded tolerance")
+          .make_subline(paste0(
+            crayon::red("\u2717 "),
+            "Stepwise change ", crayon::red("exceeded"),
+            " tolerance"),
+            indent = 5))
         if (failed_sd) fail_reasons <- c(
           fail_reasons,
-          "\n           \u2500 recent variability exceeded tolerance")
+          .make_subline(paste0(
+            crayon::red("\u2717 "),
+            "Recent variability ", crayon::red("exceeded"),
+            " tolerance"),
+            indent = 5))
         
-        message(.msg("        \u2717 Did not converge: ", "danger"),
-                paste(fail_reasons, collapse = "; "), ".")
+        report <- c(
+          report,
+          .make_line(
+            "Status",
+            paste0(.color(
+              "\u2717 Did not converge ", has_converged))),
+          fail_reasons)
       }
       
       if (within_threshold) {
         
-        txt_start <- ifelse(converged,
-                            "Error",
-                            "However, error")
-        message(.msg(
-          paste0(
-            "        \u2713 ", txt_start, 
-            " within acceptable threshold ",
-            "(\u2264 \u00B1", .err_to_txt(error_threshold),
-            "%)."), "success"))
+        txt_start <- ifelse(converged, "Error", "However, error")
+        report <- c(
+          report,
+          .make_subline(
+            paste0(
+              crayon::cyan("\u2713 "), txt_start,
+              " ",  crayon::cyan("within"),
+              " threshold (\u00B1",
+              .err_to_txt(error_threshold), "%)."),
+            indent = 5))
         
       } else {
         
-        txt_start <- ifelse(converged,
-                            "However, error",
-                            "Error")
-        message(.msg(
-          paste0(
-            "        \u2717 ", txt_start, 
-            " exceeds acceptable threshold ",
-            "(\u003E \u00B1", .err_to_txt(error_threshold),
-            "%)."), "danger"))
+        txt_start <- ifelse(converged, "However, error", "Error")
+        report <- c(
+          report,
+          .make_subline(
+            paste0(
+              crayon::red("\u2717 "), txt_start,
+              " ", crayon::red("exceeds"),
+              " threshold (\u00B1",
+              .err_to_txt(error_threshold), "%).")))
       }
       
-      if (!verbose) {
-        message(" ")
-        cat("\n")
-        next
-      } else {
-        message(" ")
-      }
+      report <- c(report, "")
+      writeLines(report)
+      
+      if (!verbose) next
       
       .header("Interpretation", 15)
       
@@ -1677,7 +1719,7 @@ summary.movedesign_optimized <- function(object,
     }
   }
   
-  .target_map <- function(target) {
+  .map_target <- function(target) {
     switch(target,
            hr = "Home range estimation",
            ctsd = "Movement speed estimation",
@@ -1761,7 +1803,7 @@ summary.movedesign_optimized <- function(object,
   for (target in set_target) {
     
     report <- c(report,
-                .make_section(.target_map(target)))
+                .make_section(.map_target(target)))
     
     for (g in seq_along(groups)) {
       
@@ -1930,7 +1972,6 @@ summary.movedesign_optimized <- function(object,
                  " replicates exceeded threshold"))
       }
       
-      
       ci_when <- out$dt_plot_means %>%
         dplyr::filter(.data$type == target) %>%
         dplyr::filter(.data$group == groups[[g]]) %>%
@@ -1984,7 +2025,6 @@ summary.movedesign_optimized <- function(object,
                  " within threshold"))
       }
     }
-    
     
     if (verbose) {
       
@@ -2144,7 +2184,7 @@ print.movedesign_optimized <- function(x,
   m_init <- x$init_m
   m_current <- x$minimum_m
   
-  .target_map <- function(target) {
+  .map_target <- function(target) {
     switch(target,
            hr = "Home range estimation",
            ctsd = "Movement speed estimation",
@@ -2195,7 +2235,7 @@ print.movedesign_optimized <- function(x,
     
     lines <- c(
       lines,
-      .section(paste0(.target_map(target), ":")))
+      .section(paste0(.map_target(target), ":")))
     
     if (x$sample_size_achieved) {
       
@@ -2339,7 +2379,7 @@ plot.movedesign_optimized <- function(x, ...) {
 #' @export
 summary.movedesign_report <- function(object, ...) {
   
-  .target_map <- function(target) {
+  .map_target <- function(target) {
     switch(target,
            hr = "Home range estimation",
            ctsd = "Movement speed estimation",
@@ -2388,7 +2428,7 @@ summary.movedesign_report <- function(object, ...) {
     for (target in set_targets) {
       
       message(crayon::bold(paste0(
-        strrep("\u2500", 8), " ", .target_map(target))))
+        strrep("\u2500", 8), " ", .map_target(target))))
       
       # Get joint winners for this target:
       jw_rows <- joint_winners[
@@ -2511,7 +2551,7 @@ summary.movedesign_report <- function(object, ...) {
 #' @export
 print.movedesign_report <- function(x, ...) {
   
-  .target_map <- function(target) {
+  .map_target <- function(target) {
     switch(target,
            hr = "Home range estimation",
            ctsd = "Movement speed estimation",
@@ -2554,7 +2594,7 @@ print.movedesign_report <- function(x, ...) {
       lines <- c(
         lines,
         paste0(" ", strrep("\u2500", 3),
-               " ", .target_map(target), ":"))
+               " ", .map_target(target), ":"))
       
       jw_rows <- joint_winners[
         joint_winners$type == target, , drop = FALSE]

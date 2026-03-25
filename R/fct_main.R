@@ -3944,9 +3944,16 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     out <- out %>%
       dplyr::mutate(
         overlaps = factor(
-          abs(.data$error) <= error_threshold,
-          levels = c(TRUE, FALSE)),
-        highlight = FALSE)
+          if (length(error_threshold) == 1L) {
+            abs(.data$error) <= error_threshold
+          } else {
+            abs(.data$error) >= error_threshold[1] &
+              abs(.data$error) <= error_threshold[2]
+          },
+          levels = c(TRUE, FALSE)
+        ),
+        highlight = FALSE
+      )
   } else {
     out <- out %>%
       dplyr::mutate(overlaps = TRUE)
@@ -3967,7 +3974,22 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   }
   
   label_ci <- paste0(ci * 100, "%")
-  label_threshold <- sprintf("%s%%", error_threshold * 100)
+  label_threshold <- if (length(error_threshold) == 1L) {
+    sprintf("%s%%", round(error_threshold * 100, 0))
+  } else {
+    sprintf("%s–%s%%", round(error_threshold[1] * 100, 0),
+            round(error_threshold[2] * 100, 0))
+  }
+  label_threshold_lower <- if (length(error_threshold) == 1L) {
+    sprintf("%s%%", round(error_threshold * 100, 0))
+  } else {
+    sprintf("%s%%", round(error_threshold[1] * 100, 0))
+  }
+  label_threshold_upper <- if (length(error_threshold) == 1L) {
+    sprintf("%s%%", round(error_threshold * 100, 0))
+  } else {
+    sprintf("%s%%", round(error_threshold[2] * 100, 0))
+  }
   labels_target <- c("hr" = "Home range area estimation",
                      "ctsd" = "Speed \u0026 distance estimation")
   
@@ -3980,75 +4002,101 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     ggplot2::ggplot(
       ggplot2::aes(
         x = if (has_groups && length(unique(.data$m)) == 1) {
-          as.factor(.data$m) 
-        } else { 
-          .data$m 
+          as.factor(.data$m)
+        } else {
+          .data$m
         },
         y = .data$error,
         group = .data$group,
         shape = .data$group,
         color = .data$overlaps)) +
     
-    { !is.null(error_threshold)
-      ggplot2::geom_hline(
-        yintercept = 0,
-        linewidth = 0.3,
-        linetype = "solid") } +
-    { !is.null(error_threshold)
+    ggplot2::geom_hline(
+      yintercept = 0,
+      linewidth = 0.3,
+      linetype = "solid") +
+    
+    {
+      ymin <- if (length(error_threshold) == 1L)
+        -error_threshold else error_threshold[1]
+      ymax <- if (length(error_threshold) == 1L)
+        error_threshold else error_threshold[2]
+      
       ggplot2::annotate(
         "rect",
         xmin = -Inf, xmax = Inf,
-        ymin = -error_threshold,
-        ymax = error_threshold,
-        alpha = 0.05)} +
-    { !is.null(error_threshold)
+        ymin = ymin, ymax = ymax,
+        alpha = 0.05)
+    } +
+    
+    {
+      y_lines <- if (length(error_threshold) == 1L)
+        c(-error_threshold, error_threshold) else error_threshold
+      
       ggplot2::geom_hline(
-        yintercept = c(-error_threshold, error_threshold),
+        yintercept = y_lines,
         linetype = "dashed",
-        linewidth = 0.35, alpha = 0.8) } +
-    { !is.null(error_threshold)
+        linewidth = 0.35,
+        alpha = 0.8)
+    } +
+    
+    {
+      ymax <- if (length(error_threshold) == 1L)
+        error_threshold else error_threshold[2]
+      
       ggplot2::annotate(
         "text",
-        x = Inf, y = error_threshold,
-        label = paste0("+", label_threshold),
-        hjust = 1.08, vjust = -0.5,
-        size = 3.2) } +
-    { !is.null(error_threshold)
+        x = Inf, y = ymax,
+        label = paste0("+", label_threshold_upper),
+        hjust = 1.08,
+        vjust = -0.5,
+        size = 3.2)
+    } +
+    
+    {
+      ymin <- if (length(error_threshold) == 1L)
+        -error_threshold else error_threshold[1]
+      
       ggplot2::annotate(
         "text",
-        x = Inf, y = -error_threshold,
-        label = paste0("\u2212", label_threshold),
-        hjust = 1.08, vjust = 1.5,
-        size = 3.2) } +
+        x = Inf, y = ymin,
+        label = paste0("\u2212", label_threshold_lower),
+        hjust = 1.08,
+        vjust = 1.5,
+        size = 3.2)
+    } +
     
-    { if (!only_one_m)
-      ggplot2::geom_jitter(
-        data = dplyr::filter(out, .data$m %in% m_resampled),
-        mapping = ggplot2::aes(
-          .data$m,
-          y = .data$error,
-          group = .data$group,
-          shape = .data$group,
-          color = .data$overlaps,
-          fill = .data$overlaps),
-        position = ggplot2::position_jitterdodge(
-        dodge.width = 1.5),
-      size = 3, alpha = 0.25) } +
+    {
+      if (!only_one_m)
+        ggplot2::geom_jitter(
+          data = dplyr::filter(out, .data$m %in% m_resampled),
+          mapping = ggplot2::aes(
+            x = .data$m,
+            y = .data$error,
+            group = .data$group,
+            shape = .data$group,
+            color = .data$overlaps,
+            fill = .data$overlaps),
+          position = ggplot2::position_jitterdodge(
+            dodge.width = 1.5),
+          size = 3,
+          alpha = 0.25)
+    } +
     
-    # Prediction intervals:
     ggplot2::geom_linerange(
-      ggplot2::aes(ymin = .data$pred_lci,
-                   ymax = .data$pred_uci),
+      ggplot2::aes(
+        ymin = .data$pred_lci,
+        ymax = .data$pred_uci),
       position = ggplot2::position_dodge(width = 0.5),
       color = "grey20",
       linewidth = 3,
       alpha = 0.18,
-      show.legend = FALSE) +
+      show.legend = FALSE ) +
     
-    # Confidence intervals:
     ggplot2::geom_linerange(
-      ggplot2::aes(ymin = .data$error_lci,
-                   ymax = .data$error_uci),
+      ggplot2::aes(
+        ymin = .data$error_lci,
+        ymax = .data$error_uci),
       position = ggplot2::position_dodge(width = 0.5),
       linewidth = 1.1,
       alpha = 0.55,
@@ -4059,37 +4107,47 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       size = 6,
       show.legend = TRUE) +
     
-    { if (length(set_target) > 1)
-      ggplot2::facet_wrap(
-        . ~ .data$type, scales = "free_y",
-        labeller = ggplot2::labeller(labels_target))
+    {
+      if (length(set_target) > 1)
+        ggplot2::facet_wrap(
+          . ~ .data$type,
+          scales = "free_y",
+          labeller = ggplot2::labeller(labels_target))
     } +
     
     ggplot2::labs(
       x = "Population sample size",
       y = "Relative error (%)") +
     
-    { if (!is.null(error_threshold)) {
-      ggplot2::scale_fill_manual(
-        name = paste0("Within error threshold (\u00B1",
-                      error_threshold * 100, "%)?"),
-        breaks = c("TRUE", "FALSE"),
-        values = pal, drop = FALSE,
-        guide = ggplot2::guide_legend(
-          override.aes = list(color = pal, fill = pal, size = 3),
-          order = 1,
-          label.vjust = 0.4))
-    } else {
-      ggplot2::scale_fill_manual(values = pal[1])
-    }} +
+    {
+      if (!is.null(error_threshold)) {
+        ggplot2::scale_fill_manual(
+          name = paste0(
+            "Within error threshold (\u00B1",
+            label_threshold, ")?"),
+          breaks = c("TRUE", "FALSE"),
+          values = pal,
+          drop = FALSE,
+          guide = ggplot2::guide_legend(
+            override.aes = list(
+              color = pal,
+              fill = pal,
+              size = 3),
+            order = 1,
+            label.vjust = 0.4))
+      } else {
+        ggplot2::scale_fill_manual(values = pal[1])
+      }
+    } +
     
-    { if (length(unique(out$m)) == 2) {
-      ggplot2::scale_x_continuous(
-        breaks = unique(out$m))
-    } else if (!only_one_m) {
-      ggplot2::scale_x_continuous(
-        breaks = scales::breaks_pretty())
-    }
+    {
+      if (length(unique(out$m)) == 2) {
+        ggplot2::scale_x_continuous(
+          breaks = unique(out$m))
+      } else if (!only_one_m) {
+        ggplot2::scale_x_continuous(
+          breaks = scales::breaks_pretty())
+      }
     } +
     
     ggplot2::scale_y_continuous(
@@ -4100,19 +4158,24 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     ggplot2::scale_color_manual(
       values = c(pal[1], pal[2]), drop = FALSE) +
     
-    { if (has_groups)
-      ggplot2::scale_shape_manual(
-        "Groups:", values = c(16, 17)) } +
+    {
+      if (has_groups)
+        ggplot2::scale_shape_manual(
+          "Groups:", values = c(16, 17))
+    } +
     
     ggplot2::scale_alpha_continuous(
-        range = c(0.3, 0.3)) +
+      range = c(0.3, 0.3)) +
     
-    { if (has_groups)
-      ggplot2::guides(
-        color = ggplot2::guide_legend(
-          override.aes = list(
-            shape = 22, size = 4,
-            fill = c(pal[1], pal[2])))) } +
+    {
+      if (has_groups)
+        ggplot2::guides(
+          color = ggplot2::guide_legend(
+            override.aes = list(
+              shape = 22,
+              size = 4,
+              fill = c(pal[1], pal[2]))))
+    } +
     
     .theme_movedesign_report()
   
@@ -4148,7 +4211,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   dots <- list(...)
   .tol <- dots[[".tol"]] %||% 0.05
   .seeds <- dots[[".seeds"]] %||% NULL
-  .n_converge <- dots[[".n_converge"]] %||% 5
+  .n_converge <- dots[[".n_converge"]] %||% 9
   .console_alert <- dots[[".console_alert"]] %||% TRUE
   
   tmp_N_area <- suppressWarnings(
@@ -4259,10 +4322,6 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   if (!prep$proceed) {
     message("Execution stopped by user.")
     return(invisible(NULL))
-  }
-  
-  .adjust_percent <- function(x, percent) {
-    x * (1 + percent / 100)
   }
   
   .configure_sampling <- function(obj,
@@ -4405,7 +4464,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   tau_p <- obj$tau_p
   tau_v <- obj$tau_v
   
-  .max_m <- obj$n_individuals
+  .max_m <- m_init <- obj$n_individuals
   if (.max_m <= 8) .iter_step <- 2 else .iter_step <- 4
   
   if (obj$add_ind_var) {
@@ -4459,6 +4518,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   
   message(crayon::yellow("Selecting"), " initial parameters...")
   
+  
   if ("hr" %in% set_target) {
     
     optimal_dur <- round(taup * N1_adj)
@@ -4500,12 +4560,28 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   message(paste0(
     "  ", msg_seq_txt, suffix,
     " (total of ", crayon::yellow(length(m_seq)), " sets)\n"))
+  
+  n_stable <- 3L
 
   broke <- FALSE
+  n_stable_count <- 0
   outList <- vector("list", length(m_seq))
   summaryList <- vector("list", length(m_seq))
   
+  history <- data.frame(
+    m = rep(NA_real_, length(m_seq)),
+    err = rep(NA_real_, length(m_seq)),
+    error_ok = rep(NA, length(m_seq)),
+    all_error_ok = rep(NA, length(m_seq)),
+    is_stable = rep(NA, length(m_seq)),
+    has_converged = rep(NA, length(m_seq)),
+    lci_within = rep(NA, length(m_seq)),
+    uci_within = rep(NA, length(m_seq)),
+    overlaps_with_zero = rep(NA, length(m_seq)))
+  
   for (i in seq_along(m_seq)) {
+    
+    start_set <- Sys.time()
     
     m_current <- m_seq[[i]]
     m <- m_current - ifelse(i == 1, 0, m_seq[[i - 1]])
@@ -4628,29 +4704,73 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     # Compute convergence diagnostics:
     
     diag <- data_subset %>%
+      dplyr::arrange(.data$type, .data$group, .data$replicate) %>%
       dplyr::group_by(.data$type, .data$group) %>%
+      dplyr::mutate(
+        cummean = cumsum(.data$error) / dplyr::row_number()) %>%
+      # step 1 — summarise the recent cummean window:
       dplyr::summarise(
+        n_reps = dplyr::n(),
         recent_cummean = list(tail(.data$cummean, .n_converge)),
-        recent_deltas = list(abs(diff(.data$recent_cummean[[1]]))),
-        max_delta = max(.data$recent_deltas[[1]], na.rm = TRUE),
-        has_converged = all(.data$recent_deltas[[1]] < .tol),
         .groups = "drop") %>%
+      # step 2 — compute deltas from recent cummean window:
+      dplyr::mutate(
+        recent_deltas = lapply(
+          .data$recent_cummean, function(x) abs(diff(x)))) %>%
+      # step 3 — convergence diagnostics:
+      dplyr::mutate(
+        n_deltas = vapply(
+          .data$recent_deltas, length, integer(1L)),
+        max_delta = vapply(
+          .data$recent_deltas, function(x)
+            if (length(x) == 0L) NA_real_ else max(x),
+          numeric(1L)),
+        is_stable = vapply(
+          .data$recent_deltas, function(x)
+            if (length(x) == 0L) FALSE else all(x < .tol),
+          logical(1L)),
+        is_within_threshold = vapply(
+          .data$recent_cummean,
+          function(x) {
+            # Guard: window must be fully populated:
+            if (length(x) < .n_converge) return(FALSE)
+            # Criterion 1: final value (most precise estimate)
+            # within user-specified error threshold:
+            final_ok <- abs(x[length(x)]) <= error_threshold
+            # Criterion 2: streak sub-window, clamped to actual
+            # window length to guard against .streak > length(x):
+            .streak <- ceiling(.n_converge * 0.6)
+            streak_n <- min(.streak, length(x))
+            streak_vals <- tail(x, streak_n)
+            streak_ok <- all(abs(streak_vals) <= error_threshold)
+            final_ok & streak_ok
+          }, logical(1L)),
+        has_converged = .data$is_stable &
+          .data$is_within_threshold) %>%
       dplyr::arrange(dplyr::desc(.data$type))
     
     # Break conditions:
-    
+
     err_values <- lapply(err_prev, tail, n = 3)
     err_values <- unlist(err_values)
-    
+
     tmp <- .md_plot_meta(summary,
                          error_threshold = error_threshold,
                          set_target = set_target,
                          has_groups = has_groups)
     
-    all_broke_when <- tmp$dt_plot_means %>%
+    dt_means <- .summarize_error(summary, conf_level = 0.95,
+                                 error_threshold = error_threshold)
+    if (has_groups) {
+      dt_means <- dt_means[dt_means$group != "All", ]
+    } else {
+      dt_means <- dt_means[dt_means$group == "All", ]
+    }
+    
+    all_broke_when <- dt_means %>%
       dplyr::mutate(m = as.numeric(as.character(.data$m))) %>%
       dplyr::inner_join(
-        tmp$dt_plot %>%
+        data %>%
           dplyr::mutate(m = as.numeric(as.character(.data$m))) %>%
           dplyr::group_by(.data$type, .data$group, .data$m) %>%
           dplyr::summarize(
@@ -4660,47 +4780,94 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         by = c("type", "group", "m")) %>%
       dplyr::filter(.data$overlaps == TRUE,
                     .data$all_within_threshold == TRUE) %>%
-      dplyr::group_by(.data$type, .data$group) %>%
+      # dplyr::group_by(.data$type, .data$group) %>%
       dplyr::filter(.data$type == set_target) %>%
-      # dplyr::filter(.data$group == groups[[g]]) %>%
-      dplyr::slice_min(.data$m, n = 1) %>%
+      # dplyr::filter(.data$group == "All") %>%
       dplyr::ungroup()
     
-    broke_when <- tmp$dt_plot_means %>%
+    broke_when <- dt_means %>%
       dplyr::filter(abs(.data$error) <= error_threshold) %>%
-      dplyr::group_by(.data$type, .data$group) %>%
       dplyr::arrange(.data$m, .by_group = TRUE) %>%
+      # dplyr::group_by(.data$type, .data$group) %>%
       dplyr::filter(.data$type == set_target) %>%
-      # dplyr::filter(.data$group == groups[[g]]) %>%
-      dplyr::slice_head(n = 1) %>%
+      # dplyr::filter(.data$group == "All") %>%
       dplyr::ungroup()
     
-    error <- tmp$dt_plot_means %>%
+    error <- dt_means %>%
       dplyr::filter(.data$type == set_target) %>%
-      # dplyr::filter(.data$group == groups[[g]]) %>%
+      # dplyr::filter(.data$group == "All") %>%
       .summarize_error(error_threshold = error_threshold) %>%
       dplyr::slice_max(.data$m) %>%
       dplyr::pull(.data$error)
     
-    error_ok <- abs(error) <= error_threshold
+    error_ok <- max(abs(error)) <= error_threshold
     all_error_ok <- !all(is.na(all_broke_when$m))
     if (length(all_error_ok) == 0) all_error_ok <- FALSE
     
+    history$m[i] <- m_current
+    history$err[i] <- error[which.max(abs(error))]
+    history$error_ok[i] <- error_ok
+    history$all_error_ok[i] <- all_error_ok
+    history$is_stable[i] <- diag$is_stable
+    history$has_converged[i] <- all(diag$has_converged)
+    
     if (obj$which_meta == "mean") {
       
-      # overlaps_with_truth <- dplyr::between(
-      #   unique(data$truth),
-      #   mean(data$lci, na.rm = TRUE),
-      #   mean(data$uci, na.rm = TRUE))
+      dt_ci <- dt_means %>%
+        dplyr::filter(.data$type == set_target) %>%
+        dplyr::filter(.data$group == "All") %>%
+        dplyr::mutate(
+          lci_within = .data$pred_lci >= -error_threshold,
+          uci_within = .data$pred_uci <= error_threshold,
+          overlaps_zero = .data$pred_lci <= 0 &
+            .data$pred_uci >= 0) %>%
+        dplyr::select("type", "group", "m",
+                      "error", "error_lci", "error_uci",
+                      "lci_within",
+                      "uci_within",
+                      "overlaps_zero")
+      
+      history$lci_within[i] <- dt_ci$lci_within
+      history$uci_within[i] <- dt_ci$uci_within
+      history$overlaps_with_zero[i] <- dt_ci$overlaps_zero
       
       if (error_ok && all_error_ok && diag$has_converged) {
-        broke <- TRUE
-        break
+        if (dt_ci$lci_within && dt_ci$uci_within) {
+          
+          writeLines(c(paste0(
+            crayon::cyan("\u2015\u2015\u2015"),
+            crayon::cyan(
+              " Convergence reached. "),
+            "Stopping loop early at m = ",
+            crayon::cyan(m_current), ".")))
+          broke <- TRUE
+          break
+        }
       }
       
     } # end of if (which_meta == "mean")
     
     if (obj$which_meta == "compare") {
+      
+      dt_ci <- dt_means %>%
+        dplyr::filter(.data$type == set_target) %>%
+        dplyr::filter(.data$group != "All") %>%
+        dplyr::mutate(
+          lci_within = .data$pred_lci >= -error_threshold,
+          uci_within = .data$pred_uci <= error_threshold,
+          overlaps_zero = .data$pred_lci <= 0 &
+            .data$pred_uci >= 0) %>%
+        dplyr::select("type", "group", "m",
+                      "error", "error_lci", "error_uci",
+                      "lci_within",
+                      "uci_within",
+                      "overlaps_zero")
+      
+      history$lci_within[i] <- dt_ci$lci_within[
+        which.max(abs(dt_ci$lci_within))]
+      history$uci_within[i] <- dt_ci$uci_within[
+        which.max(abs(dt_ci$uci_within))]
+      history$overlaps_with_zero[i] <- all(dt_ci$overlaps_zero)
       
       cov <- Inf
       if (all(error_ok) && all(all_error_ok) &&
@@ -4712,6 +4879,8 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         out_cov <- list()
         overlaps_with_truth <- list()
         ratios <- list()
+        ratios_ci <- list() 
+        
         for (target in set_target) {
           
           out_meta <- list()
@@ -4731,6 +4900,10 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
           out_cov[[target]] <- c()
           overlaps_with_truth[[target]] <- c()
           ratios[[target]] <- c()
+          ratios_ci[[target]] <- data.frame(
+            est = numeric(0),
+            lci = numeric(0),
+            uci = numeric(0))
           
           for (tmp in tmpList) {
             
@@ -4766,19 +4939,31 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
             
             if (!is.null(out_meta[[target]][["groups"]])) {
               
+              tmp_ratio <- .get_ratios(out_meta[[target]][["groups"]])
+              
               ratios[[target]] <- c(
                 ratios[[target]],
-                .get_ratios(out_meta[[target]][["groups"]])$est)
+                tmp_ratio$est)
+              
+              ratios_ci[[target]] <- rbind(
+                ratios_ci[[target]],
+                data.frame(
+                  est = tmp_ratio$est,
+                  lci = tmp_ratio$lci,
+                  uci = tmp_ratio$uci))
               
               overlaps_with_truth[[target]] <- c(
                 overlaps_with_truth[[target]],
                 dplyr::between(
-                  .get_ratios(out_meta[[target]][["groups"]])$est,
+                  tmp_ratio$est,
                   .get_ratios(out_meta_truth[[target]])$lci,
                   .get_ratios(out_meta_truth[[target]])$uci))
               
             } else {
               ratios[[target]] <- c(ratios[[target]], NA)
+              ratios_ci[[target]] <- rbind(
+                ratios_ci[[target]],
+                data.frame(est = NA, lci = NA, uci = NA))
               overlaps_with_truth[[target]] <- c(
                 overlaps_with_truth[[target]], FALSE)
             }
@@ -4787,17 +4972,36 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
           
         } # end of [target] loop
         
-        cov <- lapply(out_cov, tail, n = 1)
+        ratio <- tail(ratios[[target]], 1)
+        ratio_ci <- tail(ratios_ci[[target]], 1)
+        ratio_ci <- with(ratio_ci, (lci <= 1 & uci >= 1))
         
-        # if cov -> infinity,
-        # still sensitive to small changes in the mean.
-        if (!all(is.infinite(unlist(cov)))) {
+        cov <- lapply(out_cov, tail, n = 1)
+        # # if cov -> infinity,
+        # # still sensitive to small changes in the mean.
+        
+        # if (!all(is.infinite(unlist(cov)))) {
+        #   broke <- TRUE
+        #   break
+        # }
+        
+        if (!ratio_ci &&
+            history$lci_within[i] &&
+            history$uci_within[i]) {
+          writeLines(c(paste0(
+            crayon::cyan("\u2015\u2015\u2015"),
+            crayon::cyan(
+              " Convergence reached. "),
+            "Stopping loop early at m = ",
+            crayon::cyan(m_current), ".")))
           broke <- TRUE
           break
         }
       }
       
     } # end of if (which_meta == "compare")
+    
+    .msg_time(start_set, "Run time: ")
     
   } # end of [i] loop
   
@@ -4859,13 +5063,16 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   message(.msg(paste(
     "Running meta-analyses",
     "for the following population sample sizes:"), "success"))
-  msg_seq <- format(m_seq, big.mark = ",", trim = TRUE)
-  msg_seq <- paste(msg_seq, collapse = ", ")
-  msg_seq <- sub(", ([^,]+)$", " and \\1", msg_seq)
+  
+  m_seq_current <- m_seq[m_seq <= m_current]
+  
+  msg_seq_txt <- format(m_seq_current, big.mark = ",", trim = TRUE)
+  msg_seq_txt <- paste(msg_seq_txt, collapse = ", ")
+  msg_seq_txt <- sub(", ([^,]+)$", " and \\1", msg_seq_txt)
   suffix <- ifelse(has_groups, " individuals per group", " individuals")
   message(.msg(sprintf("  %s%s (total of %d sets)\n",
-                       msg_seq, suffix, length(m_seq)), "success"))
-  
+                       msg_seq_txt, suffix,
+                       length(m_seq_current)), "success"))
   
   start_meta_total <- Sys.time()
   message("Execution started: ", 
@@ -4873,9 +5080,10 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
             format(start_meta_total, "%Y-%m-%d %H:%M:%S %Z"))))
   
   metaList <- list()
-  for (i in seq_along(m_seq)) {
+  for (i in seq_along(m_seq_current)) {
+    
     message(.msg(
-      sprintf("Set %s out of %s...", i, length(m_seq)),
+      sprintf("Set %s out of %s...", i, length(m_seq_current)),
       "success"))
     
     tmp <- lapply(
@@ -4884,7 +5092,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         run_meta_resamples(merged,
                            set_target = merged$set_target,
                            subpop = merged$grouped,
-                           .m = m_seq[[i]],
+                           .m = m_seq_current[[i]],
                            .seed = seedInit + x)
       })
     
@@ -4952,6 +5160,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         dplyr::filter(.data$overlaps == TRUE,
                       .data$all_within_threshold == TRUE) %>%
         dplyr::group_by(.data$type, .data$group) %>%
+        dplyr::arrange(.data$m, .by_group = TRUE) %>% 
         dplyr::filter(.data$type == set_target) %>%
         dplyr::filter(.data$group == groups[[g]]) %>%
         dplyr::slice_min(.data$m, n = 1) %>%
@@ -4965,7 +5174,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         dplyr::filter(.data$group == groups[[g]]) %>%
         dplyr::slice_head(n = 1) %>%
         dplyr::ungroup()
-    
+      
       # Population size that achieves mean error below threshold:
       error_ok <- !is.na(broke_when$m)
       if (length(error_ok) == 0) error_ok <- FALSE
@@ -4976,15 +5185,38 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       if (length(all_error_ok) == 0) all_error_ok <- FALSE
       all_error_ok_m <- if (all_error_ok) all_broke_when$m else NA
       
+      if (g == 1) {
+        report <- c(
+          report,
+          .make_line(
+            paste("Recommended sampling",
+                  .color("duration", error_ok)),
+            paste0("at least ", 
+                   .color(paste0(round(obj$dur$value, 1),
+                                 " ", obj$dur$unit), error_ok))),
+          .make_line(
+            paste("Recommended sampling", 
+                  .color("interval", error_ok)),
+            paste0("no more than ",
+                   .color(paste0(round(obj$dti$value, 1),
+                                 " ", obj$dti$unit), error_ok))))
+      }
+      
       if (error_ok && all_error_ok) {
         start_text <- "Recommended sampling"
         if (g == 1) {
           report <- c(
             report,
             .make_line(
+              paste("Maximum",
+                    .color("population", all_error_ok),
+                    "sample size evaluated"),
+              .color(m_current, all_error_ok)),
+            .make_line(
               paste("Minimum",
-                    .color("population", all_error_ok), "sample size"),
-              .color(all_error_ok_m, all_error_ok)))
+                    .color("population", all_error_ok),
+                    "sample size needed"),
+              "")) # .color(all_error_ok_m, all_error_ok)))
         }
       } else if (error_ok && !all_error_ok) {
         start_text <- "Sampling"
@@ -4994,7 +5226,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
             .make_line(
               paste("Minimum",
                     .color("population", error_ok), "sample size"),
-              .color(error_ok_m, error_ok)))
+              "")) # .color(error_ok_m, error_ok)))
         }
       } else {
         start_text <- "Sampling"
@@ -5008,20 +5240,6 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         }
       }
       
-      if (g == 1) {
-        report <- c(
-          report,
-          .make_line(
-            paste(start_text,
-                  .color("duration", error_ok)),
-            .color(paste0(round(obj$dur$value, 1),
-                          " ", obj$dur$unit), error_ok)),
-          .make_line(
-            paste(start_text, 
-                  .color("interval", error_ok)),
-            .color(paste0(round(obj$dti$value, 1),
-                          " ", obj$dti$unit), error_ok)))
-      }
       
       if (length(groups) > 1) {
         report <- c(
@@ -5104,8 +5322,98 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       }
     }
     
+    ci_when <- out_plot$dt_plot_means %>%
+      dplyr::filter(.data$type == set_target) %>%
+      dplyr::filter(.data$group == groups[[g]]) %>%
+      dplyr::mutate(
+        lci_within = .data$pred_lci > -error_threshold,
+        uci_within = .data$pred_uci < error_threshold,
+        overlaps_zero = .data$pred_lci <= 0 &
+          .data$pred_uci >= 0) %>%
+      dplyr::select("type", "group", "m",
+                    "error", "error_lci", "error_uci",
+                    "lci_within",
+                    "uci_within",
+                    "overlaps_zero") %>%
+      dplyr::filter(.data$lci_within == TRUE,
+                    .data$uci_within == TRUE) %>%
+      dplyr::slice_min(.data$m, n = 1)
+    
+    ci_ok <- nrow(ci_when) > 0
+    
+    if (!ci_ok) {
+      ci_when <- tibble::tibble(
+        type = NA_real_,
+        group = groups[[g]],
+        m = NA_real_,
+        error = NA_real_,
+        error_lci = NA_real_,
+        error_uci = NA_real_,
+        lci_within = FALSE,
+        uci_within = FALSE,
+        overlaps_zero = FALSE)
+    }
+    
+    if (ci_when$lci_within && ci_when$uci_within) {
+      extra_words <- ifelse(error_ok, "CIs", "However, CIs")
+      report <- c(
+        report,
+        paste0("     ",
+               crayon::yellow("\u2713 "), extra_words,
+               " fall entirely ",
+               crayon::yellow("within threshold"), " (\u00B1",
+               round(error_threshold * 100, 0), "%) at m = ",
+               crayon::yellow(ci_when$m)))
+      
+    } else {
+      extra_words <- ifelse(error_ok, "However, with", "With")
+      report <- c(
+        report,
+        paste0("     ", crayon::red("\u2717 "), extra_words, " ",
+               crayon::red(m_current), " individuals, CIs",
+               " do not fall ", crayon::red("entirely"),
+               " within threshold"))
+    }
+    
+    report <- c(
+      report,
+      "",
+      .make_header("Replicate convergence", 4), "")
+    
+    if (diag$is_stable) {
+      status <- crayon::yellow("\u2713 Converged")
+      status_ok <- TRUE
+    } else {
+      status_ok <- FALSE
+      if (nrow(diag) == 1 && !has_groups) {
+        status <- crayon::red(
+          "\u2718 Not yet converged")
+      } else if (has_groups) {
+        status <- crayon::red(
+          "\u2718 Not yet converged") # for all groups")
+      } else {
+        status <- crayon::red(
+          "\u2718 Not yet converged") # for all targets")
+      }
+    }
+    
+    report <- c(
+      report,
+      # .make_line("Steps evaluated",
+      #            .color(.n_converge, status_ok)),
+      # .make_line("Tolerance set to", paste0(.tol * 100, "%")),
+      # .make_line("Acceptable error threshold",
+      #            paste0(round(abs(error_threshold) * 100, 1), "%")),
+      .make_line("Status", status),
+      # "",
+      paste0(
+        "     \u2015\u2015\u2015\u2015",
+        " See further details on convergence: ",
+        crayon::silver("md_check(output)")))
+    
     writeLines(report)
-  }
+    
+  } # end of trace
   
   if (has_groups) {
     out_summary <- summary_full %>%
@@ -5126,6 +5434,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
          summary = summary_full,
          verbose = verbose,
          diagnostics_table = diag,
+         history = history,
          plot_data = out_plot$dt_plot,
          plot = out_plot$plot,
          error_threshold = error_threshold,
@@ -5134,7 +5443,8 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
          sampling_interval = paste0(
            round(obj$dti$value, 1), " ", obj$dti$unit),
          sample_size_achieved = broke,
-         minimum_population_sample_size = m_seq[[i]]
+         init_m = m_init / ifelse(has_groups, 2, 1),
+         minimum_m = m_current
     ), class = "movedesign")
   class(out) <- unique(c("movedesign_optimized", class(out)))
   
@@ -5213,9 +5523,9 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
 #'   \item `sampling_interval`: Character string. Final sampling interval.
 #'   \item `sample_size_achieved`: Logical. Indicates if convergence was
 #'     achieved and the threshold met.
-#'   \item `minimum_population_sample_size`: Integer. Minimum sample size
-#'     achieving the threshold (or maximum evaluated if
-#'     `sample_size_achieved` is `FALSE`).
+#'   \item `init_m`: Integer. Maximum sample size evaluated.
+#'   \item `minimum_m`: Integer. Minimum sample size
+#'     achieving the threshold.
 #' }
 #' 
 #' @examples
