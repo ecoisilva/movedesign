@@ -181,8 +181,7 @@
 #' representing different stages of a "movedesign" workflow, such as
 #' input, preprocessing, simulation, output, diagnostics, and plots.
 #' 
-#' @param x The underlying data or object to be wrapped
-#'   (e.g., list, tibble, simulation object, output).
+#' @param x The underlying data or object to be wrapped.
 #' @param subclass Character string specifying the subclass
 #'   (e.g., `movedesign_input`, `movedesign_output`).
 #' @param ... Additional attributes to set on the object.
@@ -1371,7 +1370,7 @@ summary.movedesign_check <- function(object,
                                      verbose = FALSE,
                                      ...) {
   
-  . <- type <- group <- NULL
+  . <- type <- group <- error <- NULL
   
   .make_header <- function(title, n_dash = 10) {
     header_line <- paste0(strrep("\u2500", n_dash), " ", title, ":")
@@ -1407,21 +1406,29 @@ summary.movedesign_check <- function(object,
            target)
   }
   
-  .find_stable <- function(type, group) {
-    idx <- object$stabilized_at
-    idx <- idx[idx$type == type, ]
-    if (object$grouped) idx <- idx[idx$group == group, ]
-    idx$idx_stable_start
+  .find_stable <- function(type, group, tol) {
+    
+    x <- object$diag[
+      object$diag$type == type, , drop = FALSE]$deltas
+    vals <- unlist(x)
+    
+    stable_idx <- which(sapply(seq_along(vals), function(i) {
+      all(vals[i:length(vals)] <= tol, na.rm = TRUE)
+    }))[1]
+    
+    return(stable_idx)
   }
   
   .tol <- object$tolerance
+  .n_converge <- object$n_converge
   
   diag <- object$diagnostics_table
   error_threshold <- object$error_threshold
   
   targets <- unique(diag$type)
   has_groups <- object$grouped
-  has_converged <- object$has_converged
+  has_converged <- all(object$has_converged)
+  groups <- if (has_groups) c("A", "B") else c("All")
   
   report <- c(
     "", .make_header("Convergence diagnostics", 4), "")
@@ -1429,10 +1436,10 @@ summary.movedesign_check <- function(object,
   report <- c(
     report,
     .make_line(
-      paste("Number of", .color("steps", has_converged), "evaluated"),
-      .color(length(diag$recent_cummean[[1]]), has_converged)),
+      "Number of steps evaluated",
+      .color(.n_converge, has_converged)),
     .make_line(
-      paste(.color("Convergence tolerance", has_converged), "set to"),
+      "Convergence tolerance set to",
       .color(paste0(.err_to_txt(.tol), "%"), has_converged)))
   
   for (t in targets) {
@@ -1457,7 +1464,14 @@ summary.movedesign_check <- function(object,
                         diag$type[i])))
       }
       
-      mean_err <- row$last_cummean
+      mean_err <- object$summary %>%
+        dplyr::filter(type == t) %>%
+        dplyr::filter(group == row$group) %>%
+        dplyr::slice_max(.data$m) %>%
+        .summarize_error(error_threshold = error_threshold,
+                         conf_level = 0.95) %>%
+        dplyr::pull(error)
+      
       converged <- row$has_converged
       
       within_threshold <- if (!is.null(error_threshold)) {
@@ -1483,41 +1497,44 @@ summary.movedesign_check <- function(object,
           "", .make_section(paste0(.map_target(t), ":"), 5))
       }
       
-      report <- c(
-        report,
-        .make_subline(paste0(
-          .color("Convergence check", has_converged),
-                 " for ", tg), 5))
-      
-      report <- c(
-        report,
-        .make_line(
-          paste(.color("Mean", within_threshold), "relative error"),
-          .color(paste0(.err_to_txt(mean_err), "%"),
-                 within_threshold)))
+      if (nrow(rows) >= 2) {
+        report <- c(
+          report,
+          .make_subline(paste0(
+            .color("Convergence check", has_converged),
+            " for ", tg), 5))
+      }
       
       if (converged) {
-        stable <- .find_stable(t, row$group)
+        
+        stable_r <- .find_stable(
+          t, row$group, tol = object$tolerance)
+        
         report <- c(
           report,
           .make_line(
             "Status",
             paste0(.color(
-              "\u2713 Converged ", has_converged))),
-          .make_subline(
-              "At replicate ", .color(stable, has_converged), "."))
+              "\u2713 Converged ", has_converged))))
+        
+        report <- c(
+          report,
+          paste0(
+            "     ",
+            crayon::yellow("\u2713 "), "Stabilized at replicate ",
+            .color(stable_r, has_converged)))
         
       } else {
         
         # Identify which criteria failed:
         
         failed_delta <- any(sapply(
-          diag$recent_delta_cummean,
+          diag$recent_deltas,
           function(x) any(abs(x) > .tol, na.rm = TRUE)))
         
-        failed_sd <- any(sapply(
-          diag$recent_roll_sd,
-          function(x) any(x > .tol, na.rm = TRUE)))
+        # failed_sd <- any(sapply(
+        #   diag$recent_roll_sd,
+        #   function(x) any(x > .tol, na.rm = TRUE)))
         
         # Construct informative message:
         
@@ -1528,13 +1545,13 @@ summary.movedesign_check <- function(object,
             "Stepwise change ", crayon::red("exceeded"),
             " tolerance"),
             indent = 5))
-        if (failed_sd) fail_reasons <- c(
-          fail_reasons,
-          .make_subline(paste0(
-            crayon::red("\u2717 "),
-            "Recent variability ", crayon::red("exceeded"),
-            " tolerance"),
-            indent = 5))
+        # if (failed_sd) fail_reasons <- c(
+        #   fail_reasons,
+        #   .make_subline(paste0(
+        #     crayon::red("\u2717 "),
+        #     "Recent variability ", crayon::red("exceeded"),
+        #     " tolerance"),
+        #     indent = 5))
         
         report <- c(
           report,
@@ -1545,6 +1562,14 @@ summary.movedesign_check <- function(object,
           fail_reasons)
       }
       
+      report <- c(
+        report,
+        "",
+        .make_line(
+          paste(.color("Mean", within_threshold), "relative error"),
+          .color(paste0(.err_to_txt(mean_err), "%"),
+                 within_threshold)))
+      
       if (within_threshold) {
         
         txt_start <- ifelse(converged, "Error", "However, error")
@@ -1552,10 +1577,10 @@ summary.movedesign_check <- function(object,
           report,
           .make_subline(
             paste0(
-              crayon::cyan("\u2713 "), txt_start,
-              " ",  crayon::cyan("within"),
+              crayon::yellow("\u2713 "), txt_start,
+              " ",  crayon::yellow("within"),
               " threshold (\u00B1",
-              .err_to_txt(error_threshold), "%)."),
+              .err_to_txt(error_threshold), "%)"),
             indent = 5))
         
       } else {
@@ -1616,16 +1641,33 @@ summary.movedesign_check <- function(object,
       cat("\n")
     }
   }
-
+  
   if (!is.null(object$warning)) {
+    
+    issues <- c()
+    actions <- c()
+    
+    if (!is.null(object$n_converge) &&
+        object$n_converge <= 5) {
+      issues <- c(issues, "few steps")
+      actions <- c(actions, "number of steps (`n_converge`)")
+    }
+    
+    if (!is.null(object$data$n_replicates) &&
+        object$data$n_replicates <= 5) {
+      issues <- c(issues, "few simulation runs")
+      actions <- c(
+        actions, "number of replicates")
+    }
+    
     warning(paste0(
-        "Convergence diagnostics may be ", 
-        crayon::yellow("unreliable"),
-        " with few replicates.\n",
-        crayon::bold(
-          "  Increase number of replicates "),
-        crayon::bold("for more robust inferences.")
-      ), call. = FALSE)
+      "Convergence diagnostics may be ",
+      crayon::yellow("unreliable"), " with ",
+      paste(issues, collapse = " and "), ".\n",
+      crayon::bold("  Increase "),
+      paste(unique(actions), collapse = " and "), 
+      " for more robust inferences."),
+      call. = FALSE)
   }
   
   invisible(object)
@@ -1992,7 +2034,7 @@ summary.movedesign_optimized <- function(object,
       ci_ok <- nrow(ci_when) > 0
       
       if (!ci_ok) {
-        ci_when <- tibble::tibble(
+        ci_when <- data.frame(
           type = target,
           group = groups[[g]],
           m = NA_real_,
@@ -2001,7 +2043,8 @@ summary.movedesign_optimized <- function(object,
           error_uci = NA_real_,
           lci_within = FALSE,
           uci_within = FALSE,
-          overlaps_zero = FALSE)
+          overlaps_zero = FALSE,
+          stringsAsFactors = FALSE)
       }
       
       if (ci_when$lci_within && ci_when$uci_within) {

@@ -2565,7 +2565,7 @@ ellipke <- function(m, tol = .Machine$double.eps) {
     labels = c("TRUE", "FALSE"))
   
   return(dplyr::bind_cols(
-    out, dplyr::tibble(
+    out, data.frame(
       error_lci = error_lci,
       error_uci = error_uci,
       pred_lci = pred_lci,
@@ -2573,6 +2573,7 @@ ellipke <- function(m, tol = .Machine$double.eps) {
       ci = conf_level,
       within_threshold = within_threshold,
       overlaps_with_threshold = overlaps_with_threshold,
-      overlaps = overlaps)))
+      overlaps = overlaps,
+      stringsAsFactors = FALSE)))
 }
 

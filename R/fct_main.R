@@ -21,8 +21,8 @@
 #'   
 #'   Provide a list with two elements:
 #'   \itemize{
-#'     \item `value` — a numeric value (e.g. `6`)
-#'     \item `unit`  — a character string: one of `"second"`,
+#'     \item `value` - a numeric value (e.g. `6`)
+#'     \item `unit`  - a character string: one of `"second"`,
 #'       `"minute"`, `"hour"`, `"day"`, `"month"`, or `"year"`
 #'   }
 #' 
@@ -63,17 +63,17 @@
 #'   to be evaluated in the study design workflow. Choose one or
 #'   both:
 #'   \itemize{
-#'     \item `"hr"`   — home range area
-#'     \item `"ctsd"` — continuous-time speed and distance
+#'     \item `"hr"`   - home range area
+#'     \item `"ctsd"` - continuous-time speed and distance
 #'   }
 #'   Defaults to `c("hr", "ctsd")`.
 #'
 #' @param which_meta Character specifying the population-level
 #'   analytical target. Choose one:
 #'   \itemize{
-#'     \item `"mean"` (default) — estimates the average value
+#'     \item `"mean"` (default) - estimates the average value
 #'       across all individuals.
-#'     \item `"ratio"` — compares the mean between groups A and B.
+#'     \item `"ratio"` - compares the mean between groups A and B.
 #'       Requires `grouped = TRUE`.
 #'   }
 #'   
@@ -99,8 +99,8 @@
 #' that model.
 #' 
 #' Simulated data are immediately passed through the full
-#' `movedesign` workflow — model fitting, aggregation, and
-#' estimation of the target metrics — so the returned object is
+#' `movedesign` workflow (model fitting, aggregation, and
+#' estimation of the target metrics) so the returned object is
 #' ready for study design evaluation without further steps.
 #' 
 #' When `grouped = TRUE`, simulations are generated independently for
@@ -452,19 +452,19 @@ md_simulate <- function(n_individuals = NULL,
 #'   to be evaluated in the study design workflow. Choose one or
 #'   both:
 #'   \itemize{
-#'     \item `"hr"`   — home range area
-#'     \item `"ctsd"` — continuous-time speed and distance
+#'     \item `"hr"`   - home range area
+#'     \item `"ctsd"` - continuous-time speed and distance
 #'   }
 #'   Defaults to `c("hr", "ctsd")`.
 #'
 #' @param which_meta Character. Specifies the analytical target for
 #'   population-level inference. Choose one:
 #'   \itemize{
-#'     \item `"mean"` (default) — estimates the average
+#'     \item `"mean"` (default) - estimates the average
 #'       across all individuals.
-#'     \item `"ratio"` — compares the mean between groups
+#'     \item `"ratio"` - compares the mean between groups
 #'       `"A"` and `"B"`. Requires `groups` to be specified.
-#'     \item `NULL` — single-individual inference. Requires
+#'     \item `NULL` - single-individual inference. Requires
 #'       `data` to be a single telemetry object rather than
 #'       a list.
 #'   }
@@ -1410,7 +1410,7 @@ md_merge <- function(x, ...) {
 #' calling [md_replicate()] with `n_replicates = n`.
 #' 
 #' Use this function when the [md_run()] calls have already been
-#' made — for example, when runs were executed in parallel outside
+#' made; for example, when runs were executed in parallel outside
 #' the standard workflow, or recovered after an interruption.
 #' 
 #' The distinction from [md_merge()] is important. [md_merge()]
@@ -1858,7 +1858,7 @@ md_replicate <- function(obj,
 #' @param error_threshold Numeric. Relative error threshold shown as
 #'   a reference line in the plot (e.g. `0.05` for 5%).
 #'   
-#' @param pal A character vector of two colours, used for estimates
+#' @param pal A character vector of two colors, used for estimates
 #'   within and outside the error threshold respectively.
 #'   Defaults to `c("#007d80", "#A12C3B")`.
 #'   
@@ -3037,25 +3037,33 @@ md_check <- function(obj,
     is.numeric(tol) && tol > 0 && tol < 1,
     is.numeric(n_converge) && n_converge >= 0)
   
-  set_caption <- NULL
-  if (n_converge < 5 || obj$data$n_replicates <= 5) {
-    set_caption <- paste(
-      "Using a small number of replicates may",
-      "give unreliable convergence diagnostics.")
-    set_caption <- paste("Warning:", set_caption)
+  if (!is.character(pal) || length(pal) != 2L) {
+    stop("`pal` must be a length-2 character vector.",
+         call. = FALSE)
   }
   
-  index <- NULL
-  type <- group <- has_converged <- NULL
-  cummean <- delta_cummean <- last_cummean <- NULL
-  idx_stable_start <- last_roll_sd <- NULL
+  set_caption <- NULL
+  if (n_converge <= 5 || obj$data$n_replicates <= 5) {
+    issues <- c()
+    if (n_converge < 5) issues <- c(issues, "steps")
+    if (obj$data$n_replicates <= 5) 
+      issues <- c(issues, "replicates")
+    
+    set_caption <- paste(
+      "Warning: Using a small number of",
+      paste(issues, collapse = " and "),
+      "may give unreliable convergence diagnostics.")
+  }
   
   variable <- "error"
   data <- obj$summary
-  
   set_target <- obj$data$set_target
+  error_threshold <- obj$error_threshold
   has_groups <- ("group" %in% names(data)) &&
     any(c("A", "B") %in% unique(as.character(data$group)))
+  
+  n_replicates <- obj$data$n_replicates
+  .streak <- ceiling(n_converge * 0.6)
   
   if (has_groups) {
     data <- data[data$group != "All", ]
@@ -3074,12 +3082,10 @@ md_check <- function(obj,
     data <- subset(data, m == max(m))
   }
   
-  stopifnot(is.data.frame(data))
-  stopifnot(is.numeric(tol) && tol > 0)
-  stopifnot(is.numeric(n_converge) && n_converge >= 2)
+  stopifnot(is.data.frame(data), nrow(data) > 0)
   stopifnot(variable %in% names(data))
   
-  # Rolling SD (vectorized):
+  # Rolling SD:
   
   .roll_sd <- function(x, n) {
     sd_vec <- rep(NA_real_, length(x))
@@ -3109,71 +3115,95 @@ md_check <- function(obj,
     return(NA_integer_)
   }
   
-  # Compute cumulative mean and stepwise changes:
+  # Maps internal type codes to strings:
+  .label_type <- function(type_vec, group_vec, has_groups) {
+    type_str <- dplyr::case_when(
+      type_vec == "hr" ~ "mean home range",
+      type_vec == "ctsd" ~ "mean speed",
+      TRUE ~ as.character(type_vec))
+    if (has_groups) {
+      return(paste0(type_str, " / group ", group_vec))
+    } else {
+      return(type_str)
+    }
+  }
   
-  data_subset <- data %>%
+  # Compute convergence diagnostics:
+  
+  diag <- data %>%
+    dplyr::arrange(.data$type, .data$group, .data$replicate) %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::mutate(
+      cummean = cumsum(.data[[variable]]) / dplyr::row_number()) %>%
+    dplyr::mutate(
+      delta_cummean = abs(.data$cummean - 
+                            dplyr::last(.data$cummean))) %>%
+    dplyr::summarise(
+      n_steps = length(.data$cummean),
+      has_enough_reps = .data$n_steps >= n_converge,
+      deltas = list(.data$delta_cummean),
+      recent_cummean = list(tail(.data$delta_cummean, n_converge)),
+      recent_deltas = if (.data$has_enough_reps)
+        list(tail(.data$delta_cummean, n_converge)) else list(NA),
+      # Arithmetic stability:
+      # consecutive cummean deltas all within internal tolerance
+      is_stable = if (.data$has_enough_reps)
+        all(abs(unlist(.data$recent_deltas)) < tol) else FALSE,
+      # Threshold criterion:
+      # final value AND streak sub-window all within error threshold
+      is_within_threshold = .data$has_enough_reps & {
+        w <- unlist(.data$recent_cummean)
+        ok <- abs(tail(w, 1)) <= error_threshold
+        streak_n <- ceiling(n_converge * 0.6)
+        streak_ok <- all(abs(tail(w, streak_n)) <= error_threshold)
+        ok & streak_ok
+      },
+      idx_stable_start = .find_stable(
+        .data$delta_cummean, tol, n_converge),
+      .groups = "drop") %>%
+    dplyr::mutate(
+      has_converged = .data$n_steps >= 5 &
+        .data$is_stable &
+        .data$is_within_threshold) %>%
+    dplyr::arrange(dplyr::desc(.data$type))
+  
+  min_valid <- diag %>%
+    dplyr::summarise(min_n = min(.data$n_steps), .groups = "drop") %>%
+    dplyr::pull(.data$min_n)
+  
+  if (min_valid < n_converge) {
+    stop(sprintf(
+      "Not enough replicates (n = %d) to check %d steps.",
+      min_valid, n_converge), call. = FALSE)
+  }
+  
+  # Prepare data for plotting:
+  
+  dt_plot <- data %>%
+    dplyr::arrange(.data$type, .data$group, .data$replicate) %>%
     dplyr::group_by(.data$type, .data$group) %>%
     dplyr::mutate(
       index = dplyr::row_number(),
-      cummean = cumsum(.data[[variable]]) / index,
-      cumvar = cumsum((.data[[variable]] - cummean)^2) / index,
-      delta_cummean = c(NA, diff(cummean)),
-      roll_sd = .roll_sd(cummean, n = n_converge),
-      has_converged = abs(delta_cummean) < tol) %>%
-    dplyr::mutate(
-      color_state = dplyr::case_when(
-        .data$index <= max(.data$index) - n_converge ~ "early",
-        .data$has_converged ~ "converged",
-        TRUE ~ "diverged")) %>%
-    dplyr::ungroup()
-  
-  get_r <- data_subset %>%
-    dplyr::group_by(.data$type, .data$group) %>%
-    dplyr::summarise(
-      n_steps = sum(!is.na(.data$delta_cummean)),
-      .groups = "drop") %>%
-    dplyr::pull(.data$n_steps) %>%
-    min()
-  
-  if (get_r < n_converge) {
-    stop(sprintf(
-      "Not enough replicates (n = %d) to check %d steps.",
-      get_r, n_converge))
-  }
-
-  # Compute convergence diagnostics:
-  
-  stable_idx <- data_subset %>%
-    dplyr::group_by(.data$type, .data$group) %>%
-    dplyr::summarise(
-      idx_stable_start = .find_stable(
-        delta_cummean, tol, n_converge),
-      .groups = "drop")
-  
-  diag <- data_subset %>%
-    dplyr::group_by(.data$type, .data$group) %>%
-    dplyr::summarise(
-      last_cummean = tail(.data$cummean, 1),
-      recent_cummean = list(tail(.data$cummean, n_converge)),
-      recent_delta_cummean = list(
-        tail(.data$delta_cummean, n_converge)),
-      recent_roll_sd = list(tail(.data$roll_sd, n_converge)),
-      last_roll_sd = max(
-        tail(.data$roll_sd, 1), na.rm = TRUE),
-      idx_stable_start = .find_stable(
-        delta_cummean, tol, n_converge),
-      .groups = "drop") %>%
-    dplyr::mutate(
-      has_converged = !is.na(.data$idx_stable_start) &
-        .data$last_roll_sd <= tol) %>%
-    dplyr::arrange(dplyr::desc(.data$type))
-  
-  dt_plot <- data_subset %>%
+      cummean = cumsum(.data[[variable]]) / .data$index,
+      delta_cummean = abs(
+        .data$cummean - dplyr::last(.data$cummean))) %>%
     dplyr::left_join(
-      diag %>% dplyr::select(
-        -"has_converged", -"idx_stable_start"),
+      diag %>%
+        dplyr::select(
+          "type", "group", "has_converged", "idx_stable_start"),
       by = c("type", "group")) %>%
-    dplyr::left_join(stable_idx, by = c("type", "group"))
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::mutate(
+      max_index = max(.data$index),
+      color_state = dplyr::case_when(
+        .data$index < .data$max_index - n_converge + 1 ~ "early",
+        .data$has_converged & .data$index >=
+          .data$idx_stable_start ~ "converged",
+        TRUE ~ "diverged")) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-.data$max_index)
+  
+  dt_plot$type_f <- factor(dt_plot$type, levels = c("hr", "ctsd"))
   
   dt_rect <- suppressWarnings(
     dt_plot %>%
@@ -3183,67 +3213,53 @@ md_check <- function(obj,
         xmin = .data$idx_stable_start[1],
         xmax = max(.data$index, na.rm = TRUE),
         .groups = "drop"))
+  if (nrow(dt_rect > 1))
+    dt_rect$type_f <- factor(
+      dt_rect$type[[1]], levels = c("hr", "ctsd"))
   
-  failed_groups <- diag %>%
-    dplyr::filter(!.data$has_converged) %>%
-    dplyr::mutate(
-      group_label = if (has_groups) {
-        paste0(.data$type, " / group ", .data$group)
-      } else {
-        dplyr::case_when(
-          .data$type == "hr" ~ "mean home range",
-          .data$type == "ctsd" ~ "mean speed",
-          TRUE ~ as.character(.data$type)
-        )
-      }) %>%
-    dplyr::pull(.data$group_label)
+  all_labels <- .label_type(
+    diag$type, diag$group, has_groups)
+  failed_labels <- .label_type(
+    diag$type[!diag$has_converged],
+    diag$group[!diag$has_converged],
+    has_groups)
+  converged_labels <- setdiff(all_labels, failed_labels)
   
-  all_groups <- diag %>%
-    dplyr::mutate(
-      group_label = if (has_groups) {
-        paste0(.data$type, " / group ", .data$group)
-      } else {
-        dplyr::case_when(
-          .data$type == "hr" ~ "mean home range",
-          .data$type == "ctsd" ~ "mean speed",
-          TRUE ~ as.character(.data$type))
-      }) %>%
-    dplyr::pull(.data$group_label)
-  
-  if (has_groups) {
-    all_groups <- gsub("^hr", "mean home range", all_groups)
-    all_groups <- gsub("^ctsd", "mean speed", all_groups)
-    failed_groups <- gsub("^hr", "mean home range", failed_groups)
-    failed_groups <- gsub("^ctsd", "mean speed", failed_groups)
+  .format_str <- function(x, indent) {
+    paste(x, collapse = paste0("\n", strrep(" ", indent)))
   }
   
-  converged_groups <- setdiff(all_groups, failed_groups)
   set_subtitle <- paste0(
-    if (length(converged_groups)) {
+    if (length(converged_labels)) {
       paste0("Converged: ",
-             paste(converged_groups,
+             paste(converged_labels,
                    collapse = "\n                  "))
     } else "",
     
-    if (length(converged_groups) && 
-        length(failed_groups)) "\n" else "",
+    if (length(converged_labels) && 
+        length(failed_labels)) "\n" else "",
     
-    if (length(failed_groups)) {
+    if (length(failed_labels)) {
       paste0("Did not converge: ",
-             paste(failed_groups,
+             paste(failed_labels,
                    collapse = "\n                           "))
     } else "",
     
     sprintf("\n(tolerance = \u00B1 %g%%)", tol * 100)
   )
   
-  dt_plot$type_f <- factor(dt_plot$type, levels = c("hr", "ctsd"))
-  dt_rect$type_f <- factor(dt_rect$type, levels = c("hr", "ctsd"))
-  
-  col_converged <- col_tolerance <- pal[1]
+  col_converged <- pal[1]
   col_diverged <- pal[2]
   
-  p <- NULL
+  has_converged <- diag$has_converged 
+  col_tolerance <- ifelse(has_converged, pal[1], pal[2])
+  
+  .set_position <- if (has_groups) {
+    ggplot2::position_dodge(width = 0.1)
+  } else {
+    ggplot2::position_identity()
+  }
+  
   p <- dt_plot %>%
     ggplot2::ggplot(
       ggplot2::aes(x = .data$replicate, 
@@ -3279,27 +3295,21 @@ md_check <- function(obj,
         data = dt_rect,
         ggplot2::aes(xintercept = .data$xmin),
         color = col_converged,
-        linetype = "dotted", linewidth = 0.45,
+        linetype = "dotted",
+        linewidth = 0.45,
         inherit.aes = FALSE)
     } +
     
     # Zero reference:
     ggplot2::geom_hline(
       yintercept = 0,
-      color = "black",
-      # color = "#1a1a1a",
       linewidth = 0.35,
       alpha = 0.35) +
     
     # Tolerance bounds:
     ggplot2::geom_hline(
-      yintercept = tol,
-      color = col_tolerance,
-      linewidth = 0.55,
-      linetype = "dashed") +
-    ggplot2::geom_hline(
-      yintercept = -tol,
-      color = col_tolerance,
+      yintercept = c(tol, -tol),
+      colour = col_tolerance,
       linewidth = 0.55,
       linetype = "dashed") +
     
@@ -3309,7 +3319,6 @@ md_check <- function(obj,
       x = Inf, y = tol,
       label = sprintf("+%g%%", tol * 100),
       color = col_tolerance,
-      # fontface = "bold",
       hjust = 1.08, vjust = -0.5,
       size = 3.2) +
     ggplot2::annotate(
@@ -3317,7 +3326,6 @@ md_check <- function(obj,
       x = Inf, y = -tol,
       label = sprintf("\u2212%g%%", tol * 100),
       color = col_tolerance,
-      # fontface = "bold",
       hjust = 1.08, vjust = 1.5,
       size = 3.2) +
     
@@ -3333,36 +3341,25 @@ md_check <- function(obj,
     
     ggplot2::geom_line(
       color = "#CCCCCC",
-      position = if (has_groups)
-        ggplot2::position_dodge(width = 0.1) else 
-          ggplot2::position_identity(),
+      position = .set_position,
       linewidth = 0.7,
       lineend = "round",
       show.legend = FALSE) +
     
     ggplot2::geom_point(
       ggplot2::aes(color = .data$color_state),
-      position = if (has_groups)
-        ggplot2::position_dodge(width = 0.1) else 
-          ggplot2::position_identity(),
-      size = 8,
-      alpha = 0.10) +
+      position = .set_position,
+      size = 8, alpha = 0.10) +
     
     ggplot2::geom_point(
       ggplot2::aes(color = .data$color_state),
-      position = if (has_groups)
-        ggplot2::position_dodge(width = 0.1) else 
-          ggplot2::position_identity(),
-      size = 5,
-      alpha = 0.25) +
+      position = .set_position,
+      size = 5, alpha = 0.25) +
     
     ggplot2::geom_point(
       ggplot2::aes(color = .data$color_state),
-      position = if (has_groups)
-        ggplot2::position_dodge(width = 0.1) else 
-          ggplot2::position_identity(),
-      size = 1.8,
-      alpha = 1) +
+      position = .set_position,
+      size = 1.8, alpha = 1) +
     
     ggplot2::scale_y_continuous(
       labels = scales::percent,
@@ -3480,15 +3477,15 @@ md_check <- function(obj,
   }
   
   return(structure(list(
+    summary = obj$summary,
     grouped = has_groups,
-    diagnostics_table = diag,
-    tolerance = tol,
-    n_converge = n_converge,
-    has_converged = diag$has_converged,
-    stabilized_at = stable_idx,
+    targets = set_target,
     error_threshold = obj$error_threshold,
-    plot = p,
-    warning = set_caption
+    n_converge = n_converge,
+    tolerance = tol,
+    diagnostics_table = diag,
+    has_converged = diag$has_converged,
+    plot = p
   ), class = "movedesign_check"))
   
 }
@@ -3928,7 +3925,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
                           has_groups = FALSE) {
   
   ci <- 0.95
-  pal <- list("TRUE" = "#007d80", "FALSE" = "#A12C3B")
+  pal <- c("TRUE" = "#007d80", "FALSE" = "#A12C3B")
   
   if (has_groups) {
     out <- x[x$group != "All", ]
@@ -3977,7 +3974,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
   label_threshold <- if (length(error_threshold) == 1L) {
     sprintf("%s%%", round(error_threshold * 100, 0))
   } else {
-    sprintf("%s–%s%%", round(error_threshold[1] * 100, 0),
+    sprintf("%s\u2013%s%%", round(error_threshold[1] * 100, 0),
             round(error_threshold[2] * 100, 0))
   }
   label_threshold_lower <- if (length(error_threshold) == 1L) {
@@ -4009,7 +4006,8 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         y = .data$error,
         group = .data$group,
         shape = .data$group,
-        color = .data$overlaps)) +
+        color = .data$overlaps,
+        fill = .data$overlaps)) +
     
     ggplot2::geom_hline(
       yintercept = 0,
@@ -4136,7 +4134,8 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
             order = 1,
             label.vjust = 0.4))
       } else {
-        ggplot2::scale_fill_manual(values = pal[1])
+        ggplot2::scale_fill_manual(
+          values = pal, drop = FALSE)
       }
     } +
     
@@ -4209,7 +4208,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
                                ...) {
   
   dots <- list(...)
-  .tol <- dots[[".tol"]] %||% 0.05
+  .tol <- dots[[".tol"]] %||% 0.01
   .seeds <- dots[[".seeds"]] %||% NULL
   .n_converge <- dots[[".n_converge"]] %||% 9
   .console_alert <- dots[[".console_alert"]] %||% TRUE
@@ -4397,6 +4396,22 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     }
     
     return(obj)
+  }
+  
+  .find_stable <- function(delta_vec, tol, n_converge) {
+    
+    valid <- !is.na(delta_vec) & (abs(delta_vec) <= tol)
+    if (sum(valid) < n_converge) return(NA_integer_)
+    
+    # Find first run of n_converge consecutive TRUEs:
+    run_len <- 0L
+    for (i in seq_along(valid)) {
+      run_len <- if (valid[i]) run_len + 1L else 0L
+      if (run_len >= n_converge)
+        return(i - n_converge + 1L)
+    }
+    
+    return(NA_integer_)
   }
   
   .worker <- function(r, m, obj, seeds = NULL, trace = FALSE) {
@@ -4591,12 +4606,21 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       " Set ", crayon::yellow(i), " out of ",
       crayon::yellow(length(m_seq))))
     
-    message(paste(
-      crayon::cyan("\u2015\u2015\u2015"),
-      "Current sampled population:", 
-      if (!is.null(groups))
-        crayon::cyan(m_current * 2) else crayon::cyan(m_current), 
-      "individual(s)"))
+    if (!has_groups) {
+      message(paste(
+        crayon::cyan("\u2015\u2015\u2015"),
+        "Current sampled population:", 
+        if (!is.null(groups))
+          crayon::cyan(m_current * 2) else crayon::cyan(m_current), 
+        "individual(s)"))
+    } else {
+      message(paste(
+        crayon::cyan("\u2015\u2015\u2015"),
+        "Current sampled population:", 
+        if (!is.null(groups))
+          crayon::cyan(m_current * 2) else crayon::cyan(m_current), 
+        "individual(s) per group"))
+    }
     
     seeds <- NULL
     if (!is.null(.seeds)) seeds <- seeds_split[[i]]
@@ -4693,64 +4717,48 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         }
       }), names(err_prev))
     
-    variable <- "error"
-    data_subset <- data %>%
-      dplyr::group_by(.data$type, .data$group) %>%
-      dplyr::mutate(
-        cummean = cumsum(.data[[variable]]) / 
-          dplyr::row_number()) %>%
-      dplyr::ungroup()
-    
     # Compute convergence diagnostics:
     
-    diag <- data_subset %>%
+    browser()
+    diag <- data %>%
       dplyr::arrange(.data$type, .data$group, .data$replicate) %>%
       dplyr::group_by(.data$type, .data$group) %>%
       dplyr::mutate(
-        cummean = cumsum(.data$error) / dplyr::row_number()) %>%
-      # step 1 — summarise the recent cummean window:
+        cummean = cumsum(.data[["error"]]) / dplyr::row_number()) %>%
+      dplyr::mutate(
+        delta_cummean = abs(.data$cummean - 
+                              dplyr::last(.data$cummean))) %>%
       dplyr::summarise(
-        n_reps = dplyr::n(),
-        recent_cummean = list(tail(.data$cummean, .n_converge)),
+        n_steps = length(.data$cummean),
+        has_enough_reps = .data$n_steps >= .n_converge,
+        deltas = list(.data$delta_cummean),
+        recent_cummean = list(tail(.data$delta_cummean, .n_converge)),
+        recent_deltas = if (.data$has_enough_reps)
+          list(tail(.data$delta_cummean, .n_converge)) else list(NA),
+        # Arithmetic stability:
+        # consecutive cummean deltas all within internal .tolerance
+        is_stable = if (.data$has_enough_reps)
+          all(abs(unlist(.data$recent_deltas)) < .tol) else FALSE,
+        # Threshold criterion:
+        # final value AND streak sub-window all within error threshold
+        is_within_threshold = .data$has_enough_reps & {
+          w <- unlist(.data$recent_cummean)
+          ok <- abs(tail(w, 1)) <= error_threshold
+          streak_n <- ceiling(.n_converge * 0.6)
+          streak_ok <- all(abs(tail(w, streak_n)) <= error_threshold)
+          ok & streak_ok
+        },
+        idx_stable_start = .find_stable(
+          .data$delta_cummean, .tol, .n_converge),
         .groups = "drop") %>%
-      # step 2 — compute deltas from recent cummean window:
       dplyr::mutate(
-        recent_deltas = lapply(
-          .data$recent_cummean, function(x) abs(diff(x)))) %>%
-      # step 3 — convergence diagnostics:
-      dplyr::mutate(
-        n_deltas = vapply(
-          .data$recent_deltas, length, integer(1L)),
-        max_delta = vapply(
-          .data$recent_deltas, function(x)
-            if (length(x) == 0L) NA_real_ else max(x),
-          numeric(1L)),
-        is_stable = vapply(
-          .data$recent_deltas, function(x)
-            if (length(x) == 0L) FALSE else all(x < .tol),
-          logical(1L)),
-        is_within_threshold = vapply(
-          .data$recent_cummean,
-          function(x) {
-            # Guard: window must be fully populated:
-            if (length(x) < .n_converge) return(FALSE)
-            # Criterion 1: final value (most precise estimate)
-            # within user-specified error threshold:
-            final_ok <- abs(x[length(x)]) <= error_threshold
-            # Criterion 2: streak sub-window, clamped to actual
-            # window length to guard against .streak > length(x):
-            .streak <- ceiling(.n_converge * 0.6)
-            streak_n <- min(.streak, length(x))
-            streak_vals <- tail(x, streak_n)
-            streak_ok <- all(abs(streak_vals) <= error_threshold)
-            final_ok & streak_ok
-          }, logical(1L)),
-        has_converged = .data$is_stable &
+        has_converged = .data$n_steps >= 5 &
+          .data$is_stable &
           .data$is_within_threshold) %>%
       dplyr::arrange(dplyr::desc(.data$type))
     
     # Break conditions:
-
+    
     err_values <- lapply(err_prev, tail, n = 3)
     err_values <- unlist(err_values)
 
@@ -4761,6 +4769,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     
     dt_means <- .summarize_error(summary, conf_level = 0.95,
                                  error_threshold = error_threshold)
+    
     if (has_groups) {
       dt_means <- dt_means[dt_means$group != "All", ]
     } else {
@@ -4808,7 +4817,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     history$err[i] <- error[which.max(abs(error))]
     history$error_ok[i] <- error_ok
     history$all_error_ok[i] <- all_error_ok
-    history$is_stable[i] <- diag$is_stable
+    history$is_stable[i] <- all(diag$is_stable)
     history$has_converged[i] <- all(diag$has_converged)
     
     if (obj$which_meta == "mean") {
@@ -5252,7 +5261,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
               paste(rep("\u2500", 65L), collapse = "")))))
       }
       
-      if (error_ok && all_error_ok) {
+      if (error_ok) {
         report <- c(
           report,
           "",
@@ -5261,18 +5270,6 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
                  crayon::yellow("within threshold"), " (\u00B1",
                  round(error_threshold * 100, 0), "%) achieved at m = ",
                  crayon::yellow(error_ok_m)))
-        
-        n_outside_threshold <- out_plot$dt_plot %>%
-          dplyr::group_by(.data$type, .data$group) %>%
-          dplyr::filter(.data$m == error_ok_m) %>%
-          dplyr::summarise(
-            n_outside_threshold = sum(
-              abs(.data$error) > error_threshold, na.rm = TRUE),
-            n_replicates = dplyr::n(),
-            .groups = "keep") %>%
-          dplyr::pull(n_outside_threshold)
-        set_m <- error_ok_m
-        
       } else {
         report <- c(
           report,
@@ -5283,6 +5280,31 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
                  round(error_threshold * 100, 0), "%)"),
           paste0("     ", "Increase ",
                  crayon::red("population"), " sample size!"))
+      }
+      
+      set_m <- out_plot$dt_plot %>%
+        dplyr::group_by(.data$type, .data$group, .data$m) %>%
+        dplyr::summarise(
+          n_outside_threshold = sum(
+            abs(.data$error) > error_threshold, na.rm = TRUE),
+          .groups = "drop") %>%
+        dplyr::filter(n_outside_threshold == 0) %>%
+        dplyr::slice_min(.data$m) %>%
+        dplyr::pull(.data$m)
+      
+      if (all_error_ok) {
+        
+        # extra_words <- ifelse(error_ok, "All", "However, all")
+        report <- c(
+          report,
+          paste0("     ",
+                 crayon::yellow("\u2713 "), "All replicates ",
+                 crayon::yellow("within threshold"), " (\u00B1",
+                 round(error_threshold * 100, 0),
+                 "%) achieved at m = ",
+                 crayon::yellow(set_m)))
+        
+      } else {
         
         n_outside_threshold <- out_plot$dt_plot %>%
           dplyr::group_by(.data$type, .data$group) %>%
@@ -5294,31 +5316,17 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
             n_replicates = dplyr::n(),
             .groups = "keep") %>%
           dplyr::pull(n_outside_threshold)
-        set_m <- .max_m
-      }
-      
-      if (all_error_ok) {
-        extra_words <- ifelse(error_ok, "All", "However, all")
-        report <- c(
-          report,
-          paste0("     ",
-                 crayon::yellow("\u2713 "), extra_words, " replicates ",
-                 crayon::yellow("within threshold"), " (\u00B1",
-                 round(error_threshold * 100, 0), "%) achieved at m = ",
-                 crayon::yellow(all_error_ok_m)))
-        
-      } else {
         
         set_m <- if (has_groups) set_m/2 else set_m
-        extra_words <- ifelse(error_ok, "However, with", "With")
+        # extra_words <- ifelse(error_ok, "However, with", "With")
         report <- c(
           report,
           paste0("     ",
-                 crayon::red("\u2717 "), extra_words, " ",
-                 crayon::red(set_m), " individuals, ",
+                 crayon::red("\u2717 "), "With ",
+                 crayon::red(.max_m), " individuals, ",
                  crayon::red(n_outside_threshold[[g]]),
                  " of ", crayon::red(n_replicates),
-                 " replicates exceeded threshold."))
+                 " replicates exceeded threshold"))
       }
     }
     
@@ -5342,7 +5350,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     ci_ok <- nrow(ci_when) > 0
     
     if (!ci_ok) {
-      ci_when <- tibble::tibble(
+      ci_when <- data.frame(
         type = NA_real_,
         group = groups[[g]],
         m = NA_real_,
@@ -5351,25 +5359,26 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         error_uci = NA_real_,
         lci_within = FALSE,
         uci_within = FALSE,
-        overlaps_zero = FALSE)
+        overlaps_zero = FALSE,
+        stringsAsFactors = FALSE)
     }
     
     if (ci_when$lci_within && ci_when$uci_within) {
-      extra_words <- ifelse(error_ok, "CIs", "However, CIs")
+      # extra_words <- ifelse(error_ok, "CIs", "However, CIs")
       report <- c(
         report,
         paste0("     ",
-               crayon::yellow("\u2713 "), extra_words,
+               crayon::yellow("\u2713 "), "CIs",
                " fall entirely ",
                crayon::yellow("within threshold"), " (\u00B1",
                round(error_threshold * 100, 0), "%) at m = ",
                crayon::yellow(ci_when$m)))
       
     } else {
-      extra_words <- ifelse(error_ok, "However, with", "With")
+      # extra_words <- ifelse(error_ok, "However, with", "With")
       report <- c(
         report,
-        paste0("     ", crayon::red("\u2717 "), extra_words, " ",
+        paste0("     ", crayon::red("\u2717 "), "With ",
                crayon::red(m_current), " individuals, CIs",
                " do not fall ", crayon::red("entirely"),
                " within threshold"))
@@ -5380,7 +5389,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       "",
       .make_header("Replicate convergence", 4), "")
     
-    if (diag$is_stable) {
+    if (all(diag$is_stable)) {
       status <- crayon::yellow("\u2713 Converged")
       status_ok <- TRUE
     } else {
@@ -5429,6 +5438,18 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
         "is_grouped", "group", "error", "error_lci", "error_uci")
   }
   
+  set_warning <- NULL
+  if (.n_converge <= 5 || n_replicates <= 5) {
+    issues <- c()
+    if (.n_converge < 5) issues <- c(issues, "steps")
+    if (n_replicates <= 5) issues <- c(issues, "replicates")
+    
+    set_warning <- paste(
+      "Warning: Using a small number of",
+      paste(issues, collapse = " and "),
+      "may give unreliable convergence diagnostics.")
+  }
+  
   out <- structure(
     list(data = merged,
          summary = summary_full,
@@ -5437,14 +5458,17 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
          history = history,
          plot_data = out_plot$dt_plot,
          plot = out_plot$plot,
+         tolerance = .tol,
          error_threshold = error_threshold,
          sampling_duration = paste0(
            round(obj$dur$value, 1), " ", obj$dur$unit),
          sampling_interval = paste0(
            round(obj$dti$value, 1), " ", obj$dti$unit),
+         has_converged = all(diag$has_converged),
          sample_size_achieved = broke,
          init_m = m_init / ifelse(has_groups, 2, 1),
-         minimum_m = m_current
+         minimum_m = m_current,
+         warning = set_warning
     ), class = "movedesign")
   class(out) <- unique(c("movedesign_optimized", class(out)))
   
@@ -5642,7 +5666,7 @@ md_optimize <- function(obj,
 #'   }
 #' }
 #'
-#' Both panels share a common colour palette (within/outside the
+#' Both panels share a common color palette (within/outside the
 #' acceptable error threshold) and, when two groups are present,
 #' a common shape scale. By default, the function plots only the
 #' second item listed above.
@@ -6114,7 +6138,7 @@ md_plot_replicates <- function(obj,
 #' @param error_threshold Numeric. Relative error threshold shown
 #'   as a horizontal reference line in the plot (e.g. `0.05` for 5%).
 #'   
-#' @param pal A character vector of two colours, used for estimates
+#' @param pal A character vector of two colors, used for estimates
 #'   within and outside the error threshold respectively.
 #'   Defaults to `c("#007d80", "#A12C3B")`.
 #'   
@@ -6686,7 +6710,7 @@ md_compare_preview <- function(...,
 #'   asymmetric or skewed error distributions. See
 #'   `?bayestestR::ci` for all available options.
 #'   
-#' @param pal A character vector of colours for the density curves,
+#' @param pal A character vector of colors for the density curves,
 #'   CI shading, and centre line. Defaults to `c("#007d80", "#A12C3B")`.
 #'   
 #' @param m (Optional) Numeric. If provided, restricts all results
@@ -6737,7 +6761,7 @@ md_compare_preview <- function(...,
 #' distribution of relative error across replicates for each
 #' design. The centre statistic (`stat`) and credible interval
 #' (`ci`) are overlaid. When groups are present, density curves
-#' for each group are shown side by side using the colours in
+#' for each group are shown side by side using the colors in
 #' `pal`.
 #' 
 #' ## Recommended workflow
