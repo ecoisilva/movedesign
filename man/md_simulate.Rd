@@ -29,8 +29,8 @@ the average \emph{home range crossing time}.
 
 Provide a list with two elements:
 \itemize{
-\item \code{value} — a numeric value (e.g. \code{6})
-\item \code{unit}  — a character string: one of \code{"second"},
+\item \code{value} - a numeric value (e.g. \code{6})
+\item \code{unit}  - a character string: one of \code{"second"},
 \code{"minute"}, \code{"hour"}, \code{"day"}, \code{"month"}, or \code{"year"}
 }
 
@@ -70,17 +70,17 @@ A list with elements \code{value} (numeric) and \code{unit} (character).
 to be evaluated in the study design workflow. Choose one or
 both:
 \itemize{
-\item \code{"hr"}   — home range area
-\item \code{"ctsd"} — continuous-time speed and distance
+\item \code{"hr"}   - home range area
+\item \code{"ctsd"} - continuous-time speed and distance
 }
 Defaults to \code{c("hr", "ctsd")}.}
 
 \item{which_meta}{Character specifying the population-level
 analytical target. Choose one:
 \itemize{
-\item \code{"mean"} (default) — estimates the average value
+\item \code{"mean"} (default) - estimates the average value
 across all individuals.
-\item \code{"ratio"} — compares the mean between groups A and B.
+\item \code{"ratio"} - compares the mean between groups A and B.
 Requires \code{grouped = TRUE}.
 }}
 
@@ -122,8 +122,8 @@ and \code{dti}, and then one trajectory per individual is drawn from
 that model.
 
 Simulated data are immediately passed through the full
-\code{movedesign} workflow — model fitting, aggregation, and
-estimation of the target metrics — so the returned object is
+\code{movedesign} workflow (model fitting, aggregation, and
+estimation of the target metrics) so the returned object is
 ready for study design evaluation without further steps.
 
 When \code{grouped = TRUE}, simulations are generated independently for

@@ -58,19 +58,19 @@ Same valid units as \code{dur}.
 to be evaluated in the study design workflow. Choose one or
 both:
 \itemize{
-\item \code{"hr"}   — home range area
-\item \code{"ctsd"} — continuous-time speed and distance
+\item \code{"hr"}   - home range area
+\item \code{"ctsd"} - continuous-time speed and distance
 }
 Defaults to \code{c("hr", "ctsd")}.}
 
 \item{which_meta}{Character. Specifies the analytical target for
 population-level inference. Choose one:
 \itemize{
-\item \code{"mean"} (default) — estimates the average
+\item \code{"mean"} (default) - estimates the average
 across all individuals.
-\item \code{"ratio"} — compares the mean between groups
+\item \code{"ratio"} - compares the mean between groups
 \code{"A"} and \code{"B"}. Requires \code{groups} to be specified.
-\item \code{NULL} — single-individual inference. Requires
+\item \code{NULL} - single-individual inference. Requires
 \code{data} to be a single telemetry object rather than
 a list.
 }}

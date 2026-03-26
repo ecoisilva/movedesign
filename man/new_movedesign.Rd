@@ -7,8 +7,7 @@
 new_movedesign(x, subclass, ...)
 }
 \arguments{
-\item{x}{The underlying data or object to be wrapped
-(e.g., list, tibble, simulation object, output).}
+\item{x}{The underlying data or object to be wrapped.}
 
 \item{subclass}{Character string specifying the subclass
 (e.g., \code{movedesign_input}, \code{movedesign_output}).}

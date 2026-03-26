@@ -56,9 +56,9 @@ replicate, sample size, and metric.
 \item \code{sampling_interval}: Character string. Final sampling interval.
 \item \code{sample_size_achieved}: Logical. Indicates if convergence was
 achieved and the threshold met.
-\item \code{minimum_population_sample_size}: Integer. Minimum sample size
-achieving the threshold (or maximum evaluated if
-\code{sample_size_achieved} is \code{FALSE}).
+\item \code{init_m}: Integer. Maximum sample size evaluated.
+\item \code{minimum_m}: Integer. Minimum sample size
+achieving the threshold.
 }
 }
 \description{

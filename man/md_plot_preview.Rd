@@ -25,7 +25,7 @@ resampling.}
 \item{error_threshold}{Numeric. Relative error threshold shown as
 a reference line in the plot (e.g. \code{0.05} for 5\%).}
 
-\item{pal}{A character vector of two colours, used for estimates
+\item{pal}{A character vector of two colors, used for estimates
 within and outside the error threshold respectively.
 Defaults to \code{c("#007d80", "#A12C3B")}.}
 

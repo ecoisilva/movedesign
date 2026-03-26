@@ -7,6 +7,7 @@
 \method{summary}{movedesign_optimized}(
   object,
   verbose = FALSE,
+  error_threshold = NULL,
   m = NULL,
   ci = 0.95,
   tol = 0.05,
@@ -25,6 +26,9 @@ print the full convergence diagnostics. This can also
 display a convergence plot when \code{plot = TRUE}.
 If \code{FALSE} (default), only the convergence status is
 printed.}
+
+\item{error_threshold}{Numeric. Upper limit of the relative error
+in estimation (e.g., \code{0.05} for 5\%) deemed acceptable by the user.}
 
 \item{m}{Numeric (Optional). If provided, restricts the results to
 a specific population sample size (\code{m}). Defaults to \code{NULL}, which

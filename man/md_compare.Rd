@@ -35,7 +35,7 @@ interval, passed to \code{\link[bayestestR:ci]{bayestestR::ci()}}. Defaults to \
 asymmetric or skewed error distributions. See
 \code{?bayestestR::ci} for all available options.}
 
-\item{pal}{A character vector of colours for the density curves,
+\item{pal}{A character vector of colors for the density curves,
 CI shading, and centre line. Defaults to \code{c("#007d80", "#A12C3B")}.}
 
 \item{m}{(Optional) Numeric. If provided, restricts all results
@@ -97,7 +97,7 @@ The function prints a density plot showing the full
 distribution of relative error across replicates for each
 design. The centre statistic (\code{stat}) and credible interval
 (\code{ci}) are overlaid. When groups are present, density curves
-for each group are shown side by side using the colours in
+for each group are shown side by side using the colors in
 \code{pal}.
 \subsection{Recommended workflow}{
 

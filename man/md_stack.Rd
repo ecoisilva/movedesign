@@ -28,7 +28,7 @@ a list of \code{n} \code{\link[=md_run]{md_run()}} outputs produces the same res
 calling \code{\link[=md_replicate]{md_replicate()}} with \code{n_replicates = n}.
 
 Use this function when the \code{\link[=md_run]{md_run()}} calls have already been
-made — for example, when runs were executed in parallel outside
+made; for example, when runs were executed in parallel outside
 the standard workflow, or recovered after an interruption.
 
 The distinction from \code{\link[=md_merge]{md_merge()}} is important. \code{\link[=md_merge]{md_merge()}}
