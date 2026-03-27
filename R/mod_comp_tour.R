@@ -22,7 +22,7 @@ mod_comp_tour_ui <- function(id) {
           #   icon = icon("compass"),
           #   width = "238px",
           #   class = "btn-primary"),
-
+          
           splitLayout(
             cellWidths = c("200px", "1%", "200px"),
             cellArgs = list(style = 'align: center;'),
@@ -39,12 +39,12 @@ mod_comp_tour_ui <- function(id) {
               label = "Population estimate",
               width = "100%",
               class = "btn-info")
-
+            
           ), # end of splitLayout
           p()
           
       )) # end of fluidRow
-  
+    
   ) # end of tagList
 }
 
@@ -135,15 +135,24 @@ mod_comp_tour_server <- function(id, rv) {
           "application. At certain points, you will be prompted to",
           "perform specific actions, which will be clearly",
           
-          span(class = "tour_action", action_bell, "highlighted."),
+          wrap_none(
+            span(style = paste("display: inline-block;",
+                               "color: white;",
+                               "background-color: #136265;",
+                               "padding: 0 6px",
+                               "border-radius: 5px;",
+                               action_bell, "highlighted"), ".")),
+          
           "Follow these instructions carefully,",
           "as later parts of the tutorial require that all",
           "previous steps were performed.",
           p(),
-          span(class = "tour_action", action_bell,
-               "If no action is requested, simply proceed",
-               "to the next step by clicking on the 'Next' button",
-               "or using the right arrow of your keyboard.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "If no action is requested, simply proceed",
+              "to the next step by clicking on the 'Next' button",
+              "or using the right arrow of your keyboard.")))
         )))
       
       element <- c(element, "#Tour_start")
@@ -178,23 +187,25 @@ mod_comp_tour_server <- function(id, rv) {
           "tab. Another guided tour will be available there.",
           p(),
           
-          span(class = "tour_action", action_bell,
-               "Please choose",
-               fontawesome::fa("square-check", fill = "white"),
-               span("Select", class = "txt_code inline"),
-               "as your Data source, to choose",
-               "from a list of available species,",
-               "and both",
-               fontawesome::fa("square-check", fill = "white"),
-               span("Home range", class = "txt_code inline"),
-               "and",
-               fontawesome::fa("square-check", fill = "white"),
-               span("Speed & distance", class = "txt_code inline"),
-               "as your research targets.",
-               br(), 
-               "For analytical targets, select",
-               wrap_none("Individual estimate",
-                         css = "txt_code inline", "."))
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Please choose",
+              fontawesome::fa("square-check", fill = "white"),
+              span("Select", class = "txt_code inline"),
+              "as your Data source, to choose",
+              "from a list of available species,",
+              "and both",
+              fontawesome::fa("square-check", fill = "white"),
+              span("Home range", class = "txt_code inline"),
+              "and",
+              fontawesome::fa("square-check", fill = "white"),
+              span("Speed & distance", class = "txt_code inline"),
+              "as your research targets.",
+              br(), 
+              "For analytical targets, select",
+              wrap_none("Individual estimate",
+                        css = "txt_code inline", "."))))
         )))
       
       element <- c(element, ".sidebar")
@@ -223,12 +234,14 @@ mod_comp_tour_server <- function(id, rv) {
           span("Report", class = "cl-sea-l"), "tab.",
           p(),
           
-          span(class = "tour_action", action_bell,
-               "Proceed to the next step",
-               "as it will move you to the",
-               fontawesome::fa("file-circle-plus", fill = "white"),
-               span("Select data", class = "txt_code inline"),
-               "tab automatically.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Proceed to the next step",
+              "as it will move you to the",
+              fontawesome::fa("file-circle-plus", fill = "white"),
+              span("Select data", class = "txt_code inline"),
+              "tab automatically.")))
         )))
       
       ## Data tabs: -------------------------------------------------------
@@ -253,12 +266,13 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            "First, select the African Buffalo",
-            wrap_none("(", em("Syncerus caffer"), ")"),
-            "as your study species.",
-            "Do not select or click any other options yet.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "First, select the African Buffalo",
+              wrap_none("(", em("Syncerus caffer"), ")"),
+              "as your study species.",
+              "Do not select or click any other options yet.")))
         )))
       
       element <- c(element, "#comp_viz_selected-vizTabs_data")
@@ -299,13 +313,14 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            
-            "Now, pick individual 'Cilla' from the dropdown menu",
-            "and click the", fontawesome::fa("wand-magic-sparkles"),
-            span("Validate", class = "txt_code inline"),
-            "button before proceeding."),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Now, pick individual 'Cilla' from the dropdown menu",
+              "and click the", fontawesome::fa("wand-magic-sparkles"),
+              span("Validate", class = "txt_code inline"),
+              "button before proceeding."))),
           p(),
           "Outside of this tour, you can also select an",
           "individual from the table or",
@@ -328,14 +343,15 @@ mod_comp_tour_server <- function(id, rv) {
           "estimation.",
           p(),
           
-          span(
-            class = "tour_action", action_bell,
-            "The button should now read",
-            fontawesome::fa("circle-check"),
-            wrap_none(
-              span("Validated!", class = "txt_code inline"), "."),
-            "Now click the", fontawesome::fa("paper-plane"), 
-            span("Extract", class = "txt_code inline"), "button.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "The button should now read",
+              fontawesome::fa("circle-check"),
+              wrap_none(
+                span("Validated!", class = "txt_code inline"), "."),
+              "Now click the", fontawesome::fa("paper-plane"), 
+              span("Extract", class = "txt_code inline"), "button.")))
         )))
       
       element <- c(element, paste0(tab3, "selectBox_schedule"))
@@ -402,10 +418,12 @@ mod_comp_tour_server <- function(id, rv) {
           "conditioned upon the previously extracted parameters.",
           p(),
           
-          span(class = "tour_action", action_bell,
-               
-               "Choose GPS/Satellite logger as",
-               "your tracking device."),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+              "Choose GPS/Satellite logger as",
+              "your tracking device."))),
           
           p(),
           "With these devices",
@@ -435,8 +453,10 @@ mod_comp_tour_server <- function(id, rv) {
           "model with a battery that will last 12 months",
           "if a new location (fix) is recorded every day.",
           p(),
-          span(class = "tour_action", action_bell,
-               text_device())
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                text_device())))
         )))
       
       element <- c(element, paste0(tab4, "devBox_sampling"))
@@ -455,31 +475,32 @@ mod_comp_tour_server <- function(id, rv) {
           "for a clearer view of this tradeoff.",
           p(),
           
-          span(
-            class = "tour_action", action_bell,
-            "Select the point in the figure corresponding to",
-            "the sampling interval to",
-            span("2 hours", class = "txt_code inline"),
-            "(equal to a frequency of",
-            wrap_none(
-              span("12 fixes per day", class = "cl-sea-l"), ")."))
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Select the point in the figure corresponding to",
+              "the sampling interval to",
+              span("2 hours", class = "txt_code inline"),
+              "(equal to a frequency of", wrap_none(
+                span("12 fixes per day", class = "cl-sea-l"), ")."))))
         )))
       
       element <- c(element, paste0(tab4, "devBox_sampling"))
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            
-            "Click the", fontawesome::fa("wand-magic-sparkles"),
-            span("Validate", class = "txt_code inline"),
-            "button until it reads",
-            wrap_none(
-              span("Validate", class = "txt_code inline"), ","),
-            "then click the", fontawesome::fa("bolt"), 
-            span("Run", class = "txt_code inline"),
-            "button."),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+              "Click the", fontawesome::fa("wand-magic-sparkles"),
+              span("Validate", class = "txt_code inline"),
+              "button until it reads",
+              wrap_none(
+                span("Validate", class = "txt_code inline"), ","),
+              "then click the", fontawesome::fa("bolt"), 
+              span("Run", class = "txt_code inline"),
+              "button."))),
           p(),
           "You will see two notifications: the first during",
           "the calculation of the expected run time,",
@@ -522,10 +543,10 @@ mod_comp_tour_server <- function(id, rv) {
       # intro <- c(
       #   intro,
       #   HTML(paste(
-      #     span(
-      #       class = "tour_action", action_bell,
-      #       "Throughout this walkthrough, you can click on the", 
-      #       fontawesome::fa("bookmark"), "Show table", 
+      #     div(class = "tour_action",
+      #         span(class = "tour_action_icon", action_bell),
+      #       "Throughout this walkthrough, you can click on the",
+      #       fontawesome::fa("bookmark"), "Show table",
       #       "button to show relevant inputs and outputs",
       #       "in a table for a quick overview."),
       #     p(),
@@ -569,12 +590,12 @@ mod_comp_tour_server <- function(id, rv) {
             class = "txt_code inline"),
           "package.", br(),
           
-          span(
-            class = "tour_action", action_bell,
-            
-            "Click on the", fontawesome::fa("paper-plane"),
-            span("Run estimation", class = "txt_code inline"),
-            "button to estimate home range area.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+              "Click on the", fontawesome::fa("paper-plane"),
+              span("Run estimation", class = "txt_code inline"),
+              "button to estimate home range area.")))
         )))
       
       # element <- c(element, paste0(tab5, "hrBox_viz"))
@@ -645,8 +666,8 @@ mod_comp_tour_server <- function(id, rv) {
       # intro <- c(
       #   intro,
       #   HTML(paste(
-      #     span(
-      #       class = "tour_action", action_bell,
+      #     div(class = "tour_action",
+      #         span(class = "tour_action_icon", action_bell),
       #       "You can once again see all outputs to a table",
       #       "by clicking on the", fontawesome::fa("bookmark")
       #       , "Show table", "button located at the bottom",
@@ -687,10 +708,12 @@ mod_comp_tour_server <- function(id, rv) {
             wrap_none(span("ctmm", class = "txt_mono cl-grn")),
             class = "txt_code inline"), "R package.", p(),
           
-          span(class = "tour_action", action_bell,
-               "Click on the", fontawesome::fa("paper-plane"),
-               span("Run estimation", class = "txt_code inline"),
-               "button to estimate speed & distance.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Click on the", fontawesome::fa("paper-plane"),
+              span("Run estimation", class = "txt_code inline"),
+              "button to estimate speed & distance.")))
         )))
       
       # element <- c(element, paste0(tab6, "sdPlot_path"))
@@ -743,14 +766,15 @@ mod_comp_tour_server <- function(id, rv) {
       # intro <- c(
       #   intro,
       #   HTML(paste(
-      #     span(class = "tour_action", action_bell,
+      #     div(class = "tour_action",
+      #         span(class = "tour_action_icon", action_bell),
       #          "You can once again see all outputs to a table",
       #          "by clicking on the", fontawesome::fa("bookmark")
       #          , "Show table", "button located at the bottom",
       #          "of the box."
       #     )
       #   )))
-      # 
+      
       # element <- c(element, paste0(tab6, "sdBox_summary"))
       # intro <- c(
       #   intro,
@@ -769,24 +793,25 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-            "Here, you can generates a comprehensive summary",
-            "of all study design outputs. This report consolidates",
-            "key findings, highlighting how our current sampling",
-            "effort affects estimation accuracy."
+          "Here, you can generates a comprehensive summary",
+          "of all study design outputs. This report consolidates",
+          "key findings, highlighting how our current sampling",
+          "effort affects estimation accuracy."
         )))
       
       element <- c(element, paste0(tab7, "repBox_details"))
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            
-            "Click the", fontawesome::fa("bookmark"),
-            span("Build report", class = "txt_code inline"),
-            "button to see a detailed",
-            "assessment of how well your current sampling design",
-            "addresses your research targets.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Click the", fontawesome::fa("bookmark"),
+              span("Build report", class = "txt_code inline"),
+              "button to see a detailed",
+              "assessment of how well your current sampling design",
+              "addresses your research targets.")))
         )))
       
       element <- c(element, paste0(tab7, "repBox_analyses"))
@@ -866,42 +891,75 @@ mod_comp_tour_server <- function(id, rv) {
     
     ## Build 'Population estimate' tour: ----------------------------------
     
+    .make_step <- function(step, total_steps) {
+      
+      tags$div(
+        style = paste(
+          "display:flex; align-items:center;",
+          "justify-content:space-between;",
+          "margin-bottom:16px;"),
+        
+        tags$span(
+          style = paste(
+            "font-family:var(--monosans);",
+            "font-size:10px; letter-spacing:0.15em;",
+            "text-transform:uppercase; color:#00b4a0;",
+            "opacity:0.75;"
+          ),
+          paste0("Step ", step, " / ", total_steps)
+        ),
+        
+        tags$div(
+          style = "display:flex; gap:5px; align-items:center;",
+          lapply(seq_len(total_steps), function(i) {
+            if (i == step) {
+              tags$div(style = paste(
+                "width:18px; height:5px; border-radius:3px;",
+                "background:#00b4a0;"))
+            } else {
+              tags$div(style = paste(
+                "width:5px; height:5px; border-radius:50%;",
+                "background:rgba(255,255,255,0.07);",
+                "border:1px solid rgba(255,255,255,0.1);")) }
+          })))
+    }
+    
     .build_tour_pop <- function(ns, rv) {
-      action_bell <- wrap_none("(", fontawesome::fa("bell"), ")")
+      
+      step <- 1
+      total_steps <- 10
+      action_bell <- fontawesome::fa("bell")
+      
       element <- intro <- character(0)
       
       element <- c(element, "#Tour_start")
       intro <- c(
         intro,
         HTML(paste(
+          # .make_step(step, total_steps),
+          
           p(class = "ttl_tour cl-wht",
             
             "Welcome to",
             wrap_none("move", span("design", class = "cl-sea-l"))),
           
           "Here, you will be guided step-by-step through the",
-          span(
-            wrap_none("move", span("design",
-                                   class = "txt_mono cl-sea-l")),
-               class = "txt_code inline"),
           "application. At certain points, you will be prompted to",
           "perform specific actions, which will be clearly",
-          span(class = "tour_action", 
-                 action_bell, "highlighted."),
+          wrap_none(span(class = "tour_chip",
+               action_bell, "highlighted"), "."),
           "Follow these instructions carefully,",
           "as later parts of the tutorial require that all",
           "previous steps were performed.",
-          "If no action is requested, simply proceed",
-          "to the next step.", p(),
-          
-          span(class = "tour_action", action_bell,
-               "Click",
-               span("Next", style = paste0(
-                 "font: 13px/normal 'Roboto Condensed', sans-serif;",
-                 "background-color: #00000061;",
-                 "letter-spacing: 0.5px;",
-                 "text-transform: uppercase;")),
-               "or use the right arrow of your keyboard to proceed.")
+          p(),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                div(class = "tour_action_text", span(
+                "Click", tags$strong(class = "cl-sky", "NEXT"),
+                "or press the", tags$strong("right arrow key"),
+                tags$kbd("\u2192"), "to proceed.")))))
         )))
       
       element <- c(element, "#Tour_start")
@@ -945,52 +1003,50 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-          span(class = "tour_action", action_bell,
-               "Please choose",
-               fontawesome::fa("square-check", fill = "white"),
-               span("Select", class = "txt_code"), "as your",
-               wrap_none(
-                 span("data source", class = "txt_bold"), ", and"),
-               fontawesome::fa("square-check", fill = "white"),
-               span("Home range", class = "txt_code"), "as the",
-               wrap_none(
-                 span("research target", class = "txt_bold"), "."),
-               "For the",
-               wrap_none(
-                 span("analytical target", class = "txt_bold"), ","),
-               "choose",
-               span("Mean estimate of",
-                    wrap_none(
-                      span("sampled population",
-                           class = "txt_mono cl-sea-l")
-                    ), class = "txt_code"),
-               "to display deployment options.")
+          "Please select the following options for this workflow:",
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+              
+                fontawesome::fa("square-check", fill = "white"),
+                span("Select", class = "txt_code"), "as your",
+                wrap_none(span("data source", class = "txt_bold"), ","),
+                br(),
+                fontawesome::fa("square-check", fill = "white"),
+                span("Home range", class = "txt_code"), "as the",
+                wrap_none(
+                  span("research target", class = "txt_bold"), ","),
+                br(), 
+                fontawesome::fa("square-check", fill = "white"),
+                span("Mean estimate of",
+                     span("sampled population",
+                          class = "txt_mono cl-sea-l"),
+                     class = "txt_code"),
+                "as the analytical target."))),
+          "Then wait until the deployment options appear below."
         )))
       
       element <- c(element, "#content_workflow-second")
       intro <- c(
         intro,
         HTML(paste(
-          span(class = "tour_action", action_bell,
-               "For",
-               wrap_none(
-                 span("deployment", class = "txt_bold"), ","),
-               "select",
-               span("I plan to deploy a",
-                    wrap_none(
-                      span("set",
-                           class = "txt_mono cl-grn"),
-                      " number of VHF/GPS tags."),
-                    class = "txt_code"),
-               "Then check the",
-               span("Add",
-                    wrap_none(
-                      span("individual",
-                           class = "txt_mono cl-grn"),
-                      " variation"),
-                    class = "txt_code"),
-               "checkbox, as we wish to account for",
-               "individual differences.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+              "For", wrap_none(
+                span("deployment", class = "txt_bold"), ","),
+              "select", span(
+                "I plan to deploy a", wrap_none(
+                  span("set", class = "txt_mono cl-grn"),
+                  " number of VHF/GPS tags."), class = "txt_code"),
+              "Then check the", span(
+                "Add", wrap_none(
+                  span("individual", class = "txt_mono cl-grn"),
+                  " variation"), class = "txt_code"),
+              "checkbox, as we wish to account for",
+              "individual differences.")))
         )))
       
       element <- c(element, ".sidebar")
@@ -1023,12 +1079,15 @@ mod_comp_tour_server <- function(id, rv) {
           span("Report", class = "cl-sea-l"), "tab.",
           p(),
           
-          span(class = "tour_action", action_bell,
-               "Proceed to the next step",
-               "as it will move you to the",
-               fontawesome::fa("file-circle-plus", fill = pal$sea),
-               span("Select data", class = "cl-sea-l"), "tab",
-               "automatically.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Proceed to the next step",
+              "as it will move you to the",
+              fontawesome::fa("file-circle-plus", fill = pal$sea),
+              span("Select data", class = "cl-sea-l"), "tab",
+              "automatically.")))
         )))
       
       ## Data tabs: -------------------------------------------------------
@@ -1054,13 +1113,15 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            "First, select the",
-            span("African Buffalo", class = "txt_code inline"),
-            wrap_none("(", em("Syncerus caffer"), ")"),
-            "as your study species.",
-            "Do not select any other options yet.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "First, select the",
+              span("African Buffalo", class = "txt_code inline"),
+              wrap_none("(", em("Syncerus caffer"), ")"),
+              "as your study species.",
+              "Do not select any other options yet.")))
         )))
       
       element <- c(element, "#comp_viz_selected-vizTabs_data")
@@ -1091,28 +1152,31 @@ mod_comp_tour_server <- function(id, rv) {
           "You should ideally choose datasets and",
           "individuals that are representative of the",
           span("population", class = "cl-sea-l"),
-          "you wish to emulate.", p(),
-          span(
-            class = "tour_action", action_bell,
-            
-            "Select all individuals from the dropdown menu",
-            "and click the", fontawesome::fa("wand-magic-sparkles"),
-            span("Validate", class = "txt_code inline"),
-            "button."),
+          "you wish to emulate.",
+          p(),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Select all individuals from the dropdown menu",
+              "and click the", fontawesome::fa("wand-magic-sparkles"),
+              span("Validate", class = "txt_code inline"),
+              "button."))),
           p(),
           "Keep in mind that, for home range estimation,",
           "all selected individuals must meet",
           "the", span("range residency assumption", class = "cl-sea-l"),
           "(see the vignette for details).",
           p(),
-          span(
-            class = "tour_action", action_bell,
-            "The button should now read",
-            fontawesome::fa("circle-check"),
-            wrap_none(span("Validated!", class = "txt_code inline"),
-                      "."), "Now click the",
-            fontawesome::fa("paper-plane"), 
-            span("Extract", class = "txt_code inline"), "button.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "The button should now read",
+              fontawesome::fa("circle-check"),
+              wrap_none(span("Validated!", class = "txt_code inline"),
+                        "."), "Now click the",
+              fontawesome::fa("paper-plane"), 
+              span("Extract", class = "txt_code inline"), "button.")))
         )))
       
       element <- c(element, paste0(tab3, "selectBox_pars"))
@@ -1166,10 +1230,12 @@ mod_comp_tour_server <- function(id, rv) {
           "conditioned upon the previously extracted parameters.",
           p(),
           
-          span(class = "tour_action", action_bell,
-               
-               "Choose GPS/Satellite logger as",
-               "your tracking device.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Choose GPS/Satellite logger as",
+              "your tracking device.")))
         )))
       
       element <- c(element, "#content_device-limitations")
@@ -1180,27 +1246,32 @@ mod_comp_tour_server <- function(id, rv) {
           span("fix success rate", class = "txt_bold cl-grn"),
           "(the proportion of successful fixes relative to all",
           "attempted fixes, reflecting the reliability of the GPS",
-          "signal),", span("tag failure", class = "txt_bold cl-grn"),
+          "signal),",
+          span("deployment disruption", class = "txt_bold cl-grn"),
           "(the probability that a GPS tag will fail",
           "at some point during data collection),",
           "and", span("location error", class = "txt_bold cl-grn"),
           "(the positional uncertainty associated with each",
           "recorded location).", p(),
           
-          span(class = "tour_action", action_bell,
-               "Enable all three settings by checking",
-               "the corresponding boxes.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Enable all", span("three", class = "cl-grn"),
+                "settings by checking the corresponding boxes.")))
         )))
       
       element <- c(element, paste0(tab4, "devBox_gps_device"))
       intro <- c(
         intro,
         HTML(paste(
-          span(class = "tour_action", action_bell,
-               "Uncheck the",
-               span("Select from plot", class = "txt_code inline"),
-               "checkbox, which will allow us to manually input",
-               "the sampling interval."),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Uncheck the",
+              span("Select from plot", class = "txt_code inline"),
+              "checkbox, which will allow us to manually input",
+              "the sampling interval."))),
           p(),
           "For this tutorial, we will use the following",
           "sampling schedule: a <em>sampling duration</em> of",
@@ -1210,12 +1281,14 @@ mod_comp_tour_server <- function(id, rv) {
           "<em>sampling interval</em> of",
           wrap_none(span("2 hours", class = "txt_code"), ")."),
           p(),
-          span(class = "tour_action", action_bell,
-               "First, set",
-               span("GPS battery life", class = "txt_code inline"),
-               "(equivalent to the",
-               "maximum sampling duration) to",
-               wrap_none(span("3 months", class = "txt_code"), "."))
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "First, set",
+              span("GPS battery life", class = "txt_code inline"),
+              "(equivalent to the",
+              "maximum sampling duration) to",
+              wrap_none(span("3 months", class = "txt_code"), "."))))
         )))
       
       element <- c(element, paste0(tab4, "devBox_sampling"))
@@ -1223,44 +1296,48 @@ mod_comp_tour_server <- function(id, rv) {
         intro,
         HTML(paste(
           "Here, we set the <em>sampling interval</em>",
-          "(time between when new fixes or locations are collected).",
+          "(defines the time between each recorded location).",
           p(),
-          span(class = "tour_action", action_bell,
-               "Set",
-               span("What sampling interval will you evaluate?",
-               class = "txt_code inline"), "to",
-               wrap_none(span("2 hours", class = "txt_code"), "."))
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Set",
+              span("What sampling interval will you evaluate?",
+                   class = "txt_code inline"), "to",
+              wrap_none(span("2 hours", class = "txt_code"), "."))))
         )))
       
       element <- c(element, "#content_limitations")
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            "Set fix success rate to",
-            wrap_none(span("85%", class = "txt_code"), ","),
-            "tag failure to",
-            wrap_none(span("5%", class = "txt_code"), ","),
-            "and location error",
-            wrap_none(span("15 meters", class = "txt_code"), "."))
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Set fix success rate to",
+              wrap_none(span("85%", class = "txt_code"), ","),
+              "tag failure to",
+              wrap_none(span("5%", class = "txt_code"), ","),
+              "and location error",
+              wrap_none(span("15 meters", class = "txt_code"), "."))))
         )))
       
       element <- c(element, paste0(tab4, "devBox_sampling"))
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            
-            "Click the",
-            fontawesome::fa("wand-magic-sparkles"),
-            span("Validate", class = "txt_code inline"),
-            "button, wait until it reads",
-            wrap_none(span("Validated!", class = "txt_code inline"),
-                      end = ","), "then click the",
-            fontawesome::fa("paper-plane"), 
-            span("Run", class = "txt_code inline"), "button."),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Click the",
+              fontawesome::fa("wand-magic-sparkles"),
+              span("Validate", class = "txt_code inline"),
+              "button, wait until it reads",
+              wrap_none(span("Validated!", class = "txt_code inline"),
+                        end = ","), "then click the",
+              fontawesome::fa("paper-plane"), 
+              span("Run", class = "txt_code inline"), "button."))),
           p(),
           "You will see two notifications: the first during",
           "the calculation of the expected run time,",
@@ -1296,12 +1373,13 @@ mod_comp_tour_server <- function(id, rv) {
             class = "txt_code inline"), 
           span("R", class = "txt_code inline"), "package.", p(),
           
-          span(
-            class = "tour_action", action_bell,
-            
-            "Click on the", fontawesome::fa("paper-plane"), 
-            span("Run estimation", class = "txt_code inline"),
-            "button to estimate home range area.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Click on the", fontawesome::fa("paper-plane"), 
+              span("Run estimation", class = "txt_code inline"),
+              "button to estimate home range area.")))
         )))
       
       element <- c(element, "#hr_outputs")
@@ -1358,24 +1436,25 @@ mod_comp_tour_server <- function(id, rv) {
         HTML(paste(
           "Here, we are able to set the",
           span("total number of tags", class = "cl-grn txt_bold"),
-          "(refers to the number of tracking units deployed",
-          "during a study), and the",
+          "(refers to the number of units deployed during a",
+          "study, or the number or tracked animals), and the",
           span("error threshold", class = "cl-grn txt_bold"),
           "(used to assess whether the estimates fall within",
           "acceptable range from the expected values).",
           p(),
           
-          span(
-            class = "tour_action", action_bell,
-            
-            "Set the total number of tags to",
-            span("14", class = "txt_code inline"),
-            "and the error threshold at",
-            wrap_none(
-              span("5%", class = "txt_code inline"), end = ","),
-            "before clicking the", fontawesome::fa("bolt"),
-            span("Simulate", class = "txt_code inline"),
-            "button."),
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Set the total number of tags to",
+              span("14", class = "txt_code inline"),
+              "and the error threshold at",
+              wrap_none(
+                span("5%", class = "txt_code inline"), end = ","),
+              "before clicking the", fontawesome::fa("bolt"),
+              span("Simulate", class = "txt_code inline"),
+              "button."))),
           p(),
           
           "A message will appear showing the",
@@ -1410,15 +1489,16 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            
-            "Click on the", fontawesome::fa("paper-plane"), 
-            span("Run meta-analyses", class = "txt_code inline"),
-            "button to obtain information on",
-            "population-level inferences using all",
-            span("14", class = "txt_code inline"),
-            "simulated individuals.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Click on the", fontawesome::fa("paper-plane"), 
+              span("Run meta-analyses", class = "txt_code inline"),
+              "button to obtain information on",
+              "population-level inferences using all",
+              span("14", class = "txt_code inline"),
+              "simulated individuals.")))
         )))
       
       element <- c(element, paste0(tab7, "metaBox_err_hr"))
@@ -1457,24 +1537,24 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-         "The second plot illustrates how varying the number",
-         "of individuals (from a <em>population</em> sample size of",
-         span("2", class = "txt_code inline"),
-         "to a maximum of",
-         wrap_none(span("14", class = "txt_code inline"), "),"),
-         "influences population-level mean estimates.",
-         p(),
-         "Each point represents the mean relative",
-         "error (%) of this metric, along with its 95%",
-         "confidence intervals, plotted against the number of",
-         "tracked individuals. Dashed horizontal lines",
-         "indicate the predefined error threshold of",
-         wrap_none(
-           span("5%", class = "txt_code inline"), "."),
-         p(),
-         "An accompanying table provides detailed information,",
-         "as well as whether a sub-population was detected at",
-         "each population sample size."
+          "The second plot illustrates how varying the number",
+          "of individuals (from a <em>population</em> sample size of",
+          span("2", class = "txt_code inline"),
+          "to a maximum of",
+          wrap_none(span("14", class = "txt_code inline"), "),"),
+          "influences population-level mean estimates.",
+          p(),
+          "Each point represents the mean relative",
+          "error (%) of this metric, along with its 95%",
+          "confidence intervals, plotted against the number of",
+          "tracked individuals. Dashed horizontal lines",
+          "indicate the predefined error threshold of",
+          wrap_none(
+            span("5%", class = "txt_code inline"), "."),
+          p(),
+          "An accompanying table provides detailed information,",
+          "as well as whether a sub-population was detected at",
+          "each population sample size."
         )))
       
       element <- c(element, paste0(tab7, "metaBox_summary"))
@@ -1488,15 +1568,16 @@ mod_comp_tour_server <- function(id, rv) {
           span("home range areas", class = "cl-sea-l"),
           "for each new set.",
           p(),
-          span(
-            class = "tour_action", action_bell,
-            "Set the resamples to",
-            span("15", class = "txt_code inline"),
-            "then click the",
-            fontawesome::fa("wand-magic-sparkles"),
-            span("Resample", class = "txt_code inline"), "button.",
-            "Note that higher values are recommended when",
-            "simulating larger population sample sizes.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              div(class = "tour_action_text", span(
+                "Set the resamples to",
+              span("15", class = "txt_code inline"),
+              "then click the",
+              fontawesome::fa("wand-magic-sparkles"),
+              span("Resample", class = "txt_code inline"), "button.",
+              "Note that higher values are recommended when",
+              "simulating larger population sample sizes.")))
         )))
       
       element <- c(element, paste0(tab7, "metaBox_summary"))
@@ -1528,14 +1609,15 @@ mod_comp_tour_server <- function(id, rv) {
       intro <- c(
         intro,
         HTML(paste(
-          span(
-            class = "tour_action", action_bell,
-            
-            "Click the", fontawesome::fa("bookmark"),
-            span("Build report", class = "txt_code inline"),
-            "button to generate a detailed assessment of how",
-            "well the current sampling strategy",
-            "aligns with the set research targets.")
+          div(class = "tour_action",
+              span(class = "tour_action_icon", action_bell),
+              
+              div(class = "tour_action_text", span(
+                "Click the", fontawesome::fa("bookmark"),
+              span("Build report", class = "txt_code inline"),
+              "button to generate a detailed assessment of how",
+              "well the current sampling strategy",
+              "aligns with the set research targets.")))
         )))
       
       element <- c(element, paste0(tab7, "repBox_meta"))
@@ -1602,6 +1684,8 @@ mod_comp_tour_server <- function(id, rv) {
         options = list(steps = tour,
                        showStepNumbers = FALSE,
                        showButtons = TRUE,
+                       nextLabel = "Next \u2192",
+                       prevLabel = "\u2190 Back",
                        showBullets = TRUE,
                        scrollToElement = TRUE),
         events = list(onbeforechange = 
@@ -1614,18 +1698,20 @@ mod_comp_tour_server <- function(id, rv) {
     
     observe({
       rv$tour_active <- TRUE
-
+      
       tour <- .build_tour_pop(ns, rv)
       rintrojs::introjs(
         session = session,
         options = list(steps = tour,
                        showStepNumbers = FALSE,
                        showButtons = TRUE,
+                       nextLabel = "Next \u2192",
+                       prevLabel = "\u2190 Back",
                        showBullets = TRUE,
                        scrollToElement = TRUE),
         events = list(onbeforechange =
                         rintrojs::readCallback("switchTabs")))
-
+      
     }) %>% # end of observe,
       bindEvent(input$default_tour_pop)
     

@@ -3047,21 +3047,72 @@ mod_tab_meta_server <- function(id, rv) {
       n_digits <- 1
       
       if (is.null(rv$meta_tbl_replicates)) {
-        dt_meta <- rv$meta_tbl
+        if (is.null(rv$meta_tbl_resample)) {
+          dt_meta <- rv$meta_tbl %>%
+            dplyr::mutate(subpop = as.logical(.data$subpop_detected))
+          dt_meta$subpop <- ifelse(dt_meta$subpop, "Yes", "No")
+          subpop_col_def <- reactable::colDef(
+            minWidth = 80, name = "Detected?")
+          
+        } else {
+          req(rv$meta_tbl_resample)
+          dt_meta <- rv$meta_tbl_resample %>%
+            .summarize_error(error_threshold = rv$error_threshold,
+                             conf_level = 0.95)
+        }
       } else {
         req(rv$meta_tbl_replicates)
-        dt_meta <- rv$meta_tbl_replicates
+        dt_meta <- rv$meta_tbl_replicates %>%
+          .summarize_error(error_threshold = rv$error_threshold,
+                           conf_level = 0.95)
+      }
+      
+      if (!is.null(rv$meta_tbl_resample) ||
+          !is.null(rv$meta_tbl_replicates)) {
+        
+        if (rv$grouped) {
+        req(rv$metaList_groups)
+        meta_group_truth <- rv$metaList_groups[[
+          "intro"]][[rv$set_analysis]]
+        is_subpop <- meta_group_truth$logs$subpop_detected
+        } else {
+          if (rv$set_analysis == "hr") {
+            variable <- "area"
+          } else if (rv$set_analysis == "ctsd") {
+            variable <- "speed"
+          }
+          
+          tmp <- .capture_meta(rv$fitList, 
+                               variable = variable,
+                               units = FALSE, 
+                               verbose = FALSE, 
+                               plot = FALSE)
+          req(tmp)
+          is_subpop <- tmp$logs$subpop_detected
+        }
+        
+        subpop_col_def <- reactable::colDef(
+          minWidth = 80,
+          name = "Detected?",
+          style = function(value) format_subpop_perc(
+            value, is_subpop = is_subpop),
+          format = reactable::colFormat(
+            separators = TRUE, locale = "en-US",
+            percent = TRUE, digits = n_digits))
+        
       }
       
       if (rv$grouped) {
         dt_meta <- dt_meta %>%
           dplyr::filter(.data$group != "All")
+        .default_page_size <- 6
+      } else {
+        .default_page_size <- 5
       }
       
       dt_meta <- dt_meta %>%
         dplyr::filter(.data$type == rv$set_analysis) %>% 
-        dplyr::select(-c(.data$overlaps, .data$type)) %>%
-        dplyr::mutate(subpop = as.logical(.data$subpop_detected)) %>% 
+        dplyr::select(-c(.data$overlaps, .data$type)) %>% 
         dplyr::select(
           .data$m,
           .data$error_lci,
@@ -3069,8 +3120,6 @@ mod_tab_meta_server <- function(id, rv) {
           .data$error_uci,
           .data$group,
           .data$subpop)
-      
-      dt_meta$subpop <- ifelse(dt_meta$subpop, "Yes", "No")
       
       nms <- list(
         m = "m",
@@ -3091,7 +3140,7 @@ mod_tab_meta_server <- function(id, rv) {
         highlight = TRUE,
         striped = TRUE,
         
-        defaultPageSize = 5,
+        defaultPageSize = .default_page_size,
         paginationType = "jump",
         showPageSizeOptions = TRUE,
         pageSizeOptions = c(5, 10, 20),
@@ -3108,25 +3157,26 @@ mod_tab_meta_server <- function(id, rv) {
             name = nms[["m"]]),
           error_lci = reactable::colDef(
             name = nms[["lci"]],
-            style = format_perc,
+            style = function(value)
+              format_perc(value, rv$error_threshold),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = n_digits)),
           error = reactable::colDef(
             name = nms[["est"]],
-            style = format_perc,
+            style = function(value)
+              format_perc(value, rv$error_threshold),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = n_digits)),
           error_uci = reactable::colDef(
             name = nms[["uci"]],
-            style = format_perc,
+            style = function(value)
+              format_perc(value, rv$error_threshold),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = n_digits)),
-          subpop = reactable::colDef(
-            minWidth = 80,
-            name = nms[["subpop"]]),
+          subpop = subpop_col_def,
           group = reactable::colDef(
             name = nms[["group"]])),
         

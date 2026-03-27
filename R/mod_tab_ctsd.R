@@ -718,8 +718,10 @@ mod_tab_ctsd_server <- function(id, rv) {
     
     output$sdUI_distLegend <- output$sdUI_sdLegend <- renderUI({
       req(rv$speedErr,
-          rv$simList)
-
+          rv$simList,
+          rv$which_meta)
+      req(rv$which_meta == "none")
+      
       ci <- suppressWarnings(bayestestR::ci(
         rv$speedErr$est, ci = .95, method = "HDI"))
       lci <- ci$CI_low
@@ -2727,16 +2729,16 @@ mod_tab_ctsd_server <- function(id, rv) {
     ### Speed & distance estimates: ---------------------------------------
 
     observe({
-      req(rv$ctsdList, rv$speedEst, rv$speedErr)
+      req(rv$ctsdList, rv$speedEst, rv$speedErr, rv$sd_nsim)
       req(nrow(rv$speedEst) == length(rv$simList),
           nrow(rv$speedErr) == length(rv$simList))
       
       mod_blocks_server(
         id = "sdBlock_est",
-        rv = rv, type = "ctsd", name = "speedEst")
+        rv = rv, type = "ctsd", name = "speedEst", get_id = rv$sd_nsim)
       mod_blocks_server(
         id = "sdBlock_err",
-        rv = rv, type = "ctsd", name = "speedErr")
+        rv = rv, type = "ctsd", name = "speedErr", get_id = rv$sd_nsim)
       
     }) # end of observe
     
@@ -2758,14 +2760,14 @@ mod_tab_ctsd_server <- function(id, rv) {
     ### Movement metrics: -------------------------------------------------
     
     observe({
-      req(rv$ctsdList, rv$speedEst, rv$distEst)
+      req(rv$ctsdList, rv$speedEst, rv$distEst, rv$sd_nsim)
       
       mod_blocks_server(
         id = "distBlock_est",
-        rv = rv, type = "dist", name = "distEst")
+        rv = rv, type = "dist", name = "distEst", get_id = rv$sd_nsim)
       mod_blocks_server(
         id = "distBlock_err",
-        rv = rv, type = "dist", name = "distErr")
+        rv = rv, type = "dist", name = "distErr", get_id = rv$sd_nsim)
       
     }) # end of observe
 
