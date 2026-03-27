@@ -1725,6 +1725,17 @@ mod_tab_design_server <- function(id, rv) {
     
     observe({
       req(rv$active_tab == 'device',
+          rv$which_meta == "none")
+      
+      shinyjs::show(id = "device_type")
+      shinyjs::hide(id = "device_price")
+      shinyjs::hide(id = "device_max_budget")
+      shinyjs::hide(id = "devUI_optimize")
+      
+    }) # end of observe
+    
+    observe({
+      req(rv$active_tab == 'device',
           rv$which_m)
       
       if (rv$which_m == "get_all") {
