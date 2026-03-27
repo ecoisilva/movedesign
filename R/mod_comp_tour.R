@@ -113,7 +113,8 @@ mod_comp_tour_server <- function(id, rv) {
     ## Build 'Individual estimate' tour: ----------------------------------
     
     .build_tour <- function(ns, rv) {
-      action_bell <- wrap_none("(", fontawesome::fa("bell"), ")")
+      action_bell <- fontawesome::fa("bell")
+      
       element <- intro <- character(0)
       
       element <- c(element, "#Tour_start")
@@ -128,14 +129,8 @@ mod_comp_tour_server <- function(id, rv) {
           "Here, you will be guided step-by-step through the",
           "application. At certain points, you will be prompted to",
           "perform specific actions, which will be clearly",
-          
-          wrap_none(
-            span(style = paste("display: inline-block;",
-                               "color: white;",
-                               "background-color: #136265;",
-                               "padding: 0 6px",
-                               "border-radius: 5px;",
-                               action_bell, "highlighted"), ".")),
+          wrap_none(span(class = "tour_chip",
+                         action_bell, "highlighted"), "."),
           
           "Follow these instructions carefully,",
           "as later parts of the tutorial require that all",
