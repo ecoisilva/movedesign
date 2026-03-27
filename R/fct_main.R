@@ -3099,20 +3099,28 @@ md_check <- function(obj,
   
   # Stable detection:
   
-  .find_stable <- function(delta_vec, tol, n_converge) {
+  .find_stable <- function(delta_vec, tol, n) {
     
-    valid <- !is.na(delta_vec) & (abs(delta_vec) <= tol)
-    if (sum(valid) < n_converge) return(NA_integer_)
-    
-    # Find first run of n_converge consecutive TRUEs:
-    run_len <- 0L
-    for (i in seq_along(valid)) {
-      run_len <- if (valid[i]) run_len + 1L else 0L
-      if (run_len >= n_converge)
-        return(i - n_converge + 1L)
+    length(delta_vec) <- length(delta_vec)
+    if (length(delta_vec) == 0L || n <= 0L ||
+        n > length(delta_vec) || !is.finite(tol) || tol < 0) {
+      return(NA_integer_)
     }
     
-    return(NA_integer_)
+    valid <- !is.na(delta_vec) & abs(delta_vec) <= tol
+    if (!valid[length(delta_vec)]) return(NA_integer_)
+    
+    run_vec <- 0
+    for (i in length(delta_vec):1) {
+      if (valid[i]) {
+        run_vec <- run_vec + 1
+      } else {
+        break
+      }
+    }
+    
+    if (run_vec < n) return(NA_integer_)
+    return(length(delta_vec) - n + 1L)
   }
   
   # Maps internal type codes to strings:
@@ -3201,7 +3209,7 @@ md_check <- function(obj,
           .data$idx_stable_start ~ "converged",
         TRUE ~ "diverged")) %>%
     dplyr::ungroup() %>%
-    dplyr::select(-.data$max_index)
+    dplyr::select(-"max_index")
   
   dt_plot$type_f <- factor(dt_plot$type, levels = c("hr", "ctsd"))
   
@@ -4398,20 +4406,28 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     return(obj)
   }
   
-  .find_stable <- function(delta_vec, tol, n_converge) {
+  .find_stable <- function(delta_vec, tol, n) {
     
-    valid <- !is.na(delta_vec) & (abs(delta_vec) <= tol)
-    if (sum(valid) < n_converge) return(NA_integer_)
-    
-    # Find first run of n_converge consecutive TRUEs:
-    run_len <- 0L
-    for (i in seq_along(valid)) {
-      run_len <- if (valid[i]) run_len + 1L else 0L
-      if (run_len >= n_converge)
-        return(i - n_converge + 1L)
+    length(delta_vec) <- length(delta_vec)
+    if (length(delta_vec) == 0L || n <= 0L ||
+        n > length(delta_vec) || !is.finite(tol) || tol < 0) {
+      return(NA_integer_)
     }
     
-    return(NA_integer_)
+    valid <- !is.na(delta_vec) & abs(delta_vec) <= tol
+    if (!valid[length(delta_vec)]) return(NA_integer_)
+    
+    run_vec <- 0
+    for (i in length(delta_vec):1) {
+      if (valid[i]) {
+        run_vec <- run_vec + 1
+      } else {
+        break
+      }
+    }
+    
+    if (run_vec < n) return(NA_integer_)
+    return(length(delta_vec) - n + 1L)
   }
   
   .worker <- function(r, m, obj, seeds = NULL, trace = FALSE) {
@@ -4423,22 +4439,12 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     
     obj$n_individuals <- ifelse(obj$grouped, m * 2, m)
     
-    if (is.null(.seeds)) {
+    if (is.null(.seeds))
       return(md_run(obj, trace = FALSE))
-      
-    } else {
-      
-      if (has_groups) {
-        idx_start <- (r - 1) * (m * 2) + 1
-        idx_end <- r * (m * 2)
-      } else {
-        idx_start <- (r - 1) * m + 1
-        idx_end <- r * m
-      }
-      
-      tmp <- seeds[idx_start:idx_end]
-      return(md_run(obj, .seeds = tmp, trace = FALSE))
-    }
+    
+    n_per_rep <- if (has_groups) m * 2 else m
+    idx <- ((r - 1) * n_per_rep + 1):(r * n_per_rep)
+    return(md_run(obj, .seeds = seeds[idx], trace = FALSE))
   }
   
   obj <- prep$obj
@@ -4719,7 +4725,6 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     
     # Compute convergence diagnostics:
     
-    browser()
     diag <- data %>%
       dplyr::arrange(.data$type, .data$group, .data$replicate) %>%
       dplyr::group_by(.data$type, .data$group) %>%

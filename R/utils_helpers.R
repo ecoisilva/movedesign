@@ -1300,11 +1300,46 @@ format_num <- function(value) {
 #' format_perc
 #'
 #' @noRd
-format_perc <- function(value) {
-  list(color = case_when(
-    abs(value) > .5 ~ "#dd4b39",
-    abs(value) > .1 & abs(value) < .5 ~ "#ffa600",
-    TRUE ~ "#006669"))
+format_perc <- function(value, error_threshold = NULL, tol = 0.05) {
+  
+  if (is.null(error_threshold)) {
+    
+    col <- dplyr::case_when(
+      abs(value) > 0.5 ~ "#dd4b39",
+      abs(value) > 0.1 & abs(value) <= 0.5 ~ "#ffa600",
+      TRUE ~ "#006669")
+    
+  } else {
+    
+    col <- dplyr::case_when(
+      abs(value) < error_threshold ~ "#006669",
+      abs(value) >= error_threshold &
+        abs(value) <= (error_threshold + 0.05) ~ "#ffa600",
+      TRUE ~ "#dd4b39")
+  }
+  
+  return(list(color = col))
+}
+
+
+#' format_subpop_perc
+#'
+#' @noRd
+format_subpop_perc <- function(value, is_subpop) {
+  
+  col <- if (is_subpop) {
+    dplyr::case_when(
+      abs(value) > 0.5 ~ "#006669",
+      abs(value) > 0.1 & abs(value) <= 0.5 ~ "#ffa600",
+      TRUE ~ "#dd4b39")
+  } else {
+    dplyr::case_when(
+      abs(value) < 0.1 ~ "#006669",
+      abs(value) >= 0.1 & abs(value) <= 0.5 ~ "#ffa600",
+      TRUE ~ "#dd4b39")
+  }
+  
+  return(list(color = col))
 }
 
 #' Calculate limits for plots.
@@ -2472,43 +2507,28 @@ ellipke <- function(m, tol = .Machine$double.eps) {
 #' @noRd
 .summarize_error <- function(data,
                              error_col = "error",
+                             subpop_col = "subpop_detected",
                              group_vars = c("type", "group", "m"),
                              error_threshold = 0.05,
                              conf_level = 0.95) {
   
-  if (!is.data.frame(data)) {
+  if (!is.data.frame(data))
     stop("`data` must be a data.frame.")
-  }
-  
-  if (!is.character(error_col) || length(error_col) != 1L) {
-    stop("`error_col` must be a single character string.")
-  }
-  
-  if (!all(group_vars %in% names(data))) {
-    stop("All `group_vars` must exist in `data`.")
-  }
-  
-  if (!error_col %in% names(data)) {
+  if (!error_col %in% names(data))
     stop("`error_col` must exist in `data`.")
-  }
-  
-  # if (!is.numeric(error_threshold) ||
-  #     length(error_threshold) != 1L) {
-  #   stop("`error_threshold` must be a single numeric value.")
-  # }
+  if (!all(group_vars %in% names(data)))
+    stop("All `group_vars` must exist in `data`.")
   
   if (!is.numeric(error_threshold) ||
       !(length(error_threshold) %in% c(1, 2))) {
     stop("`error_threshold` must be a single numeric value",
          " or a numeric vector of length 2.")
   }
-  
   if (length(error_threshold) == 2L &&
       error_threshold[1] >= error_threshold[2]) {
     stop("If `error_threshold` is a vector of length 2,",
          "the first element must be smaller than the second.")
   }
-  
   
   if (!is.numeric(conf_level) ||
       conf_level <= 0 ||
@@ -2519,52 +2539,47 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   alpha <- 1 - conf_level
   t_prob <- 1 - alpha / 2
   
-  out <- suppressWarnings(
-    suppressMessages(
-      data %>%
-        dplyr::group_by(
-          dplyr::across(dplyr::all_of(group_vars))) %>%
-        dplyr::summarize(
-          n = dplyr::n(),
-          sd_error = stats::sd(.data[[error_col]], na.rm = TRUE),
-          error = base::mean(.data[[error_col]], na.rm = TRUE),
-          .groups = "drop")))
+  out <- suppressWarnings(suppressMessages(
+    data %>%
+      dplyr::group_by(
+        dplyr::across(dplyr::all_of(group_vars))) %>%
+      dplyr::summarize(
+        n = dplyr::n(),
+        sd_error = stats::sd(.data[[error_col]], na.rm = TRUE),
+        error = base::mean(.data[[error_col]], na.rm = TRUE),
+        .groups = "drop")))
   
   df <- out$n - 1L
   t_crit <- suppressWarnings(
-    ifelse(df > 0, stats::qt(t_prob, df = df), NA_real_))
-  se <- out$sd_error / base::sqrt(out$n)
+    ifelse(df > 0, stats::qt(t_prob, df = df), NA))
+  se <- out$sd_error / sqrt(out$n)
   
-  # Confidence intervals:
+  # Confidence intervals
   error_lci <- out$error - t_crit * se
   error_uci <- out$error + t_crit * se
   
-  # Prediction intervals:
-  pred_scale <- base::sqrt(1 + 1 / out$n)
+  # Prediction intervals
+  pred_scale <- sqrt(1 + 1 / out$n)
   pred_lci <- out$error - t_crit * out$sd_error * pred_scale
   pred_uci <- out$error + t_crit * out$sd_error * pred_scale
   
+  # Threshold checks
   if (length(error_threshold) == 1L) {
     within_threshold <- abs(out$error) <= error_threshold
-  } else {
-    within_threshold <- out$error >= error_threshold[1] &
-      out$error <= error_threshold[2]
-  }
-  
-  if (length(error_threshold) == 1L) {
     overlaps_with_threshold <- error_lci <= error_threshold &
       error_uci >= -error_threshold
   } else {
+    within_threshold <- out$error >= error_threshold[1] &
+      out$error <= error_threshold[2]
     overlaps_with_threshold <- error_lci <= error_threshold[2] &
       error_uci >= error_threshold[1]
   }
   
-  overlaps <- factor(
-    ifelse(within_threshold, TRUE, FALSE),
-    levels = c(TRUE, FALSE),
-    labels = c("TRUE", "FALSE"))
+  overlaps <- factor(ifelse(within_threshold, TRUE, FALSE),
+                     levels = c(TRUE, FALSE),
+                     labels = c("TRUE", "FALSE"))
   
-  return(dplyr::bind_cols(
+  out <- dplyr::bind_cols(
     out, data.frame(
       error_lci = error_lci,
       error_uci = error_uci,
@@ -2574,6 +2589,24 @@ ellipke <- function(m, tol = .Machine$double.eps) {
       within_threshold = within_threshold,
       overlaps_with_threshold = overlaps_with_threshold,
       overlaps = overlaps,
-      stringsAsFactors = FALSE)))
+      stringsAsFactors = FALSE))
+  
+  # Subpopulation summary (only if column exists):
+  if (subpop_col %in% names(data)) {
+    out_subpop <- data %>%
+      dplyr::group_by(
+        dplyr::across(dplyr::all_of(group_vars))) %>%
+      dplyr::summarize(
+        n_detected = sum(
+          .data[[subpop_col]] == TRUE, na.rm = TRUE),
+        subpop = mean(
+          .data[[subpop_col]] == TRUE, na.rm = TRUE),
+        .groups = "drop")
+    
+    return(dplyr::left_join(
+      out, out_subpop, by = group_vars))
+  }
+  
+  return(out)
 }
 
