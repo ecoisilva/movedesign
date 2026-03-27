@@ -3059,7 +3059,7 @@ mod_tab_report_server <- function(id, rv) {
             ggplot2::geom_point(
               data = ~ head(.x, 1),
               ggplot2::aes(
-                x = mean(rv$sdErr$est, na.rm = TRUE),
+                x = mean(rv$speedErr$est, na.rm = TRUE),
                 y = 0, col = "now", shape = "now"),
               size = 6, alpha = .7)
           } +
