@@ -16,12 +16,6 @@ mod_comp_tour_ui <- function(id) {
       div(id = "content-tutorial",
           
           p(),
-          # actionButton(
-          #   inputId = ns("default_tour"),
-          #   label = "Individual estimate",
-          #   icon = icon("compass"),
-          #   width = "238px",
-          #   class = "btn-primary"),
           
           splitLayout(
             cellWidths = c("200px", "1%", "200px"),
@@ -539,23 +533,6 @@ mod_comp_tour_server <- function(id, rv) {
           em("i.e."), "if the semi-variance reaches an asymptote."
         )))
       
-      # element <- c(element, paste0(tab4, "devBox_sizes"))
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     div(class = "tour_action",
-      #         span(class = "tour_action_icon", action_bell),
-      #       "Throughout this walkthrough, you can click on the",
-      #       fontawesome::fa("bookmark"), "Show table",
-      #       "button to show relevant inputs and outputs",
-      #       "in a table for a quick overview."),
-      #     p(),
-      #     "If you set different sampling parameters,",
-      #     "you can also check them here.",
-      #     "Keep in mind that for further analyses, the application",
-      #     "will use the last set of parameters/data simulated."
-      #   )))
-      
       element <- c(element, paste0(tab4, "devBox_summary"))
       intro <- c(
         intro,
@@ -569,13 +546,6 @@ mod_comp_tour_server <- function(id, rv) {
       
       ## Analyses tab: ----------------------------------------------------
       ### Home range ------------------------------------------------------
-      
-      # element <- c(element, "#analyses")
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #  
-      #   )))
       
       tab5 <- paste0("#tab_hrange_1", "-")
       element <- c(element, paste0(tab5, "hr_intro"))
@@ -598,7 +568,6 @@ mod_comp_tour_server <- function(id, rv) {
               "button to estimate home range area.")))
         )))
       
-      # element <- c(element, paste0(tab5, "hrBox_viz"))
       element <- c(element, "#hr_outputs")
       intro <- c(
         intro,
@@ -662,30 +631,6 @@ mod_comp_tour_server <- function(id, rv) {
           text_hr()
         )))
       
-      # element <- c(element, paste0(tab5, "hrBox_viz"))
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     div(class = "tour_action",
-      #         span(class = "tour_action_icon", action_bell),
-      #       "You can once again see all outputs to a table",
-      #       "by clicking on the", fontawesome::fa("bookmark")
-      #       , "Show table", "button located at the bottom",
-      #       "of the box."
-      #     )
-      #   )))
-      
-      # element <- c(element, paste0(tab5, "hrBox_summary"))
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     "Here are the outputs from the",
-      #     fontawesome::fa("map-location-dot", fill = pal$sea),
-      #     span("Home range", class = "cl-sea-l"), "tab.",
-      #     "Now we are ready to move on to",
-      #     span("speed & distance", class = "cl-sea-l"), "estimation."
-      #   )))
-      
       element <- c(element, "#Tour_middle")
       intro <- c(
         intro,
@@ -716,7 +661,6 @@ mod_comp_tour_server <- function(id, rv) {
               "button to estimate speed & distance.")))
         )))
       
-      # element <- c(element, paste0(tab6, "sdPlot_path"))
       element <- c(element, "#sd_outputs")
       intro <- c(
         intro,
@@ -761,30 +705,6 @@ mod_comp_tour_server <- function(id, rv) {
         HTML(paste(
           text_ctsd()
         )))
-      
-      # element <- c(element, paste0(tab6, "sdBox_outputs"))
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     div(class = "tour_action",
-      #         span(class = "tour_action_icon", action_bell),
-      #          "You can once again see all outputs to a table",
-      #          "by clicking on the", fontawesome::fa("bookmark")
-      #          , "Show table", "button located at the bottom",
-      #          "of the box."
-      #     )
-      #   )))
-      
-      # element <- c(element, paste0(tab6, "sdBox_summary"))
-      # intro <- c(
-      #   intro,
-      #   HTML(paste(
-      #     "Here are the outputs from the",
-      #     fontawesome::fa("gauge-high", fill = pal$sea),
-      #     span("Speed & distance", class = "cl-sea-l"), "tab.",
-      #     "Now we are ready to move on to the",
-      #     span("Report", class = "cl-sea-l"), "tab."
-      #   )))
       
       ## Report tab: ------------------------------------------------------
       
@@ -833,7 +753,6 @@ mod_comp_tour_server <- function(id, rv) {
           span("sampling", class = "cl-sea-l"), "parameters."
         )))
       
-      # element <- c(element, paste0(tab7, "repPlot_precision"))
       element <- c(element, "#section-two_questions")
       intro <- c(
         intro,
