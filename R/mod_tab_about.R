@@ -313,7 +313,9 @@ mod_tab_about_server <- function(id, rv) {
     }, label = "o-about_workflow")
     
     observe({
+      req(input$which_m)
       rv$which_m <- input$which_m
+      if (is.null(rv$which_m)) rv$which_m <- "none"
       if (req(rv$which_meta) == "none") rv$which_m <- NULL
       if (req(rv$which_meta) == "none") shinyjs::disable("add_ind_var")
       else shinyjs::enable("add_ind_var")

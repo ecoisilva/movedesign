@@ -983,7 +983,10 @@ mod_tab_design_server <- function(id, rv) {
     ## Update device settings: --------------------------------------------
     
     observe({
-      req(rv$which_m != "get_all", input$device_type)
+      req(input$device_type)
+      if (!is.null(rv$which_m)) {
+        req(rv$which_m != "get_all")
+      }
       rv$device_type <- input$device_type
       
       shinyjs::show(id = "devBox_sampling")
@@ -3299,10 +3302,13 @@ mod_tab_design_server <- function(id, rv) {
     
     output$devPlot_gps <- ggiraph::renderGirafe({
       req(rv$active_tab == 'device',
-          rv$which_m != "get_all",
           rv$dev$dur$value,
           rv$dev$dur$unit,
           input$gps_dti_max)
+      
+      if (!is.null(rv$which_m)) {
+        req(rv$which_m != "get_all")
+      }
       
       dti_scale <- dti_yn <- NULL
       device <- simulating_gps()
@@ -3785,8 +3791,10 @@ mod_tab_design_server <- function(id, rv) {
         N2 = "N (speed)",
         fit = "Fitted?")
       
-      if (rv$which_m == "get_all") {
-        dt_dv <- dplyr::select(dt_dv, -c(.data$device))
+      if (!is.null(rv$which_m)) {
+        if (rv$which_m == "get_all") {
+          dt_dv <- dplyr::select(dt_dv, -c(.data$device))
+        }
       }
       
       reactable::reactable(
