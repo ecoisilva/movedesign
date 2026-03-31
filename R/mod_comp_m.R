@@ -991,11 +991,20 @@ mod_comp_m_server <- function(id, rv,
             " Replication ", crayon::yellow(rep), " out of ",
             crayon::yellow(rv$n_replicates)))
           
-          .md_add_m(rv,
-                    m = iter_step,
-                    init_m = init_m,
-                    has_groups = has_groups,
-                    trace = TRUE)
+          if ((i == 1 && m_seq[[i]] == 2) |
+              (i == 1 && m_seq[[i]] == 3)) {
+            .md_add_m(rv,
+                      m = m_seq[[i]],
+                      init_m = init_m,
+                      has_groups = has_groups,
+                      trace = TRUE)
+          } else {
+            .md_add_m(rv,
+                      m = iter_step,
+                      init_m = init_m,
+                      has_groups = has_groups,
+                      trace = TRUE)
+          }
           
           replicate_dt <- rbind(
             replicate_dt,
@@ -1539,6 +1548,7 @@ mod_comp_m_server <- function(id, rv,
       rv$is_report <- FALSE
       
       if (broke) m_seq <- m_seq[m_seq <= m_current]
+      rv$n_tags <- max(m_seq)
       
       metaList <- list()
       start_meta_total <- Sys.time()
@@ -1570,7 +1580,7 @@ mod_comp_m_server <- function(id, rv,
         subpop = rv$grouped,
         randomize = FALSE,
         trace = FALSE,
-        .max_m = length(rv$simList) / rv$n_replicates,
+        .max_m = max(m_seq),
         .automate_seq = TRUE,
         .seed = rv$seedInit)
       

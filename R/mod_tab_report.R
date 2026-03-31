@@ -4071,12 +4071,12 @@ mod_tab_report_server <- function(id, rv) {
           dplyr::everything(), 
           ~ifelse(all(is.na(.)), NA, .[!is.na(.)][1])))
       
-      if (!is.null(rv$n_replicates)) {
-        if (!is.null(rv$meta_tbl_replicates)) {
-          out$replicate <- rep(1:rv$n_replicates,
-                               each = nrow(out) / rv$n_replicates)
-        }
-      }
+      # if (!is.null(rv$n_replicates)) {
+      #   if (!is.null(rv$meta_tbl_replicates)) {
+      #     out$replicate <- rep(1:rv$n_replicates,
+      #                          each = nrow(out) / rv$n_replicates)
+      #   }
+      # }
       
       return(out)
       

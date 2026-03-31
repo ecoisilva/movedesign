@@ -541,8 +541,8 @@ mod_tab_meta_server <- function(id, rv) {
         req(rv$n_units)
         return(paste(rv$n_units, "tags"))
       } else if (rv$which_m == "get_m") {
-        req(length(rv$simList), rv$n_replicates)
-        return(paste(length(rv$simList) / rv$n_replicates, "tags"))
+        req(length(rv$simList), rv$n_replicates, rv$n_tags)
+        return(paste(rv$n_tags, "tags"))
       } else {
         return(length(rv$simList %||% 0))
       }
