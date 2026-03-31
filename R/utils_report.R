@@ -42,6 +42,7 @@
   set_target <- match.arg(set_target)
   err_name <- paste0(set_target, "Err")
   
+  # Determine number of tags
   n_tags <- if (rv$which_m == "get_all") {
     rv$n_units
   } else if (rv$which_m == "get_m") {
@@ -62,62 +63,72 @@
       .err_to_txt(rv[[err_name]]$est), "%."))
   }
   
-  if (is.null(rv$meta_tbl_replicates)) {
-    meta <- rv$meta_tbl[
-      rv$meta_tbl$group == "All" &
-        rv$meta_tbl$type == set_target, , drop = FALSE]
-    
+  meta <- if (is.null(rv$meta_tbl_replicates)) {
+    rv$meta_tbl
   } else {
-    meta <- rv$meta_tbl_replicates[
-      rv$meta_tbl_replicates$group == "All" &
-        rv$meta_tbl_replicates$type == set_target, , drop = FALSE]
-    
-    txt_replicates <- paste(" and", rv$n_replicates, "replicates")
+    rv$meta_tbl_replicates
   }
   
-  if (rv$which_m != "get_all" && is.null(rv$meta_tbl_replicates)) {
-    err <- meta[which.max(meta$m), , drop = FALSE]
-    
-  } else {
-    summaries <- lapply(split(meta, meta$m), function(x) {
-      n <- nrow(x)
-      error <- mean(x$error, na.rm = TRUE)
-      sd_error <- stats::sd(x$error, na.rm = TRUE)
-      se <- sd_error / sqrt(n)
-      
-      data.frame(
-        m = x$m[1],
-        error = error,
-        error_lci = error - stats::qt(0.975, df = n - 1) * se,
-        error_uci = error + stats::qt(0.975, df = n - 1) * se)
-    })
-    
-    summaries <- do.call(rbind, summaries)
-    err <- summaries[which.max(summaries$m), , drop = FALSE]
-    
+  txt_replicates <- if (!is.null(rv$meta_tbl_replicates)) {
+    paste(" and", rv$n_replicates, "replicates")
+  } else ""
+  
+  summarize_meta <- function(sub_meta) {
+    n <- nrow(sub_meta)
+    error <- mean(sub_meta$error, na.rm = TRUE)
+    sd_error <- stats::sd(sub_meta$error, na.rm = TRUE)
+    se <- sd_error / sqrt(n)
+    data.frame(
+      m = sub_meta$m[1],
+      error = error,
+      error_lci = error - stats::qt(0.975, df = n - 1) * se,
+      error_uci = error + stats::qt(0.975, df = n - 1) * se)
   }
   
-  txt_direction <- ifelse(dplyr::pull(err, .data$error) > 0,
-                          "overestimated", "underestimated")
+  summarize_by_max_m <- function(sub_meta) {
+    if (rv$which_m != "get_all" && is.null(rv$meta_tbl_replicates)) {
+      sub_meta[which.max(sub_meta$m), , drop = FALSE]
+    } else {
+      summaries <- lapply(split(sub_meta, sub_meta$m), summarize_meta)
+      summaries <- do.call(rbind, summaries)
+      summaries[which.max(summaries$m), , drop = FALSE]
+    }
+  }
   
   txt_target <- switch(set_target,
                        hr = "home range area",
                        ctsd = "speed")
   
-  if (is.null(rv$meta_tbl_replicates)) {
-    return(paste0(
-      "The mean ", txt_target, " based on ", txt_n_tags,
+  if (rv$grouped) {
+    
+    err <- summarize_by_max_m(
+      meta[meta$type == set_target, , drop = FALSE])
+    txt_direction <- ifelse(err$error > 0
+                            , "overestimated", "underestimated")
+    
+    paste0(
+      "The mean ", txt_target, " based on ",
+      txt_n_tags, " (both groups)", txt_replicates,
       " was ", txt_direction, " by ",
       .err_to_txt(err$error), "% [",
       .err_to_txt(err$error_lci), ", ",
-      .err_to_txt(err$error_uci), "]."))
+      .err_to_txt(err$error_uci), "].")
+    
   } else {
-    return(paste0(
-      "The mean ", txt_target, " based on ", txt_n_tags,
-      txt_replicates, " was ", txt_direction, " by ",
+    
+    grp_meta <- meta[meta$group == "All" &
+                       meta$type == set_target, , drop = FALSE]
+    err <- summarize_by_max_m(grp_meta)
+    txt_direction <- ifelse(err$error > 0,
+                            "overestimated", "underestimated")
+    
+    paste0(
+      "The mean ", txt_target, " based on ",
+      txt_n_tags, txt_replicates,
+      " was ", txt_direction, " by ",
       .err_to_txt(err$error), "% [",
       .err_to_txt(err$error_lci), ", ",
-      .err_to_txt(err$error_uci), "]."))
+      .err_to_txt(err$error_uci), "].")
   }
 }
 
