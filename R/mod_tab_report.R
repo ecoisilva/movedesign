@@ -4465,6 +4465,14 @@ mod_tab_report_server <- function(id, rv) {
       },
       content = function(file) {
         
+        if (rv$which_m == "get_all") {
+          n_tags <- rv$n_units
+        } else if (rv$which_m == "get_m") {
+          n_tags <- rv$n_tags
+        } else {
+          n_tags <- length(rv$simList)
+        }
+        
         .add_break <- "\n"
         
         r_code <- paste0(
@@ -4517,7 +4525,7 @@ mod_tab_report_server <- function(id, rv) {
               ", unit = \"", rv$dur$unit[[1]], "\"),\n",
               "  dti = list(value = ", rv$dti$value[[1]],
               ", unit = \"", rv$dti$unit[[1]], "\"),\n",
-              "  n_individuals = ", length(rv$simList), ",\n")
+              "  n_individuals = ", n_tags, ",\n")
             
           } else {
             
@@ -4550,7 +4558,7 @@ mod_tab_report_server <- function(id, rv) {
               ", unit = \"", rv$dur$unit[[1]], "\"),\n",
               "  dti = list(value = ", rv$dti$value[[1]],
               ", unit = \"", rv$dti$unit[[1]], "\"),\n",
-              "  n_individuals = ", length(rv$simList), ",\n")
+              "  n_individuals = ", n_tags, ",\n")
           }
           
         } else {
@@ -4595,10 +4603,12 @@ mod_tab_report_server <- function(id, rv) {
           
           if (!rv$grouped) {
             
-            if (rv$which_m != "get_all") {
-              n_individuals <- length(rv$simList)
-            } else {
+            if (rv$which_m == "get_all") {
               n_individuals <- rv$n_units
+            } else if (rv$which_m == "get_m") { 
+              n_individuals <- rv$n_tags * 2
+            } else {
+              n_individuals <- length(rv$simList)
             }
             
             r_code <- paste0(
@@ -4635,12 +4645,6 @@ mod_tab_report_server <- function(id, rv) {
               "    B = c(", paste0('"', groups$B, '"', 
                                    collapse = ", "), ")),\n")
             
-            if (rv$which_m != "get_all") {
-              n_individuals <- length(rv$simList)
-            } else {
-              n_individuals <- rv$n_units
-            }
-            
             r_code <- paste0(
               r_code,
               "# Prepare initial study design object:\n",
@@ -4649,7 +4653,7 @@ mod_tab_report_server <- function(id, rv) {
               "  data = data_tel,\n",
               "  models = fits,\n",
               group_code,
-              "  n_individuals = ", n_individuals, ",\n")
+              "  n_individuals = ", n_tags, ",\n")
             
             if (rv$which_m != "get_all") {
               r_code <- paste0(

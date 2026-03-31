@@ -1227,11 +1227,6 @@ mod_comp_m_server <- function(id, rv,
           history$uci_within[i] <- dt_ci$uci_within
           history$overlaps_with_zero[i] <- dt_ci$overlaps_zero
           
-          error_ok
-          all_error_ok
-          diag$has_converged
-          dt_ci$lci_within && dt_ci$uci_within
-          
           if (error_ok && all_error_ok && diag$has_converged) {
             if (dt_ci$lci_within && dt_ci$uci_within) {
               writeLines(c(paste0(
