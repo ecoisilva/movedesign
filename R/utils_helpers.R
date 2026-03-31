@@ -2634,3 +2634,31 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   return(out)
 }
 
+
+#' Find initial stable value in sequence
+#'
+#' @noRd
+.find_stable <- function(delta_vec, tol, n) {
+  
+  length(delta_vec) <- length(delta_vec)
+  if (length(delta_vec) == 0L || n <= 0L ||
+      n > length(delta_vec) || !is.finite(tol) || tol < 0) {
+    return(NA_integer_)
+  }
+  
+  valid <- !is.na(delta_vec) & abs(delta_vec) <= tol
+  if (!valid[length(delta_vec)]) return(NA_integer_)
+  
+  run_vec <- 0
+  for (i in length(delta_vec):1) {
+    if (valid[i]) {
+      run_vec <- run_vec + 1
+    } else {
+      break
+    }
+  }
+  
+  if (run_vec < n) return(NA_integer_)
+  return(length(delta_vec) - n + 1L)
+}
+
