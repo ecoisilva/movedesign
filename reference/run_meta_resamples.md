@@ -36,7 +36,7 @@ run_meta_resamples(
   rv,
   set_target = c("hr", "ctsd"),
   subpop = FALSE,
-  random = FALSE,
+  randomize = FALSE,
   max_draws = 100,
   iter_step = 2,
   trace = FALSE,
@@ -63,7 +63,7 @@ run_meta_resamples(
   subpopulations/groups (e.g., males vs. females). Requires group
   assigments in `rv`.
 
-- random:
+- randomize:
 
   Logical; if TRUE, performs random sampling of individuals using
   different combinations (up to max_draws).
@@ -196,10 +196,6 @@ size, sample, and group (if specified). Columns include:
 
 [`akde`](https://rdrr.io/pkg/ctmm/man/akde.html),
 [`speed`](https://rdrr.io/pkg/ctmm/man/speed.html),
-
-## Author
-
-Inês Silva <i.simoes-silva@hzdr.de>
 
 ## Examples
 

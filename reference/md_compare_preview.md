@@ -1,81 +1,96 @@
-# Preview plot for movedesign workflow outputs (single replicate)
+# Compare estimation error across designs (single replicate)
 
-Generates a quick visualization of relative error for home range or
-movement speed estimation from a single replicate of a movedesign
-workflow. The plot can display either the estimates from that replicate
-for a random combination of individuals, or, when resampling is enabled,
-summaries derived from repeated draws of individuals at each population
-sample size (based on the specified number of resamples).
-
-This functions shows preliminary outputs only based on the output of
+Plots estimation error of the chosen targets for two or more study
+designs, each represented by a single
 [`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md)
-(a `movedesign_preprocess` object) and should not be used to evaluate
-study design by itself. Instead, users should run
+output. Use this function to quickly compare how design choices affect
+estimation performance before committing to a full replication with
+[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md).
+
+Because each design is represented by a single stochastic run, results
+are preliminary. For robust, publication-ready comparisons, run
 [`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
-and check for convergence with
-[`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md).
+for each design and compare with
+[`md_compare()`](https://ecoisilva.github.io/movedesign/reference/md_compare.md).
 
 ## Usage
 
 ``` r
 md_compare_preview(
-  objs,
+  ...,
   n_resamples = NULL,
   error_threshold = 0.05,
-  pal = c("#007d80", "#A12C3B"),
-  ...
+  pal = c("#007d80", "#A12C3B")
 )
 ```
 
 ## Arguments
 
-- objs:
+- ...:
 
-  A list of object of class `movedesign_preprocess` (outputs of
-  [`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md)).
+  One or more `movedesign_processed` objects, each returned by
+  [`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md),
+  or a single list containing such objects. Each element represents one
+  study design to compare. Designs typically differ in sampling
+  parameters such as `dur`, `dti`, or `n_individuals`, but any valid
+  inputs can be compared.
 
 - n_resamples:
 
-  Numeric. Must be a positive value. Defines how many combinations are
-  generated for each population sample size, with each combination
-  producing a new population-level estimate.
+  A single positive integer. The number of random combinations of
+  individuals generated at each population sample size per design. Each
+  combination produces one population-level estimate. Set to `NULL` to
+  plot raw estimates without resampling.
 
 - error_threshold:
 
-  Numeric. Error threshold (e.g. `0.05` for 5%) to display as a
-  reference in the plot.
+  Numeric. Relative error threshold shown as a horizontal reference line
+  in the plot (e.g. `0.05` for 5%).
 
 - pal:
 
-  Character vector of two colors for within/outside threshold (default:
-  c("#007d80", "#A12C3B")).
-
-- ...:
-
-  Additional arguments used internally.
+  A character vector of two colors, used for estimates within and
+  outside the error threshold respectively. Defaults to
+  `c("#007d80", "#A12C3B")`.
 
 ## Value
 
-A ggplot object displaying relative error by population sample size,
-with point estimate and confidence intervals for mean estimates, and
-horizontal error threshold lines.
+A `ggplot` object. Displays relative error as a function of population
+sample size, with one panel (or two if two target) per design. Point
+estimates, confidence intervals, and a horizontal reference line at
+`error_threshold`.
 
 ## Details
 
-This plot summarizes a single replicate. Credible intervals and robust
-study design conclusions generally require multiple replicates generated
-with
-[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md).
+If `n_resamples` is not `NULL`, the function draws `n_resamples` random
+combinations of individuals at each population sample size and computes
+a population-level estimate for each. This step
+
+Each design is represented by a single stochastic run. Apparent
+differences between designs may reflect random variation rather than
+genuine performance differences. Use
+[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
+to generate robust, replicated results for each design, and
+[`md_compare()`](https://ecoisilva.github.io/movedesign/reference/md_compare.md)
+to compare multiple designs.
 
 ## See also
 
-[`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md),
+[`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md)
+to generate each input object.
+[`md_plot_preview()`](https://ecoisilva.github.io/movedesign/reference/md_plot_preview.md)
+for a single-design equivalent.
 [`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
+for robust multi-replicate outputs per design.
+[`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md)
+to assess convergence across replicates.
 
 ## Examples
 
 ``` r
 if (interactive()) {
+
+  data(buffalo)
   inputA <- md_prepare(
     data = buffalo,
     models = models,
@@ -83,11 +98,11 @@ if (interactive()) {
     n_individuals = 5,
     dur = list(value = 1, unit = "month"),
     dti = list(value = 1, unit = "day"),
-    add_individual_variation = TRUE,
+    add_individual_variation = FALSE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
+    which_meta = "mean")
+  
   inputB <- md_prepare(
     data = buffalo,
     models = models,
@@ -98,9 +113,8 @@ if (interactive()) {
     add_individual_variation = TRUE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
-
+    which_meta = "mean")
+  
   outputA <- md_run(inputA)
   outputB <- md_run(inputB)
   md_compare_preview(list(outputA,

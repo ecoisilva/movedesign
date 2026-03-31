@@ -119,7 +119,7 @@ groups, and resampling scenarios.</p></li>
 <span>  <span class="va">rv</span>,</span>
 <span>  set_target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hr"</span>, <span class="st">"ctsd"</span><span class="op">)</span>,</span>
 <span>  subpop <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  random <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  randomize <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max_draws <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  iter_step <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  trace <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -148,9 +148,9 @@ by subpopulations/groups (e.g., males vs. females). Requires group
 assigments in <code>rv</code>.</p></dd>
 
 
-<dt id="arg-random">random<a class="anchor" aria-label="anchor" href="#arg-random"></a></dt>
-<dd><p>Logical; if TRUE, performs random sampling of individuals
-using different combinations (up to max_draws).</p></dd>
+<dt id="arg-randomize">randomize<a class="anchor" aria-label="anchor" href="#arg-randomize"></a></dt>
+<dd><p>Logical; if TRUE, performs random sampling of
+individuals using different combinations (up to max_draws).</p></dd>
 
 
 <dt id="arg-max-draws">max_draws<a class="anchor" aria-label="anchor" href="#arg-max-draws"></a></dt>
@@ -262,10 +262,6 @@ include:</p><dl><dt>type</dt>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="https://rdrr.io/pkg/ctmm/man/akde.html" class="external-link">akde</a></code>, <code><a href="https://rdrr.io/pkg/ctmm/man/speed.html" class="external-link">speed</a></code>,</p></div>
-    </div>
-    <div class="section level2">
-    <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>
-    <p>Inês Silva <a href="mailto:i.simoes-silva@hzdr.de">i.simoes-silva@hzdr.de</a></p>
     </div>
 
     <div class="section level2">

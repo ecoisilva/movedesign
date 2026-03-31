@@ -4,9 +4,11 @@
 
 ### New features
 
-- Added new core functions to compare `movedesign` scenarios.
-- Added `Download R script` button to Report tab which can replicate the
-  movedesign workflow.
+- Exported all internal functions, allowing workflows to run directly
+  from the command line.
+- Introduced new core functions to compare `movedesign` scenarios.  
+- Added a `Download R Script` button on the Report tab to replicate the
+  `movedesign` workflow.
 
 ### Minor improvements
 

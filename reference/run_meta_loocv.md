@@ -75,10 +75,6 @@ run_meta_loocv(
 
 A data frame containing summarized simulation outputs.
 
-## Author
-
-Inês Silva <i.simoes-silva@hzdr.de>
-
 ## Examples
 
 ``` r

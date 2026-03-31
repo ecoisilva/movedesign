@@ -9,17 +9,16 @@ a specific analytical target.
 ## Usage
 
 ``` r
-md_configure(data, models = NULL)
+md_configure(data, models = NULL, parallel = FALSE)
 ```
 
 ## Arguments
 
 - data:
 
-  A named list of telemetry objects (from
-  [`ctmm::as.telemetry()`](https://rdrr.io/pkg/ctmm/man/as.telemetry.html))
-  to be used as the empirical basis for the simulations. Each telemetry
-  object must contain valid metadata and timestamped locations.
+  A named list of simulated movement datasets, each a `telemetry` object
+  compatible with `ctmm` `R` package. Each object must contain valid
+  metadata and timestamped locations.
 
 - models:
 
@@ -27,6 +26,10 @@ md_configure(data, models = NULL)
   [`ctmm::ctmm.fit()`](https://rdrr.io/pkg/ctmm/man/ctmm.fit.html) or
   [`ctmm::ctmm.select()`](https://rdrr.io/pkg/ctmm/man/ctmm.fit.html)).
   If not supplied, models are fitted automatically.
+
+- parallel:
+
+  Logical. If `TRUE`, enables parallel processing.
 
 ## Value
 

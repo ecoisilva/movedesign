@@ -68,12 +68,14 @@ providing a visual diagnostic of simulation results.</p>
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">md_plot</span><span class="op">(</span></span>
-<span>  <span class="va">obj</span>,</span>
+<span>  <span class="va">x</span>,</span>
 <span>  stat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"median"</span><span class="op">)</span>,</span>
-<span>  ci <span class="op">=</span> <span class="fl">0.95</span>,</span>
+<span>  ci <span class="op">=</span> <span class="fl">0.8</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"HDI"</span>,</span>
 <span>  pal <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"#007d80"</span>, <span class="st">"#A12C3B"</span><span class="op">)</span>,</span>
-<span>  m <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  m <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  show_text <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -81,7 +83,7 @@ providing a visual diagnostic of simulation results.</p>
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
 
-<dl><dt id="arg-obj">obj<a class="anchor" aria-label="anchor" href="#arg-obj"></a></dt>
+<dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>A <code>movedesign_output</code> object, as returned by
 <code><a href="md_replicate.html">md_replicate()</a></code>. The object must contain a
 <code>summary</code> data frame with, at a minimum, the following columns:</p><dl><dt>error</dt>
@@ -107,7 +109,7 @@ display. Must be <code>"mean"</code> or <code>"median"</code>. Defaults to <code
 
 <dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
 <dd><p>Numeric scalar between 0 and 1. The probability of the
-credible interval (CI) to be estimated. Default to <code>0.95</code> (95%).</p></dd>
+credible interval (CI) to be estimated. Default to <code>0.80</code> (80%).</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
@@ -124,10 +126,18 @@ and mean line. If a single group, supply one color (default:
 
 
 <dt id="arg-m">m<a class="anchor" aria-label="anchor" href="#arg-m"></a></dt>
-<dd><p>Numeric (optional). If provided, restricts the
-results for a specific population sample size (<code>m</code>).
-Defaults to <code>NULL</code>, which checks up to the maximum population
-sample size.</p></dd>
+<dd><p>Numeric (Optional). If provided, restricts the results to a
+specific population sample size (<code>m</code>). Defaults to <code>NULL</code>, which
+checks up to the maximum population sample size.</p></dd>
+
+
+<dt id="arg-show-text">show_text<a class="anchor" aria-label="anchor" href="#arg-show-text"></a></dt>
+<dd><p>Logical, whether to display text annotations in
+the plots. Default is <code>TRUE</code>.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Reserved for internal use.</p></dd>
 
 </dl></div>
     <div class="section level2">

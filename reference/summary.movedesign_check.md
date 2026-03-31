@@ -6,7 +6,7 @@ Summary method for `movedesign_check` objects
 
 ``` r
 # S3 method for class 'movedesign_check'
-summary(object, ...)
+summary(object, verbose = FALSE, ...)
 ```
 
 ## Arguments
@@ -14,6 +14,10 @@ summary(object, ...)
 - object:
 
   An object of class `movedesign_check`
+
+- verbose:
+
+  Add interpretation text
 
 - ...:
 

@@ -9,7 +9,7 @@ required for each simulated individual.
 ## Usage
 
 ``` r
-estimate_speed(rv)
+estimate_speed(rv, stop_on_error = FALSE)
 ```
 
 ## Arguments

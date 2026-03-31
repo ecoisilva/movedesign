@@ -14,8 +14,7 @@ new_movedesign(x, subclass, ...)
 
 - x:
 
-  The underlying data or object to be wrapped (e.g., list, tibble,
-  simulation object, output).
+  The underlying data or object to be wrapped.
 
 - subclass:
 

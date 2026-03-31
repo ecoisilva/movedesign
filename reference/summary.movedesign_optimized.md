@@ -1,22 +1,22 @@
-# Summarise a study design output
+# Summarise a study design optimization
 
-Print a structured summary of a `movedesign_output` object produced by
-[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
-or
-[`md_stack()`](https://ecoisilva.github.io/movedesign/reference/md_stack.md).
+Print a structured summary of a `movedesign_optimized` object produced
+by
+[`md_optimize()`](https://ecoisilva.github.io/movedesign/reference/md_optimize.md).
 The summary reports the study design, replication settings, estimation
 performance for each target metric, and a convergence assessment.
 
 This method runs automatically when calling `summary(output)` on a
-`movedesign_output` object.
+`movedesign_optimized` object.
 
 ## Usage
 
 ``` r
-# S3 method for class 'movedesign_output'
+# S3 method for class 'movedesign_optimized'
 summary(
   object,
   verbose = FALSE,
+  error_threshold = NULL,
   m = NULL,
   ci = 0.95,
   tol = 0.05,
@@ -31,7 +31,7 @@ summary(
 
 - object:
 
-  A `movedesign_output` object returned by
+  A `movedesign_optimized` object returned by
   [`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
   or
   [`md_stack()`](https://ecoisilva.github.io/movedesign/reference/md_stack.md).
@@ -43,6 +43,11 @@ summary(
   and print the full convergence diagnostics. This can also display a
   convergence plot when `plot = TRUE`. If `FALSE` (default), only the
   convergence status is printed.
+
+- error_threshold:
+
+  Numeric. Upper limit of the relative error in estimation (e.g., `0.05`
+  for 5%) deemed acceptable by the user.
 
 - m:
 
@@ -79,40 +84,3 @@ summary(
 - ...:
 
   Additional arguments
-
-## See also
-
-[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md),
-[`md_stack()`](https://ecoisilva.github.io/movedesign/reference/md_stack.md)
-to generate results.
-[`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md)
-to inspect convergence directly.
-[`md_compare()`](https://ecoisilva.github.io/movedesign/reference/md_compare.md)
-to compare designs after convergence.
-
-## Examples
-
-``` r
-if(interactive()) {
-
-data(buffalo)
-
-input <- md_prepare(
-  species = "African buffalo",
-  data = buffalo,
-  n_individuals = 5,
-  dur = list(value = 1, unit = "month"),
-  dti = list(value = 1, unit = "day"),
-  set_target = "hr",
-  which_meta = "mean")
-
-output <- md_replicate(input, n_replicates = 20)
-
-# Print standard summary:
-summary(output)
-
-# Run full convergence diagnostics:
-summary(output, verbose = TRUE, tol = 0.05)
-
-}
-```

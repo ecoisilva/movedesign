@@ -1,13 +1,14 @@
-# Optimize population sample size and sampling parameters
+# Optimize sampling parameters and population sample size
 
 Repeatedly simulates movement datasets across a range of candidate
 population sample sizes to identify the minimal sample size and
-associated sampling parameters (e.g., duration, sampling interval)
-required to achieve a predefined error threshold for key space-use and
-movement metrics (home range area, or speed).
+associated sampling parameters (i.e., duration, sampling interval)
+needed to achieve estimates for key movement and space-use metrics
+(e.g., home range area, speed) within the specified relative error
+threshold.
 
 The function quantifies estimation error for each metric and sample
-size, evaluates which population sample size reliably meets target
+size, evaluating which population sample size reliably meet target
 thresholds, and reports final recommendations.
 
 ## Usage
@@ -15,13 +16,13 @@ thresholds, and reports final recommendations.
 ``` r
 md_optimize(
   obj,
-  n_replicates = 20,
+  n_replicates = 10,
   error_threshold = 0.05,
-  verbose = FALSE,
-  trace = TRUE,
+  plot = FALSE,
+  verbose = TRUE,
   parallel = FALSE,
   ncores = parallel::detectCores(),
-  plot = FALSE,
+  trace = TRUE,
   ...
 )
 ```
@@ -42,18 +43,19 @@ md_optimize(
 
 - error_threshold:
 
-  Numeric. Error threshold (e.g. `0.05` for 5%) to display as a
-  reference in the plot.
+  Numeric. Upper limit of the relative error in estimation (e.g., `0.05`
+  for 5%) deemed acceptable by the user. The function will attempt to
+  find sampling parameters and sample sizes that keep errors below this
+  threshold.
+
+- plot:
+
+  Logical. If TRUE, displays a diagnostic plot of the final results.
 
 - verbose:
 
   Logical. If `TRUE` (default), prints a summary of the convergence
   check to the console.
-
-- trace:
-
-  Logical; if `TRUE` (default), prints progress and timing messages to
-  the console.
 
 - parallel:
 
@@ -65,13 +67,14 @@ md_optimize(
   to all available cores detected by
   [`parallel::detectCores()`](https://rdrr.io/r/parallel/detectCores.html).
 
-- plot:
+- trace:
 
-  Logical. If TRUE, displays a diagnostic plot of the final results.
+  Logical; if `TRUE` (default), prints progress and timing messages to
+  the console.
 
 - ...:
 
-  Additional arguments used internally.
+  Reserved for internal use.
 
 ## Value
 
@@ -89,9 +92,9 @@ A list of class `movedesign_report` containing:
 - `sample_size_achieved`: Logical. Indicates if convergence was achieved
   and the threshold met.
 
-- `minimum_population_sample_size`: Integer. Minimum sample size
-  achieving the threshold (or maximum evaluated if
-  `sample_size_achieved` is `FALSE`).
+- `init_m`: Integer. Maximum sample size evaluated.
+
+- `minimum_m`: Integer. Minimum sample size achieving the threshold.
 
 ## Details
 

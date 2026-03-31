@@ -16,18 +16,20 @@ providing a visual diagnostic of simulation results.
 
 ``` r
 md_plot(
-  obj,
+  x,
   stat = c("mean", "median"),
-  ci = 0.95,
+  ci = 0.8,
   method = "HDI",
   pal = c("#007d80", "#A12C3B"),
-  m = NULL
+  m = NULL,
+  show_text = TRUE,
+  ...
 )
 ```
 
 ## Arguments
 
-- obj:
+- x:
 
   A `movedesign_output` object, as returned by
   [`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md).
@@ -58,7 +60,7 @@ md_plot(
 - ci:
 
   Numeric scalar between 0 and 1. The probability of the credible
-  interval (CI) to be estimated. Default to `0.95` (95%).
+  interval (CI) to be estimated. Default to `0.80` (80%).
 
 - method:
 
@@ -75,9 +77,18 @@ md_plot(
 
 - m:
 
-  Numeric (optional). If provided, restricts the results for a specific
+  Numeric (Optional). If provided, restricts the results to a specific
   population sample size (`m`). Defaults to `NULL`, which checks up to
   the maximum population sample size.
+
+- show_text:
+
+  Logical, whether to display text annotations in the plots. Default is
+  `TRUE`.
+
+- ...:
+
+  Reserved for internal use.
 
 ## Value
 

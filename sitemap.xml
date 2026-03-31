@@ -11,7 +11,7 @@
 <url><loc>https://ecoisilva.github.io/movedesign/news/index.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/estimate_hr.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/estimate_speed.html</loc></url>
-<url><loc>https://ecoisilva.github.io/movedesign/reference/fitting_model.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/fitting_models.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/fixrates.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/index.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/md_check.html</loc></url>
@@ -31,14 +31,17 @@
 <url><loc>https://ecoisilva.github.io/movedesign/reference/movedesign-package.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/movedesign_input.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/movedesign_output.html</loc></url>
-<url><loc>https://ecoisilva.github.io/movedesign/reference/movedesign_preprocess.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/movedesign_processed.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/movmods.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/new_movedesign.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/plot.movedesign_optimized.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/print.movedesign_check.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/print.movedesign_input.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/print.movedesign_optimized.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/print.movedesign_output.html</loc></url>
-<url><loc>https://ecoisilva.github.io/movedesign/reference/print.movedesign_preprocess.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/print.movedesign_processed.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/print.movedesign_report.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/read_md.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/run_app.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/run_meta.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/run_meta_loocv.html</loc></url>
@@ -46,8 +49,9 @@
 <url><loc>https://ecoisilva.github.io/movedesign/reference/simulating_data.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/summary.movedesign_check.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/summary.movedesign_input.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/summary.movedesign_optimized.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/summary.movedesign_output.html</loc></url>
-<url><loc>https://ecoisilva.github.io/movedesign/reference/summary.movedesign_preprocess.html</loc></url>
+<url><loc>https://ecoisilva.github.io/movedesign/reference/summary.movedesign_processed.html</loc></url>
 <url><loc>https://ecoisilva.github.io/movedesign/reference/summary.movedesign_report.html</loc></url>
 </urlset>
 

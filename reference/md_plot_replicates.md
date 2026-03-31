@@ -1,66 +1,109 @@
-# Plot replicate error estimates and confidence intervals
+# Plot estimation error, replicates and confidence intervals
 
-This function generates two complementary visualizations of replicate
-performance across different population sample sizes. It summarizes and
-plots relative estimation errors for each type of analysis (e.g., home
-range or speed estimation), distinguishing results that fall within or
-outside a user-defined error threshold.
+This function produces two complementary visualizations of replicate
+performance across a range of population sample sizes \\m\\, up to the
+maximum number of individuals requested. It summarizes and plots
+relative errors regarding the estimation of a set target (*e.g.*, home
+range or speed estimation), and classified by whether the error falls
+within a user-defined acceptable threshold.
+
+- "Estimation error (for a single random replicate)":
+
+  Error for one randomly-selected replicate, rendered as point estimates
+  with confidence interval bars. Reflects the outcome a researcher would
+  observe from a *single* empirical study.
+
+- "Mean estimation error across all replicates":
+
+  Mean error collapsed across **all** replicates (with confidence
+  intervals as a narrow bar, and prediction intervals as a wide shaded
+  band), with per-replicate jitter in the background. Conveys the full
+  distribution of outcomes with the set sampling parameters and
+  population sample size.
+
+Both panels share a common color palette (within/outside the acceptable
+error threshold) and, when two groups are present, a common shape scale.
+By default, the function plots only the second item listed above.
 
 ## Usage
 
 ``` r
-md_plot_replicates(obj, ci = 0.95, error_threshold = 0.05)
+md_plot_replicates(
+  obj,
+  ci = 0.95,
+  view = "summary_only",
+  pal = c("#007d80", "#A12C3B"),
+  ...
+)
 ```
 
 ## Arguments
 
 - obj:
 
-  A movement design output object (see
+  A movement design output object (returned by either
   [`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
   or
-  [`md_stack()`](https://ecoisilva.github.io/movedesign/reference/md_stack.md)).
+  [`md_optimize()`](https://ecoisilva.github.io/movedesign/reference/md_optimize.md)).
 
 - ci:
 
-  Numeric scalar between 0 and 1. The probability of the credible
-  interval (CI) to be estimated. Default to `0.95` (95%).
+  Confidence level for the intervals. Applied to both the narrow
+  confidence bars and wide prediction bands. Must be between `0` and
+  `1`. Default: `0.95` (95%).
 
-- error_threshold:
+- view:
 
-  Numeric. Error threshold (e.g. `0.05` for 5%) to display as a
-  reference in the plot (errors outside this range are highlighted in
-  red).
+  Layout selector. Indicate whether to return the complete two-panel
+  layout (`"both"`) or only the aggregated summary plot with all
+  replicates (`"summary_only"`).
+
+- pal:
+
+  Character vector of two valis hex color code for within and for
+  outside the threshold (default: `c("#007d80", "#A12C3B"))`.
+
+- ...:
+
+  Reserved for internal use.
 
 ## Value
 
-A list of class `movedesign_report` containing: A list with two
-elements:
+A `patchwork` / `ggplot` object containing:
 
-- `p`: A `ggplot` object displaying the results from a single replicate,
-  showing individual error estimates and their confidence intervals. It
-  is equivalente to the output from
-  [`md_plot()`](https://ecoisilva.github.io/movedesign/reference/md_plot.md).
+- Top plot: A `ggplot` object displaying the results from a single
+  randomly selected replicate, showing individual error estimates and
+  their confidence intervals.
 
-- `p.replicates`: A `ggplot` object summarizing mean errors across all
-  replicates, with aggregated estimates in the foreground and individual
-  replicates shown in lighter tones in the background.
+- Bottom plot: A `ggplot` object summarizing mean relative error across
+  all replicates, with aggregated estimates in the foreground and
+  individual replicates shown in lighter tones in the background.
 
 ## See also
 
 [`md_plot()`](https://ecoisilva.github.io/movedesign/reference/md_plot.md)
+for the density plot for the maximum \\m\\.  
+[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
+to produce a `movedesign_output`.  
+[`md_optimize()`](https://ecoisilva.github.io/movedesign/reference/md_optimize.md)
+to produce a `movedesign_optimized`.
 
 ## Examples
 
 ``` r
 if(interactive()) {
+  
   obj <- md_replicate(...)
   
-  plots <- md_plot_replicates(obj,
-                              ci = 0.95,
-                              error_threshold = 0.05)
-  # Display the plots:
-  plots[[1]]
-  plots[[2]]
+  # Default: both panels
+  md_plot_replicates(obj)
+  
+  # Summary panel, custom palette, 80% CI:
+  md_plot_replicates(
+    obj,
+    ci = 0.90,
+    view = "summary_only",
+    pal = c("#1e2a38", "#9e3419"))
+
 }
 ```

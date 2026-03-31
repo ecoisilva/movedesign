@@ -6,9 +6,9 @@ The plot can display either the estimates from that replicate for a
 random combination of individuals, or, when resampling is enabled,
 summaries derived from repeated draws of individuals at each population
 sample size (based on the specified number of resamples).
-This functions shows preliminary outputs only based on the output of
-md_run() (a movedesign_preprocess object) and should not be used to
-evaluate study design by itself. Instead, users should run
+This functions shows preliminary outputs for a single stochastic run
+from md_run() (a movedesign_processed object) and should not be
+used to evaluate study design by itself. Instead, users should run
 md_replicate() and check for convergence with md_check()."><meta property="og:description" content="Generates a quick visualization of relative error for home range or
 movement speed estimation from a single replicate of a movedesign
 workflow.
@@ -16,9 +16,9 @@ The plot can display either the estimates from that replicate for a
 random combination of individuals, or, when resampling is enabled,
 summaries derived from repeated draws of individuals at each population
 sample size (based on the specified number of resamples).
-This functions shows preliminary outputs only based on the output of
-md_run() (a movedesign_preprocess object) and should not be used to
-evaluate study design by itself. Instead, users should run
+This functions shows preliminary outputs for a single stochastic run
+from md_run() (a movedesign_processed object) and should not be
+used to evaluate study design by itself. Instead, users should run
 md_replicate() and check for convergence with md_check()."><meta property="og:image" content="https://ecoisilva.github.io/movedesign/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -68,9 +68,9 @@ The plot can display either the estimates from that replicate for a
 random combination of individuals, or, when resampling is enabled,
 summaries derived from repeated draws of individuals at each population
 sample size (based on the specified number of resamples).</p>
-<p>This functions shows preliminary outputs only based on the output of
-<code><a href="md_run.html">md_run()</a></code> (a <code>movedesign_preprocess</code> object) and should not be used to
-evaluate study design by itself. Instead, users should run
+<p>This functions shows preliminary outputs for a single stochastic run
+from <code><a href="md_run.html">md_run()</a></code> (a <code>movedesign_processed</code> object) and should not be
+used to evaluate study design by itself. Instead, users should run
 <code><a href="md_replicate.html">md_replicate()</a></code> and check for convergence with <code><a href="md_check.html">md_check()</a></code>.</p>
     </div>
 
@@ -90,50 +90,59 @@ evaluate study design by itself. Instead, users should run
 
 
 <dl><dt id="arg-obj">obj<a class="anchor" aria-label="anchor" href="#arg-obj"></a></dt>
-<dd><p>An object of class <code>movedesign_preprocess</code>
-(output of <code><a href="md_run.html">md_run()</a></code>).</p></dd>
+<dd><p>An object of class <code>movedesign_processed</code>, as returned
+by <code><a href="md_run.html">md_run()</a></code>.</p></dd>
 
 
 <dt id="arg-n-resamples">n_resamples<a class="anchor" aria-label="anchor" href="#arg-n-resamples"></a></dt>
-<dd><p>Numeric. Must be a positive value. Defines how many
-combinations are generated for each population sample size,
-with each combination producing a new population-level estimate.</p></dd>
+<dd><p>A single positive integer. The number of
+random combinations of individuals generated at each population
+sample size. Each combination produces one population-level
+estimate. Set to <code>NULL</code> to plot raw estimates without
+resampling.</p></dd>
 
 
 <dt id="arg-error-threshold">error_threshold<a class="anchor" aria-label="anchor" href="#arg-error-threshold"></a></dt>
-<dd><p>Numeric. Error threshold (e.g. <code>0.05</code> for 5%)
-to display as a reference in the plot.</p></dd>
+<dd><p>Numeric. Relative error threshold shown as
+a reference line in the plot (e.g. <code>0.05</code> for 5%).</p></dd>
 
 
 <dt id="arg-pal">pal<a class="anchor" aria-label="anchor" href="#arg-pal"></a></dt>
-<dd><p>Character vector of two colors for within/outside threshold
-(default: c("#007d80", "#A12C3B")).</p></dd>
+<dd><p>A character vector of two colors, used for estimates
+within and outside the error threshold respectively.
+Defaults to <code>c("#007d80", "#A12C3B")</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments used internally.</p></dd>
+<dd><p>Reserved for internal use.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A ggplot object displaying relative error by population sample size,
-with point estimate and confidence intervals for mean estimates,
-and horizontal error threshold lines.</p>
+    <p>A <code>ggplot</code> object. Displays relative error as a function of
+population sample size, with point estimates, confidence
+intervals, and a horizontal reference line at <code>error_threshold</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>This plot summarizes a single replicate. Credible intervals and robust
-study design conclusions generally require multiple replicates generated
-with <code><a href="md_replicate.html">md_replicate()</a></code>.</p>
+    <p>This plot summarizes a single replicate, so it is subject to
+stochastic variation. The plot shown here may look very
+different with another run of the same design. Use <code><a href="md_replicate.html">md_replicate()</a></code>
+to aggregate results across many independent runs, and <code><a href="md_check.html">md_check()</a></code>
+to confirm that estimates have stabilised before drawing conclusions.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="md_run.html">md_run()</a></code>, <code><a href="md_replicate.html">md_replicate()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="md_run.html">md_run()</a></code> to generate the input object.
+<code><a href="md_replicate.html">md_replicate()</a></code> for robust outputs based on multiple replicates.
+<code><a href="md_check.html">md_check()</a></code> to assess convergence across replicates.</p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  </span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">buffalo</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">input</span> <span class="op">&lt;-</span> <span class="fu"><a href="md_prepare.html">md_prepare</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    data <span class="op">=</span> <span class="va">buffalo</span>,</span></span>
 <span class="r-in"><span>    models <span class="op">=</span> <span class="va">models</span>,</span></span>
@@ -141,12 +150,11 @@ with <code><a href="md_replicate.html">md_replicate()</a></code>.</p>
 <span class="r-in"><span>    n_individuals <span class="op">=</span> <span class="fl">5</span>,</span></span>
 <span class="r-in"><span>    dur <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">1</span>, unit <span class="op">=</span> <span class="st">"month"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    dti <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">1</span>, unit <span class="op">=</span> <span class="st">"day"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    add_individual_variation <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>    add_individual_variation <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
 <span class="r-in"><span>    grouped <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
 <span class="r-in"><span>    set_target <span class="op">=</span> <span class="st">"hr"</span>,</span></span>
-<span class="r-in"><span>    which_meta <span class="op">=</span> <span class="st">"mean"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
+<span class="r-in"><span>    which_meta <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="va">output</span> <span class="op">&lt;-</span> <span class="fu"><a href="md_run.html">md_run</a></span><span class="op">(</span><span class="va">input</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu">md_plot_preview</span><span class="op">(</span><span class="va">output</span>, error_threshold <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>

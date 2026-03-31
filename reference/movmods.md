@@ -50,6 +50,6 @@ A `data.frame` with 5 rows and 6 variables:
   relocation data as a continuous-time stochastic process. Methods in
   Ecology and Evolution, 7(9), 1124-1132 <doi:10.1111/2041-210X.12559>.
 
-- Silva et al. (2022). Autocorrelation‐informed home range estimation: A
+- Silva et al. (2022). Autocorrelation-informed home range estimation: A
   review and practical guide. Methods in Ecology and Evolution, 13(3),
   534-544 \<10.1111/2041-210X.13786\>.

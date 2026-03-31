@@ -1,100 +1,133 @@
-# Visualize study design outputs
+# Compare estimation error across study design workflows
 
-Produces a publication-ready density plot showing the distribution of
-relative error estimates from study design simulations. The plot
-highlights the mean and a shaded credible interval (CI) region,
-following the computation of credible intervals as implemented in
-[`bayestestR::ci()`](https://easystats.github.io/bayestestR/reference/ci.html).
-If groups are present, density curves for each group are overlaid for
-comparison, using customizable colors.
+The final step in the `movedesign` workflow. Takes replicated outputs
+from two or more study designs, ranks them by estimation performance,
+identifies the best-performing design, and produces a density plot of
+relative error across replicates.
 
-This function is typically used after running
-[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md),
-providing a visual diagnostic of simulation results.
+Use this function after running
+[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
+for each design and confirming convergence with
+[`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md).
+For a quick visual comparison before full replication, use
+[`md_compare_preview()`](https://ecoisilva.github.io/movedesign/reference/md_compare_preview.md)
+instead.
 
 ## Usage
 
 ``` r
 md_compare(
-  objs,
+  x,
   stat = c("mean", "median"),
-  ci = 0.95,
+  ci = 0.8,
   method = "HDI",
   pal = c("#007d80", "#A12C3B"),
-  m = NULL
+  m = NULL,
+  show_text = TRUE
 )
 ```
 
 ## Arguments
 
-- objs:
+- x:
 
-  A list of `movedesign_output` objects, as returned by
+  A list of at least two `movedesign_output` objects, each returned by
   [`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md).
+  All designs must share the same `set_target`. Designs typically differ
+  in sampling parameters such as `dur`, `dti`, or `n_individuals`.
 
 - stat:
 
-  Character string specifying which summary statistic to display. Must
-  be `"mean"` or `"median"`. Defaults to `"mean"`.
+  Character. Summary statistic used to represent the centre of the error
+  distribution in the plot and ranking. Must be `"mean"` (default) or
+  `"median"`.
 
 - ci:
 
-  Numeric scalar between 0 and 1. The probability of the credible
-  interval (CI) to be estimated. Default to `0.95` (95%).
+  Numeric. Coverage probability of the credible interval computed over
+  the distribution of relative error across replicates. Must be strictly
+  between 0 and 1. Defaults to `0.80` (80% CI).
 
 - method:
 
-  Character. Credible interval estimation method (passed to
-  [`bayestestR::ci()`](https://easystats.github.io/bayestestR/reference/ci.html);
-  default: `"HDI"`). See `?bayestestR::ci()` for more details.
+  Character. Method used to compute the credible interval, passed to
+  [`bayestestR::ci()`](https://easystats.github.io/bayestestR/reference/ci.html).
+  Defaults to `"HDI"` (Highest Density Interval), which is generally
+  preferred for asymmetric or skewed error distributions. See
+  [`?bayestestR::ci`](https://easystats.github.io/bayestestR/reference/ci.html)
+  for all available options.
 
 - pal:
 
-  Character vector of color(s) for the density, CI shading, and mean
-  line. If a single group, supply one color (default: `"#007d80"`). If
-  groups are present, supply two colors (default:
-  `c("#007d80", "#A12C3B")`).
+  A character vector of colors for the density curves, CI shading, and
+  centre line. Defaults to `c("#007d80", "#A12C3B")`.
 
 - m:
 
-  Numeric (optional). If provided, restricts the results for a specific
-  population sample size (`m`). Defaults to `NULL`, which checks up to
-  the maximum population sample size.
+  (Optional) Numeric. If provided, restricts all results and ranking to
+  a specific *population* sample size. Defaults to `NULL`, which uses
+  the maximum sample size defined by `n_individuals`.
+
+- show_text:
+
+  Logical. Whether to display annotation text in the plot with the mean
+  (or median) relative errors. Defaults to `TRUE`.
 
 ## Value
 
-A `ggplot` object showing:
+An object of class `movedesign_report`. A density plot of relative error
+is printed as a side effect; to reproduce it later, call
+[`md_plot()`](https://ecoisilva.github.io/movedesign/reference/md_plot.md)
+on any of the input designs.
 
-- Density curve(s) of the relative error distribution.
+This object contains:
 
-- Shaded region for the central credible interval.
+- ranking:
 
-- Vertical dashed lines at mean(s).
+  Data frame with one row per design per target (and per group if
+  grouping is used). Columns include the centre error statistic
+  (`error`), credible interval bounds (`error_lci`, `error_uci`), CI
+  width, distance from zero error, and rank. Lower rank indicates better
+  performance.
 
-- Overlaid densities if multiple groups are present.
+- winners:
 
-- Percent-formatted x-axis for interpretation.
-
-This object can be further customized with additional `ggplot2` layers
-if needed.
+  Data frame identifying designs that rank first across all groups for
+  each target. A design is a winner when it has the lowest absolute
+  error and the credible interval closest to zero across every group.
+  Returns empty if no single design dominates.
 
 ## Details
 
-This plot helps users assess the reliability of simulation outputs by
-visualizing the distribution of relative errors. When multiple groups
-are simulated, the plot enables direct visual comparison of performance
-across groups. If credible intervals cannot be calculated, a warning is
-issued and only the density curves are displayed.
+Designs are ranked separately for each target metric (home range, speed)
+and group (if present). The ranking criterion combines absolute relative
+error and distance of the credible interval from zero: designs with
+lower error and tighter intervals closer to zero rank higher. A design
+is identified as the overall winner only if it ranks first across all
+groups for a given target.
 
-**It is strongly recommended to use
-[`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md)
-to assess whether the distributions shown here have stabilized.**
-Checking for convergence ensures that the summary statistics and
-uncertainty estimates depicted in the plot are reliable and not unduly
-influenced by too few replicates or ongoing variability. Running
-[`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md)
-helps you determine if additional simulation replicates are needed to
-achieve stable inference in your design evaluation.
+The function prints a density plot showing the full distribution of
+relative error across replicates for each design. The centre statistic
+(`stat`) and credible interval (`ci`) are overlaid. When groups are
+present, density curves for each group are shown side by side using the
+colors in `pal`.
+
+### Recommended workflow
+
+This function is designed to be called at the end of the `movedesign`
+workflow:
+
+1.  Build each design with
+    [`md_prepare()`](https://ecoisilva.github.io/movedesign/reference/md_prepare.md).
+
+2.  Run
+    [`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md)
+    for each design.
+
+3.  Confirm convergence with
+    [`md_check()`](https://ecoisilva.github.io/movedesign/reference/md_check.md).
+
+4.  Compare and rank designs with `md_compare()`.
 
 ## See also
 
@@ -104,10 +137,18 @@ for convergence diagnostics, and refer to
 [`bayestestR::ci()`](https://easystats.github.io/bayestestR/reference/ci.html)
 for details on credible interval computation and interpretation.
 
+Other workflow_steps:
+[`md_prepare()`](https://ecoisilva.github.io/movedesign/reference/md_prepare.md),
+[`md_replicate()`](https://ecoisilva.github.io/movedesign/reference/md_replicate.md),
+[`md_run()`](https://ecoisilva.github.io/movedesign/reference/md_run.md),
+[`md_simulate()`](https://ecoisilva.github.io/movedesign/reference/md_simulate.md)
+
 ## Examples
 
 ``` r
 if (interactive()) {
+
+  data(buffalo)
   inputA <- md_prepare(
     data = buffalo,
     models = models,
@@ -118,8 +159,8 @@ if (interactive()) {
     add_individual_variation = TRUE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
+    which_meta = "mean")
+  
   inputB <- md_prepare(
     data = buffalo,
     models = models,
@@ -130,13 +171,13 @@ if (interactive()) {
     add_individual_variation = TRUE,
     grouped = TRUE,
     set_target = "hr",
-    which_meta = "mean"
-  )
-
+    which_meta = "mean")
+  
   outputA <- md_replicate(inputA, n_replicates = 20)
   outputB <- md_replicate(inputB, n_replicates = 20)
-
+  
   # Plot with 80% credible intervals:
   md_compare(list(outputA, outputB), ci = 0.80, method = "HDI")
+  
 }
 ```
