@@ -42,10 +42,12 @@
   set_target <- match.arg(set_target)
   err_name <- paste0(set_target, "Err")
   
-  n_tags <- if (rv$which_m != "get_all") {
-    length(rv$simList)
-  } else {
+  n_tags <- if (rv$which_m == "get_all") {
     rv$n_units
+  } else if (rv$which_m == "get_m") {
+    if (is.null(rv$n_tags_current)) rv$n_sims else rv$n_tags_current
+  } else {
+    length(rv$simList)
   }
   
   txt_n_tags <- if (n_tags == 1) {
