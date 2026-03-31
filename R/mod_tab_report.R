@@ -1545,6 +1545,8 @@ mod_tab_report_server <- function(id, rv) {
       out_targets <- out_truth <- out_coi <- out_cri <- NULL
       
       n_tags <- switch(rv$which_m, get_all = rv$n_units, rv$n_sims)
+      n_tags_final <- if (is.null(rv$n_tags_current))
+        n_tags else rv$n_tags_current
       threshold <- rv$error_threshold
       
       list2env(.format_outputs(rv), envir = environment())
@@ -1577,12 +1579,16 @@ mod_tab_report_server <- function(id, rv) {
         txt_meta_tabs <- "Meta-analyses"
       }
       
-      txt_meta_extra <- span(
-        style = "font-weight: 800; font-family: var(--monosans);",
-        "If the", txt_meta_word, "was deemed",
-        "insufficient, run additional tags in the",
-        shiny::icon(txt_meta_icon, class = "cl-sea"),
-        span(txt_meta_tabs, class = "cl-sea"), "tab.")
+      txt_meta_extra <- NULL
+      if ((rv$which_m == "get_m" || rv$which_m == "get_all") &&
+          is.null(rv$n_tags_current)) {
+        txt_meta_extra <- p(
+          style = "font-weight: 800; font-family: var(--monosans);",
+          "If the", txt_meta_word, "was deemed",
+          "insufficient, run additional tags in the",
+          shiny::icon(txt_meta_icon, class = "cl-sea"),
+          span(txt_meta_tabs, class = "cl-sea"), "tab.")
+      }
       
       for (t in seq_along(out_targets)) {
         target <- out_targets[[t]]
@@ -1763,7 +1769,8 @@ mod_tab_report_server <- function(id, rv) {
           rv$which_m,
           set_m = paste("You specified", n_tags, "tags"),
           get_m = paste(
-            "You specified a maximum of", n_tags, "tags"),
+            "You specified a maximum of", n_tags, "tags and",
+            paste0(rv$n_replicates, " replicates")),
           get_all = paste(
             "You specified", n_tags, "tags and",
             paste0(rv$n_replicates, " replicates")))
@@ -1785,7 +1792,7 @@ mod_tab_report_server <- function(id, rv) {
             "Under the current assumptions and an",
             wrap_none(txt_threshold, end = ","),
             "a stable estimate of mean", txt_target[[target]],
-            "may be achieved with", n_tags, "tags.",
+            "may be achieved with", n_tags_final, "tags.",
             "Running additional", txt_meta_type, "beyond this point",
             "is unlikely to meaningfully change the estimate."))
         } else {
@@ -2249,9 +2256,17 @@ mod_tab_report_server <- function(id, rv) {
         } else {
           req(rv$meta_tbl_replicates)
           m <- nrow(rv$dev$tbl)
-          txt_m <- paste0("of ", m, " simulations ",
-                          "(", rv$n_replicates, " replicates \u00D7 ",
-                          rv$n_sims, " tags)")
+          if (is.null(rv$n_tags_current)) {
+            txt_m <- paste0("of ", m, " simulations ",
+                            "(", rv$n_replicates,
+                            " replicates \u00D7 ",
+                            rv$n_sims, " tags)")
+          } else {
+            txt_m <- paste0("of ", m, " simulations ",
+                            "(", rv$n_replicates,
+                            " replicates \u00D7 ",
+                            rv$n_tags_current, " tags)")
+          }
         }
       }
       

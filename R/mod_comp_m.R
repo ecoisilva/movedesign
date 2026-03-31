@@ -217,37 +217,32 @@ mod_comp_m_server <- function(id, rv,
       req(length(rv$simList) >= 2)
       wheel_step <- ifelse("compare" %in% rv$which_meta, 2, 1)
       
-      if (is.null(rv$n_replicates)) {
-        set_value <- length(rv$simList)
-      } else {
-        set_value <- length(rv$simList) / rv$n_replicates
-      }
+      req(rv$which_m == "set_m")
+      set_value <- length(rv$simList)
       
-      if (rv$which_m == "set_m") {
-        shinyWidgets::updateAutonumericInput(
-          session = session,
-          inputId = "nsims",
-          label = "Number of tags (total):",
-          value = set_value, 
-          options = list(
-            decimalPlaces = 0,
-            minimumValue = 1,
-            maximumValue = 100,
-            wheelStep = wheel_step))
-      }
+      shinyWidgets::updateAutonumericInput(
+        session = session,
+        inputId = "nsims",
+        label = "Number of tags (total):",
+        value = set_value, 
+        options = list(
+          decimalPlaces = 0,
+          minimumValue = 1,
+          maximumValue = 100,
+          wheelStep = wheel_step))
       
-      if (rv$which_m == "get_m") {
-        shinyWidgets::updateAutonumericInput(
-          session = session,
-          inputId = "nsims_max",
-          label = "Number of tags (maximum):",
-          value = set_value,
-          options = list(
-            decimalPlaces = 0,
-            minimumValue = 1,
-            maximumValue = 100,
-            wheelStep = wheel_step))
-      }
+      # if (rv$which_m == "get_m") {
+      #   shinyWidgets::updateAutonumericInput(
+      #     session = session,
+      #     inputId = "nsims_max",
+      #     label = "Number of tags (maximum):",
+      #     value = set_value,
+      #     options = list(
+      #       decimalPlaces = 0,
+      #       minimumValue = 1,
+      #       maximumValue = 100,
+      #       wheelStep = wheel_step))
+      # }
       
     }) %>% # end of observe,
       bindEvent(rv$active_tab)
@@ -983,11 +978,12 @@ mod_comp_m_server <- function(id, rv,
           init_m <- NULL
           
           if (rep == 1 && !has_groups && length(rv$simList) == 1) {
-            init_m <- iter_step - length(rv$simList)
+            init_m <- m_seq[[i]] - length(rv$simList)
           }
           if (rep == 1 && has_groups && length(rv$simList) == 2) {
+            if (m_seq[[i]] == 2) next
             init_m <- iter_step / (length(rv$simList))
-            if (init_m == 1) next
+            if (init_m == 0) next
           }
           
           if (trace) writeLines(paste0(
@@ -1235,6 +1231,7 @@ mod_comp_m_server <- function(id, rv,
                   " Convergence reached. "),
                 "Stopping loop early at m = ",
                 crayon::cyan(m_current), ".")))
+              rv$n_tags_current <- m_current
               broke <- TRUE
               break
             }
@@ -1303,6 +1300,7 @@ mod_comp_m_server <- function(id, rv,
                   " Convergence reached. "),
                 "Stopping loop early at m = ",
                 crayon::cyan(m_current), ".")))
+              rv$n_tags_current <- m_current
               broke <- TRUE
               break
             }
@@ -2251,7 +2249,7 @@ mod_comp_m_server <- function(id, rv,
                   wrap_none(rv$error_threshold * 100, "%,"),
                   "a stable estimate of the population mean",
                   "may be achieved by deploying",
-                  length(rv$simList) / rv$n_replicates, "tags."),
+                  rv$n_tags_current, "tags."),
                 p("If the", span("recommended number of tags",
                                  style = "font-weight: bold;"),
                   "is close to (or equal to) the",

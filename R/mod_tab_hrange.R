@@ -254,8 +254,7 @@ mod_tab_hrange_ui <- function(id) {
                     uiOutput(ns("hrBlock_group")),
                     
                     p(style = "margin-top: 35px;"),
-                    uiOutput(ns("hrBlock_replicate")),
-                    
+                    uiOutput(ns("hrBlock_replicates"))
                     
                 ) # end of div()
                 

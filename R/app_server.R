@@ -32,7 +32,9 @@ app_server <- function(input, output, session) {
   rv <- reactiveValues(
     ctmm = data.frame(cbind(species, species_binom)),
     data_type = NULL,
+    sample_size_achieved = FALSE,
     n_sims = NULL,
+    n_tags_current = NULL,
     n_units = NULL,
     n_replicates = NULL,
     species = NULL,

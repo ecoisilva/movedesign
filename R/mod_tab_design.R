@@ -2802,6 +2802,10 @@ mod_tab_design_server <- function(id, rv) {
         
         shinyjs::show(id = "devBox_sims")
         
+        rv$sample_size_achieved <- out_optimize$sample_size_achieved
+        if (rv$sample_size_achieved)
+          rv$n_tags_current <- out_optimize$m_current
+        
         rv$dur <- out_optimize$data$dur
         rv$dti <- out_optimize$data$dti
         
