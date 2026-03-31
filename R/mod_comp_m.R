@@ -876,6 +876,9 @@ mod_comp_m_server <- function(id, rv,
       if ("compare" %in% rv$which_meta) 
         req((rv$n_sims - 2) > 0) else req((rv$n_sims - 1) > 0)
       
+      out_meta <- outList <- NULL
+      n <- est <- error_sd <- groups <- NULL
+      
       num_sims <- length(rv$simList)
       seq_for <- (num_sims + 1):rv$n_sims
       rv$m$needs_fit <- FALSE
