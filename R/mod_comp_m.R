@@ -58,14 +58,13 @@ mod_comp_m_ui <- function(id) {
             value = 5,
             wheelStep = 1),
           
-          shiny::uiOutput(ns("mUI_nsims_iter")),
-          
           fluidRow(
             column(width = 12,
                    verbatimTextOutput(outputId = ns("txt_m_groups"))
             )),
           br(),
           
+          shiny::uiOutput(ns("mUI_nsims_iter")),
           uiOutput(ns("error_threshold_for_m")),
           
           fluidRow(
@@ -152,6 +151,7 @@ mod_comp_m_server <- function(id, rv,
     shinyjs::hide(id = "nsims")
     shinyjs::hide(id = "nsims_max")
     shinyjs::hide(id = "n_replicates_minimize")
+    shinyjs::hide(id = "mUI_nsims_iter")
     
     ## Reveal elements based on workflow: ---------------------------------
     
@@ -403,7 +403,9 @@ mod_comp_m_server <- function(id, rv,
     }) # end of renderUI
     
     observe({
-      if (rv$n_sims <= 8) {
+      if (rv$which_m == "set_m") {
+        shinyjs::hide(id = "mUI_nsims_iter")
+      } else if (rv$n_sims <= 8) {
         shinyjs::hide(id = "mUI_nsims_iter")
       } else {
         shinyjs::show(id = "mUI_nsims_iter")

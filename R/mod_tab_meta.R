@@ -438,14 +438,16 @@ mod_tab_meta_server <- function(id, rv) {
       
       if (rv$is_meta) {
         
-        if (rv$which_m == "get_m") shinyjs::disable("run_meta")
-        
-        if ("hr" %in% rv$set_target) {
-          shinyjs::hide(id = "metaBox_err_speed")
-        }
-        
-        if ("ctsd" %in% rv$set_target) {
-          shinyjs::hide(id = "metaBox_err_hr")
+        if (rv$which_m != "set_m") {
+          if (rv$which_m == "get_m") shinyjs::disable("run_meta")
+          
+          if ("hr" %in% rv$set_target) {
+            shinyjs::hide(id = "metaBox_err_speed")
+          }
+          
+          if ("ctsd" %in% rv$set_target) {
+            shinyjs::hide(id = "metaBox_err_hr")
+          }
         }
         
       } else {
@@ -459,7 +461,7 @@ mod_tab_meta_server <- function(id, rv) {
                       "err_speed")
         
         for (i in 1:length(boxnames)) {
-          shinyjs::hide(id = paste0("metaBox_", boxnames[i]))
+          shinyjs::show(id = paste0("metaBox_", boxnames[i]))
         }
       }
       
