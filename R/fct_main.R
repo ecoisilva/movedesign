@@ -3097,32 +3097,6 @@ md_check <- function(obj,
     return(sd_vec)
   }
   
-  # Stable detection:
-  
-  .find_stable <- function(delta_vec, tol, n) {
-    
-    length(delta_vec) <- length(delta_vec)
-    if (length(delta_vec) == 0L || n <= 0L ||
-        n > length(delta_vec) || !is.finite(tol) || tol < 0) {
-      return(NA_integer_)
-    }
-    
-    valid <- !is.na(delta_vec) & abs(delta_vec) <= tol
-    if (!valid[length(delta_vec)]) return(NA_integer_)
-    
-    run_vec <- 0
-    for (i in length(delta_vec):1) {
-      if (valid[i]) {
-        run_vec <- run_vec + 1
-      } else {
-        break
-      }
-    }
-    
-    if (run_vec < n) return(NA_integer_)
-    return(length(delta_vec) - n + 1L)
-  }
-  
   # Maps internal type codes to strings:
   .label_type <- function(type_vec, group_vec, has_groups) {
     type_str <- dplyr::case_when(
@@ -4404,30 +4378,6 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     }
     
     return(obj)
-  }
-  
-  .find_stable <- function(delta_vec, tol, n) {
-    
-    length(delta_vec) <- length(delta_vec)
-    if (length(delta_vec) == 0L || n <= 0L ||
-        n > length(delta_vec) || !is.finite(tol) || tol < 0) {
-      return(NA_integer_)
-    }
-    
-    valid <- !is.na(delta_vec) & abs(delta_vec) <= tol
-    if (!valid[length(delta_vec)]) return(NA_integer_)
-    
-    run_vec <- 0
-    for (i in length(delta_vec):1) {
-      if (valid[i]) {
-        run_vec <- run_vec + 1
-      } else {
-        break
-      }
-    }
-    
-    if (run_vec < n) return(NA_integer_)
-    return(length(delta_vec) - n + 1L)
   }
   
   .worker <- function(r, m, obj, seeds = NULL, trace = FALSE) {

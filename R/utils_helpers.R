@@ -483,7 +483,7 @@ msg_log <- function(..., detail,
                  ' ', msg_main(detail), "\n")  }
   }
   
-  return(out)
+  return(invisible(out))
 }
 
 
