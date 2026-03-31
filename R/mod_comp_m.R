@@ -1085,13 +1085,6 @@ mod_comp_m_server <- function(id, rv,
         diag$is_within_threshold
         diag$has_converged
         
-        # .md_meta_convergence(dt_meta,
-        #                      diag,
-        #                      error_threshold,
-        #                      .tol = .tol,
-        #                      .n_converge = .n_converge,
-        #                      x_axis = "sample")
-        
         dt_means <- .summarize_error(dt_meta, conf_level = 0.95,
                                      error_threshold = error_threshold)
         
