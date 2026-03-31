@@ -80,9 +80,7 @@ early and still retrieve partial results.
 \subsection{Parallel processing}{
 
 Setting \code{parallel = TRUE} can substantially reduce runtime for
-large replication runs. Parallelisation relies on
-\code{\link[parallel:mcdummies]{parallel::mclapply()}} and is not available on Windows; in that
-case, execution falls back to sequential with no error.
+large replication runs.
 }
 
 \subsection{Appending replicates}{
