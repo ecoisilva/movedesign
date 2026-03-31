@@ -106,10 +106,7 @@ safe to stop a long run early and still retrieve partial results.
 ### Parallel processing
 
 Setting `parallel = TRUE` can substantially reduce runtime for large
-replication runs. Parallelisation relies on
-[`parallel::mclapply()`](https://rdrr.io/r/parallel/mclapply.html) and
-is not available on Windows; in that case, execution falls back to
-sequential with no error.
+replication runs.
 
 ### Appending replicates
 
