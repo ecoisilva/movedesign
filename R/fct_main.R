@@ -1571,9 +1571,7 @@ md_stack <- function(obj, error_threshold = 0.05, ...) {
 #' ## Parallel processing
 #' 
 #' Setting `parallel = TRUE` can substantially reduce runtime for
-#' large replication runs. Parallelisation relies on
-#' [parallel::mclapply()] and is not available on Windows; in that
-#' case, execution falls back to sequential with no error.
+#' large replication runs.
 #' 
 #' ## Appending replicates
 #' 
@@ -1700,6 +1698,19 @@ md_replicate <- function(obj,
       tmp <- parallel::mclapply(
         seq_len(n_replicates), 
         .worker, mc.cores = ncores)
+      
+      for (i in seq_len(n_replicates)) {
+        outList[[i]] <- tmp[[i]]$out
+        metaList[[i]] <- tmp[[i]]$meta
+        completed <- i
+      }
+      
+    } else if (sysname == "Windows" && parallel) {
+      
+      cl <- parallel::makeCluster(ncores)
+      tmp <- tryCatch(parallel::parLapply(
+          cl, seq_len(n_replicates), .worker),
+        finally = parallel::stopCluster(cl))
       
       for (i in seq_len(n_replicates)) {
         outList[[i]] <- tmp[[i]]$out
@@ -4586,7 +4597,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       tmpList <- parallel::mclapply(
         seq_len(n_replicates), function(r) 
           .worker(r, m, obj, seeds, trace = TRUE), mc.cores = ncores)
-    } else if (sysname != "Windows" && parallel) {
+    } else if (sysname == "Windows" && parallel) {
       cl <- parallel::makeCluster(ncores)
       tmpList <- tryCatch(parallel::parLapply(
         cl, seq_len(n_replicates), function(r)
