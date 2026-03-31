@@ -452,9 +452,9 @@ emulate_seeded <- function(obj, seed) {
 #' ctmm::simulate() but seeded 
 #'  
 #' @noRd 
-simulate_seeded <- function(obj, seed) { 
+simulate_seeded <- function(obj, seed) {
   set.seed(seed) 
-  return(ctmm::simulate(obj)) 
+  return(suppressWarnings(ctmm::simulate(obj)))
 } 
 
 
