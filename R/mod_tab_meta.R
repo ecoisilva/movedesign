@@ -431,17 +431,40 @@ mod_tab_meta_server <- function(id, rv) {
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     ## Hide elements at the start: ----------------------------------------
     
-    shinyjs::hide(id = "txt_ratio")
+    shinyjs::hide(id = "metaBox_outputs")
     
-    boxnames <- c("simulations",
-                  "outputs",
-                  "summary",
-                  "err_hr",
-                  "err_speed")
-    
-    for (i in 1:length(boxnames)) {
-      shinyjs::hide(id = paste0("metaBox_", boxnames[i]))
-    }
+    observe({
+      req(rv$active_tab == 'meta', rv$which_m)
+      
+      if (rv$is_meta) {
+        
+        if (rv$which_m == "get_m") shinyjs::disable("run_meta")
+        
+        if ("hr" %in% rv$set_target) {
+          shinyjs::hide(id = "metaBox_err_speed")
+        }
+        
+        if ("ctsd" %in% rv$set_target) {
+          shinyjs::hide(id = "metaBox_err_hr")
+        }
+        
+      } else {
+        
+        shinyjs::hide(id = "txt_ratio")
+        
+        boxnames <- c("simulations",
+                      "outputs",
+                      "summary",
+                      "err_hr",
+                      "err_speed")
+        
+        for (i in 1:length(boxnames)) {
+          shinyjs::hide(id = paste0("metaBox_", boxnames[i]))
+        }
+      }
+      
+    }) %>% # end of observe,
+      bindEvent(list(rv$is_meta, rv$active_tab))
     
     ## Update ratio text based on workflow: -------------------------------
     
@@ -517,6 +540,9 @@ mod_tab_meta_server <- function(id, rv) {
       if (rv$which_m == "get_all") {
         req(rv$n_units)
         return(paste(rv$n_units, "tags"))
+      } else if (rv$which_m == "get_m") {
+        req(length(rv$simList), rv$n_replicates)
+        return(paste(length(rv$simList) / rv$n_replicates, "tags"))
       } else {
         return(length(rv$simList %||% 0))
       }
@@ -854,7 +880,8 @@ mod_tab_meta_server <- function(id, rv) {
               class = "btn-warning"),
             br(),
             
-            if (length(rv$simList) <= 10) {
+            if (length(rv$simList) <= 10 ||
+                rv$which_m == "get_m") {
               shiny::actionButton(
                 inputId = ns("run_meta_replicate"),
                 label = span("Replicate"),
@@ -871,7 +898,8 @@ mod_tab_meta_server <- function(id, rv) {
             },
             br(),
             
-            if (length(rv$simList) <= 10) {
+            if (length(rv$simList) <= 10 ||
+                rv$which_m == "get_m") {
               shinyWidgets::autonumericInput(
                 inputId = ns("n_replicates"),
                 label = NULL,
@@ -1141,7 +1169,7 @@ mod_tab_meta_server <- function(id, rv) {
         }
       }
       
-      if (rv$which_m != "get_all") {
+      if (rv$which_m != "get_all" && rv$which_m == "get_m") {
         shinyjs::show(id = "metaBox_outputs")
       }
       
@@ -1952,7 +1980,6 @@ mod_tab_meta_server <- function(id, rv) {
         if ("ctsd" %in% rv$set_target)
           rv$sd$tbl <- dplyr::distinct(rv$sd$tbl)
         
-        
         shinyjs::hide(id = "metaBox_outputs")
         
         msg_log(
@@ -2193,8 +2220,8 @@ mod_tab_meta_server <- function(id, rv) {
         meta = TRUE)
       req(out)
       
-      if (rv$grouped) x_shape <- c(15, 16, 17)
-      else x_shape <- c(15, 16)
+      if (rv$grouped) { x_shape <- c(15, 16, 17)
+      } else { x_shape <- c(15, 16) }
       
       truth <- out$unit[[1]] %#% truth
       
@@ -3200,8 +3227,8 @@ mod_tab_meta_server <- function(id, rv) {
           "Home range" %in% rv$which_question)
       
       mod_blocks_server(
-        id = "metaBlock_hr",
-        rv = rv, type = "hr", name = "metaErr")
+          id = "metaBlock_hr",
+          rv = rv, type = "hr", name = "metaErr")
       
     }) # end of observe
     
@@ -3268,7 +3295,7 @@ mod_tab_meta_server <- function(id, rv) {
     ## Help modal: --------------------------------------------------------
     
     observe({
-
+      
       shiny::showModal(
         shiny::modalDialog(
           title = h4(span("Resampling", class = "cl-sea"),

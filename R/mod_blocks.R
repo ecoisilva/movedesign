@@ -263,6 +263,27 @@ mod_blocks_server <- function(id,
                               mean(out$error_uci[1]))
                  }
                  
+                 if (rv$which_m == "get_m") {
+                   req(rv$meta_tbl_replicates)
+                   
+                   out <- rv$meta_tbl_replicates %>%
+                     dplyr::filter(
+                       .data$type == rv$set_target,
+                       .data$group == "All") %>%
+                     dplyr::filter(.data$m == max(.data$m)) %>%
+                     .summarize_error(
+                       error_threshold = rv$error_threshold,
+                       conf_level = 0.95) %>%
+                     dplyr::select("error",
+                                   "error_lci", 
+                                   "error_uci")
+                   
+                   value <- c(out$error_lci[1],
+                              out$error[1],
+                              out$error_uci[1])
+                   
+                 }
+                 
                } # end of outputs (error)
                
              }, # end of type == "metrics"

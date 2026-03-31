@@ -251,7 +251,11 @@ mod_tab_hrange_ui <- function(id) {
                     uiOutput(ns("hrUI_errLegend")),
                     
                     p(style = "margin-top: 35px;"),
-                    uiOutput(ns("hrBlock_group"))
+                    uiOutput(ns("hrBlock_group")),
+                    
+                    p(style = "margin-top: 35px;"),
+                    uiOutput(ns("hrBlock_replicate")),
+                    
                     
                 ) # end of div()
                 
@@ -2062,7 +2066,30 @@ mod_tab_hrange_server <- function(id, rv) {
       }) # end of renderUI, "hrBlock_group"
       
     }) %>% # end of observe,
-      bindEvent(list(rv$hr_nsim, rv$active_tab == 'sd'))
+      bindEvent(list(rv$hr_nsim, rv$active_tab == 'hr'))
+    
+    ## Replicates: --------------------------------------------------------
+    
+    observe({
+      req(rv$hr_nsim, rv$active_tab == 'hr')
+      req(rv$hr$tbl, rv$meta_tbl_replicates, rv$n_replicates)
+      
+      shinyjs::show(id = "hrBlock_replicates")
+      
+      req(rv$hr$tbl$replicate)
+      tbl <- rv$hr$tbl
+      get_replicate <- tbl[rv$hr_nsim, ]$replicate
+      
+      output$hrBlock_replicates <- renderUI({
+
+        parBlock(
+          icon = "clone",
+          header = "Replicate",
+          value = get_replicate)
+
+      }) # end of renderUI, "hrBlock_replicates"
+
+    }) # end of observe
   
     ## Home range outputs: ------------------------------------------------
     

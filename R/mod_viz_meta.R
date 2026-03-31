@@ -28,7 +28,7 @@ mod_viz_meta_server <- function(id, rv) {
     pal <- load_pal()
     
     output$metaPlot_m_optimal <- ggiraph::renderGirafe({
-      req(rv$meta_tbl, 
+      req(rv$meta_tbl,
           rv$which_m, 
           rv$which_meta,
           rv$which_question,
@@ -44,6 +44,10 @@ mod_viz_meta_server <- function(id, rv) {
       is_replicates <- FALSE
       if (rv$which_m == "get_all" ||
           !(is.null(rv$meta_tbl_replicates))) {
+        req(rv$error_threshold)
+        is_replicates <- TRUE
+      }
+      if (rv$which_m == "get_m") {
         req(rv$error_threshold)
         is_replicates <- TRUE
       }
