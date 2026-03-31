@@ -34,6 +34,7 @@ app_server <- function(input, output, session) {
     data_type = NULL,
     sample_size_achieved = FALSE,
     n_sims = NULL,
+    n_tags = NULL,
     n_tags_current = NULL,
     n_units = NULL,
     n_replicates = NULL,
