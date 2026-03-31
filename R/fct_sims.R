@@ -292,14 +292,14 @@ fitting_models <- function(obj,
   if (!is.null(init_m)) {
     
     if (!has_groups) {
-      simList <- lapply(seq_len(m - 1), function(x) {
+      simList <- lapply(seq_len(init_m), function(x) {
         rv$seed0 <- generate_seed(rv$seedList)
         out <- simulating_data(rv, rv$seed0)[[1]]
         rv$seedList <- c(rv$seedList, rv$seed0)
         return(out) 
       })
       
-      seedList <- utils::tail(rv$seedList, m - 1)
+      seedList <- utils::tail(rv$seedList, init_m)
       names(simList) <- seedList
       
     } else {
