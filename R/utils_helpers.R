@@ -54,6 +54,30 @@ quiet <- function(x) {
   }
 }
 
+#' Assign color based on flag
+#' 
+#' @noRd
+.color <- function(x, ok) {
+  if (ok) crayon::cyan(x) else crayon::red(x)
+}
+
+#' Assign color based on error threshold
+#' 
+#' @noRd
+.color_error <- function(x, error_threshold) {
+  
+  val <- abs(x)
+  label <- paste0(round(x * 100, 1), "%")
+  
+  if (val < error_threshold) {
+    crayon::cyan(label)
+  # } else if (val < (error_threshold + 0.05)) {
+  #  crayon::yellow(label)
+  } else {
+    crayon::red(label)
+  }
+}
+
 #' Unicode names
 #' 
 #' @noRd

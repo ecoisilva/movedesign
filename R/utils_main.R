@@ -2779,3 +2779,195 @@ print.movedesign_report <- function(x, ...) {
   
 }
 
+#' @title Cumulative mean convergence diagnostics
+#' @noRd
+.md_meta_convergence <- function(summary,
+                                 diag,
+                                 error_threshold,
+                                 .tol,
+                                 .n_converge = 4,
+                                 .streak = ceiling(.n_converge * 0.6),
+                                 x_axis = c("replicate", "sample")) {
+  
+  x_axis <- match.arg(x_axis)
+  x_col <- rlang::sym(x_axis)
+  
+  plot_data <- summary %>%
+    dplyr::arrange(.data$type, .data$group, !!x_col) %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::mutate(
+      cummean = cumsum(.data$error) / dplyr::row_number(),
+      n_reps = dplyr::n(),
+      in_window = !!x_col > (.data$n_reps[1] - .n_converge),
+      in_streak = !!x_col > (.data$n_reps[1] - .streak)) %>%
+    dplyr::ungroup()
+  
+  annot_data <- diag %>%
+    dplyr::mutate(
+      label = paste0(
+        "is_stable: ", .data$is_stable,
+        "\nis_within_threshold: ", .data$is_within_threshold,
+        "\nhas_converged: ", .data$has_converged),
+      conv_state = dplyr::case_when(
+        .data$has_converged ~ "converged",
+        .data$is_within_threshold & .data$is_stable ~ "converged",
+        .data$is_within_threshold | .data$is_stable ~ "partial",
+        TRUE ~ "none"))
+  
+  window_data <- plot_data %>%
+    dplyr::group_by(.data$type, .data$group) %>%
+    dplyr::summarise(
+      xmin_window = max(!!x_col) - .n_converge + 1L,
+      xmax_window = max(!!x_col),
+      xmin_streak = max(!!x_col) - .streak + 1L,
+      xmax_streak = max(!!x_col),
+      .groups = "drop")
+  
+  state_pal <- c(
+    "converged" = "#2ECC71",
+    "partial" = "#F39C12",
+    "none" = "#E74C3C")
+  
+  p <- ggplot2::ggplot(
+    plot_data,
+    ggplot2::aes(
+      x = !!x_col,
+      y = .data$cummean,
+      color = .data$type)) +
+    
+    # Zero line:
+    ggplot2::geom_hline(
+      yintercept = 0,
+      color = "grey50",
+      linewidth = 0.3) +
+    
+    # Acceptable bias band [-tol, +tol]:
+    ggplot2::annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,
+      ymin = -error_threshold, ymax = error_threshold,
+      fill = "#2ECC71",
+      alpha = 0.07) +
+    ggplot2::geom_hline(
+      yintercept = c(-error_threshold, error_threshold),
+      linetype = "dashed",
+      color = "#2ECC71",
+      linewidth = 0.4) +
+    
+    # Full convergence window shading:
+    ggplot2::geom_rect(
+      data = window_data,
+      ggplot2::aes(
+        xmin = .data$xmin_window - 0.5,
+        xmax = .data$xmax_window + 0.5,
+        ymin = -Inf,
+        ymax = Inf),
+      inherit.aes = FALSE,
+      fill = "#3498DB",
+      alpha = 0.06) +
+    
+    # Streak sub-window shading (darker):
+    ggplot2::geom_rect(
+      data = window_data,
+      ggplot2::aes(
+        xmin = .data$xmin_streak - 0.5,
+        xmax = .data$xmax_streak + 0.5,
+        ymin = -Inf,
+        ymax = Inf),
+      inherit.aes = FALSE,
+      fill = "#3498DB",
+      alpha = 0.08) +
+    
+    # Raw replicate errors (faint):
+    ggplot2::geom_point(
+      ggplot2::aes(y = .data$error),
+      size = 0.8,
+      alpha = 0.18,
+      shape = 16) +
+    
+    # Cumulative mean trajectory:
+    ggplot2::geom_line(linewidth = 0.7, alpha = 0.9) +
+    ggplot2::geom_point(size = 1.5, alpha = 0.9) +
+    
+    # Full window points (circled):
+    ggplot2::geom_point(
+      data = dplyr::filter(plot_data, .data$in_window),
+      ggplot2::aes(y = .data$cummean),
+      size = 3,
+      shape = 21,
+      fill = "white",
+      stroke = 0.7) +
+    
+    # Streak points (filled circle — most informative):
+    ggplot2::geom_point(
+      data = dplyr::filter(plot_data, .data$in_streak),
+      ggplot2::aes(y = .data$cummean, fill = .data$type),
+      size = 3,
+      shape = 21,
+      stroke = 0.8,
+      color = "white") +
+    
+    # Convergence flag annotation (top-left of each facet):
+    ggplot2::geom_text(
+      data = annot_data,
+      ggplot2::aes(
+        label = .data$label,
+        color = .data$conv_state),
+      x = -Inf,
+      y = Inf,
+      hjust = -0.05,
+      vjust = 1.15,
+      size = 2.5,
+      family = "mono",
+      inherit.aes = FALSE,
+      show.legend = FALSE) +
+    
+    ggplot2::scale_color_manual(
+      values = state_pal,
+      guide = "none",
+      aesthetics = "color") +
+    
+    ggplot2::facet_grid(
+      rows = ggplot2::vars(.data$type),
+      cols = ggplot2::vars(.data$group),
+      scales = "free_y"
+    ) +
+    
+    ggplot2::scale_color_brewer(
+      palette = "Set2",
+      name = "Type") +
+    ggplot2::scale_fill_brewer(
+      palette = "Set2",
+      guide = "none") +
+    ggplot2::scale_x_continuous(
+      breaks = scales::pretty_breaks()) +
+    ggplot2::scale_y_continuous(
+      labels = scales::percent_format(accuracy = 0.1)) +
+    
+    ggplot2::labs(
+      title = "Cumulative mean convergence diagnostics",
+      subtitle = paste0(
+        "Green band: [\u2212", error_threshold * 100, "%, +",
+        .tol * 100, "%]",
+        " | Blue (light): window (last ", .n_converge,
+        " reps)",
+        " | Blue (dark): streak (last ", .streak, " reps)",
+        " | Annotation color: ",
+        crayon::green("converged"),
+        " / orange = partial / ",
+        crayon::red("none")),
+      x = x_axis,
+      y = "Cumulative mean relative bias",
+      color = "Type") +
+    
+    ggplot2::theme_bw(base_size = 11) +
+    ggplot2::theme(
+      strip.background = ggplot2::element_rect(fill = "grey95"),
+      strip.text = ggplot2::element_text(
+        face = "bold", size = 9),
+      panel.grid.minor = ggplot2::element_blank(),
+      legend.position = "bottom")
+  
+  return(p)
+}
+
