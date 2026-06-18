@@ -2232,7 +2232,7 @@ mod_comp_m_server <- function(id, rv,
       #     "Fagan, W. F. & Calabrese, J. M. (preprint). Too few,",
       #     "too many, or just right? Optimizing sample sizes for",
       #     "population-level inferences in animal tracking",
-      #     "projects (10.1101/2025.07.30.667390v1)."))
+      #     "projects (10.1101/2025.07.30.667390v2)."))
       
       if (broke) {
         
