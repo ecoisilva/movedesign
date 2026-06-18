@@ -202,6 +202,7 @@
       
       if (target == "hr") {
         out <- get_true_hr(
+          data = if (!summarized) rv$simList else NULL,
           sigma = rv$sigma,
           ind_var = FALSE,
           grouped = rv$grouped,
@@ -212,6 +213,7 @@
       
       if (target == "ctsd") {
         out <- get_true_speed(
+          data = if (!summarized) rv$simList else NULL,
           tau_p = rv$tau_p,
           tau_v = rv$tau_v,
           sigma = rv$sigma,
