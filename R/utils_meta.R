@@ -354,7 +354,10 @@
     out <- rep(seq_len(num_sets), each = set_size,
                length.out = length(input))
   
-  if (!is.null(.seed)) set.seed(.seed)
+  if (!is.null(.seed)) {
+    if (!is.na(.seed)) set.seed(.seed)
+  }
+  
   n_possible <- choose(length(input), set_size)
   n_draws <- min(.max_draws, n_possible)
   batch_size <- ceiling(n_draws * 1.2)

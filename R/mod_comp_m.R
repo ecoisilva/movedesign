@@ -1575,7 +1575,7 @@ mod_comp_m_server <- function(id, rv,
         trace = FALSE,
         .max_m = max(m_seq),
         .automate_seq = TRUE,
-        .seed = rv$seedInit)
+        .seed = if (is.na(rv$seedInit)) NULL else rv$seedInit)
       
       rv$metaEst <- NULL
       rv$metaErr <- NULL

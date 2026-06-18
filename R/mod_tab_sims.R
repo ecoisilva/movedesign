@@ -585,6 +585,7 @@ mod_tab_sims_server <- function(id, rv) {
         
         rv$modList <- rv$modList0[selected_m]
         rv$seedList <- rv$seedList0[selected_m]
+        rv$seedInit <- rv$seedList[[1]]
         rv$is_isotropic <- TRUE
         
         names(rv$modList) <- c("A", "B")
