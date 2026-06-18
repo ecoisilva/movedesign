@@ -2,6 +2,8 @@
 
 ## movedesign 0.3.3
 
+CRAN release: 2026-05-27
+
 ### New features
 
 - Exported all internal functions, allowing workflows to run directly

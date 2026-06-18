@@ -95,8 +95,8 @@ citation("movedesign")
 [![DOI](https://img.shields.io/badge/DOI-10.1111%2F2041--210X.14153-009da0)](https://doi.org/10.1111/2041-210X.14153)
 
 > Silva, I., Fleming, C. H., Noonan, M. J., Fagan, W. F., & Calabrese,
-> J. M. (2025). Too few, too many, or just right? Optimizing sample
+> J. M. (2026). Too few, too many, or just right? Optimizing sample
 > sizes for population-level inferences in animal tracking projects.
-> BioRxiv.
+> Ecology and Evolution, 16(6), e73755.
 
-[![DOI](https://img.shields.io/badge/DOI-10.1101%2F2025.07.30.667390-%23009da0.svg)](https://doi.org/10.1101/2025.07.30.667390)
+[![DOI](https://img.shields.io/badge/DOI-10.1002/ece3.73755-%23009da0.svg)](https://doi.org/10.1002/ece3.73755)
