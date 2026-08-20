@@ -655,7 +655,7 @@ summary.movedesign_processed <- function(object, ...) {
     
   }
   
-  .header("Workflow summary", 5)
+  .header("Workflow summary", 4)
   .line("No. of individuals",
         as.character(object$n_individuals))
   
@@ -675,7 +675,8 @@ summary.movedesign_processed <- function(object, ...) {
                      na.rm = TRUE), 1))
   }
   
-  .header("Notes", 5)
+  message("")
+  .header("Notes", 4)
   .line("No. of replicates", .msg(1, "danger"))
   
   message(paste0(
@@ -739,8 +740,6 @@ print.movedesign_processed <-function(x, ...) {
   
   lines <- c(
     lines,
-    
-    "",
     "", "\u2500\u2500\u2500\u2500 Notes:",
     "",
     .line("No. of replicates", 1),
@@ -864,7 +863,7 @@ summary.movedesign_output <- function(object,
   }
   
   .format_pct <- function(x) {
-    paste0(round(abs(x) * 100, 1L), "%")
+    paste0(round(x * 100, 1L), "%")
   }
   
   .line <- function(label, value, width = 40L) {
@@ -1012,7 +1011,7 @@ summary.movedesign_output <- function(object,
     
     cis_str <- if (!is.na(row$error_lci) &&
                    !is.na(row$error_uci)) {
-      paste0(" [", round(row$error_lci * 100),
+      paste0(" [", .format_pct(row$error_lci),
              ", ", .format_pct(row$error_uci), "]")
     } else {
       ""
@@ -1150,7 +1149,7 @@ print.movedesign_output <- function(x,
   }
   
   .format_pct <- function(x) {
-    paste0(round(abs(x) * 100, 1), "%")
+    paste0(round(x * 100, 1), "%")
   }
   
   .line <- function(label, value, width = 40L) {
@@ -1279,7 +1278,7 @@ print.movedesign_output <- function(x,
     
     cis_str <- if (!is.na(row$error_lci) &&
                    !is.na(row$error_uci)) {
-      paste0(" [", round(row$error_lci * 100),
+      paste0(" [", .format_pct(row$error_lci),
              ", ", .format_pct(row$error_uci), "]")
     } else ""
     
