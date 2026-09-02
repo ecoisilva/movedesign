@@ -230,9 +230,6 @@ fitting_models <- function(obj,
     if ("ctsd" %in% set_target) N <- c(N, "speed")
   }
   
-  if (has_error && is.null(.error_m)) 
-    stop("No location error provided!")
-  
   guessList <- lapply(obj, function(x) {
     if (has_error) {
       ctmm::ctmm.guess(

@@ -57,18 +57,18 @@ mod_tab_design_ui <- function(id) {
                   onInitialize = I('function() { this.setValue(""); }')))),
           
           div(id = "content_device-limitations",
-          shinyWidgets::checkboxGroupButtons(
-            inputId = ns("which_limitations"),
-            label = p("What limitations do you want to consider?") %>%
-              tagAppendAttributes(
-                class = 'label_center no-bottom'),
-            choices = c("Fix success rate" = "loss",
-                        "Deployment disruption" = "failure",
-                        "Location error" = "error",
-                        "Storage limits" = "max"),
-            selected = character(0),
-            checkIcon = list(yes = icon("ok", lib = "glyphicon"),
-                             no = icon("remove", lib = "glyphicon")))),
+              shinyWidgets::checkboxGroupButtons(
+                inputId = ns("which_limitations"),
+                label = p("What limitations do you want to consider?") %>%
+                  tagAppendAttributes(
+                    class = 'label_center no-bottom'),
+                choices = c("Fix success rate" = "loss",
+                            "Deployment disruption" = "failure",
+                            "Location error" = "error",
+                            "Storage limits" = "max"),
+                selected = character(0),
+                checkIcon = list(yes = icon("ok", lib = "glyphicon"),
+                                 no = icon("remove", lib = "glyphicon")))),
           
           div(
             style = paste("width: 200px; margin-left: auto;",
@@ -81,9 +81,9 @@ mod_tab_design_ui <- function(id) {
                   p("What is your budget?"),
                   class = "label_center no-bottom"),
                 span("Price per unit:",
-                           style = paste(
-                             "display: block;",
-                             "text-align: center;"))),
+                     style = paste(
+                       "display: block;",
+                       "text-align: center;"))),
               currencySymbol = "",
               currencySymbolPlacement = "p",
               decimalPlaces = 0,
@@ -417,7 +417,7 @@ mod_tab_design_ui <- function(id) {
                 uiOutput(ns("devText_sizes"))
                 
               )) # end of footer
-              
+            
             # footer = column(
             #   width = 12, align = "right",
             #   style = "padding-left: 0px; padding-right: 0px;",
@@ -1853,7 +1853,7 @@ mod_tab_design_server <- function(id, rv) {
       
       column(
         align = "center", width = 12,
-       
+        
         p(style = "text-align: center;",
           "If you wish to get the optimal sampling parameters,",
           br(), "then click the",
@@ -1980,7 +1980,7 @@ mod_tab_design_server <- function(id, rv) {
       req(!is.null(input$gps_from_plot))
       
       # Check if inputs were selected:
-
+      
       rv$dev$is_valid <- FALSE
       if ((!input$gps_from_plot && is.null(input$gps_dti)) ||
           (input$gps_from_plot && is.null(input$devPlot_gps_selected))
@@ -2200,7 +2200,7 @@ mod_tab_design_server <- function(id, rv) {
       
       if ((dur) < 10 %#% "days") {
         input_cutoff <- .5 %#% "days"
-      } else { input_cutoff <- 2 %#% "days" }
+      } else { input_cutoff <- 1 %#% "day" }
       
       gps_sim <- simulate_gps(
         data =  movedesign::fixrates,
@@ -2228,7 +2228,6 @@ mod_tab_design_server <- function(id, rv) {
       }
       
       req(gps_sim)
-      
       
       if (!("N" %in% gps_sim$cutoff)) {
         pal_values <- pal$dgr
@@ -2356,14 +2355,14 @@ mod_tab_design_server <- function(id, rv) {
       
       simList <- rv$simList
       simfitList <- fitting_models(simList,
-                                  .dur = rv$dur,
-                                  .dti = rv$dti,
-                                  .tau_p = rv$tau_p,
-                                  .tau_v = rv$tau_v,
-                                  .error_m = rv$error,
-                                  .check_sampling = TRUE,
-                                  .rerun = TRUE,
-                                  parallel = rv$parallel)
+                                   .dur = rv$dur,
+                                   .dti = rv$dti,
+                                   .tau_p = rv$tau_p,
+                                   .tau_v = rv$tau_v,
+                                   .error_m = rv$error,
+                                   .check_sampling = TRUE,
+                                   .rerun = TRUE,
+                                   parallel = rv$parallel)
       
       if (is.null(simfitList)) {
         msg_log(
@@ -2456,7 +2455,9 @@ mod_tab_design_server <- function(id, rv) {
             to_keep <- round(nrow(x) * (1 - rv$lost$perc), 0)
             to_keep_vec <- sort(sample(seq_len(nrow(x)),
                                        to_keep, replace = FALSE))
-            x[to_keep_vec, ] })
+            x[to_keep_vec, ]
+            
+          })
           
         } # end of input$device_fixsuccess
       
@@ -3274,7 +3275,7 @@ mod_tab_design_server <- function(id, rv) {
           message = paste0("Optimization ",
                            msg_success("completed"), "."),
           run_time = difftime(Sys.time(), start, units = "sec"))
-
+        
         if (!rv$tour_active) {
           shinyalert::shinyalert(
             className = "modal_success",
@@ -3562,20 +3563,20 @@ mod_tab_design_server <- function(id, rv) {
             color = "grey90", shape = 21, size = 1.4) +
           ggplot2::scale_fill_grey(start = .4) +
           
-            ggplot2::geom_path(
-              sim, mapping = ggplot2::aes(
-                x = .data$x,
-                y = .data$y,
-                color = .data$timestamp),
-              linewidth = .6, alpha = .8) +
+          ggplot2::geom_path(
+            sim, mapping = ggplot2::aes(
+              x = .data$x,
+              y = .data$y,
+              color = .data$timestamp),
+            linewidth = .6, alpha = .8) +
           
-            ggiraph::geom_point_interactive(
-              sim, mapping = ggplot2::aes(
-                x = .data$x,
-                y = .data$y,
-                color = .data$timestamp,
-                tooltip = .data$timestamp),
-              size = 2.5)
+          ggiraph::geom_point_interactive(
+            sim, mapping = ggplot2::aes(
+              x = .data$x,
+              y = .data$y,
+              color = .data$timestamp,
+              tooltip = .data$timestamp),
+            size = 2.5)
         
       }
       
@@ -3751,7 +3752,7 @@ mod_tab_design_server <- function(id, rv) {
       
       n_loss <- round(rv$dev$n[[1]] *
                         (1 - input$device_fixsuccess/100), 0)
-    
+      
       parBlock(
         header = "Fixes lost:",
         value = n_loss)
@@ -3814,9 +3815,9 @@ mod_tab_design_server <- function(id, rv) {
         showPageInfo = FALSE,
         
         defaultColDef = reactable::colDef(
-            headerClass = "rtable_header",
-            align = "center",
-            minWidth = 50),
+          headerClass = "rtable_header",
+          align = "center",
+          minWidth = 50),
         
         columns = list(
           device = reactable::colDef(
@@ -3825,13 +3826,13 @@ mod_tab_design_server <- function(id, rv) {
             reactable::colDef(
               minWidth = 80, name = nms[["group"]]) },
           taup = reactable::colDef(
-              minWidth = 100, name = nms[["taup"]],
-              style = list(fontWeight = "bold")),
+            minWidth = 100, name = nms[["taup"]],
+            style = list(fontWeight = "bold")),
           tauv = reactable::colDef(
-              minWidth = 100, name = nms[["tauv"]],
-              style = list(fontWeight = "bold")),
+            minWidth = 100, name = nms[["tauv"]],
+            style = list(fontWeight = "bold")),
           sigma = reactable::colDef(
-              minWidth = 100, name = nms[["sigma"]]),
+            minWidth = 100, name = nms[["sigma"]]),
           dur = reactable::colDef(
             minWidth = 80, name = nms[["dur"]],
             style = list(fontWeight = "bold")),

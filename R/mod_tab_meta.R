@@ -1540,7 +1540,7 @@ mod_tab_meta_server <- function(id, rv) {
           style = "danger",
           message = paste0(
             "Replication ", msg_danger("failed"), "."))
-        print(out_replicate)
+        # print(out_replicate)
         return_obj <- NULL
         
       } else {
@@ -2094,7 +2094,7 @@ mod_tab_meta_server <- function(id, rv) {
             style = "danger",
             message = paste0(
               "Replication ", msg_danger("failed"), "."))
-          print(out_replicate)
+          # print(out_replicate)
           return_obj <- NULL
           
         } else {

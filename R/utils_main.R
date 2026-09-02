@@ -326,6 +326,14 @@ summary.movedesign_input <- function(object, ...) {
   
   species <- object$get_species %||% "Unknown"
   
+  limitations <- list(
+    error = if (object$error_m > 0)
+      object$error_m else NULL,
+    prob_failure = if (object$prob_failure != 0)
+      object$prob_failure else NULL,
+    prob_fixsuccess = if (object$prob_fixsuccess != 1)
+      object$prob_fixsuccess else NULL)
+
   .header("Input summary", 5)
   
   if (object$data_type != "simulated") {
@@ -453,6 +461,23 @@ summary.movedesign_input <- function(object, ...) {
              .msg("two", "success"), " sampled groups.")))
   }
   
+  if (any(!vapply(limitations, is.null, logical(1)))) {
+    
+    .section("Limitations:")
+    
+    if (!is.null(limitations$error))
+      .line("Location error", 
+            paste(limitations$error, "meters"))
+    
+    if (!is.null(limitations$prob_failure))
+      .line("Deployment disruption (%)",
+            paste0(limitations$prob_failure * 100, "%"))
+    
+    if (!is.null(limitations$prob_fixsuccess))
+      .line("Fix success rate (%)",
+            paste0(limitations$prob_fixsuccess * 100, "%"))
+  }
+  
   invisible(object)
 }
 
@@ -483,6 +508,14 @@ print.movedesign_input <- function(x, ...) {
                      mean = "Population mean",
                      compare = "Group comparison",
                      "Individual")
+  
+  limitations <- list(
+    error = if (x$error_m > 0)
+      x$error_m else NULL,
+    prob_failure = if (x$prob_failure != 0)
+      x$prob_failure else NULL,
+    prob_fixsuccess = if (x$prob_fixsuccess != 1)
+      x$prob_fixsuccess else NULL)
   
   species <- x$get_species %||% "Unknown"
   
@@ -575,9 +608,10 @@ print.movedesign_input <- function(x, ...) {
   lines <- c(
     lines,
     .line("Location variance", paste(sig$value, sig$unit)),
-    
     "", "\u2500\u2500\u2500\u2500 Workflow requested:",
+    
     .section("Study design parameters:"),
+    
     .line("No. of individuals requested",  x$n_individuals),
     sampling_parameters,
     if (!is.null(x$dur) && !is.null(x$dti)) {
@@ -585,7 +619,7 @@ print.movedesign_input <- function(x, ...) {
     } else NULL,
     .line("Estimation target",
           paste(target_map[x$set_target], collapse = ", ")),
-    .line("Inference target",              meta_map),
+    .line("Inference target", meta_map),
     .line("Individual variation",
           if (x$add_ind_var) "Yes" else "No"),
     "")
@@ -619,6 +653,30 @@ print.movedesign_input <- function(x, ...) {
     lines <- c(
       lines, 
       "     Comparing estimates of sampled groups.")
+  }
+  
+  if (any(!vapply(limitations, is.null, logical(1)))) {
+    
+    lines <- c(
+      lines, 
+      .section("Limitations:"))
+    
+    if (!is.null(limitations$error))
+      lines <- c(
+        lines, .line(
+          "Location error", paste(limitations$error, "meters")))
+    
+    if (!is.null(limitations$prob_failure))
+      lines <- c(
+        lines, .line(
+          "Deployment disruption (%)", 
+          paste0(limitations$prob_failure * 100, "%")))
+    
+    if (!is.null(limitations$prob_fixsuccess))
+      lines <- c(
+        lines, .line(
+          "Fix success rate (%)",
+          paste0(limitations$prob_fixsuccess * 100, "%")))
   }
   
   lines <- c(

@@ -59,6 +59,20 @@
 #'
 #'   **Example:** `list(value = 2, unit = "hours")`
 #'
+#' @param error Location error, in meters. This location
+#'   error is added to each simulated fix. Defaults to `0` (no error).
+#'   `NULL` is treated as `0`.
+#'
+#' @param prob_failure Deployment disruption. Probability that a tag
+#'   fails before the end of the sampling period, truncating the
+#'   track (between `0` and `1`). Defaults to `0` (no failure).
+#'    `NULL` is treated as `0`.
+#'
+#' @param prob_fixsuccess Fix success rate. Probability that any
+#'   individual fix is successfully recorded.
+#'   Values below `1` thin the sampling schedule at random. Defaults
+#'   to `1` (no data loss). `NULL` is treated as `1`.
+#'
 #' @param set_target Character vector specifying the target metrics
 #'   to be evaluated in the study design workflow. Choose one or
 #'   both:
@@ -172,6 +186,9 @@ md_simulate <- function(n_individuals = NULL,
                         sigma,
                         dur = NULL,
                         dti = NULL,
+                        error = 0,
+                        prob_failure = 0,
+                        prob_fixsuccess = 1,
                         set_target = c("hr", "ctsd"),
                         which_meta = "mean",
                         grouped = FALSE,
@@ -293,6 +310,32 @@ md_simulate <- function(n_individuals = NULL,
     }
   }
   
+  .validate_error <- function(error) {
+    if (is.null(error)) return(0)
+    if (!is.numeric(error) ||
+        length(error) != 1L ||
+        is.na(error) ||
+        error < 0) {
+      stop(paste("'error' must be a single non-negative number,",
+                 "in meters."),
+           call. = FALSE)
+    }
+    return(as.numeric(error))
+  }
+  
+  .validate_prob <- function(param, key, default) {
+    if (is.null(param)) return(default)
+    if (!is.numeric(param) ||
+        length(param) != 1L ||
+        is.na(param) ||
+        param < 0 || param > 1) {
+      stop(sprintf(
+        "'%s' must be a single number between 0 and 1.", key),
+        call. = FALSE)
+    }
+    return(as.numeric(param))
+  }
+  
   .validate_sampling(dur, "dur")
   .validate_sampling(dti, "dti")
   set_target <- .validate_target(set_target)
@@ -300,6 +343,13 @@ md_simulate <- function(n_individuals = NULL,
   tau_p <- .validate_parameters(tau_p, grouped, "tau_p")
   tau_v <- .validate_parameters(tau_v, grouped, "tau_v")
   sigma <- .validate_parameters(sigma, grouped, "sigma")
+  
+  error_m <- .validate_error(error)
+  error <- ifelse(error_m > 0, TRUE, FALSE)
+  prob_failure <- .validate_prob(
+    prob_failure, "prob_failure", default = 0)
+  prob_fixsuccess <- .validate_prob(
+    prob_fixsuccess, "prob_fixsuccess", default = 1)
   
   if (is.null(dur) || is.null(dti)) {
     stop("Both dur and dti must be provided", call. = FALSE)
@@ -357,7 +407,7 @@ md_simulate <- function(n_individuals = NULL,
     names(groups) <- NULL
   }
   
-  #  Fit movement models:
+  # Fit movement models:
   
   fitList <- fitting_models(data, parallel = parallel)
   names(fitList) <- names(data)
@@ -379,6 +429,10 @@ md_simulate <- function(n_individuals = NULL,
     n_individuals = as.numeric(n_individuals),
     dur = dur,
     dti = dti,
+    error = error,
+    error_m = error_m,
+    prob_failure = prob_failure,
+    prob_fixsuccess = prob_fixsuccess,
     use_global_parameters = use_global_parameters,
     add_ind_var = add_individual_variation,
     grouped = grouped,
@@ -456,7 +510,19 @@ md_simulate <- function(n_individuals = NULL,
 #'     \item `"ctsd"` - continuous-time speed and distance
 #'   }
 #'   Defaults to `c("hr", "ctsd")`.
-#'
+#'   
+#' @param error Location error, in meters. This location
+#'   error is added to each simulated fix. Defaults to `0` (no error).
+#'   `NULL` is treated as `0`.
+#' @param prob_failure Deployment disruption. Probability that a tag
+#'   fails before the end of the sampling period, truncating the
+#'   track (between `0` and `1`). Defaults to `0` (no failure).
+#'    `NULL` is treated as `0`.
+#' @param prob_fixsuccess Fix success rate. Probability that any
+#'   individual fix is successfully recorded.
+#'   Values below `1` thin the sampling schedule at random. Defaults
+#'   to `1` (no data loss). `NULL` is treated as `1`.
+#'   
 #' @param which_meta Character. Specifies the analytical target for
 #'   population-level inference. Choose one:
 #'   \itemize{
@@ -561,6 +627,9 @@ md_prepare <- function(species = NULL,
                        n_individuals = NULL,
                        dur = NULL,
                        dti = NULL,
+                       error = 0,
+                       prob_failure = 0,
+                       prob_fixsuccess = 1,
                        set_target = c("hr", "ctsd"),
                        which_meta = "mean",
                        add_individual_variation = FALSE,
@@ -642,11 +711,44 @@ md_prepare <- function(species = NULL,
     }
   }
   
+  .validate_error <- function(error) {
+    if (is.null(error)) return(0)
+    if (!is.numeric(error) ||
+        length(error) != 1L ||
+        is.na(error) ||
+        error < 0) {
+      stop(paste("'error' must be a single non-negative number,",
+                 "in meters."),
+           call. = FALSE)
+    }
+    return(as.numeric(error))
+  }
+  
+  .validate_prob <- function(param, key, default) {
+    if (is.null(param)) return(default)
+    if (!is.numeric(param) ||
+        length(param) != 1L ||
+        is.na(param) ||
+        param < 0 || param > 1) {
+      stop(sprintf(
+        "'%s' must be a single number between 0 and 1.", key),
+        call. = FALSE)
+    }
+    return(as.numeric(param))
+  }
+  
   stopifnot(is.list(data))
   if (length(data) == 0) stop("Input 'data' cannot be empty.")
   
   set_target <- .validate_target(set_target)
   .validate_meta(which_meta, data)
+  
+  error_m <- .validate_error(error)
+  error <- ifelse(error_m > 0, TRUE, FALSE)
+  prob_failure <- .validate_prob(
+    prob_failure, "prob_failure", default = 0)
+  prob_fixsuccess <- .validate_prob(
+    prob_fixsuccess, "prob_fixsuccess", default = 1)
   
   if (!is.null(dur)) {
     if (missing(dur) || 
@@ -899,6 +1001,10 @@ md_prepare <- function(species = NULL,
     n_individuals = as.numeric(n_individuals),
     dur = dur,
     dti = dti,
+    error = error,
+    error_m = error_m,
+    prob_failure = prob_failure,
+    prob_fixsuccess = prob_fixsuccess,
     use_global_parameters = use_global_parameters,
     add_ind_var = add_individual_variation,
     grouped = ifelse(!is.null(groups), TRUE, FALSE),
@@ -1049,9 +1155,12 @@ md_run <- function(design,
         as.character(seed0 + 1))
       nms[[i]] <- seed0
       nms[[i + 1]] <- seed0 + 1
+      
     } else {
+      
       design$simList[[i]] <- simulating_data(design, seed0)[[1]]
       nms[[i]] <- seed0
+      
     }
   }
   
@@ -1059,10 +1168,29 @@ md_run <- function(design,
   names(design$simList) <- names(design$seedList) <- nms
   if (trace) .msg_time(start, "        Run time: ")
   
+  # If there is data loss:
+  
+  design$simList <- .trigger_fix_success(
+    design$simList, prob = design$prob_fixsuccess)
+  
+  # If there is tag failure:
+  
+  tmp <- .trigger_disruption(
+    design$simList, fail_prob = design$prob_failure)
+  devices_failed <- tmp[[2]]
+  design$simList <- tmp[[1]]
+  
+  # If there are errors associated with each location:
+  
+  if (design$error_m > 0)
+    design$simList <- suppressMessages(.trigger_error(
+    design$simList, error = design$error_m))
+  
   if (trace) writeLines(paste0(
     crayon::yellow("  \u2015\u2015\u2015\u2015\u2015\u2015"),
     " Fitting ", crayon::yellow("movement models"), "..."))
   if (trace) start <- Sys.time()
+  
   design$simfitList <- fitting_models(
     design$simList, parallel = design$parallel)
   names(design$simfitList) <- names(design$simList)
@@ -1273,7 +1401,10 @@ md_merge <- function(x, ...) {
   metadata_fields <- c(
     "data", "data_type",
     "get_species", "n_individuals",
-    "dur", "dti", "add_ind_var",
+    "dur", "dti", 
+    "error", "error_m",
+    "prob_failure", "prob_fixsuccess",
+    "add_ind_var",
     "grouped", "groups",
     "set_target", "which_meta", "parallel",
     "sigma", "tau_p", "tau_v", "mu"

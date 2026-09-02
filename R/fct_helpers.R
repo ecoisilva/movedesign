@@ -813,14 +813,14 @@ extract_pars <- function(
       
       tmp <- sum.obj$CI[grep(var, nms.obj), ]
       unit <- extract_units(nms.obj[grep(var, nms.obj)])
-
+      
       if (!is.null(nrow(tmp)))
         if (nrow(tmp) > 1)
           tmp <- subset(tmp, !grepl("^CoV", row.names(tmp)))[1,]
-
+      
       tmp <- data.frame(value = tmp / -2 / log(0.05) / pi,
                         unit = unit)
-
+      
       if (!si_units) tmp <- fix_unit(tmp, convert = TRUE)
       
       return(data.frame(tmp, 
@@ -869,36 +869,52 @@ extract_pars <- function(
 #' 
 #' @importFrom ctmm %#% 
 #' @noRd 
-extract_sampling <- function(obj, name, units = FALSE) { 
+extract_sampling <- function(obj, name,
+                             units = FALSE,
+                             average = FALSE) { 
   
-  out <- unit <- NULL 
+  if (missing(obj)) {
+    stop("`obj` argument not provided.", call. = FALSE)
+  }
+  
+  if (name == "duration") name <- "period"
+  
+  out <- unit <- NULL
   if (missing(obj)) stop("`obj` argument not provided.") 
   if (class(obj)[1] != "list" && class(obj[[1]])[1] != "ctmm") 
     obj <- list(obj) 
   
-  out <- list() 
-  if (inherits(obj[[1]], "telemetry")) { 
-    i <- 1 
-    for (i in seq_along(obj)) { 
-      sum.obj <- summary(obj[[i]]) 
-      nms.obj <- suppressWarnings(names(sum.obj)) 
-      
+  if (!all(vapply(obj, inherits, logical(1), "telemetry"))) {
+    stop("`obj` must contain `telemetry` objects.", call. = FALSE)
+  }
+  
+  out <- lapply(obj, function(x) {
+    
+    sum.obj <- summary(x) 
+    nms.obj <- suppressWarnings(names(sum.obj)) 
+    
+    unit <- extract_units(nms.obj[grep(name, nms.obj)]) 
+    tmp <- suppressWarnings(as.numeric(sum.obj[grep(name, nms.obj)])) 
+    
+    if (units) { 
+      tmp <- tmp %#% unit 
+      unit <- "seconds" 
+    } else { 
       unit <- extract_units(nms.obj[grep(name, nms.obj)]) 
-      tmp <- suppressWarnings(as.numeric(sum.obj[grep(name, nms.obj)])) 
-      
-      if (units) { 
-        tmp <- tmp %#% unit 
-        unit <- "seconds" 
-      } else { 
-        unit <- extract_units(nms.obj[grep(name, nms.obj)]) 
-      } 
-      out[[i]] <- data.frame(value = tmp, unit = unit) 
     } 
     
-  } else stop("as.telemetry() obj required.") 
+    return(data.frame(value = tmp, unit = unit))
+    
+  })
+  
+  if (average) {
+    out <- data.frame(
+      value = mean(vapply(out, `[[`, numeric(1), "value")),
+      unit = out[[1L]]$unit)
+  }
   
   return(out) 
-} 
+}
 
 
 #' @title Extract DOF values 
@@ -1031,7 +1047,7 @@ extract_svf <- function(data, fit = NULL,
     
     return(out) 
     
-  }) # end of lapply 
+  }) # end of lapply
   
   if (!single) names(out) <- nms 
   return(out) 
@@ -1098,7 +1114,7 @@ extract_outputs <- function(obj,
                "unit" = abbrv_unit(tmpunit, ui_only = TRUE))) 
     } 
     
-  }) # end of lapply 
+  }) # end of lapply
   
   if (!is.null(groups)) 
     obj_groups <- sapply(seq_along(obj), function(x) { 
@@ -1541,7 +1557,7 @@ estimate_trajectory <- function(data,
     path$dist <- measure_distance(path) 
     return(path) 
     
-  }) # end of lapply 
+  }) # end of lapply
   
   names(out) <- nms 
   return(out) 
