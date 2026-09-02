@@ -108,6 +108,10 @@ mod_tab_design_ui <- function(id) {
         ) # end of column (text)
       ), # end of box // device_intro
       
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
+          uiOutput(ns("devUI_low_N"))
+      ), # end of column
+      
       # [left column] -----------------------------------------------------
       
       div(class = "col-xs-12 col-sm-4 col-md-4 col-lg-3",
@@ -652,33 +656,49 @@ mod_tab_design_server <- function(id, rv) {
     ### Initial sampling parameters:
     
     observe({ # GPS duration
-      req(input$gps_dur, input$gps_dur_unit)
+      req(input$gps_dur_unit)
+      
+      value <- suppressWarnings(as.numeric(input$gps_dur))
+      req(length(value) == 1, !is.na(value), value > 0)
+      
       rv$dev$dur <- data.frame(
-        value = input$gps_dur, unit = input$gps_dur_unit)
+        value = value, unit = input$gps_dur_unit)
       
     }) %>% # end of observe
       bindEvent(input$gps_dur)
     
     observe({ # GPS interval
-      req(input$gps_dti, input$gps_dti_unit)
+      req(input$gps_dti_unit)
+      
+      value <- suppressWarnings(as.numeric(input$gps_dti))
+      req(length(value) == 1, !is.na(value), value > 0)
+      
       rv$dev$dti <- data.frame(
-        value = input$gps_dti, unit = input$gps_dti_unit)
+        value = value, unit = input$gps_dti_unit)
       
     }) %>% # end of observe,
       bindEvent(input$gps_dti)
     
     observe({ # VHF duration
-      req(input$vhf_dur, input$vhf_dur_unit)
+      req(input$vhf_dur_unit)
+      
+      value <- suppressWarnings(as.numeric(input$vhf_dur))
+      req(length(value) == 1, !is.na(value), value > 0)
+      
       rv$dev$dur <- data.frame(
-        value = input$vhf_dur, unit = input$vhf_dur_unit)
+        value = value, unit = input$vhf_dur_unit)
       
     }) %>% # end of observe,
       bindEvent(input$vhf_dur)
     
     observe({ # VHF interval
-      req(input$vhf_dti, input$vhf_dti_unit)
+      req(input$vhf_dti_unit)
+      
+      value <- suppressWarnings(as.numeric(input$vhf_dti))
+      req(length(value) == 1, !is.na(value), value > 0)
+      
       rv$dev$dti <- data.frame(
-        value = input$vhf_dti, unit = input$vhf_dti_unit)
+        value = value, unit = input$vhf_dti_unit)
       
     }) %>% # end of observe,
       bindEvent(input$vhf_dti)
@@ -773,6 +793,7 @@ mod_tab_design_server <- function(id, rv) {
       dur <- rv$dur$value %#% rv$dur$unit
       dti <- rv$dti$value %#% rv$dti$unit
       
+      req(round(dti, 0) >= 1, round(dur, 0) > round(dti, 0))
       t0 <- seq(0, round(dur, 0), by = round(dti, 0))[-1]
       n <- length(t0)
       rv$dev$n <- list(n)
@@ -946,9 +967,47 @@ mod_tab_design_server <- function(id, rv) {
            input$devPlot_vhf_selected)
     })
     
+    ## Block validation/run on zero (or empty) schedule values: ----------
+    
+    schedule_is_valid <- reactive({
+      
+      .is_positive <- function(x) {
+        x <- suppressWarnings(as.numeric(x))
+        length(x) == 1 && !is.na(x) && x > 0
+      }
+      
+      if (!isTruthy(input$device_type)) return(FALSE)
+      
+      switch(
+        input$device_type,
+        GPS = {
+          ok_dti <- if (isTRUE(input$gps_from_plot)) TRUE else
+            .is_positive(input$gps_dti)
+          .is_positive(input$gps_dur) && ok_dti
+        },
+        VHF = .is_positive(input$vhf_dur) &&
+          .is_positive(input$vhf_dti),
+        FALSE)
+      
+    }) # end of reactive, schedule_is_valid()
+    
+    # Run button, disabled unless the schedule is usable:
+    
+    .run_button <- function() {
+      out <- shiny::actionButton(
+        inputId = ns("devButton_run"),
+        icon = icon("bolt"),
+        label = "Run",
+        width = "120px",
+        class = "btn-primary")
+      
+      if (schedule_is_valid()) out else shinyjs::disabled(out)
+    }
+    
     observe({
       req(rv$active_tab == 'device')
-      shinyjs::enable("devButton_run")
+      if (schedule_is_valid()) shinyjs::enable("devButton_run")
+      else shinyjs::disable("devButton_run")
     }) %>% bindEvent(device_inputs())
     
     ## Reveal boxes: ------------------------------------------------------
@@ -1105,7 +1164,7 @@ mod_tab_design_server <- function(id, rv) {
           value = 1e6)
       } else {
         req(input$which_limitations)
-        shinyjs::enable("devButton_run")
+        if (schedule_is_valid()) shinyjs::enable("devButton_run")
       }
       
     }) # end of observe
@@ -1146,11 +1205,18 @@ mod_tab_design_server <- function(id, rv) {
     # }) %>% # end of observer,
     #   bindEvent(input$dev_nsim)
     
+    ## Add low effective sample size warning: -----------------------------
+    
+    output$devUI_low_N <- renderUI({
+      req(rv$active_tab == 'device')
+      low_N_banner(rv, "area")
+    })
+    
     ## Render validate buttons: -------------------------------------------
     
     output$devButton_gps <- renderUI({
       
-      if (rv$dev$is_valid) {
+      out <- if (rv$dev$is_valid) {
         shiny::actionButton(
           inputId = ns("validate_gps"),
           icon =  icon("circle-check"),
@@ -1165,12 +1231,15 @@ mod_tab_design_server <- function(id, rv) {
           width = "100px",
           class = "btn-danger")
       }
+      
+      if (!schedule_is_valid()) out <- shinyjs::disabled(out)
+      return(out)
       
     }) # end of renderUI // devButton_gps
     
     output$devButton_vhf <- renderUI({
       
-      if (rv$dev$is_valid) {
+      out <- if (rv$dev$is_valid) {
         shiny::actionButton(
           inputId = ns("validate_vhf"),
           icon =  icon("circle-check"),
@@ -1185,6 +1254,9 @@ mod_tab_design_server <- function(id, rv) {
           width = "120px",
           class = "btn-danger")
       }
+      
+      if (!schedule_is_valid()) out <- shinyjs::disabled(out)
+      return(out)
       
     }) # end of renderUI // devButton_vhf
     
@@ -1537,12 +1609,7 @@ mod_tab_design_server <- function(id, rv) {
             
             uiOutput(ns("devButton_gps"), inline = TRUE),
             HTML("&nbsp;"),
-            shiny::actionButton(
-              inputId = ns("devButton_run"),
-              icon =  icon("bolt"),
-              label = "Run",
-              width = "120px",
-              class = "btn-primary")
+            .run_button()
             
           )) # end of tagList (footer)
           
@@ -1580,12 +1647,7 @@ mod_tab_design_server <- function(id, rv) {
             
             uiOutput(ns("devButton_vhf"), inline = TRUE),
             HTML("&nbsp;"),
-            shiny::actionButton(
-              inputId = ns("devButton_run"),
-              icon =  icon("bolt"),
-              label = "Run",
-              width = "120px",
-              class = "btn-primary")
+            .run_button()
           )
           
           # , shiny::actionButton(
@@ -2668,7 +2730,7 @@ mod_tab_design_server <- function(id, rv) {
               tau_p = tau_p,
               tau_v = tau_v,
               sigma = sigma))
-        
+          
         })
         
         rv$report_dev_yn <- TRUE

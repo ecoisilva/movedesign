@@ -74,6 +74,10 @@ mod_tab_hrange_ui <- function(id) {
           
       ), # end of div (top row)
       
+      div(class = "col-xs-12 col-sm-12 col-md-12 col-lg-12",
+          uiOutput(ns("hrUI_low_N"))
+      ), # end of column
+      
       # [right column] ----------------------------------------------------
       
       div(class = "col-xs-12 col-sm-4 col-md-4 col-lg-3",
@@ -718,6 +722,13 @@ mod_tab_hrange_server <- function(id, rv) {
       
     }) %>% # end of renderUI, "hrUI_errLegend"
       bindEvent(rv$hrErr)
+    
+    ## Add low effective sample size warning: -----------------------------
+    
+    output$hrUI_low_N <- renderUI({
+      req(rv$active_tab == 'hr')
+      low_N_banner(rv, "area")
+    })
     
     # ALERTS --------------------------------------------------------------
     

@@ -51,6 +51,8 @@ app_server <- function(input, output, session) {
       hr = list(area = list(), data = list()),
       ctsd = list()
     ),
+    low_N = list(area = NA_real_, speed = NA_real_),
+    low_N_ack = NULL,
     dev = NULL,
     pars = NULL,
     hr = NULL,

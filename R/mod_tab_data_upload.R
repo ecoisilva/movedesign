@@ -544,17 +544,75 @@ mod_tab_data_upload_server <- function(id, rv) {
       
     }) # end of renderUI, "uploadUI_size_notes"
     
+    ## Alert if mean effective sample size is very low: -------------------
+    
+    low_N_blocks <- reactive({
+      if (isTRUE(rv$tour_active)) return(FALSE)
+      if (!("Home range" %in% rv$which_question)) return(FALSE)
+      if (is.null(rv$low_N$area) || !is.finite(rv$low_N$area))
+        return(FALSE)
+      
+      return(rv$low_N$area < .min_N)
+    })
+    
+    .alert_low_N <- function() {
+      
+      N1 <- unlist(extract_dof(rv$fitList[rv$id], name = "area"))
+      
+      N1_mean <- mean(N1, na.rm = TRUE)
+      req(is.finite(N1_mean), N1_mean < 5)
+      n_low <- sum(N1 < .min_N, na.rm = TRUE)
+      
+      shinyalert::shinyalert(
+        type = "warning",
+        title = "Very small effective sample sizes",
+        text = tagList(
+          p(style = "text-align: justify !important;",
+            "The mean effective sample size for home range area, ",
+            wrap_none(span("N[area]", class = "cl-dgr"), ","),
+            "is ", wrap_none(
+              span(round(N1_mean, 1), class = "cl-dgr"), "."),
+            " It falls below 5 for", n_low, "of",
+            length(N1),
+            ifelse(length(N1) == 1, "individual.", "individuals."),
+            "At these values the movement parameters",
+            # wrap_none("(\u03C4", tags$sub("p"), ", \u03C3)"),
+            "extracted from the data may be unreliable."),
+          p(style = "text-align: justify !important;",
+            "Consider selecting only individuals with larger",
+            "effective sample sizes, and confirming that each meets",
+            "the", span("range residency", class = "cl-dgr"),
+            "assumption, before proceeding to the",
+            icon("stopwatch", class = "cl-mdn"),
+            span("Sampling design", class = "cl-mdn"), "tab.")),
+        showCancelButton = TRUE,
+        cancelButtonText = "Go back and reselect",
+        confirmButtonText = "Proceed anyway",
+        confirmButtonCol = pal$mdn,
+        callbackR = function(x) { rv$low_N_ack <- isTRUE(x) },
+        html = TRUE,
+        size = "s")
+    }
+    
+    observe({
+      req(rv$is_valid, low_N_blocks())
+      .alert_low_N()
+      
+    }) %>% # end of observe,
+      bindEvent(rv$low_N)
+    
     ## If data available, update variable inputs: -------------------------
     
     observe({
       req(rv$active_tab == 'data_upload', 
           rv$datList, rv$id)
       
-      rv$is_valid <- NULL # was FALSE
-      
       shinyjs::show(id = "uploadVar_x")
       shinyjs::show(id = "uploadVar_y")
       shinyjs::show(id = "uploadVar_t")
+      
+      if (is.null(rv$fitList) ||
+          !all(rv$id %in% names(rv$fitList))) rv$is_valid <- FALSE
       
     }) %>% # end of observe,
       bindEvent(rv$id)
@@ -700,6 +758,20 @@ mod_tab_data_upload_server <- function(id, rv) {
       }
       
       if (inherits(out_file, "error")) {
+        
+        shinyalert::shinyalert(
+          type = "error",
+          title = "Warning",
+          text = tagList(p(
+            style = "text-align: justify !important;",
+            
+            "File may be ",
+            wrap_none(
+              span("incorrectly formatted", class = "cl-dgr"), "."),
+            "Try a different separator and/or quote.")),
+          
+          html = TRUE, size = "s")
+        
         msg_log(
           style = "warning",
           message = paste0("File may be ",
@@ -738,38 +810,49 @@ mod_tab_data_upload_server <- function(id, rv) {
       out_dataset <- tryCatch(
         ctmm::as.telemetry(out_dataset, timeformat = "auto"),
         error = function(e) e) %>%
-        suppressMessages() %>% 
-        suppressWarnings() %>% 
+        suppressMessages() %>%
+        suppressWarnings() %>%
         quiet()
       
       if (inherits(out_dataset, "error")) {
-          if (grepl("Could not identify location columns",
-                    out_dataset)) {
-            
-            if (any(grepl("UTM", names(out_dataset)))) {
-            } else {
-              msg_log(
-                style = "warning",
-                message = paste0(
-                  "Assuming ", msg_warning("latitude/longitude"), ","),
-                detail = paste(
-                  "If incorrect, please add missing easting,",
-                  "northing, and/or UTM zone columns."))
-              
-              if (any(grepl("x.", names(out_dataset)))) {
-                out_dataset$longitude <- out_dataset[
-                  , grepl("x.", names(out_dataset))]
-              }
-              if (any(grepl("y.", names(out_dataset)))) {
-                out_dataset$latitude <- out_dataset[
-                  , grepl("y.", names(out_dataset))]
-              }
-            }
-          }
         
-        out_dataset <- tryCatch(
-          ctmm::as.telemetry(out_dataset, timeformat = "auto"),
-          error = function(e) e)
+        no_location <- grepl(
+          "Could not identify location columns",
+          conditionMessage(out_dataset), fixed = TRUE)
+        
+        has_utm <- any(grepl("UTM", names(out_dataset),
+                             ignore.case = TRUE))
+        
+        .find_col <- function(prefix) {
+          hits <- grep(paste0("^", prefix, "($|\\.)"),
+                       names(out_dataset), value = TRUE)
+          if (length(hits) == 0) NA_character_ else hits[[1]]
+        }
+        
+        x_col <- .find_col("x")
+        y_col <- .find_col("y")
+        
+        if (no_location && !has_utm &&
+            !is.na(x_col) && !is.na(y_col)) {
+          
+          msg_log(
+            style = "warning",
+            message = paste0(
+              "Assuming ", msg_warning("latitude/longitude"), ","),
+            detail = paste(
+              "If incorrect, please add missing easting,",
+              "northing, and/or UTM zone columns."))
+          
+          out_dataset$longitude <- out_dataset[[x_col]]
+          out_dataset$latitude <- out_dataset[[y_col]]
+          
+          out_dataset <- tryCatch(
+            ctmm::as.telemetry(out_dataset, timeformat = "auto"),
+            error = function(e) e) %>%
+            suppressMessages() %>%
+            suppressWarnings() %>%
+            quiet()
+        }
       }
       
       if (inherits(out_dataset, "error")) {
@@ -1157,6 +1240,16 @@ mod_tab_data_upload_server <- function(id, rv) {
           preventDuplicates = TRUE,
           positionClass = "toast-bottom-right"))
       
+      .mean_dof <- function(name) {
+        out <- unlist(extract_dof(rv$fitList[rv$id], name = name))
+        if (length(out) == 0) return(NA_real_)
+        mean(out, na.rm = TRUE)
+      }
+      
+      rv$low_N <- list(area = .mean_dof("area"),
+                       speed = .mean_dof("speed"))
+      rv$low_N_ack <- NULL
+      
       shinyjs::show(id = "uploadBox_parameters")
       rv$confirm_time <- FALSE
       
@@ -1170,6 +1263,13 @@ mod_tab_data_upload_server <- function(id, rv) {
       req(rv$which_question,
           rv$data_type == "uploaded", rv$id, rv$is_valid)
       req(rv$datList, rv$fitList)
+      
+      # Low N requires confirmation before parameters are
+      # extracted and carried into the design tab:
+      if (low_N_blocks() && !isTRUE(rv$low_N_ack)) {
+        .alert_low_N()
+        return(NULL)
+      }
       
       shinyjs::show(id = "uploadBox_schedule")
       shinyjs::show(id = "uploadBox_sizes")
@@ -1187,12 +1287,12 @@ mod_tab_data_upload_server <- function(id, rv) {
       dat0 <- rv$datList[rv$id]
       fit0 <- rv$fitList[rv$id]
       
-      nm_mods <- lapply(rv$fitList, function(x) summary(x)$name)
+      nm_mods <- vapply(fit0, function(x) summary(x)$name, character(1))
       n_OUf <- sum(grepl("^OUf", nm_mods))
       
-      to_filter_out <- paste0("^OU\u03A9")
-      if (any(grep(to_filter_out, unlist(nm_mods), perl = TRUE))) {
-        to_remove <- grep(to_filter_out, unlist(nm_mods), perl = TRUE)
+      to_filter_out <- "^OU\u03A9"
+      to_remove <- grep(to_filter_out, nm_mods, perl = TRUE)
+      if (length(to_remove) > 0) {
         
         msg_log(
           style = "danger",
@@ -1203,7 +1303,7 @@ mod_tab_data_upload_server <- function(id, rv) {
         
         fit0 <- fit0[-to_remove]
         rv$id <- rv$id[-to_remove]
-        nm_mods <- lapply(fit0, function(x) summary(x)$name)
+        nm_mods <- nm_mods[-to_remove]
       }
       
       # to_filter <- "^IOU|^OUF|^OU(?!f)"
@@ -1303,7 +1403,7 @@ mod_tab_data_upload_server <- function(id, rv) {
         rv$speed <- extract_pars(fit0, "speed", meta = get_meta)
         
         if (n_OUf >= 1)
-          msg_log(
+          msg_log( 
             style = "danger",
             message = paste0(
               "OUf process(es) ", msg_danger("selected"), ","),
@@ -1444,6 +1544,7 @@ mod_tab_data_upload_server <- function(id, rv) {
       if (!rv$proceed || !are_groups_valid) {
         
       }
+      
       req(rv$proceed, are_groups_valid)
       
       ### Extract variogram:

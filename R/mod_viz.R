@@ -154,6 +154,7 @@ mod_viz_server <- function(id, rv) {
     }) %>% debounce(1000)
     
     observe({
+      req(rv$active_tab %in% c('data_select', 'data_upload'))
       req(rv$datList, rv$data_type != "simulated")
       if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
       if (rv$active_tab == 'data_upload') req(rv$data_type == "uploaded")
@@ -875,6 +876,7 @@ mod_viz_server <- function(id, rv) {
     ## Table for summary of all individuals: ----------------------------
 
     output$vizTable_all <- reactable::renderReactable({
+      req(rv$active_tab %in% c('data_select', 'data_upload'))
       req(rv$datList, rv$which_meta)
       
       if (rv$active_tab == 'data_select') req(rv$data_type == "selected")
