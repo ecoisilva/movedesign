@@ -36,47 +36,59 @@ export(run_meta_loocv)
 export(run_meta_resamples)
 import(shiny)
 importFrom(crayon,make_style)
-importFrom(ctmm,"%#%")
-importFrom(ctmm,akde)
-importFrom(ctmm,ctmm.guess)
-importFrom(ctmm,ctmm.select)
-importFrom(ctmm,simulate)
-importFrom(ctmm,speed)
-importFrom(dplyr,"%>%")
-importFrom(dplyr,add_row)
-importFrom(dplyr,case_when)
-importFrom(dplyr,group_by)
-importFrom(dplyr,left_join)
-importFrom(dplyr,mutate)
-importFrom(dplyr,select)
-importFrom(dplyr,summarize)
+importFrom(ctmm,
+  "%#%",
+  akde,
+  ctmm.guess,
+  ctmm.select,
+  simulate,
+  speed
+)
+importFrom(dplyr,
+  "%>%",
+  add_row,
+  case_when,
+  group_by,
+  left_join,
+  mutate,
+  select,
+  summarize
+)
 importFrom(ggplot2,"%+replace%")
-importFrom(golem,activate_js)
-importFrom(golem,add_resource_path)
-importFrom(golem,bundle_resources)
-importFrom(golem,favicon)
-importFrom(golem,with_golem_options)
+importFrom(golem,
+  activate_js,
+  add_resource_path,
+  bundle_resources,
+  favicon,
+  with_golem_options
+)
 importFrom(grDevices,colorRampPalette)
 importFrom(rlang,.data)
-importFrom(shiny,NS)
-importFrom(shiny,shinyApp)
-importFrom(shiny,tagList)
-importFrom(stats,median)
-importFrom(stats,qchisq)
-importFrom(stats,qt)
-importFrom(stats,rbinom)
-importFrom(stats,reorder)
-importFrom(stats,runif)
-importFrom(stats,sd)
-importFrom(stats,setNames)
+importFrom(shiny,
+  NS,
+  shinyApp,
+  tagList
+)
+importFrom(stats,
+  median,
+  qchisq,
+  qt,
+  rbinom,
+  reorder,
+  runif,
+  sd,
+  setNames
+)
 importFrom(stringr,str_pad)
-importFrom(utils,capture.output)
-importFrom(utils,combn)
-importFrom(utils,data)
-importFrom(utils,head)
-importFrom(utils,packageVersion)
-importFrom(utils,read.csv)
-importFrom(utils,read.table)
-importFrom(utils,setTxtProgressBar)
-importFrom(utils,tail)
-importFrom(utils,txtProgressBar)
+importFrom(utils,
+  capture.output,
+  combn,
+  data,
+  head,
+  packageVersion,
+  read.csv,
+  read.table,
+  setTxtProgressBar,
+  tail,
+  txtProgressBar
+)

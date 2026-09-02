@@ -1,4 +1,14 @@
 
+# movedesign 0.3.4
+
+## New features
+
+-   Added limitations to the relevant md_* functions (fix success rate, deployment disruption, location error).
+
+## Bug fixes
+
+-   Fixed minor bugs affecting performance.
+
 # movedesign 0.3.3
 
 ## New features

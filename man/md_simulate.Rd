@@ -11,6 +11,9 @@ md_simulate(
   sigma,
   dur = NULL,
   dti = NULL,
+  error = 0,
+  prob_failure = 0,
+  prob_fixsuccess = 1,
   set_target = c("hr", "ctsd"),
   which_meta = "mean",
   grouped = FALSE,
@@ -65,6 +68,20 @@ Same format as \code{tau_p}.}
 A list with elements \code{value} (numeric) and \code{unit} (character).
 
 \strong{Example:} \code{list(value = 2, unit = "hours")}}
+
+\item{error}{Location error, in meters. This location
+error is added to each simulated fix. Defaults to \code{0} (no error).
+\code{NULL} is treated as \code{0}.}
+
+\item{prob_failure}{Deployment disruption. Probability that a tag
+fails before the end of the sampling period, truncating the
+track (between \code{0} and \code{1}). Defaults to \code{0} (no failure).
+\code{NULL} is treated as \code{0}.}
+
+\item{prob_fixsuccess}{Fix success rate. Probability that any
+individual fix is successfully recorded.
+Values below \code{1} thin the sampling schedule at random. Defaults
+to \code{1} (no data loss). \code{NULL} is treated as \code{1}.}
 
 \item{set_target}{Character vector specifying the target metrics
 to be evaluated in the study design workflow. Choose one or

@@ -323,11 +323,27 @@ mod_tab_about_server <- function(id, rv) {
       req(input$which_m)
       rv$which_m <- input$which_m
       if (is.null(rv$which_m)) rv$which_m <- "none"
-      if (req(rv$which_meta) == "none") rv$which_m <- NULL
-      if (req(rv$which_meta) == "none") shinyjs::disable("add_ind_var")
-      else shinyjs::enable("add_ind_var")
       
     }, label = "o-about_m")
+    
+    observe({
+      req(rv$which_meta)
+      
+      if (rv$which_meta == "none") {
+        
+        rv$which_m <- NULL
+        shinyjs::disable("add_ind_var")
+        
+        shinyWidgets::updateRadioGroupButtons(
+          session = session,
+          inputId = "which_m",
+          selected = character(0))
+        
+      } else {
+        shinyjs::enable("add_ind_var")
+      }
+      
+    }, label = "o-about_ind_var")
     
     observe({
       rv$overwrite_active <- input$overwrite_active
