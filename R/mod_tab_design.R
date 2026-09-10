@@ -1208,7 +1208,7 @@ mod_tab_design_server <- function(id, rv) {
     ## Add low effective sample size warning: -----------------------------
     
     output$devUI_low_N <- renderUI({
-      req(rv$active_tab == 'device')
+      req(rv$active_tab == 'device', rv$data_type)
       low_N_banner(rv, "area")
     })
     
@@ -2269,9 +2269,7 @@ mod_tab_design_server <- function(id, rv) {
         b_max = rv$dev$dur$value,
         b_unit = rv$dev$dur$unit,
         cutoff = input_cutoff,
-        dti_max = input$gps_dti_max,
-        seed = rv$seed0,
-        set_seed = rv$overwrite_active)
+        dti_max = input$gps_dti_max)
       
       if (all(gps_sim$dur_sec == 0)) return(NULL)
       
@@ -2502,8 +2500,9 @@ mod_tab_design_server <- function(id, rv) {
       rv$n_sims <- NULL
       rv$needs_fit <- TRUE
       rv$is_analyses <- FALSE
-      rv$hr_completed <- FALSE
-      rv$sd_completed <- FALSE
+      
+      # Discard outputs tied to the previous simulations:
+      reset_outputs(rv, which = c("hr", "ctsd"))
       
       class(simList) <- c(class(simList), "movedesign")
       
@@ -2700,17 +2699,18 @@ mod_tab_design_server <- function(id, rv) {
           }
           
           if (rv$add_ind_var) {
+            
             tau_p <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              rv$seedList[[x]]),
               "position")[[1]]
             tau_v <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              rv$seedList[[x]]),
               "velocity")[[1]]
             sigma <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]], 
-                             rv$seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              rv$seedList[[x]]),
               "sigma")[[1]]
             
           } else {
@@ -2802,8 +2802,9 @@ mod_tab_design_server <- function(id, rv) {
       
       rv$n_sims <- NULL
       rv$is_analyses <- FALSE
-      rv$hr_completed <- FALSE
-      rv$sd_completed <- FALSE
+      
+      # Discard outputs tied to the previous simulations:
+      reset_outputs(rv, which = c("hr", "ctsd"))
       
       target_map <- c("Home range" = "hr",
                       "Speed & distance" = "ctsd")
@@ -2936,16 +2937,16 @@ mod_tab_design_server <- function(id, rv) {
           
           if (rv$add_ind_var) {
             tau_p <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]],
-                             rv$seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              rv$seedList[[x]]),
               "position")[[1]]
             tau_v <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]],
-                             rv$seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              rv$seedList[[x]]),
               "velocity")[[1]]
             sigma <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]],
-                             rv$seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              rv$seedList[[x]]),
               "sigma")[[1]]
           } else {
             tau_p <- rv$tau_p[[group]]
@@ -3005,16 +3006,16 @@ mod_tab_design_server <- function(id, rv) {
             
             if (rv$add_ind_var) {
               tau_p <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               rv$seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                rv$seedList[[i]]),
                 "position")[[1]]
               tau_v <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               rv$seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                rv$seedList[[i]]),
                 "velocity")[[1]]
               sigma <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               rv$seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                rv$seedList[[i]]),
                 "sigma")[[1]]
             } else {
               tau_p <- rv$tau_p[[group]]
@@ -3287,16 +3288,16 @@ mod_tab_design_server <- function(id, rv) {
             
             if (rv$add_ind_var) {
               tau_p <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               rv$seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                rv$seedList[[i]]),
                 "position")[[1]]
               tau_v <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               rv$seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                rv$seedList[[i]]),
                 "velocity")[[1]]
               sigma <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               rv$seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                rv$seedList[[i]]),
                 "sigma")[[1]]
             } else {
               tau_p <- rv$tau_p[[group]]

@@ -209,7 +209,8 @@ mod_tab_hrange_ui <- function(id) {
                         shinyWidgets::sliderTextInput(
                           inputId = ns("hr_nsim"),
                           label = "Show simulation no.:",
-                          choices = seq(1, 100, by = 1))),
+                          choices = 1,
+                          selected = 1)),
                     p(),
                     shinyWidgets::checkboxGroupButtons(
                       inputId = ns("hr_contours"),
@@ -249,10 +250,10 @@ mod_tab_hrange_ui <- function(id) {
                     class = "col-xs-12 col-sm-12 col-md-12 col-lg-3",
                     p(class = "fluid-padding"),
                     
-                    mod_blocks_ui(ns("hrBlock_est")),
-                    p(style = "margin-top: 35px;"),
-                    mod_blocks_ui(ns("hrBlock_err")),
-                    uiOutput(ns("hrUI_errLegend")),
+                    div(id = ns("hrBlocks_current"),
+                        mod_blocks_ui(ns("hrBlock_est")),
+                        p(style = "margin-top: 35px;"),
+                        mod_blocks_ui(ns("hrBlock_err"))),
                     
                     p(style = "margin-top: 35px;"),
                     uiOutput(ns("hrBlock_group")),
@@ -465,43 +466,42 @@ mod_tab_hrange_server <- function(id, rv) {
     ## Update based on number of simulations: -----------------------------
     
     observe({
-      req(rv$active_tab == 'hr',
-          rv$simList, rv$akdeList)
-      rv$hr_nsim <- 1
+      req(rv$active_tab == "hr", rv$simList, rv$akdeList)
+      req(length(rv$simList) == length(rv$akdeList))
       
-      if (length(rv$simList) == 1) {
-        shinyjs::hide(id = "hr_nsim")
-        div(class = "sims-irs",
-            shinyWidgets::updateSliderTextInput(
-              session = session,
-              inputId = "hr_nsim",
-              label = "Show simulation no.:",
-              choices = seq(1, length(rv$simList), by = 1),
-              selected = 1))
-        
-      } else {
-        req(length(rv$simList) == length(rv$akdeList))
-        
-        shinyjs::show(id = "hr_nsim")
-        div(class = "sims-irs",
-            shinyWidgets::updateSliderTextInput(
-              session = session,
-              inputId = "hr_nsim",
-              label = "Show simulation no.:",
-              choices = seq(1, length(rv$simList), by = 1),
-              selected = length(rv$simList)))
-      }
+      n <- length(rv$simList)
+      freezeReactiveValue(input, "hr_nsim")
       
-    }) # end of observer
+      selected <- if (n == 1) 1 else n
+      rv$hr_nsim <- selected
+      
+      shinyjs::show(id = "hr_nsim")
+      shinyWidgets::updateSliderTextInput(
+        session = session,
+        inputId = "hr_nsim",
+        label = "Show simulation no.:",
+        choices = seq_len(n),
+        selected = selected)
+      if (n == 1) shinyjs::hide(id = "hr_nsim")
+      
+    }) %>% # end of observer
+      bindEvent(list(rv$active_tab, rv$simList, rv$akdeList))
     
     observe({
       req(rv$simList, rv$is_analyses,
-          input$hr_nsim >= 1,
-          rv$active_tab == 'hr')
+          rv$active_tab == "hr",
+          input$hr_nsim)
       
-      int <- round(input$hr_nsim, 0)
-      if (int %in% seq(1, length(rv$simList), 1))
-        rv$hr_nsim <- input$hr_nsim
+      n <- length(rv$simList)
+      int <- .clamp(round(
+        as.numeric(input$hr_nsim), 0), min = 1, max = n)
+      rv$hr_nsim <- int
+      
+      if (!identical(int, as.numeric(input$hr_nsim)))
+        shinyWidgets::updateSliderTextInput(
+          session = session,
+          inputId = "hr_nsim",
+          selected = int)
       
     }) %>% # end of observer,
       bindEvent(input$hr_nsim)
@@ -1189,16 +1189,16 @@ mod_tab_hrange_server <- function(id, rv) {
         
         if (rv$add_ind_var) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[sim_no]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[sim_no]]),
             "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[sim_no]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[sim_no]]),
             "velocity")[[1]]
           sigma <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[sim_no]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[sim_no]]),
             "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]
@@ -1622,16 +1622,16 @@ mod_tab_hrange_server <- function(id, rv) {
         
         if (rv$add_ind_var) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[set_id]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[set_id]]),
             "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[set_id]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[set_id]]),
             "velocity")[[1]]
           sigma <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[set_id]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[set_id]]),
             "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]
@@ -1685,12 +1685,9 @@ mod_tab_hrange_server <- function(id, rv) {
       
       req(length(rv$simList) == length(rv$akdeList))
       
-      nsim <- 1
-      if (!is.null(input$hr_nsim)) {
-        req(input$hr_nsim)
-        req(input$hr_nsim <= length(rv$simList))
-        nsim <- as.integer(input$hr_nsim)
-      }
+      req(rv$hr_nsim)
+      nsim <- .clamp(as.integer(rv$hr_nsim),
+                     min = 1, max = length(rv$simList))
       
       show_truth <- FALSE
       show_locations <- FALSE
@@ -1762,8 +1759,9 @@ mod_tab_hrange_server <- function(id, rv) {
     ## Plotting new home range: -------------------------------------------
     
     output$hrPlot_new <- ggiraph::renderGirafe({
-      req(length(rv$simList) == length(rv$akdeList))
       req(rv$hr$simList, rv$hr$akdeList, rv$hr_nsim)
+      nsim <- .clamp(as.integer(rv$hr_nsim),
+                     min = 1, max = length(rv$simList))
       
       show_truth <- FALSE
       show_locations <- FALSE
@@ -1779,7 +1777,7 @@ mod_tab_hrange_server <- function(id, rv) {
       # Rendering home range estimate plot:
       truthList <- get_true_hr(
         data = rv$hr$simList[[1]],
-        seed = rv$seedList[[rv$hr_nsim]],
+        seed = rv$seedList[[nsim]],
         sigma = rv$sigma,
         
         ind_var = rv$add_ind_var,
@@ -1789,14 +1787,14 @@ mod_tab_hrange_server <- function(id, rv) {
         groups = if (rv$grouped) rv$hr$groups else NULL)
       truth <- truthList[[1]]$data
       
-      ext <- ctmm::extent(list(rv$simList[[rv$hr_nsim]], 
+      ext <- ctmm::extent(list(rv$simList[[nsim]], 
                                rv$hr$simList[[1]],
-                               rv$akdeList[[rv$hr_nsim]], 
+                               rv$akdeList[[nsim]], 
                                rv$hr$akdeList[[1]]))
       
       ud_sim <- plotting_hr(
-        input1 = list(data = rv$simList[[rv$hr_nsim]],
-                      ud = rv$akdeList[[rv$hr_nsim]]),
+        input1 = list(data = rv$simList[[nsim]],
+                      ud = rv$akdeList[[nsim]]),
         input2 = list(data = rv$hr$simList[[1]], 
                       ud = rv$hr$akdeList[[1]]),
         truth = truth,
@@ -2104,18 +2102,32 @@ mod_tab_hrange_server <- function(id, rv) {
     ## Home range outputs: ------------------------------------------------
     
     observe({
-      req(rv$active_tab == 'hr')
-      req(rv$simList, rv$hr_completed, rv$hr_nsim)
-      req(nrow(rv$hrEst) == length(rv$simList),
-          nrow(rv$hrErr) == length(rv$simList))
+      req(rv$active_tab == "hr")
+      
+      is_valid <- !is.null(rv$simList) &&
+        isTRUE(rv$hr_completed) &&
+        !is.null(rv$hr_nsim) &&
+        !is.null(rv$hrEst) && !is.null(rv$hrErr) &&
+        nrow(rv$hrEst) == length(rv$simList) &&
+        nrow(rv$hrErr) == length(rv$simList)
+      
+      if (!is_valid) {
+        shinyjs::hide(id = "hrBlocks_current")
+        return(NULL)
+      }
+      
+      nsim <- .clamp(as.integer(rv$hr_nsim),
+                     min = 1, max = length(rv$simList))
       
       mod_blocks_server(
         id = "hrBlock_est",
-        rv = rv, type = "hr", name = "hrEst", get_id = rv$hr_nsim)
+        rv = rv, type = "hr", name = "hrEst", get_id = nsim)
       mod_blocks_server(
         id = "hrBlock_err",
-        rv = rv, type = "hr", name = "hrErr", get_id = rv$hr_nsim)
-    
+        rv = rv, type = "hr", name = "hrErr", get_id = nsim)
+      
+      shinyjs::show(id = "hrBlocks_current")
+      
     }) # end of observe
     
     observe({

@@ -1612,16 +1612,16 @@ mod_tab_meta_server <- function(id, rv) {
           
           if (rv$add_ind_var) {
             tau_p <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]],
-                             seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              seedList[[x]]),
               "position")[[1]]
             tau_v <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]],
-                             seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              seedList[[x]]),
               "velocity")[[1]]
             sigma <- extract_pars(
-              emulate_seeded(rv$meanfitList[[group]],
-                             seedList[[x]]),
+              simulate_seeded(rv$meanfitList[[group]],
+                              seedList[[x]]),
               "sigma")[[1]]
           } else {
             tau_p <- rv$tau_p[[group]]
@@ -1678,16 +1678,16 @@ mod_tab_meta_server <- function(id, rv) {
             
             if (rv$add_ind_var) {
               tau_p <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                seedList[[i]]),
                 "position")[[1]]
               tau_v <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                seedList[[i]]),
                 "velocity")[[1]]
               sigma <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                seedList[[i]]),
                 "sigma")[[1]]
             } else {
               tau_p <- rv$tau_p[[group]]
@@ -1949,16 +1949,16 @@ mod_tab_meta_server <- function(id, rv) {
             
             if (rv$add_ind_var) {
               tau_p <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                seedList[[i]]),
                 "position")[[1]]
               tau_v <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                seedList[[i]]),
                 "velocity")[[1]]
               sigma <- extract_pars(
-                emulate_seeded(rv$meanfitList[[group]],
-                               seedList[[i]]),
+                simulate_seeded(rv$meanfitList[[group]],
+                                seedList[[i]]),
                 "sigma")[[1]]
             } else {
               tau_p <- rv$tau_p[[group]]
@@ -2174,6 +2174,7 @@ mod_tab_meta_server <- function(id, rv) {
       }
       
       req(proceed)
+      cov_lci <- cov_uci <- NA
       
       if (set_analysis == "hr") {
         req(rv$akdeList)

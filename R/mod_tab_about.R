@@ -306,6 +306,8 @@ mod_tab_about_server <- function(id, rv) {
 
     }) # end of observe
    
+    ## Workflow selections: -----------------------------------------------
+    
     observe({
       rv$which_data <- input$which_data
       rv$which_question <- input$which_question
@@ -319,10 +321,12 @@ mod_tab_about_server <- function(id, rv) {
       
     }, label = "o-about_workflow")
     
+    ## Deployment type: ---------------------------------------------------
+    
     observe({
       req(input$which_m)
+      req(rv$which_meta != "none")
       rv$which_m <- input$which_m
-      if (is.null(rv$which_m)) rv$which_m <- "none"
       
     }, label = "o-about_m")
     
@@ -331,120 +335,45 @@ mod_tab_about_server <- function(id, rv) {
       
       if (rv$which_meta == "none") {
         
-        rv$which_m <- NULL
-        shinyjs::disable("add_ind_var")
+        rv$which_m <- "none"
         
         shinyWidgets::updateRadioGroupButtons(
           session = session,
           inputId = "which_m",
           selected = character(0))
         
+        shinyjs::hide(id = "which_m")
+        shinyjs::disable("add_ind_var")
+        shinyWidgets::updateAwesomeCheckbox(
+          session = session,
+          inputId = "add_ind_var",
+          value = FALSE)
+        
       } else {
-        shinyjs::enable("add_ind_var")
+        
+        rv$which_m <- NULL
+        
+        shinyjs::show(id = "which_m")
+        if (!isTRUE(rv$which_data == "Simulate"))
+          shinyjs::enable("add_ind_var")
       }
       
-    }, label = "o-about_ind_var")
+    }, label = "o-about_meta") %>%
+      bindEvent(rv$which_meta)
     
     observe({
       rv$overwrite_active <- input$overwrite_active
     }, label = "o-about_overwrite")
     
     observe({
-      rv$add_ind_var <- input$add_ind_var
-    }, label = "o-about_emulate")
+      rv$add_ind_var <- isTRUE(input$add_ind_var)
+    }, label = "o-about_ind_var")
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
     
     shinyjs::hide(id = "which_m")
     
-    # shinyjs::disable(id = "which_m")
-    # shinyjs::disable(id = "add_ind_var")
-    
-    # shinyjs::hide(id = "num_tags")
-    # shinyjs::hide(id = "num_tags_max")
-    
-    observe({
-      if (rv$which_meta == "none") {
-        shinyjs::hide(id = "which_m")
-        shinyWidgets::updateAwesomeCheckbox(
-          session = session,
-          inputId = "add_ind_var",
-          value = FALSE)
-      } else shinyjs::show(id = "which_m")
-      
-    }) %>% # end of observe,
-      bindEvent(rv$which_meta)
-    
-    observe({
-      req(rv$which_m == "get_m",
-          length(rv$which_question) == 2)
-      
-      shinyWidgets::updateCheckboxGroupButtons(
-        session = session,
-        inputId = "which_question",
-        selected = character(0))
-      
-      shinyalert::shinyalert(
-        type = "error",
-        title = "Warning",
-        text = tagList(span(
-          "Searching for the", span("minimum", class = "cl-jgl"),
-          "number of VHF/GPS tags is an iterative process.",
-          "This option only allows for one",
-          span("research question", class = "cl-dgr"),
-          "at a time. Please select either 'Home range' or",
-          "'Speed & distance' (but not both) to proceed.")),
-        confirmButtonText = "Dismiss",
-        html = TRUE,
-        size = "xs")
-      
-    }) # end of observe
-    
-    observe({
-      req(rv$which_m == "get_all",
-          length(rv$which_question) == 2)
-      
-      shinyWidgets::updateCheckboxGroupButtons(
-        session = session,
-        inputId = "which_question",
-        selected = character(0))
-      
-      shinyalert::shinyalert(
-        type = "error",
-        title = "Warning",
-        text = tagList(span(
-          "Searching for the", span("optimal", class = "cl-jgl"),
-          "sampling parameters is an iterative process.",
-          "This option only allows for one",
-          span("research question", class = "cl-dgr"),
-          "at a time. Please select either 'Home range' or",
-          "'Speed & distance' (but not both) to proceed.")),
-        confirmButtonText = "Dismiss",
-        html = TRUE,
-        size = "xs")
-      
-    }) # end of observe
-    
-    observe({
-      req(input$which_meta)
-      
-      if (!is.null(input$which_meta) &&
-          is.null(input$which_question)) {
-        
-        shinyalert::shinyalert(
-          type = "error",
-          title = "Missing estimate",
-          text = tagList(span(
-            "Meta-analyses requires you to pick a",
-            "target estimate (e.g.,",
-            wrap_none(span("home range", class = "cl-dgr"), ", ",
-                      span("speed and distance", class = "cl-dgr"),
-            ")."))),
-          html = TRUE,
-          size = "xs")
-      }
-      
-    }) # end of observe
+    ## Individual variation is unavailable for simulated data: ------------
     
     observe({
       req(rv$which_data)
@@ -458,52 +387,109 @@ mod_tab_about_server <- function(id, rv) {
         
       } else {
         shinyjs::show(id = "add_ind_var")
+        
+        if (isTRUE(rv$which_meta != "none"))
+          shinyjs::enable("add_ind_var")
       }
       
-
-    }) # end of observe
+    }) %>% # end of observe,
+      bindEvent(rv$which_data)
+    
+    ## Iterative deployments allow one research target only: --------------
+    
+    observe({
+      req(rv$which_m %in% c("get_m", "get_all"),
+          length(rv$which_question) == 2)
+      
+      txt_goal <- if (rv$which_m == "get_m")
+        span("minimum", class = "cl-jgl") else
+          span("optimal", class = "cl-jgl")
+      
+      txt_what <- if (rv$which_m == "get_m")
+        "number of VHF/GPS tags" else "sampling parameters"
+      
+      shinyWidgets::updateCheckboxGroupButtons(
+        session = session,
+        inputId = "which_question",
+        selected = character(0))
+      
+      shinyalert::shinyalert(
+        type = "error",
+        title = "Warning",
+        text = tagList(span(
+          "Searching for the", txt_goal, txt_what,
+          "is an iterative process.",
+          "This option only allows for one",
+          span("research question", class = "cl-dgr"),
+          "at a time. Please select either 'Home range' or",
+          "'Speed & distance' (but not both) to proceed.")),
+        confirmButtonText = "Dismiss",
+        html = TRUE,
+        size = "xs")
+      
+    }) %>% # end of observe,
+      bindEvent(rv$which_m, rv$which_question)
+    
+    ## A meta-analysis needs a research target: ---------------------------
+    
+    observe({
+      req(input$which_meta)
+      req(is.null(input$which_question))
+      
+      shinyalert::shinyalert(
+        type = "error",
+        title = "Missing estimate",
+        text = tagList(span(
+          "Meta-analyses requires you to pick a",
+          "target estimate (e.g.,",
+          wrap_none(span("home range", class = "cl-dgr"), ", ",
+                    span("speed and distance", class = "cl-dgr"),
+                    ")."))),
+        html = TRUE,
+        size = "xs")
+      
+    }) %>% # end of observe,
+      bindEvent(input$which_meta)
+    
+    ## Note on individual variation: --------------------------------------
     
     output$aboutUI_pop_var <- renderUI({
-      req(rv$which_question, rv$which_meta, rv$add_ind_var == TRUE)
+      req(rv$which_question, rv$which_meta, isTRUE(rv$add_ind_var))
+      req(rv$which_meta %in% c("mean", "compare"))
       
-      ui <- ui_txt <- NULL
-      
-      if (length(rv$which_question) > 1) {
-        ui_txt <- "home range and speed & distance estimation."
+      ui_txt <- if (length(rv$which_question) > 1) {
+        "home range and speed & distance estimation."
       } else {
-        ui_txt <- paste(
-          switch(
-            rv$which_question,
-            "Home range" = { "home range" },
-            "Speed & distance" = { "speed & distance" }),
-          "estimation.")
+        paste(switch(rv$which_question,
+                     "Home range" = "home range",
+                     "Speed & distance" = "speed & distance"),
+              "estimation.")
       }
       
-      if (rv$which_meta == "mean" || rv$which_meta == "compare") {
-        ui <- tagList(
-          p(style = "max-width: 685px;",
-            span(
-              class = "notes-block",
-              style = "text-align: center !important;",
-              
-              fontawesome::fa("circle-exclamation", fill = pal$dgr),
-              span("Note:", class = "cl-dgr"),
-              "Requires careful selection of individuals",
-              "to inform subsequent simulations. Ensure all selected",
-              "individuals meet the assumptions for ", ui_txt)))
-      }
-      return(ui)
+      p(style = "max-width: 685px;",
+        span(
+          class = "notes-block",
+          style = "text-align: center !important;",
+          
+          fontawesome::fa("circle-exclamation", fill = pal$dgr),
+          span("Note:", class = "cl-dgr"),
+          "Requires careful selection of individuals",
+          "to inform subsequent simulations. Ensure all selected",
+          "individuals meet the assumptions for ", ui_txt))
       
     }) # end of renderUI, "aboutUI_pop_var"
     
     # SETTINGS ------------------------------------------------------------
     ## Generating seed: ---------------------------------------------------
     
+    isolate({
+      if (is.null(rv$seed0)) {
+        rv$seed0 <- round(stats::runif(1, min = 1, max = 999999), 0)
+      }
+    })
+    
     observe({
-      req(rv$active_tab == 'about')
-      
-      if (input$overwrite_active) {
-        req(input$overwrite_active)
+      if (isTRUE(input$overwrite_active)) {
         
         msg_log(
           style = "warning",
@@ -512,11 +498,11 @@ mod_tab_about_server <- function(id, rv) {
         rv$seed0 <- 100
         
       } else {
-        seed <- round(stats::runif(1, min = 1, max = 999999), 0)
-        rv$seed0 <- seed
+        rv$seed0 <- round(stats::runif(1, min = 1, max = 999999), 0)
       }
       
-    }, label = "o-about_generate_seed") # end of observe
+    }, label = "o-about_generate_seed") %>%
+      bindEvent(input$overwrite_active, ignoreInit = TRUE)
     
     ## If settings are restored: ------------------------------------------
     
@@ -546,7 +532,11 @@ mod_tab_about_server <- function(id, rv) {
       shinybusy::remove_modal_spinner()
       req(rv$which_meta)
       
-      if (rv$which_meta != "none") {
+      if (rv$which_meta == "none") {
+        rv$which_m <- "none"
+        rv$add_ind_var <- FALSE
+        
+      } else {
         rv$which_m <- rv$restored_rv$which_m
         rv$add_ind_var <- rv$restored_rv$add_ind_var
         
@@ -563,7 +553,6 @@ mod_tab_about_server <- function(id, rv) {
       
     }) %>% # end of observe,
       bindEvent(rv$restored)
-    
     
   }) # end of moduleServer
 }

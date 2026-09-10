@@ -191,7 +191,8 @@ mod_tab_ctsd_ui <- function(id) {
                        shinyWidgets::sliderTextInput(
                          inputId = ns("sd_nsim"),
                          label = "Show simulation no.:",
-                         choices = seq(1, 100, by = 1)))),
+                         choices = 1,
+                         selected = 1))),
             
             tabsetPanel(
               id = ns("sdTabs_viz"),
@@ -225,6 +226,7 @@ mod_tab_ctsd_ui <- function(id) {
                   uiOutput(ns("sdText_new1")),
                   
                   fluidRow(
+                    id = ns("distBlocks_current"),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
                         mod_blocks_ui(ns("distBlock_est"))),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
@@ -276,6 +278,7 @@ mod_tab_ctsd_ui <- function(id) {
                   uiOutput(ns("sdText_new2")),
 
                   fluidRow(
+                    id = ns("sdBlocks_current"),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
                         mod_blocks_ui(ns("sdBlock_est"))),
                     div(class = "col-xs-6 col-sm-12 col-md-12 col-lg-12",
@@ -446,42 +449,43 @@ mod_tab_ctsd_server <- function(id, rv) {
     ## Update based on number of simulations: -----------------------------
     
     observe({
-      req(rv$active_tab == 'ctsd',
-          rv$simList, rv$ctsdList)
-      rv$sd_nsim <- 1
+      req(rv$active_tab == "ctsd", rv$simList, rv$ctsdList)
+      req(length(rv$simList) == length(rv$ctsdList))
       
-      if (length(rv$simList) == 1) {
-        shinyjs::hide(id = "sd_nsim")
-        div(class = "sims-irs",
-            shinyWidgets::updateSliderTextInput(
-              session = session,
-              inputId = "sd_nsim",
-              label = "Show simulation no.:",
-              choices = seq(1, length(rv$simList), by = 1),
-              selected = 1))
-        
-      } else {
-        req(length(rv$simList) == length(rv$ctsdList))
-        
-        shinyjs::show(id = "sd_nsim")
-        div(class = "sims-irs",
-            shinyWidgets::updateSliderTextInput(
-              session = session,
-              inputId = "sd_nsim",
-              label = "Show simulation no.:",
-              choices = seq(1, length(rv$simList), by = 1),
-              selected = length(rv$simList)))
-      }
+      n <- length(rv$simList)
       
-    }) # end of observer
+      freezeReactiveValue(input, "sd_nsim")
+      
+      selected <- if (n == 1) 1 else n
+      rv$sd_nsim <- selected
+      
+      shinyjs::show(id = "sd_nsim")
+      shinyWidgets::updateSliderTextInput(
+        session = session,
+        inputId = "sd_nsim",
+        label = "Show simulation no.:",
+        choices = seq_len(n),
+        selected = selected)
+      if (n == 1) shinyjs::hide(id = "sd_nsim")
+      
+    }) %>% # end of observer
+      bindEvent(list(rv$active_tab, rv$simList, rv$ctsdList))
     
     observe({
       req(rv$simList,
-          input$sd_nsim >= 1)
+          rv$active_tab == "ctsd",
+          input$sd_nsim)
       
-      int <- round(input$sd_nsim, 0)
-      if (int %in% seq(1, length(rv$simList), 1))
-        rv$sd_nsim <- input$sd_nsim
+      n <- length(rv$simList)
+      int <- .clamp(round(
+        as.numeric(input$sd_nsim), 0), min = 1, max = n)
+      rv$sd_nsim <- int
+      
+      if (!identical(int, as.numeric(input$sd_nsim)))
+        shinyWidgets::updateSliderTextInput(
+          session = session,
+          inputId = "sd_nsim",
+          selected = int)
       
     }) %>% # end of observer,
       bindEvent(input$sd_nsim)
@@ -1603,16 +1607,16 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         if (rv$add_ind_var) {
           tau_p <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[sim_no]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[sim_no]]),
             "position")[[1]]
           tau_v <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[sim_no]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[sim_no]]),
             "velocity")[[1]]
           sigma <- extract_pars(
-            emulate_seeded(rv$meanfitList[[group]],
-                           rv$seedList[[sim_no]]),
+            simulate_seeded(rv$meanfitList[[group]],
+                            rv$seedList[[sim_no]]),
             "sigma")[[1]]
         } else {
           tau_p <- rv$tau_p[[group]]
@@ -2123,21 +2127,20 @@ mod_tab_ctsd_server <- function(id, rv) {
     ## Plotting trajectory: -----------------------------------------------
     
     output$sdPlot_path <- ggiraph::renderGirafe({
-      req(rv$ctsdList, rv$pathList,
+      req(rv$ctsdList, rv$pathList, rv$distEst,
           input$show_paths, 
           rv$sd_nsim)
-      req(length(rv$ctsdList) == length(rv$simList))
+      req(length(rv$ctsdList) == length(rv$simList),
+          length(rv$pathList) == length(rv$simList),
+          nrow(rv$distEst) == length(rv$simList))
       
-      # if (any(rv$dev_failed)) {
-      #   req(length(rv$dev_failed) == length(rv$simList))
-      # } else {
-      #   req(length(rv$pathList) == length(rv$simList))
-      # }
+      nsim <- .clamp(as.integer(rv$sd_nsim),
+                     min = 1, max = length(rv$simList))
       
-      newdat <- rv$simList[[rv$sd_nsim]]
-      alldat <- rv$pathList[[rv$sd_nsim]]
+      newdat <- rv$simList[[nsim]]
+      alldat <- rv$pathList[[nsim]]
       
-      if (is.na(rv$distEst[rv$sd_nsim, ]$est)) {
+      if (is.na(rv$distEst[nsim, ]$est)) {
         p <- ggplot2::ggplot() +
           ggtext::geom_richtext(
             mapping = ggplot2::aes(x = 1, y = 1),
@@ -2729,16 +2732,31 @@ mod_tab_ctsd_server <- function(id, rv) {
     ### Speed & distance estimates: ---------------------------------------
 
     observe({
-      req(rv$ctsdList, rv$speedEst, rv$speedErr, rv$sd_nsim)
-      req(nrow(rv$speedEst) == length(rv$simList),
-          nrow(rv$speedErr) == length(rv$simList))
+      req(rv$active_tab == "ctsd")
+      
+      is_valid <- !is.null(rv$simList) &&
+        !is.null(rv$ctsdList) &&
+        !is.null(rv$sd_nsim) &&
+        !is.null(rv$speedEst) && !is.null(rv$speedErr) &&
+        nrow(rv$speedEst) == length(rv$simList) &&
+        nrow(rv$speedErr) == length(rv$simList)
+      
+      if (!is_valid) {
+        shinyjs::hide(id = "sdBlocks_current")
+        return(NULL)
+      }
+      
+      nsim <- .clamp(as.integer(rv$sd_nsim),
+                     min = 1, max = length(rv$simList))
       
       mod_blocks_server(
         id = "sdBlock_est",
-        rv = rv, type = "ctsd", name = "speedEst", get_id = rv$sd_nsim)
+        rv = rv, type = "ctsd", name = "speedEst", get_id = nsim)
       mod_blocks_server(
         id = "sdBlock_err",
-        rv = rv, type = "ctsd", name = "speedErr", get_id = rv$sd_nsim)
+        rv = rv, type = "ctsd", name = "speedErr", get_id = nsim)
+      
+      shinyjs::show(id = "sdBlocks_current")
       
     }) # end of observe
     
@@ -2760,14 +2778,31 @@ mod_tab_ctsd_server <- function(id, rv) {
     ### Movement metrics: -------------------------------------------------
     
     observe({
-      req(rv$ctsdList, rv$speedEst, rv$distEst, rv$sd_nsim)
+      req(rv$active_tab == "ctsd")
+      
+      is_valid <- !is.null(rv$simList) &&
+        !is.null(rv$ctsdList) &&
+        !is.null(rv$sd_nsim) &&
+        !is.null(rv$distEst) && !is.null(rv$distErr) &&
+        nrow(rv$distEst) == length(rv$simList) &&
+        nrow(rv$distErr) == length(rv$simList)
+      
+      if (!is_valid) {
+        shinyjs::hide(id = "distBlocks_current")
+        return(NULL)
+      }
+      
+      nsim <- .clamp(as.integer(rv$sd_nsim),
+                     min = 1, max = length(rv$simList))
       
       mod_blocks_server(
         id = "distBlock_est",
-        rv = rv, type = "dist", name = "distEst", get_id = rv$sd_nsim)
+        rv = rv, type = "dist", name = "distEst", get_id = nsim)
       mod_blocks_server(
         id = "distBlock_err",
-        rv = rv, type = "dist", name = "distErr", get_id = rv$sd_nsim)
+        rv = rv, type = "dist", name = "distErr", get_id = nsim)
+      
+      shinyjs::show(id = "distBlocks_current")
       
     }) # end of observe
 
