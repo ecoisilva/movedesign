@@ -468,6 +468,14 @@ sub { font-size: 90%; }
   letter-spacing: 0.5px;
 }
 
+.subheader_left {
+  font-family: var(--monosans);
+  font-size: 18px;
+  color: #000;
+  text-align: left;
+  letter-spacing: 0.5px;
+}
+
 /* INPUTS & BUTTONS --------------------------------------------------- */
 
 select[multiple], select[size] {
