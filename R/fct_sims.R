@@ -80,6 +80,7 @@ simulating_data <- function(rv, seed) {
   } else {
     
     if (rv$add_ind_var) {
+      
       fit <- simulate_seeded(rv$meanfitList[[1]], seed)
       fit <- .recenter_mu(fit)
       

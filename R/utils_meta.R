@@ -1071,13 +1071,13 @@
     
     if (rv$add_ind_var) {
       tau_p <- extract_pars(
-        emulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
+        simulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
         "position")[[1]]
       tau_v <- extract_pars(
-        emulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
+        simulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
         "velocity")[[1]]
       sigma <- extract_pars(
-        emulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
+        simulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
         "sigma")[[1]]
     } else {
       tau_p <- rv$tau_p[[group]]
@@ -1134,16 +1134,16 @@
       
       if (rv$add_ind_var) {
         tau_p <- extract_pars(
-          emulate_seeded(rv$meanfitList[[group]],
-                         seedList[[i]]),
+          simulate_seeded(rv$meanfitList[[group]],
+                          seedList[[i]]),
           "position")[[1]]
         tau_v <- extract_pars(
-          emulate_seeded(rv$meanfitList[[group]],
-                         seedList[[i]]),
+          simulate_seeded(rv$meanfitList[[group]],
+                          seedList[[i]]),
           "velocity")[[1]]
         sigma <- extract_pars(
-          emulate_seeded(rv$meanfitList[[group]],
-                         seedList[[i]]),
+          simulate_seeded(rv$meanfitList[[group]],
+                          seedList[[i]]),
           "sigma")[[1]]
       } else {
         tau_p <- rv$tau_p[[group]]
@@ -1400,16 +1400,16 @@
       
       if (rv$add_ind_var) {
         tau_p <- extract_pars(
-          emulate_seeded(rv$meanfitList[[group]],
-                         seedList[[i]]),
+          simulate_seeded(rv$meanfitList[[group]],
+                          seedList[[i]]),
           "position")[[1]]
         tau_v <- extract_pars(
-          emulate_seeded(rv$meanfitList[[group]],
-                         seedList[[i]]),
+          simulate_seeded(rv$meanfitList[[group]],
+                          seedList[[i]]),
           "velocity")[[1]]
         sigma <- extract_pars(
-          emulate_seeded(rv$meanfitList[[group]],
-                         seedList[[i]]),
+          simulate_seeded(rv$meanfitList[[group]],
+                          seedList[[i]]),
           "sigma")[[1]]
       } else {
         tau_p <- rv$tau_p[[group]]

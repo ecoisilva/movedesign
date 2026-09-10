@@ -433,305 +433,255 @@ prepare_mod <- function(tau_p, tau_p_unit = NULL,
 } 
 
 
-#' ctmm::mean() but seeded 
-#'  
-#' @noRd 
+#' ctmm::mean() but seeded
+#' 
+#' @noRd
 mean_seeded <- function(obj, seed) {
   set.seed(seed) 
   return(quiet(suppressMessages(mean(obj))))
 } 
 
-#' ctmm::emulate() but seeded 
-#'  
-#' @noRd 
+
+#' ctmm::emulate() but seeded
+#' 
+#' @noRd
 emulate_seeded <- function(obj, seed) { 
   set.seed(seed) 
   return(ctmm::emulate(obj, fast = TRUE)) 
 } 
 
-#' ctmm::simulate() but seeded 
-#'  
-#' @noRd 
+
+#' ctmm::simulate() but seeded
+#' 
+#' @noRd
 simulate_seeded <- function(obj, seed) {
   set.seed(seed) 
   return(suppressWarnings(ctmm::simulate(obj)))
 } 
 
 
-#' Get true home ranges 
-#'  
-#' @importFrom ctmm %#% 
-#' @noRd 
-get_true_hr <- function(data = NULL, 
-                        seed = NULL, 
-                        sigma, 
+#' Get true home range area
+#' 
+#' @importFrom ctmm %#%
+#' 
+#' @noRd
+get_true_hr <- function(data = NULL,
+                        seed = NULL,
+                        sigma,
                         
-                        ind_var = TRUE, 
-                        fit = NULL, 
+                        ind_var = TRUE,
+                        fit = NULL,
                         
-                        grouped = FALSE, 
-                        groups = NULL, 
+                        grouped = FALSE,
+                        groups = NULL,
                         
-                        summarized = FALSE) { 
+                        summarized = FALSE,
+                        level = 0.95) {
   
-  get_circle <- function(radius_x, radius_y) { 
-    
-    mean_x <- 0 # fit$mu[[1]][1] 
-    mean_y <- 0 # fit$mu[[1]][2] 
-    
-    truth <- data.frame( 
-      id = rep(1, each = 100), 
-      angle = seq(0, 2 * pi, length.out = 100)) 
-    truth$x <- unlist(lapply( 
-      mean_x, function(x) x + radius_x * cos(truth$angle))) 
-    truth$y <- unlist(lapply( 
-      mean_y, function(x) x + radius_y * sin(truth$angle))) 
-    return(truth) 
-  } 
+  k <- -2 * log(1 - level)
   
-  if (summarized) { 
+  .covm_eigen <- function(x) {
     
-    out <- lapply(names(sigma), function(x) { 
-      
-      if (ind_var) { 
-        
-        if (fit[[x]]$isotropic[["sigma"]]) { 
-          
-          sig <- var.covm(fit[[x]]$sigma, average = TRUE) 
-          radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig) 
-          area <- -2 * log(0.05) * pi * sig 
-          
-        } else { 
-          
-          sigma <- fit[[x]]$sigma 
-          if (ncol(sigma) == 1) { 
-            sigma <- sigma@par["major"] 
-          } else { 
-            sigma <- attr(sigma, "par")[c("major", "minor")] 
-            sigma <- sort(sigma, decreasing = TRUE) 
-          } 
-          
-          radius_x <- sqrt(-2 * log(0.05) * sigma[["major"]]) 
-          radius_y <- sqrt(-2 * log(0.05) * sigma[["minor"]]) 
-          area <- pi * radius_x * radius_y 
-          
-        } # end of if (is_isotropic)
-        
-      } else { 
-        
-        sig <- sigma[[x]]$value[2] %#% sigma[[x]]$unit[2] 
-        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig) 
-        area <- -2 * log(0.05) * pi * sig 
-        
-      } # end of if (ind_var)
-      
-      truth <- get_circle(radius_x, radius_y) 
-      return(list(area = area, data = truth)) 
-      
-    }) # end of lapply (x)
+    lambda <- eigen(.as_covm_matrix(x$sigma), symmetric = TRUE,
+                    only.values = TRUE)$values
     
-    names(out) <- names(sigma) 
-    return(out) 
+    return(.clamp(lambda, min = 0, max = Inf))
+  }
+  
+  .hr_from_eigen <- function(lambda, n = 100) {
     
-  } else { 
+    radius_x <- sqrt(k * lambda[1])
+    radius_y <- sqrt(k * lambda[2])
     
-    out <- lapply(seq_along(data), function(x) { 
-      
-      if (grouped) { 
-        nm <- names(data)[[x]] 
-        group <- ifelse(nm %in% groups[["A"]], "A", "B") 
-      } else group <- "All" 
-      
-      if (ind_var) { 
-        fit <- emulate_seeded(fit[[group]], names(data)[[x]]) 
-        
-        if (fit$isotropic[["sigma"]]) { 
-          sig <- var.covm(fit$sigma, average = TRUE) 
-          radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig) 
-          area <- -2 * log(0.05) * pi * sig 
-          
-        } else { 
-          sig1 <- fit$sigma@par["major"][[1]] 
-          sig2 <- fit$sigma@par["minor"][[1]] 
-          radius_x <- sqrt(-2 * log(0.05) * sig1) 
-          radius_y <- sqrt(-2 * log(0.05) * sig2) 
-          
-          fit_ellipse <- ellipse(fit$sigma, level = 0.95) 
-          semi_axis_1 <- max(fit_ellipse[,1])/2 - min(fit_ellipse[,1])/2 
-          semi_axis_2 <- max(fit_ellipse[,2])/2 - min(fit_ellipse[,2])/2 
-          area <- pi * semi_axis_1 * semi_axis_2 
-          
-        } # end of if (is_isotropic)
-        
-      } else { 
-        
-        sig <- sigma[[group]]$value[2] %#% sigma[[group]]$unit[2] 
-        radius_x <- radius_y <- sqrt(-2 * log(0.05) * sig) 
-        area <- -2 * log(0.05) * pi * sig 
-        
-      } # end of if (ind_var)
-      
-      truth <- get_circle(radius_x, radius_y) 
-      return(list(area = area, data = truth)) 
-      
-    }) # end of lapply (x)
+    angle <- seq(0, 2 * pi, length.out = n)
+    outline <- data.frame(id = rep(1L, n),
+                          angle = angle,
+                          x = radius_x * cos(angle),
+                          y = radius_y * sin(angle))
     
-    names(out) <- names(data) 
-    return(out) 
+    return(list(area = pi * radius_x * radius_y,
+                data = outline))
+  }
+  
+  .get_hr <- function(fit_i, sigma_i) {
+    
+    if (ind_var) {
+      
+      if (!isTRUE(fit_i$range))
+        stop("Model is not range-resident (BM/IOU): home range area ",
+             "is undefined.", call. = FALSE)
+      
+      return(.hr_from_eigen(.covm_eigen(fit_i)))
+      
+    } else {
+      
+      sigma_g <- sigma_i$value[2] %#% sigma_i$unit[2]
+      
+      ratio <- if (is.null(fit_i)) 1 else {
+        lambda <- .covm_eigen(fit_i)
+        .clamp(lambda[2] / lambda[1], min = 0, max = 1)
+      }
+      
+      return(.hr_from_eigen(.eigen_from_scalar(sigma_g, ratio)))
+      
+    }
+  }
+  
+  if (summarized) {
+    
+    nms <- names(sigma)
+    
+    out <- lapply(seq_along(nms), function(i) {
+      x <- nms[[i]]
+      .get_hr(fit[[x]], sigma[[x]])
+      
+    }) # end of lapply
+    
+    names(out) <- nms
+    return(out)
+    
+  } else {
+    
+    out <- lapply(seq_along(data), function(i) {
+      nm <- names(data)[[i]]
+      
+      group <- if (grouped) {
+        if (nm %in% groups[["A"]]) "A" else "B"
+      } else "All"
+      
+      if (ind_var) {
+        seed_i <- if (is.null(seed)) NULL else as.integer(seed[[i]])
+        fit_i <- simulate_seeded(fit[[group]], seed_i)
+        .get_hr(fit_i, NULL)
+      } else {
+        .get_hr(fit[[group]], sigma[[group]])
+      }
+      
+    }) # end of lapply
+    
+    names(out) <- names(data)
+    return(out)
     
   } # end of if (summarized)
   
-} 
+} # end of function, get_true_hr()
 
-#' Get weighted average speed (approximate only) 
-#'  
-#' @noRd 
-weighted_average_speed <- function(tau_v, fit, seed,  
-                                   err = 0.01, cor.min = 0.5) { 
-  
-  dt.max <- -log(cor.min) * tau_v 
-  
-  dt <- tau_v * (err/10)^(1/3) # O(error/10) inst error 
-  t <- seq(0, tau_v/err^2, dt) # O(error) est error 
-  dat <- ctmm::simulate(fit, t = t, 
-                        seed = seed, 
-                        precompute = FALSE) 
-  v <- sqrt(dat$vx^2 + dat$vy^2) 
-  
-  w <- diff(t) 
-  w <- w * (w <= dt.max) 
-  w <- c(0,w) + c(w,0) 
-  w <- w * (t >= range(dat$t)[1] & t <= range(dat$t)[2]) 
-  v <- sum(w * v)/sum(w) # weighted average speed 
-  return(v) 
-} 
 
-#' Get true movement speed 
-#'  
-#' @importFrom ctmm %#% 
-#' @noRd 
-get_true_speed <- function(data, 
-                           seed = NULL, 
+#' Get true movement speed
+#' 
+#' @importFrom ctmm %#%
+#' 
+#' @noRd
+get_true_speed <- function(data,
+                           seed = NULL,
                            
-                           tau_p, 
-                           tau_v, 
-                           sigma, 
+                           tau_p,
+                           tau_v,
+                           sigma,
                            
-                           ind_var = TRUE, 
-                           fit = NULL, 
+                           ind_var = TRUE,
+                           fit = NULL,
                            
-                           grouped = FALSE, 
-                           groups = NULL, 
+                           grouped = FALSE,
+                           groups = NULL,
                            
-                           summarized = FALSE) { 
+                           summarized = FALSE) {
   
-  clamp <- function (num, min = 0, max = 1) { 
-    ifelse(num < 0, 0, ifelse(num > 1, 1, num)) 
-  } 
+  speed_from_fit <- function(fit_i, seed_i = NULL) {
+    
+    if (!.has_velocity(fit_i))
+      stop("Model has no velocity process (BM/OU/IID): mean speed ",
+           "is undefined.", call. = FALSE)
+    
+    is_stationary <- is.character(fit_i$mean) &&
+      length(fit_i$mean) == 1L && fit_i$mean == "stationary"
+    if (is_stationary)
+      return(.gaussian_mean_speed(.velocity_covm(fit_i)))
+    
+    tv <- if ("velocity" %in% names(fit_i$tau)) {
+      fit_i$tau[["velocity"]]
+    } else {
+      pars <- extract_pars(fit_i, "velocity")[[1]]
+      pars$value[[2]] %#% pars$unit[[2]]
+    }
+    
+    return(.weighted_average_speed(tv, fit_i, seed_i))
+  }
   
-  if (summarized) { 
+  speed_from_pars <- function(sigma_i, tau_p_i, tau_v_i,
+                              fit_i = NULL) {
     
-    out <- lapply(names(tau_p), function(x) { 
-      
-      if (ind_var) { 
-        fit <- fit[[x]] 
-        sigma <- fit$sigma 
-        tau <- fit$tau 
-        
-        if (fit$range) { 
-          sigma <- sigma/prod(fit$tau) # OUF 
-        } else { sigma <- sigma/fit$tau[2] } # IOU 
-        
-        if (fit$mean == "stationary") { 
-          sigma <- eigen(sigma)$values 
-          if (fit$isotropic[["sigma"]] || sigma[1] == sigma[2]) { 
-            truth <- sqrt(sigma[1] * pi/2) 
-          } else { 
-            truth <- sqrt(2/pi) * sqrt(sigma[1]) * 
-              ellipke(1 - clamp(sigma[2]/sigma[1]))$e  
-          } 
-          
-        } else { 
-          if (is.null(tau[["velocity"]])) { 
-            tau_v <- extract_pars(fit, "velocity")[[1]] 
-            tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]] 
-          } else { 
-            tau_v <- tau[["velocity"]] 
-          } 
-          truth <- weighted_average_speed(tau_v, fit, seed[[1]]) 
-        } 
-        
-      } else { 
-        sigma <- sigma[[x]]$value[2] %#% sigma[[x]]$unit[2] 
-        tau_p <- tau_p[[x]]$value[2] %#% tau_p[[x]]$unit[2] 
-        tau_v <- tau_v[[x]]$value[2] %#% tau_v[[x]]$unit[2] 
-        
-        truth <- sqrt(sigma * pi/2) 
-        truth <- truth/sqrt(prod(tau_p, tau_v)) # error ~ 0.01 
-      } 
-      
-    }) # end of lapply (x) 
+    s <- sigma_i$value[2] %#% sigma_i$unit[2]
+    tp <- tau_p_i$value[2] %#% tau_p_i$unit[2]
+    tv <- tau_v_i$value[2] %#% tau_v_i$unit[2]
     
-    names(out) <- names(tau_p) 
-    return(out) 
+    lambda <- .eigen_from_scalar(s / (tp * tv), .covm_ratio(fit_i))
     
-  } else { 
-    
-    out <- lapply(seq_along(data), function(x) { 
-      nm <- names(data)[[x]] 
-      if (grouped) { 
-        group <- ifelse(nm %in% groups[["A"]], "A", "B") 
-      } else group <- "All" 
-      
-      if (ind_var) { 
-        fit <- emulate_seeded(fit[[group]], nm) 
-        sigma <- var.covm(fit$sigma, average = TRUE) 
-        
-        sigma <- fit$sigma 
-        tau <- fit$tau 
-        
-        if (fit$range) { 
-          sigma <- sigma/prod(fit$tau) # OUF 
-        } else { sigma <- sigma/fit$tau[2] } # IOU 
-        
-        if (fit$mean == "stationary") { 
-          sigma <- eigen(sigma)$values 
-          if (fit$isotropic[["sigma"]] || sigma[1] == sigma[2]) { 
-            truth <- sqrt(sigma[1] * pi/2) 
-          } else { 
-            truth <- sqrt(2/pi) * sqrt(sigma[1]) * 
-              ellipke(1 - clamp(sigma[2]/sigma[1]))$e  
-          } 
-          
-        } else { 
-          if (is.null(tau[["velocity"]])) { 
-            tau_v <- extract_pars(fit, "velocity")[[1]] 
-            tau_v <- tau_v$value[[2]] %#% tau_v$unit[[2]] 
-          } else { 
-            tau_v <- tau[["velocity"]] 
-          } 
-          truth <- weighted_average_speed(tau_v, fit, nm) 
-        } 
-        
-      } else { 
-        sigma <- sigma[[group]]$value[2] %#% sigma[[group]]$unit[2] 
-        tau_p <- tau_p[[group]]$value[2] %#% tau_p[[group]]$unit[2] 
-        tau_v <- tau_v[[group]]$value[2] %#% tau_v[[group]]$unit[2] 
-        
-        truth <- sqrt(sigma * pi/2) 
-        truth <- truth/sqrt(prod(tau_p, tau_v)) # error ~ 0.01 
-      } 
-      
-      return(truth) 
-      
-    }) # end of lapply (x) 
-    
-    names(out) <- names(data) 
-    return(out) 
-    
-  } # end of if (summarized) 
+    return(.gaussian_mean_speed(diag(lambda)))
+  }
   
-} # end of function, get_true_speed() 
+  .get_speed <- function(fit_i, sigma_i, tau_p_i, tau_v_i,
+                         seed_i = NULL) {
+    if (ind_var) {
+      speed_from_fit(fit_i, seed_i)
+    } else {
+      speed_from_pars(sigma_i, tau_p_i, tau_v_i, fit_i)
+    }
+  }
+  
+  if (summarized) {
+    
+    nms <- names(tau_p)
+    
+    out <- lapply(seq_along(nms), function(i) {
+      x <- nms[[i]]
+      
+      seed_i <- if (is.null(seed)) NULL else as.integer(seed[[i]])
+      
+      .get_speed(fit[[x]],
+                 sigma[[x]],
+                 tau_p[[x]],
+                 tau_v[[x]],
+                 seed_i)
+      
+    }) # end of lapply
+    
+    names(out) <- nms
+    return(out)
+    
+  } else {
+    
+    out <- lapply(seq_along(data), function(i) {
+      
+      nm <- names(data)[[i]]
+      
+      group <- if (grouped) {
+        if (nm %in% groups[["A"]]) "A" else "B"
+      } else "All"
+      
+      if (ind_var) {
+        
+        seed_i <- if (is.null(seed)) NULL else as.integer(seed[[i]])
+        fit_i <- simulate_seeded(fit[[group]], seed_i)
+        
+        .get_speed(fit_i, NULL, NULL, NULL, seed_i)
+        
+      } else {
+        
+        .get_speed(fit[[group]],
+                   sigma[[group]],
+                   tau_p[[group]],
+                   tau_v[[group]])
+      }
+      
+    }) # end of lapply
+    
+    names(out) <- names(data)
+    return(out)
+    
+  } # end of if (summarized)
+  
+} # end of function, get_true_speed()
 
 
 #' Calculate confidence intervals 
@@ -1139,177 +1089,171 @@ extract_outputs <- function(obj,
   return(out) 
 } 
 
-#' Simulate GPS battery life decay 
+
+#' Simulate GPS battery life decay
 #' 
-#' @description Simulate GPS battery life decay 
+#' @description Simulate GPS battery life decay
 #' 
-#' @param data data.frame. A dataset with frequencies. 
-#' @param b_max Numeric. Maximum duration (y) for the GPS device. 
-#' @param b_unit Character. Unit for the maximum duration (y). 
-#' @param cutoff Character. Cut-off for for minimum duration required. 
-#' @param dti_max Maximum sampling interval (or minimum frequency) for the maximum duration. 
-#' @keywords internal 
+#' @param data data.frame. A dataframe with frequencies
+#' @param b_max numeric. Maximum duration (y) for the GPS device
+#' @param b_unit character. Unit for the maximum duration (y)
+#' @param cutoff character. Cut-off for for minimum duration required
+#' @param dti_max character. Maximum sampling interval (or minimum
+#'   frequency) for the maximum duration
+#' @param method character. `"loglogistic"` (default) applies a
+#'   log-logistic model. `"power"` applies a power law
+#' @param k_dti numeric. Exponent of the power law
+#' @param anchor_adj numeric. Multiplicative correction at the anchor
 #' 
-#' @importFrom ctmm %#% 
-#' @importFrom dplyr %>% 
-#'  
-#' @noRd 
-simulate_gps <- function(data, 
-                         b_max, 
-                         b_unit, 
-                         cutoff, 
-                         dti_max, 
-                         seed = NULL, 
-                         set_seed = FALSE) { 
+#' @importFrom ctmm %#%
+#' @importFrom dplyr %>%
+#' 
+#' @noRd
+simulate_gps <- function(data,
+                         b_max,
+                         b_unit,
+                         cutoff,
+                         dti_max,
+                         method = c("loglogistic", "power"),
+                         k_dti = 0.686,
+                         anchor_adj = 1) {
   
-  stopifnot(!is.null(data)) 
-  stopifnot(is.numeric(b_max) || is.null(b_max)) 
-  stopifnot(is.numeric(cutoff) || is.null(cutoff)) 
-  stopifnot(is.character(b_unit) || is.null(b_unit)) 
-  stopifnot(is.character(dti_max) || is.null(dti_max)) 
-  if (b_max == 0) stop("Duration (b_max) cannot be 0.") 
-  if (b_max < 2 && b_unit == "days")  
-    stop("Duration (b_max) cannot be less than 2 days.") 
-  if (set_seed) set.seed(seed) 
+  method <- match.arg(method)
   
-  trace <- FALSE 
-  dti <- dti_notes <- dti_scale <- dti_yn <- frq_hrs <- NULL 
-  add_noise <- function(max) stats::runif(1, min = 0, max = max) 
+  stopifnot(!is.null(data))
+  if (is.null(b_max)) stop("Duration (b_max) is required.")
+  if (is.null(b_unit)) stop("Unit (b_unit) is required.")
+  if (is.null(cutoff)) stop("Cut-off (cutoff) is required.")
+  stopifnot(is.numeric(b_max))
+  stopifnot(is.numeric(cutoff))
+  stopifnot(is.character(b_unit))
+  stopifnot(is.character(dti_max) || is.null(dti_max))
   
-  # Initialize parameters: 
+  if (("days" %#% (b_max %#% b_unit)) < 2)
+    stop("Duration (b_max) cannot be less than 2 days.", call. = FALSE)
   
-  unit <- "days" 
-  params <- data.frame( 
-    id = ifelse(dti_max == "1 fix every day", TRUE, FALSE), 
-    b_max = round(unit %#% (b_max %#% b_unit), 1), 
-    x_min = data$frq_hrs[match(dti_max, data$dti_notes)], 
-    scale = 0) 
+  trace <- FALSE
   
-  params[["scale"]] <- dplyr::case_when( 
-    params[["b_max"]] < 31 ~ 1, 
-    params[["b_max"]] < 365 ~ params[["b_max"]] * 0.01, 
-    TRUE ~ params[["b_max"]] * 0.02) 
+  # Initialize parameters:
   
-  newdata <- data %>% 
-    dplyr::select(dti_notes, dti, frq_hrs) %>% 
-    dplyr::filter(frq_hrs >= params[["x_min"]]) 
+  unit <- "days"
+  params <- data.frame(
+    b_max = round(unit %#% (b_max %#% b_unit), 1),
+    x_min = data$frq_hrs[match(dti_max, data$dti_notes)],
+    dti_ref = data$dti[match(dti_max, data$dti_notes)])
   
-  # Initialize log-logistic function: 
+  if (is.na(params[["x_min"]]))
+    stop("`dti_max` does not match any entry in `data$dti_notes`.",
+         call. = FALSE)
   
-  init <- init0 <- c(-16.913, params[["b_max"]]) 
-  f <- update_f(x = newdata$frq_hrs, init) 
-  y <- f$y 
+  newdata <- data %>%
+    dplyr::select(dplyr::all_of(c("dti_notes", "dti", "frq_hrs"))) %>%
+    dplyr::filter(.data$frq_hrs >= params[["x_min"]])
   
-  err <- 100 - (max(y) * 100) / params[["b_max"]] 
+  if (nrow(newdata) == 0)
+    stop("No fix rates at or above `dti_max`.", call. = FALSE)
   
-  # Iterate until the maximum value is equal to b_max: 
-  
-  i <- 0 
-  max_attempts <- 150 
-  start_time <- Sys.time() 
-  threshold <- ifelse(params[["b_max"]] > 31, 0.01, 1) 
-  
-  params[["scale"]] <- dplyr::case_when( 
-    params[["b_max"]] < 31 ~ 1, 
-    params[["b_max"]] < 365 ~ params[["b_max"]] * 0.01, 
-    TRUE ~ params[["b_max"]] * 0.02) 
-  
-  while (abs(err) > threshold && i < max_attempts) { 
+  if (method == "power") {
     
-    # Update the log-logistic function: 
+    # Battery life follows a power law in the sampling interval,
+    # anchored on dti_max:
     
-    i <- i + 1 
-    f <- update_f(x = newdata$frq_hrs, init) 
-    y <- f$y 
+    newdata$dur_sec <- anchor_adj * (params[["b_max"]] %#% unit) *
+      (newdata$dti / params[["dti_ref"]])^k_dti
     
-    # Check error against threshold: 
+  } else {
     
-    err <- 100 - (max(y) * 100) / params[["b_max"]] 
-    if (trace) cat(paste0(i, ", Error: ", round(err, 2), "%\n")) 
-    if (abs(err) < threshold) break 
+    # Log-logistic model:
+    # solve for the offset that places max(y) at b_max
     
-    # prev_val <- ifelse(i == 1, 0, curr_val) 
-    # curr_val <- f$pars[["b_max"]] 
+    start_time <- Sys.time()
+    threshold <- ifelse(params[["b_max"]] > 31, 0.01, 1)
     
-    # Adjust initial parameters: 
+    .max_y <- function(a, b)
+      max(update_f(x = newdata$frq_hrs, c(a, b))$y)
     
-    if (params[["id"]] && # Adjust for small values when 1/day 
-        params[["b_max"]] <= 24 && i == 1) init[2] <- init[2] + 1 
-    
-    if (abs(err) > 5) mult <- 0.2 
-    else if (abs(err) >= 0.1) mult <- 0.1 
-    else mult <- 0.01 
-    
-    init[1] <- ifelse( 
-      sign(err) == 1, 
-      init[1] - max(y) * mult + add_noise(0.01), 
-      init[1] + max(y) * mult + add_noise(0.01) 
-    ) 
-    
-    # Update the log-logistic function: 
-    
-    i <- i + 1 
-    f <- update_f(x = newdata$frq_hrs, init) 
-    y <- f$y 
-    
-    err <- 100 - (max(y) * 100) / params[["b_max"]] 
-    if (trace) cat(paste0(i, ", Error: ", round(err, 2), "%\n")) 
-    if (abs(err) < threshold) break 
-    
-    if (!params[["id"]]) { 
+    .peak <- function(b) {
+      lo <- -6.756 * b
+      hi <- 6.756 * b + 1000
+      phi <- (sqrt(5) - 1) / 2
       
-      mult <- dplyr::case_when( 
-        abs(err) <= .5 ~ abs(err) * .5, 
-        abs(err) <= 1 ~ abs(err), 
-        TRUE ~ abs(err)) 
-      mult <- mult + add_noise(abs(err) * .1) 
-      if (params[["b_max"]] < 31) mult <- mult * .1 
+      for (k in seq_len(60)) {
+        m1 <- hi - phi * (hi - lo)
+        m2 <- lo + phi * (hi - lo)
+        if (.max_y(m1, b) < .max_y(m2, b)) lo <- m1 else hi <- m2
+      }
       
-      init[2] <- ifelse(err > threshold, 
-                        init[2] + params[["scale"]] * mult, 
-                        init[2] - params[["scale"]] * mult) 
-      
-      f <- update_f(newdata$frq_hrs, init) 
-      y <- f$y 
-      
-    } # !params[["id"]] 
-  } # end of while 
-  
-  if (trace) { 
-    message("number of attempts: ", i) 
-    cat("max(b):", round(max(y), 1), 
-        "\n", "b_max:", round(params[["b_max"]], 1)) 
-    cat(", error:", round(abs(err), 2), "%", "\n") 
+      a <- (lo + hi) / 2
+      return(list(a = a, value = .max_y(a, b)))
+    }
     
-    message("Elapsed time since start:") 
-    elapsed <- Sys.time() - start_time 
-    cat(format(elapsed), "\n") 
-  } 
+    b_par <- params[["b_max"]]
+    pk <- .peak(b_par)
+    n_grow <- 0
+    
+    while (pk$value < params[["b_max"]] && n_grow < 100) {
+      b_par <- b_par * 1.1
+      pk <- .peak(b_par)
+      n_grow <- n_grow + 1
+    }
+    
+    lo <- pk$a
+    hi <- pk$a + max(b_par, 1)
+    k <- 0
+    
+    while (.max_y(hi, b_par) > params[["b_max"]] && k < 200) {
+      hi <- hi + max(b_par, 1) * 2^k
+      k <- k + 1
+    }
+    
+    for (k in seq_len(100)) {
+      mid <- (lo + hi) / 2
+      if (.max_y(mid, b_par) > params[["b_max"]])
+        lo <- mid else hi <- mid
+    }
+    
+    init <- c((lo + hi) / 2, b_par)
+    y <- update_f(x = newdata$frq_hrs, init)$y
+    err <- 100 - (max(y) * 100) / params[["b_max"]]
+    
+    if (trace) {
+      cat("max(b):", round(max(y), 1),
+          "\n", "b_max:", round(params[["b_max"]], 1))
+      cat(", error:", round(abs(err), 2), "%", "\n")
+      
+      message("Elapsed time since start:")
+      elapsed <- Sys.time() - start_time
+      cat(format(elapsed), "\n")
+    }
+    
+    if (abs(err) > threshold) {
+      msg_log(
+        style = "error",
+        message = paste0("Solver did not converge (error: ",
+                         round(abs(err), 2), "%)."))
+    }
+    
+    newdata$dur_sec <- y %#% unit
+  }
   
-  if (abs(err) > threshold) { 
-    msg_log( 
-      style = "error",  
-      message = "Something went wrong!") 
-  } 
+  newdata$dur_mth <- "months" %#% newdata$dur_sec
   
-  newdata$dur_sec <- y %#% unit 
-  newdata$dur_mth <- "months" %#% newdata$dur_sec 
+  if (max(newdata$dur_sec) > cutoff) {
+    newdata$cutoff <- as.factor(dplyr::case_when(
+      newdata$dur_sec < cutoff ~ "Y",
+      newdata$dur_sec >= cutoff ~ "N"))
+  } else {
+    newdata$cutoff <- as.factor(rep("Y", nrow(newdata)))
+  }
   
-  if (max(newdata$dur_sec) > cutoff) { 
-    newdata$cutoff <- as.factor(dplyr::case_when( 
-      newdata$dur_sec < cutoff ~ "Y", 
-      newdata$dur_sec >= cutoff ~ "N")) 
-  } else { newdata$cutoff <- "Y" } 
+  newdata$id <- seq_len(nrow(newdata))
+  newdata <- dplyr::left_join(
+    newdata,
+    data %>% dplyr::select(.data$dti, .data$dti_scale, .data$dti_yn),
+    by = "dti")
   
-  newdata$id <- seq_len(nrow(newdata)) 
-  newdata <- dplyr::left_join( 
-    newdata, 
-    data %>% dplyr::select(.data$dti, .data$dti_scale, .data$dti_yn), 
-    by = "dti") 
-  
-  if (set_seed) set.seed(NULL) 
-  return(newdata) 
-} 
+  return(newdata)
+}
 
 
 #' Calculate initial parameters 

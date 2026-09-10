@@ -8,10 +8,20 @@ quiet <- function(x) {
   invisible(force(x))
 }
 
+#' Clamp values to a closed interval
+#' 
+#' @param num numeric vector
+#' @param min,max scalar bounds of the interval
+#' 
+#' @noRd
+.clamp <- function(num, min = 0, max = 1) {
+  pmin(pmax(num, min), max)
+}
+
 #' Negate %in%
 #' 
 #' @noRd
-`%!in%` <- Negate(`%in%`) 
+`%!in%` <- Negate(`%in%`)
 
 #' Null coalescing
 #' 
@@ -54,6 +64,25 @@ quiet <- function(x) {
   }
 }
 
+#' Check if a fitted model has a velocity process
+#' 
+#' @param fit a fitted `ctmm` object
+#' 
+#' @noRd
+.has_velocity <- function(fit) {
+  
+  if (isTRUE(fit$omega > 0)) return(TRUE)
+  
+  tau <- fit$tau
+  tv <- if ("velocity" %in% names(tau)) {
+    tau[["velocity"]]
+  } else if (length(tau) >= 2L) {
+    tau[[2]]
+  } else NULL
+  
+  return(!is.null(tv) && is.finite(tv) && tv > 0)
+}
+
 #' Assign color based on flag
 #' 
 #' @noRd
@@ -71,12 +100,17 @@ quiet <- function(x) {
   
   if (val < error_threshold) {
     crayon::cyan(label)
-  # } else if (val < (error_threshold + 0.05)) {
-  #  crayon::yellow(label)
+    # } else if (val < (error_threshold + 0.05)) {
+    #  crayon::yellow(label)
   } else {
     crayon::red(label)
   }
 }
+
+#' Minimum effective sample size
+#' 
+#' @noRd
+.min_N <- 5
 
 #' Unicode names
 #' 
@@ -105,6 +139,35 @@ msg_main <- crayon::make_style("dimgray")
 msg_success <- crayon::make_style("#009da0")
 msg_danger <- crayon::make_style("#dd4b39")
 msg_warning <- crayon::make_style("#ffbf00")
+
+#' Banner for low effective sample sizes
+#'
+#' @description Renders a persistent note stating that downstream error
+#'   estimates are conditional on parameters fitted at a low effective
+#'   sample size. Returns NULL when the flag is not set.
+#' @noRd
+low_N_banner <- function(rv, target = c("area", "speed")) {
+  
+  target <- match.arg(target)
+  N <- rv$low_N[[target]]
+  if (is.null(N) || !is.finite(N) || N >= .min_N) return(NULL)
+  
+  pal <- load_pal()
+  nm <- if (target == "area") "N[area]" else "N[speed]"
+  
+  span(
+    class = "notes-block",
+    fontawesome::fa("triangle-exclamation", fill = pal$dgr),
+    span("Warning:", class = "cl-dgr"),
+    "The mean", span(nm, class = "cl-dgr"),
+    "from the", rv$data_type, "dataset is",
+    wrap_none(span(round(N, 1), class = "cl-dgr"), "."),
+    "Movement parameters estimated at these effective sample sizes may be",
+    "unreliable, and every error estimate shown",
+    "in the preceding or following tabs are conditional",
+    "on them being correct. Treat these outputs with",
+    wrap_none(span("caution", class = "cl-dgr"), "."))
+}
 
 #' Parameter blocks
 #'
@@ -547,6 +610,46 @@ reset_reactiveValues <- function(rv) {
   if (!is.null(isolate(rv$sd))) rv$sd <- NULL
   if (!is.null(isolate(rv$n_sims))) rv$n_sims <- NULL
   
+  rv$low_N <- list(area = NA, speed = NA)
+  rv$low_N_ack <- NULL
+}
+
+#' Reset analysis outputs
+#' 
+#' @keywords internal
+#' 
+#' @noRd
+reset_outputs <- function(rv, which = c("hr", "ctsd")) {
+  
+  which <- match.arg(which, several.ok = TRUE)
+  
+  if ("hr" %in% which) {
+    rv$hr_completed <- FALSE
+    rv$hrEst <- rv$hrErr <- NULL
+    rv$hrEst_new <- rv$hrErr_new <- NULL
+    rv$hr_cri <- rv$hr_cri_new <- NULL
+    rv$hr_coi <- rv$hr_coi_new <- NULL
+    rv$akdeList <- NULL
+    rv$hr <- NULL
+    rv$hr_nsim <- 1
+    if (!is.null(rv$truth)) rv$truth[["hr"]] <- NULL
+  }
+  
+  if ("ctsd" %in% which) {
+    rv$sd_completed <- FALSE
+    rv$speedEst <- rv$speedErr <- NULL
+    rv$speedEst_new <- rv$speedErr_new <- NULL
+    rv$distEst <- rv$distErr <- NULL
+    rv$distEst_new <- rv$distErr_new <- NULL
+    rv$sd_cri <- rv$sd_cri_new <- NULL
+    rv$sd_coi <- rv$sd_coi_new <- NULL
+    rv$ctsdList <- NULL
+    rv$sd <- NULL
+    rv$sd_nsim <- 1
+    if (!is.null(rv$truth)) rv$truth[["ctsd"]] <- NULL
+  }
+  
+  return(invisible(rv))
 }
 
 #' Add help modal
@@ -2133,7 +2236,7 @@ par.lapply <- function(obj,
         "Parallel error, try restarting R session.\n"))
       # cat(e, "\n")
       print(e)
-
+      
     }) # end of tryCatch
     
   } else {
@@ -2662,3 +2765,275 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   return(length(delta_vec) - n + 1L)
 }
 
+
+#' Coerce a ctmm covariance to a numeric matrix
+#' 
+#' @param sigma a `covm` object or 2x2 matrix
+#' 
+#' @noRd
+.as_covm_matrix <- function(sigma) {
+  
+  x <- as.numeric(sigma)
+  
+  if (length(x) != 4L)
+    stop("Expected a 2x2 covariance, got ", 
+         length(x), " element(s).", call. = FALSE)
+  
+  return(matrix(x, nrow = 2, ncol = 2))
+}
+
+#' Stationary velocity covariance
+#' 
+#' @param fit a fitted `ctmm` object
+#' @noRd
+.velocity_covm <- function(fit) {
+  
+  if (!.has_velocity(fit))
+    stop("Model has no velocity process (BM/OU): mean speed is ",
+         "undefined.", call. = FALSE)
+  
+  if (isTRUE(fit$omega > 0))
+    stop("Oscillatory (OU-Omega) models are not supported by the ",
+         "closed-form velocity covariance.", call. = FALSE)
+  
+  sigma <- .as_covm_matrix(fit$sigma)
+  tau <- fit$tau
+  
+  tv <- if ("velocity" %in% names(tau)) {
+    tau[["velocity"]]
+  } else if (length(tau) >= 2L) {
+    tau[[2]]
+  } else NULL
+  
+  if (!fit$range) return(sigma / tv)
+  
+  tp <- if ("position" %in% names(tau)) {
+    tau[["position"]]
+  } else tau[[1]]
+  
+  if (is.null(tp) || !is.finite(tp) || tp <= 0)
+    stop("Range-resident model with an invalid position timescale: ",
+         tp, ".", call. = FALSE)
+  
+  return(sigma / (tp * tv))
+}
+
+#' Eigenvalue ratio of a model's covariance
+#' 
+#' @param fit a fitted `ctmm` object, or NULL
+#' @noRd
+.covm_ratio <- function(fit) {
+  
+  p <- tryCatch(fit$sigma@par, error = function(e) NULL)
+  
+  if (is.null(p)) {
+    lambda <- eigen(.as_covm_matrix(fit$sigma), symmetric = TRUE,
+                    only.values = TRUE)$values
+    if (!is.finite(lambda[1]) || lambda[1] <= 0)
+      stop("Covariance has a non-positive major axis; cannot form ",
+           "an eigenvalue ratio.", call. = FALSE)
+    return(.clamp(lambda[2] / lambda[1], min = 0, max = 1))
+  }
+  
+  if (!("minor" %in% names(p))) return(1)
+  
+  M <- p[["major"]]
+  m <- p[["minor"]]
+  
+  if (!is.finite(M) || M <= 0)
+    stop("Covariance has a non-positive major axis (", M,
+         "); cannot form an eigenvalue ratio.", call. = FALSE)
+  
+  return(.clamp(m / M, min = 0, max = 1))
+}
+
+#' Reconstruct two variances from their geometric mean and ratio
+#' 
+#' @param sigma_g scalar geometric mean of the two variances
+#' @param ratio eigenvalue ratio lambda2/lambda1 in (0, 1)
+#' 
+#' @noRd
+.eigen_from_scalar <- function(sigma_g, ratio = 1) {
+  
+  if (!is.finite(ratio) || ratio <= 0)
+    stop("Degenerate covariance: cannot reconstruct axes from a ",
+         "geometric mean when one axis has zero variance.",
+         call. = FALSE)
+  
+  ratio <- .clamp(ratio, min = .Machine$double.eps, max = 1)
+  lambda1 <- sigma_g / sqrt(ratio)
+  
+  return(c(lambda1, ratio * lambda1))
+}
+
+#' Mean speed of a stationary bivariate Gaussian velocity
+#' 
+#' @param sigma_v 2x2 velocity covariance matrix
+#' 
+#' @noRd
+.gaussian_mean_speed <- function(sigma_v) {
+  
+  lambda <- eigen(sigma_v, symmetric = TRUE,
+                  only.values = TRUE)$values
+  
+  lambda <- .clamp(lambda, min = 0, max = Inf)
+  if (lambda[1] == 0) return(0)
+  
+  ratio <- .clamp(lambda[2] / lambda[1], min = 0, max = 1)
+  
+  return(sqrt(2/pi) * sqrt(lambda[1]) * ellipke(1 - ratio)$e)
+}
+
+#' Weighted average speed by simulation (approximate only)
+#' 
+#' @param tau_v velocity autocorrelation timescale, in seconds
+#' @param fit a fitted `ctmm` object
+#' @param seed integer, simulation seed
+#' @param err target relative standard error of the estimate
+#' @param pts_per_tau grid points per velocity correlation time
+#' 
+#' @noRd
+.weighted_average_speed <- function(tau_v, fit, seed,  
+                                    err = 0.01, pts_per_tau = 10) { 
+  
+  t_max <- tau_v / err^2
+  
+  dt <- tau_v / pts_per_tau
+  t <- seq(0, t_max, by = dt)
+  
+  dat <- ctmm::simulate(fit, t = t, seed = seed, precompute = FALSE)
+  v <- sqrt(dat$vx^2 + dat$vy^2)
+  
+  gaps <- diff(dat$t)
+  w <- c(0, gaps) + c(gaps, 0)
+  
+  return(sum(w * v) / sum(w))
+} 
+
+#' Uncertainty in a derived quantity from a covariance matrix
+#' 
+#' @noRd
+.par_interval <- function(fit, V, est, w, level = 0.95) {
+  
+  if (is.null(V) || is.null(rownames(V)) ||
+      !is.finite(est) || est <= 0) return(NULL)
+  
+  p <- tryCatch(ctmm:::get.parameters(fit, rownames(V)),
+                error = function(e) NULL)
+  if (is.null(p)) return(NULL)
+  p <- stats::setNames(as.numeric(p), rownames(V))
+  
+  if (!("minor" %in% names(p)) && ("minor" %in% names(w))) {
+    w[["major"]] <- w[["major"]] + w[["minor"]]
+    w <- w[names(w) != "minor"]
+  }
+  
+  nm <- names(w)
+  if (!all(nm %in% rownames(V))) return(NULL)
+  if (any(!is.finite(p[nm]) | p[nm] <= 0)) return(NULL)
+  
+  S <- V[nm, nm, drop = FALSE] / outer(p[nm], p[nm])
+  a <- unname(w[nm])
+  lv <- as.numeric(t(a) %*% S %*% a)
+  
+  if (!is.finite(lv)) return(NULL)
+  lv <- max(lv, 0)
+  
+  sd_log <- sqrt(lv)
+  z <- stats::qnorm(1 - (1 - level) / 2)
+  
+  return(c(sd_log = sd_log,
+           lci = est * exp(-z * sd_log),
+           est = est,
+           uci = est * exp(+z * sd_log),
+           fold = exp(z * sd_log)))
+}
+
+#' Gradient and SI unit for a target quantity
+#' 
+#' @noRd
+.target_w <- function(target = c("hr", "ctsd")) {
+  
+  target <- match.arg(target)
+  
+  if (target == "hr")
+    return(list(w = c(major = 1/2, minor = 1/2),
+                si_unit = "m^2"))
+  
+  if (target == "ctsd")
+    return(list(w = c(major = 1/4,
+                      minor = 1/4,
+                      `tau position` = -1/2,
+                      `tau velocity` = -1/2),
+                si_unit = "meters/second"))
+}
+
+#' Confidence interval for a population mean quantity
+#' 
+#' @noRd
+.get_cov <- function(fit, est, target = "hr", level = 0.95) {
+  # sampling covariance of the estimated mean:
+  # given the source dataset, where is the true population mean?
+  # (shrinks toward zero as more individuals are added)
+  spec <- .target_w(target)
+  .par_interval(fit, fit$COV, est, spec$w, level = level)
+}
+
+#' Prediction interval for an individual's quantity
+#' 
+#' @noRd
+.get_pov <- function(fit, est, target = "hr", level = 0.95) {
+  # population variance across individuals:
+  # where would a newly tagged animal fall?
+  # (converges to the true population variance rather than to zero)
+  spec <- .target_w(target)
+  .par_interval(fit, fit$POV, est, spec$w, level = level)
+}
+
+#' Bound the population variance
+#' 
+#' @noRd
+pov_area_bounds <- function(fits, levels = c(0.90, 0.95)) {
+  
+  per <- vapply(fits, function(f) {
+    s <- tryCatch(summary(f, units = FALSE)$CI,
+                  error = function(e) NULL)
+    if (is.null(s)) return(c(est = NA_real_, sd = NA_real_))
+    
+    i <- grep("^area", rownames(s))[1]
+    if (is.na(i)) return(c(est = NA_real_, sd = NA_real_))
+    
+    c(est = unname(s[i, "est"]),
+      sd = unname(asinh((s[i, "high"] - s[i, "low"]) /
+                          s[i, "est"] / 2) / 1.96))
+  }, numeric(2))
+  
+  ok <- is.finite(per["est", ]) & is.finite(per["sd", ]) &
+    per["est", ] > 0
+  per <- per[, ok, drop = FALSE]
+  n <- ncol(per)
+  if (n < 3) return(NULL)
+  
+  var_total <- stats::var(log(per["est", ]))
+  var_within <- mean(per["sd", ]^2)
+  
+  v <- c(0, vapply(levels, function(q) {
+    max((n - 1) * var_total / stats::qchisq(1 - q, n - 1) -
+          var_within, 0)
+  }, numeric(1)))
+  
+  out <- data.frame(
+    quantity = c("point estimate",
+                 paste0(100 * levels, "% upper bound")),
+    var_log_area = v,
+    sd_log_area = sqrt(v),
+    individuals_within = exp(1.96 * sqrt(v)),
+    stringsAsFactors = FALSE)
+  
+  attr(out, "n_individuals") <- n
+  attr(out, "observed_sd") <- sqrt(var_total)
+  attr(out, "within_sd") <- sqrt(var_within)
+  attr(out, "boundary") <- var_total <= var_within
+  
+  return(out)
+}
