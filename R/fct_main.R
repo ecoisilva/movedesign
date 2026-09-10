@@ -247,27 +247,40 @@ md_simulate <- function(n_individuals = NULL,
     }
     
     if (!grouped) {
-      .stop_if(!is.list(x),
-               paste0(name,
-                      " must be a list when grouped = FALSE"))
-      .stop_if(!all(c("value", "unit") %in% names(x)),
-               paste0(name,
-                      " must contain 'value' and 'unit'"))
+      .stop_if(
+        !all(c("value", "unit") %in% names(x)),
+        paste0(name,
+               " must contain 'value' and 'unit'"))
+      .stop_if(
+        length(x$value) != 1L || length(x$unit) != 1L,
+        paste0(name,
+               " must contain a single 'value' and 'unit'"))
       
       return(list(All = .make_df(x$value[[1]], x$unit[[1]])))
     }
     
-    .stop_if(!is.list(x) || is.null(names(x)),
-             paste0(name, 
-                    " must be a named list when grouped = TRUE"))
+    .stop_if(
+      !is.list(x) || is.null(names(x)),
+      paste0(name, 
+             " must be a named list when grouped = TRUE"))
+    .stop_if(
+      !identical(sort(names(x)), c("A", "B")),
+      paste0(name, 
+             " must be named 'A' and 'B' when grouped = TRUE"))
     
     out <- lapply(names(x), function(g) {
       xi <- x[[g]]
-      .stop_if(!is.list(xi),
-               paste0(name, "[[", g, "]] must be a list"))
-      .stop_if(!all(c("value", "unit") %in% names(xi)),
-               paste0(name, "[[", g,
-                      "]] must contain 'value' and 'unit'"))
+      .stop_if(
+        !is.list(xi),
+        paste0(name, "[[", g, "]] must be a list"))
+      .stop_if(
+        !all(c("value", "unit") %in% names(xi)),
+        paste0(name, "[[", g,
+               "]] must contain 'value' and 'unit'"))
+      .stop_if(
+        length(xi$value) != 1L || length(xi$unit) != 1L,
+        paste0(name, "[[", g,
+               "]] must contain a single 'value' and 'unit'"))
       
       .make_df(xi$value[[1]], xi$unit[[1]])
     })
@@ -382,7 +395,7 @@ md_simulate <- function(n_individuals = NULL,
     
     dat <- pseudonymize(dat)
     dat$index <- seq_len(nrow(dat))
-    dat$id <- as.character(seed0)
+    dat$id <- as.character(tmp_seed)
     dat$group <- gr
     data[[gr]] <- dat
     
@@ -4402,6 +4415,13 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
           ' ', paste0(
             "Meeting it may require very long tracking durations."))
       
+      if (!interactive()) {
+        warning("Long tracking durations may be required. ",
+                "Proceeding without confirmation ",
+                "(non-interactive session).", call. = FALSE)
+        return(invisible(TRUE))
+      }
+      
       # Ask user whether to proceed:
       proceed <- readline(
         prompt = "Do you wish to proceed? (y/n): ")
@@ -4411,13 +4431,15 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
       }
       
       if (tolower(proceed) == "n") stop("Execution stopped by user.")
+      
     }
   }
   
   total_years <- "years" %#% (N1 * taup)
   
   proceed <- TRUE
-  if ("hr" %in% obj$set_target) .warn(total_years, error_label)
+  if ("hr" %in% obj$set_target)
+    proceed <- .warn(total_years, error_label)
   
   return(list(proceed = proceed,
               obj = obj,
@@ -4432,7 +4454,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
               ncores = ncores,
               plot = plot,
               verbose = verbose,
-              parallel = obj$parallel,
+              parallel = parallel,
               trace = trace))
 }
 
@@ -4531,7 +4553,7 @@ md_configure <- function(data, models = NULL, parallel = FALSE) {
     
     obj$n_individuals <- ifelse(obj$grouped, m * 2, m)
     
-    if (is.null(.seeds))
+    if (is.null(seeds))
       return(md_run(obj, trace = FALSE))
     
     n_per_rep <- if (has_groups) m * 2 else m

@@ -888,30 +888,28 @@ theme_movedesign <- function(ft_size = 13,
 
 
 #' Plot home range
-#'
+#' 
 #' @description Plotting home range output from ctmm
-#' @keywords internal
-#'
+#' 
 #' @noRd
 plotting_hr <- function(input1,
                         input2 = NULL,
                         show_both = FALSE,
-                        truth,
-                        show_truth,
+                        truth = NULL,
+                        show_truth = FALSE,
                         show_locations,
                         contours,
                         color,
                         extent,
                         font_available = TRUE) {
   
-  id <- NULL
   if (!is.list(input1)) stop("Input is not a list.")
   data <- data1 <- input1[["data"]]
   to_plot <- "initial"
   
   if (!is.null(input2)) {
     if (!is.list(input2)) stop("Input is not a list.")
-    data <- data2 <- input2[["data"]]
+    data <- input2[["data"]]
     to_plot <- "modified"
   }
   
@@ -930,24 +928,42 @@ plotting_hr <- function(input1,
   show_col <- ifelse(show_both, "#00484a", "white")
   show_alpha <- ifelse(show_both, 0.3, 0)
   
-  extent[1,"x"] <- min(extent[1,"x"], min(truth$x), min(data$x))
-  extent[2,"x"] <- max(extent[2,"x"], max(truth$x), max(data$x))
-  extent[1,"y"] <- min(extent[1,"y"], min(truth$y), min(data$y))
-  extent[2,"y"] <- max(extent[2,"y"], max(truth$y), max(data$y))
+  has_truth <- !is.null(truth) &&
+    is.data.frame(truth) &&
+    nrow(truth) > 0 &&
+    all(c("x", "y") %in% names(truth)) &&
+    any(is.finite(truth$x) & is.finite(truth$y))
   
-  extent[,"x"] <- extent[,"x"] + 
-    diff(range(extent[,"x"])) *
-    c(-.01, .01)
-  extent[,"y"] <- extent[,"y"] + 
-    diff(range(extent[,"y"])) *
-    c(-.01, .01)
+  if (has_truth) {
+    truth <- truth[is.finite(truth$x) & is.finite(truth$y), ]
+    if (!("id" %in% names(truth))) truth$id <- 1L
+    
+    truth <- do.call(rbind, lapply(
+      split(truth, truth$id), function(z) {
+        rbind(z, z[1, , drop = FALSE])
+      }))
+    
+  } else {
+    show_truth <- FALSE
+  }
+  
+  x_rng <- range(c(extent[, "x"], data$x), na.rm = TRUE)
+  y_rng <- range(c(extent[, "y"], data$y), na.rm = TRUE)
+  
+  if (has_truth) {
+    x_rng <- range(c(x_rng, truth$x), na.rm = TRUE)
+    y_rng <- range(c(y_rng, truth$y), na.rm = TRUE)
+  }
+  
+  extent[, "x"] <- x_rng + diff(x_rng) * c(-.01, .01)
+  extent[, "y"] <- y_rng + diff(y_rng) * c(-.01, .01)
   
   ud <- ctmm::as.sf(ud, level = .95, level.UD = .95)
   
   if ("uci" %in% contours) {
     p1 <- ggplot2::geom_sf(
       data = ud[3, ],
-      fill = color, color = color, 
+      fill = color, color = color,
       linetype = "dotted", alpha = .2)
   }
   
@@ -963,7 +979,7 @@ plotting_hr <- function(input1,
   if ("lci" %in% contours) {
     p3 <- ggplot2::geom_sf(
       data = ud[1, ],
-      fill = color, color = pal[2], 
+      fill = color, color = pal[2],
       linetype = "dotted", alpha = .2)
   }
   
@@ -975,7 +991,8 @@ plotting_hr <- function(input1,
         mapping = ggplot2::aes(x = .data$x,
                                y = .data$y,
                                group = .data$id),
-        fill = "#353c42", alpha = .2)
+        fill = "#353c42", color = NA,
+        linewidth = 0.3, alpha = .2)
     } +
     
     { if (show_locations)
@@ -986,7 +1003,8 @@ plotting_hr <- function(input1,
     } +
     { if (show_locations)
       ggplot2::geom_point(
-        data = data,
+        data = if (nrow(data) > 5000)
+          data[seq(1, nrow(data), length.out = 5000), ] else data,
         mapping = ggplot2::aes(x = .data$x, y = .data$y),
         color = pal[2], size = 1, alpha = .3)
     } +
@@ -995,24 +1013,19 @@ plotting_hr <- function(input1,
     p2 +
     { if ("lci" %in% contours) p3 } +
     
-    { if (show_both)
+    { if (show_both && !is.null(input2))
       ggplot2::geom_point(
         data = data1,
         mapping = ggplot2::aes(x = .data$x, y = .data$y),
-        color = show_col, alpha = show_alpha, 
+        color = show_col, alpha = show_alpha,
         size = 1)
     } +
     
-    ggplot2::scale_x_continuous(
-      labels = scales::comma,
-      limits = c(
-        extent$x[1] - abs(diff(range(extent$x))) * .01,
-        extent$x[2] + abs(diff(range(extent$x))) * .01)) +
-    ggplot2::scale_y_continuous(
-      labels = scales::comma,
-      limits = c(
-        extent$y[1] - abs(diff(range(extent$y))) * .01,
-        extent$y[2] + abs(diff(range(extent$y))) * .01)) +
+    ggplot2::scale_x_continuous(labels = scales::comma) +
+    ggplot2::scale_y_continuous(labels = scales::comma) +
+    ggplot2::coord_sf(xlim = extent[, "x"],
+                      ylim = extent[, "y"],
+                      expand = FALSE) +
     
     ggplot2::labs(x = "X coordinate", y = "Y coordinate") +
     theme_movedesign(font_available = font_available) +
@@ -1301,23 +1314,38 @@ loading_modal <- function(x,
                       "text-align: center;",
                       "margin-top: -40px;")
     
-    mean_time <- fix_unit(exp_time$mean * n, exp_time$unit,
-                          convert = TRUE)
-    max_time <- fix_unit(exp_time$max * n, exp_time$unit, 
-                         convert = TRUE)
+    is_unknown <- identical(
+      as.character(exp_time$range), "unknown") ||
+      !is.finite(exp_time$max) ||
+      exp_time$max <= 0
     
-    tmp <- max_time$unit %#% (
-      ifelse(exp_time$min == 0, .001, exp_time$min) * n) %#%
-      exp_time$unit
-    min_time <- fix_unit(ifelse(tmp <= 1, 2, tmp),
-                         max_time$unit)
-    
-    out_txt_range <- paste0(min_time$value, 
-                            "\u2013", max_time$value, 
-                            " ", max_time$unit)
+    if (is_unknown) {
+      mean_time <- max_time <- min_time <- NULL
+      out_txt_range <- "unknown"
+      
+    } else {
+      mean_time <- fix_unit(exp_time$mean * n, exp_time$unit,
+                            convert = TRUE)
+      max_time <- fix_unit(exp_time$max * n, exp_time$unit, 
+                           convert = TRUE)
+      
+      floor_min <- max_time$unit %#% (2 %#% "minutes")
+      tmp <- max_time$unit %#% (
+        ifelse(exp_time$min == 0, .001, exp_time$min) * n) %#%
+        exp_time$unit
+      min_time <- fix_unit(
+        ifelse(tmp <= floor_min, floor_min, tmp),
+        max_time$unit)
+      
+      out_txt_range <- if (min_time$value >= max_time$value)
+        paste(max_time$value, max_time$unit) else
+          paste0(min_time$value, 
+                 "\u2013", max_time$value, 
+                 " ", max_time$unit)
+    }
     
     out_txt_parallel <- span("")
-    if (type == "fit") {
+    if (type == "fit" && !is_unknown) {
       if (parallel) {
         n_cores <- parallel::detectCores(logical = FALSE)/2
         tmp_time <- fix_unit(mean_time$value / n_cores,
@@ -1387,31 +1415,25 @@ loading_modal <- function(x,
 #'
 #' @noRd
 #'
-wrap_none <- function(text, ...,
+wrap_none <- function(text, 
+                      ...,
                       end = "",
                       color = NULL,
                       css = NULL) {
   
-  out <- shiny::HTML(paste0(text, ...))
+  inner <- paste0(text, ...)
   
-  if (!is.null(css)) {
-    out <- shiny::HTML(
-      paste0(
-        shiny::span(
-          paste0(text, ...), class = css), end))
-  }
+  if (is.null(css) && is.null(color))
+    return(shiny::HTML(paste0(inner, end)))
   
-  if (!is.null(color)) {
-    
-    out <- shiny::HTML(paste0(
-      shiny::span(
-        shiny::HTML(paste0(text, ...)),
-        style = paste0("color:", color, "!important;")),
-      end))
-  }
+  style <- if (is.null(color)) NULL else
+    paste0("color:", color, " !important;")
   
-  return(out)
+  out <- shiny::span(shiny::HTML(inner),
+                     class = css,
+                     style = style)
   
+  return(shiny::HTML(paste0(out, end)))
 }
 
 #' format_num
@@ -1840,9 +1862,8 @@ round_any <- function(x, accuracy, f = round) {
   f(x/accuracy) * accuracy
 }
 
-# ctmm and ctmmweb functions: ---------------------------------------------
 
-#' Give false origin, orientation, dispatch epoch from ctmm.
+#' Give false origin, orientation, dispatch epoch from ctmm
 #'
 #' @description Give false origin, orientation, dispatch epoch
 #' @keywords internal
@@ -1892,7 +1913,7 @@ pseudonymize <- function(data,
 }
 
 
-#' Extract location variance from ctmm.
+#' Extract location variance from ctmm
 #'
 #' @description Extract total variance or average variance
 #' @keywords internal
@@ -2972,9 +2993,6 @@ ellipke <- function(m, tol = .Machine$double.eps) {
 #' 
 #' @noRd
 .get_cov <- function(fit, est, target = "hr", level = 0.95) {
-  # sampling covariance of the estimated mean:
-  # given the source dataset, where is the true population mean?
-  # (shrinks toward zero as more individuals are added)
   spec <- .target_w(target)
   .par_interval(fit, fit$COV, est, spec$w, level = level)
 }
@@ -2983,9 +3001,6 @@ ellipke <- function(m, tol = .Machine$double.eps) {
 #' 
 #' @noRd
 .get_pov <- function(fit, est, target = "hr", level = 0.95) {
-  # population variance across individuals:
-  # where would a newly tagged animal fall?
-  # (converges to the true population variance rather than to zero)
   spec <- .target_w(target)
   .par_interval(fit, fit$POV, est, spec$w, level = level)
 }

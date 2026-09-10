@@ -72,29 +72,24 @@
   }
   
   if ("ctsd" %in% set_target) {
-    datList[[1]][["ctsd"]] <- rv$ctsdList[
-      !.check_for_inf_speed(rv$ctsdList)]
+    tmp_ctsd <- rv$ctsdList[!.check_for_inf_speed(rv$ctsdList)]
     
-    danger_msg <- "Outputs are empty. Run analyses first."
-    if (is.null(datList[[1]][["ctsd"]])) stop(danger_msg)
-    else if (length(datList[[1]][["ctsd"]]) == 0) stop(danger_msg)
+    if (length(tmp_ctsd) > 0)
+      tmp_ctsd[vapply(tmp_ctsd, is.null, logical(1))] <- NULL
     
-    datList[[1]][["ctsd"]][sapply(
-      datList[[1]][["ctsd"]], is.null)] <- NULL
+    datList[[1]][["ctsd"]] <- tmp_ctsd
     
-    outList[[1]][["ctsd"]] <- .capture_meta(
-      datList[[1]][["ctsd"]],
-      variable = "speed",
-      units = TRUE,
-      verbose = FALSE,
-      plot = FALSE,
-      type = "ctsd")
-    
-    danger_msg <- "Outputs are empty. Run speed estimation first."
-    if (is.null(datList[[1]][["ctsd"]])) {
-      stop(danger_msg)
+    if (length(tmp_ctsd) < 2) {
+      outList[[1]][["ctsd"]] <- NULL
+      
     } else {
-      if (length(datList[[1]][["ctsd"]]) == 0) stop(danger_msg)
+      outList[[1]][["ctsd"]] <- .capture_meta(
+        datList[[1]][["ctsd"]],
+        variable = "speed",
+        units = TRUE,
+        verbose = FALSE,
+        plot = FALSE,
+        type = "ctsd")
     }
   }
   
@@ -155,7 +150,6 @@
   return(list(datList = datList,
               outList = outList,
               truthList = truthList))
-  
 }
 
 
@@ -335,6 +329,12 @@ run_meta_resamples <- function(rv,
   true_estimate <- c()
   true_ratio <- c()
   
+  if (length(set_target) == 0) {
+    warning("No target has enough valid individuals for meta().",
+            call. = FALSE)
+    return(invisible(NULL))
+  }
+  
   out <- lapply(set_target, function(target) {
     
     if (trace) message(format(
@@ -368,6 +368,7 @@ run_meta_resamples <- function(rv,
     
     input <- list()
     input[["All"]] <- datList[["All"]][[target]]
+    if (length(input[["All"]]) < 2) return(NULL)
     input_groups <- list(input)
     
     if (subpop) {

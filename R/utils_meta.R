@@ -501,9 +501,8 @@
 
 
 #' @title Plot meta-analyses outputs
-#'
-#' @noRd 
 #' 
+#' @noRd
 .plot_meta <- function(rv,
                        set_target = c("hr", "ctsd"),
                        randomize = FALSE,
@@ -520,6 +519,25 @@
   
   n <- error <- error_sd <- error_mean <- NULL
   type <- top_facet <- NULL
+  
+  .empty_plot <- function(target) {
+    
+    txt <- ifelse(
+      target == "ctsd",
+      paste("Speed could not be estimated:",
+            "fewer than two individuals\nhave valid estimates."),
+      paste("Home range could not be estimated:",
+            "fewer than two individuals\nhave valid estimates."))
+    
+    p <- ggplot2::ggplot() +
+      ggplot2::annotate("text", x = 0, y = 0, label = txt,
+                        size = 4.5, color = "#797979",
+                        lineheight = 1.2) +
+      ggplot2::theme_void()
+    
+    attr(p, "md_empty") <- TRUE
+    return(p)
+  }
   
   if (length(rv$simList) <= 1)
     stop("simList must have more than one element.")
@@ -578,6 +596,8 @@
       set_shapes <- c(21, 21)
       set_shapes_manual <- c(16, 16)
     }
+    
+    if (nrow(out) == 0) return(.empty_plot(set_target))
     
     out <- out %>%
       dplyr::mutate(
@@ -651,7 +671,8 @@
           group = .data$group,
           shape = .data$group,
           fill = .data$overlaps),
-        position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+        position = ggplot2::position_jitterdodge(
+          dodge.width = 0.4),
         size = 3, alpha = 0.5, color = "transparent") +
       
       ggplot2::geom_hline(
@@ -722,7 +743,8 @@
           name = "Groups:",
           values = set_shapes,
           guide = ggplot2::guide_legend(
-            override.aes = list(shape = set_shapes_manual, size = 3)))
+            override.aes = list(
+              shape = set_shapes_manual, size = 3)))
       }
       } +
       
@@ -741,12 +763,17 @@
       
       ggplot2::theme_classic() +
       ggplot2::theme(
-        text = ggplot2::element_text(size = 13),
+        text = ggplot2::element_text(
+          size = 13),
         legend.position = "bottom",
-        strip.text = ggplot2::element_text(size = 16),
-        strip.background.x = ggplot2::element_rect(color = NA, fill = NA),
-        strip.background.y = ggplot2::element_rect(color = NA, fill = NA),
-        plot.margin = ggplot2::unit(c(1, 1, 1, 1), "cm"))
+        strip.text = ggplot2::element_text(
+          size = 16),
+        strip.background.x = ggplot2::element_rect(
+          color = NA, fill = NA),
+        strip.background.y = ggplot2::element_rect(
+          color = NA, fill = NA),
+        plot.margin = ggplot2::unit(
+          c(1, 1, 1, 1), "cm"))
     
     if (!subpop) {
       p.optimal <- p.optimal + ggplot2::guides(shape = "none")
@@ -765,8 +792,7 @@
       dplyr::filter(.data$type == set_target)
     if (subpop) out <- dplyr::filter(out, .data$group != "All")
     
-    req(nrow(out) > 0)
-    stopifnot(all(!is.na(out$est)), nrow(out) > 0)
+    if (nrow(out) == 0) return(.empty_plot(set_target))
     
     max_draws <- max(unique(out$sample))
     
@@ -831,7 +857,8 @@
                                group = .data$group,
                                shape = .data$group,
                                color = .data$status),
-        position = ggplot2::position_jitterdodge(dodge.width = 0.4),
+        position = ggplot2::position_jitterdodge(
+          dodge.width = 0.4),
         size = 3.5, color = "grey80", alpha = 0.9) +
       
       ggplot2::geom_linerange(
@@ -852,12 +879,15 @@
         y = "Relative error (%)",
         color = txt_color) +
       
-      ggplot2::scale_y_continuous(breaks = scales::breaks_pretty(),
-                                  labels = scales::percent) +
+      ggplot2::scale_y_continuous(
+        breaks = scales::breaks_pretty(),
+        labels = scales::percent) +
       
-      ggplot2::scale_color_manual(values = pal_values,
-                                  na.translate = FALSE, drop = FALSE) +
-      ggplot2::scale_shape_manual("Groups:", values = c(16, 18)) +
+      ggplot2::scale_color_manual(
+        values = pal_values,
+        na.translate = FALSE, drop = FALSE) +
+      ggplot2::scale_shape_manual(
+        "Groups:", values = c(16, 18)) +
       
       ggplot2::theme_minimal() +
       ggplot2::theme(
@@ -889,12 +919,12 @@
       dplyr::select(-c(.data$est, .data$lci, .data$uci)) %>%
       dplyr::filter(.data$type == set_target)
     
-    stopifnot(all(!is.na(out$est)), nrow(out) > 0)
+    if (nrow(out) == 0) return(.empty_plot(set_target))
     
     if (subpop) subpop_detected <- NULL
     if (subpop) out <- dplyr::filter(out, .data$group != "All")
     
-    stopifnot(all(!is.na(out$est)), nrow(out) > 0)
+    if (nrow(out) == 0) return(.empty_plot(set_target))
     
     txt_color <- paste0(
       "Within error threshold (\u00B1",
@@ -916,7 +946,8 @@
     
     txt_caption <- NULL
     txt_color <- paste0(
-      "Within error threshold (\u00B1", rv$error_threshold * 100, "%)?")
+      "Within error threshold (\u00B1",
+      rv$error_threshold * 100, "%)?")
     
     if (rv$which_meta == "compare") {
       dodge_width <- .4
@@ -938,7 +969,7 @@
       txt_color <- "Groups:"
       txt_caption <- "(*) Asterisks indicate subpopulations were found."
       
-    } # Note: refers to finding subpops within the population.
+    }
     
     p.optimal <- out %>%
       ggplot2::ggplot(
@@ -963,11 +994,13 @@
         linetype = "solid") +
       ggplot2::geom_point(
         size = 4,
-        position = ggplot2::position_dodge(width = dodge_width)) +
+        position = ggplot2::position_dodge(
+          width = dodge_width)) +
       ggplot2::geom_linerange(
         ggplot2::aes(ymin = .data$error_lci,
                      ymax = .data$error_uci),
-        position = ggplot2::position_dodge(width = dodge_width)) +
+        position = ggplot2::position_dodge(
+          width = dodge_width)) +
       
       { if (rv$which_meta == "compare")
         ggplot2::geom_text(
@@ -987,10 +1020,13 @@
         color = txt_color,
         caption = txt_caption) +
       
-      ggplot2::scale_y_continuous(labels = scales::percent,
-                                  breaks = scales::breaks_pretty()) +
-      ggplot2::scale_color_manual(txt_color, values = pal_values) +
-      ggplot2::scale_shape_manual("Groups:", values = c(16, 18)) +
+      ggplot2::scale_y_continuous(
+        labels = scales::percent,
+        breaks = scales::breaks_pretty()) +
+      ggplot2::scale_color_manual(
+        txt_color, values = pal_values) +
+      ggplot2::scale_shape_manual(
+        "Groups:", values = c(16, 18)) +
       ggplot2::theme_minimal() +
       ggplot2::theme(legend.position = "bottom")
     
@@ -998,18 +1034,15 @@
       p.optimal <- p.optimal +
         ggplot2::guides(shape = "none")
     }
-    
   }
   
   return(p.optimal)
-  
 }
 
 
 #' @title Process replicates
-#'
-#' @noRd 
 #' 
+#' @noRd
 .process_replicates <- function(rv,
                                 out_replicate,
                                 start = Sys.time()) {

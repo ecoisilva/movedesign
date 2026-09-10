@@ -60,16 +60,20 @@ mod_viz_meta_server <- function(id, rv) {
         subpop = rv$grouped, 
         colors = c(pal$sea, pal$dgr))
       
-      p.optimal <- p.optimal +
-        theme_movedesign(font_available = rv$is_font) +
-        ggplot2::theme(
-          legend.position = "bottom",
-          plot.title = ggtext::element_markdown(
-            size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
-      
-      if (rv$which_meta == "mean") {
+      if (isFALSE(attr(p.optimal, "md_empty"))) {
+        
         p.optimal <- p.optimal +
-          ggplot2::guides(shape = "none")
+          theme_movedesign(font_available = rv$is_font) +
+          ggplot2::theme(
+            legend.position = "bottom",
+            plot.title = ggtext::element_markdown(
+              size = 14, hjust = 1,
+              margin = ggplot2::margin(b = 15)))
+        
+        if (rv$which_meta == "mean") {
+          p.optimal <- p.optimal +
+            ggplot2::guides(shape = "none")
+        }
       }
       
       ggiraph::girafe(
