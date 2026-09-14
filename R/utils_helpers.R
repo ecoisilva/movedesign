@@ -141,10 +141,7 @@ msg_danger <- crayon::make_style("#dd4b39")
 msg_warning <- crayon::make_style("#ffbf00")
 
 #' Banner for low effective sample sizes
-#'
-#' @description Renders a persistent note stating that downstream error
-#'   estimates are conditional on parameters fitted at a low effective
-#'   sample size. Returns NULL when the flag is not set.
+#' 
 #' @noRd
 low_N_banner <- function(rv, target = c("area", "speed")) {
   
@@ -162,18 +159,15 @@ low_N_banner <- function(rv, target = c("area", "speed")) {
     "The mean", span(nm, class = "cl-dgr"),
     "from the", rv$data_type, "dataset is",
     wrap_none(span(round(N, 1), class = "cl-dgr"), "."),
-    "Movement parameters estimated at these effective sample sizes may be",
-    "unreliable, and every error estimate shown",
+    "Movement parameters estimated at these effective sample",
+    "sizes may be unreliable, and every error estimate shown",
     "in the preceding or following tabs are conditional",
     "on them being correct. Treat these outputs with",
     wrap_none(span("caution", class = "cl-dgr"), "."))
 }
 
 #' Parameter blocks
-#'
-#' @description Display parameters.
-#' @keywords internal
-#'
+#' 
 #' @noRd
 parBlock <- function(icon = NULL,
                      header = NULL,
@@ -197,10 +191,7 @@ parBlock <- function(icon = NULL,
 }
 
 #' Sample size blocks
-#'
-#' @description Display sample sizes.
-#' @keywords internal
-#'
+#' 
 #' @noRd
 sizeBlock <- function(type = c("n", "N_area", "N_speed"),
                       percentage = NULL,
@@ -284,10 +275,7 @@ sizeBlock <- function(type = c("n", "N_area", "N_speed"),
 }
 
 #' Relative error blocks
-#'
-#' @description Display relative errors.
-#' @keywords internal
-#'
+#' 
 #' @noRd
 errorBlock <- function(icon = NULL,
                        text = NULL,
@@ -299,6 +287,17 @@ errorBlock <- function(icon = NULL,
   
   cl <- "errorblock"
   if (isTRUE(rightBorder)) cl <- paste0(cl, " border-right")
+  
+  if (length(value) != 1L || !is.finite(value)) {
+    return(shiny::tags$div(
+      class = cl,
+      if (!is.null(icon)) { shiny::tags$span(
+        class = "errorblock-icon", icon(icon), br()) },
+      shiny::tags$span(class = "errorblock-text", text, br()),
+      shiny::tags$span(class = "errorblock-header",
+                       span("Not estimable"), br(),
+                       style = "color: #808080 !important;")))
+  }
   
   if (value > 0) {
     tmptext <- span("Overestimation", icon("angle-up"))
@@ -323,13 +322,16 @@ errorBlock <- function(icon = NULL,
   color_err_max <- getColor(max)
   
   value <- sigdigits(value * 100, 2)
-  min <- ifelse((min * 100) %% 1 == 0,
-                scales::label_comma(accuracy = 1)(min * 100),
-                scales::label_comma(accuracy = .1)(min * 100))
   
-  max <- ifelse((max * 100) %% 1 == 0,
-                scales::label_comma(accuracy = 1)(max * 100),
-                scales::label_comma(accuracy = .1)(max * 100))
+  .fmt_bound <- function(b) {
+    if (length(b) != 1L || !is.finite(b)) return("NA")
+    ifelse((b * 100) %% 1 == 0,
+           scales::label_comma(accuracy = 1)(b * 100),
+           scales::label_comma(accuracy = .1)(b * 100))
+  }
+  
+  min <- .fmt_bound(min)
+  max <- .fmt_bound(max)
   
   range <- wrap_none(
     "[", wrap_none(min, color = color_err_min),
@@ -366,10 +368,7 @@ errorBlock <- function(icon = NULL,
 }
 
 #' Parameter blocks
-#'
-#' @description Display parameters.
-#' @keywords internal
-#'
+#' 
 #' @noRd
 staticBlock <- function(text,
                         type = "logical",
@@ -411,11 +410,10 @@ staticBlock <- function(text,
   
 }
 
-#' Extract units.
-#'
-#' @description Extracting units from ctmm summaries.
-#' @keywords internal
-#'
+#' Extract units
+#' 
+#' @description Extracting units from ctmm summaries
+#' 
 #' @noRd
 extract_units <- function(input, name = NULL) {
   
@@ -432,36 +430,32 @@ extract_units <- function(input, name = NULL) {
     }, error = function(e) return(NULL))
 }
 
-#' Add helper text.
-#'
-#' @description Add helper text to inputs.
-#' @return The return value, if any, from executing the utility.
-#' @keywords internal
-#'
+#' Add helper text
+#' 
 #' @importFrom dplyr %>%
+#' 
 #' @noRd
 help_text <- function(title, subtitle, content) {
+  
   shiny::fluidRow(
-    title, style = "margin-bottom: -14px;",
-    
-    bsplus::shiny_iconlink(
-      name = "circle-info",
-      class = "icon_help") %>%
-      bsplus::bs_embed_popover(
-        title = subtitle,
-        content = content,
-        placement = "bottom")
-  )
+    title,
+    bsplus::bs_embed_popover(
+      bsplus::shiny_iconlink(
+        name = "circle-info",
+        class = "icon_help"),
+      title = subtitle,
+      content = content,
+      placement = "bottom"),
+    style = "margin-bottom: -14px;")
 }
 
-#' Add helper tip.
-#'
-#' @description Add helper tip to inputs.
-#' @keywords internal
-#'
+#' Add helper tip
+#' 
 #' @importFrom dplyr %>%
+#' 
 #' @noRd
 help_tip <- function(input, text, placement = "bottom") {
+  
   bsplus::shinyInput_label_embed(
     input,
     bsplus::shiny_iconlink(
@@ -472,12 +466,12 @@ help_tip <- function(input, text, placement = "bottom") {
 }
 
 #' Message formatting
-#'
-#' @description Formats a message string according to the message type.
-#' @keywords internal
-#'
+#' 
+#' @description Formats a message string according to the message type
+#' 
 #' @noRd
 .msg <- function(txt, type = "main") {
+  
   switch(type,
          main = msg_main(txt),
          success = msg_success(txt),
@@ -487,10 +481,9 @@ help_tip <- function(input, text, placement = "bottom") {
 }
 
 #' Create message logs
-#'
-#' @description Create message logs to show throughout app run.
-#' @keywords internal
-#'
+#' 
+#' @description Create message logs to show throughout app run
+#' 
 #' @importFrom crayon make_style
 #' @importFrom ctmm %#%
 #' 
@@ -510,7 +503,7 @@ msg_log <- function(..., detail,
                        round(total_time$value, 1), " ",
                        total_time$unit, ".")
     }
-  } # end of run_time
+  }
   
   if (is.null(style)) {
     out <- cat(' ', HTML(...), "\n")
@@ -551,10 +544,9 @@ msg_log <- function(..., detail,
 
 
 #' Create message steps
-#'
+#' 
 #' @description Create message logs
-#' @keywords internal
-#'
+#' 
 #' @noRd
 msg_step <- function(current, total, style) {
   
@@ -571,11 +563,7 @@ msg_step <- function(current, total, style) {
 }
 
 #' Reset reactive values
-#'
-#' @description Reset reactive values
-#' @return The return value, if any, from executing the utility.
-#' @keywords internal
-#'
+#' 
 #' @noRd
 reset_reactiveValues <- function(rv) {
   
@@ -614,9 +602,7 @@ reset_reactiveValues <- function(rv) {
   rv$low_N_ack <- NULL
 }
 
-#' Reset analysis outputs
-#' 
-#' @keywords internal
+#' Reset analyses outputs
 #' 
 #' @noRd
 reset_outputs <- function(rv, which = c("hr", "ctsd")) {
@@ -653,31 +639,30 @@ reset_outputs <- function(rv, which = c("hr", "ctsd")) {
 }
 
 #' Add help modal
-#'
-#' @description Add help modal to inputs
-#' @keywords internal
-#'
+#' 
 #' @importFrom dplyr %>%
+#' 
 #' @noRd
 help_modal <- function(input, file) {
+  
   bsplus::shinyInput_label_embed(
     input, bsplus::shiny_iconlink(
       name = "circle-question", class = "icon_help") %>%
       bsplus::bs_attach_modal(id_modal = file))
 }
 
-
 #' @title movedesign ggplot2 custom theme
 #' @encoding UTF-8
-#'
-#' @description Custom ggplot2 theme for movedesign plot outputs.
+#' 
+#' @description Custom ggplot2 theme for movedesign plot outputs
 #' @author Inu00EAs Silva \email{i.simoes-silva@@hzdr.de}
 #' @keywords internal
 #' 
 #' @importFrom ggplot2 %+replace%
 #' @importFrom dplyr %>%
-#'
-#' @param ft_size Base font size.
+#' 
+#' @param ft_size base font size
+#' 
 #' @noRd
 theme_movedesign <- function(ft_size = 13,
                              font = "Roboto Condensed",
@@ -730,27 +715,30 @@ theme_movedesign <- function(ft_size = 13,
         axis.title.x = ggtext::element_markdown(
           hjust = 1, margin = ggplot2::margin(t = 2.5)),
         
-        if (title_y) {
-          axis.title.y = ggtext::element_markdown(
-            angle = 90, margin = ggplot2::margin(r = 2.5)) }
+        axis.title.y = if (title_y) {
+          ggtext::element_markdown(
+            angle = 90, margin = ggplot2::margin(r = 2.5))
+        } else {
+          ggplot2::element_blank()
+        }
         
       ) %>%
       suppressWarnings()
   }
 }
 
-
-#' @title movedesign report custom theme
+#' @title movedesign ggplot2 report custom theme
 #' @encoding UTF-8
-#'
-#' @description Custom ggplot2 theme for movedesign reports.
+#' 
+#' @description Custom ggplot2 theme for movedesign reports
 #' @author Inu00EAs Silva \email{i.simoes-silva@@hzdr.de}
 #' @keywords internal
 #' 
 #' @importFrom ggplot2 %+replace%
 #' @importFrom dplyr %>%
-#'
-#' @param ft_size Base font size.
+#' 
+#' @param ft_size base font size
+#' 
 #' @noRd
 .theme_movedesign_report <- function(base_size = 13,
                                      font = NULL) {
@@ -816,17 +804,18 @@ theme_movedesign <- function(ft_size = 13,
 }
 
 
-#' @title movedesign density custom theme
+#' @title movedesign ggplot2 density custom theme
 #' @encoding UTF-8
-#'
+#' 
 #' @description Custom ggplot2 theme for movedesign density plots.
 #' @author Inu00EAs Silva \email{i.simoes-silva@@hzdr.de}
 #' @keywords internal
 #' 
 #' @importFrom ggplot2 %+replace%
 #' @importFrom dplyr %>%
-#'
-#' @param ft_size Base font size.
+#' 
+#' @param ft_size base font size
+#' 
 #' @noRd
 .theme_movedesign_density <- function() {
   
@@ -885,7 +874,6 @@ theme_movedesign <- function(ft_size = 13,
       plot.margin = ggplot2::unit(
         c(0.5, 0.5, 0.5, 0.5), "cm"))
 }
-
 
 #' Plot home range
 #' 
@@ -1034,12 +1022,10 @@ plotting_hr <- function(input1,
   return(p)
 }
 
-
 #' Plot variogram
-#'
+#' 
 #' @description Plot variogram from ctmm
-#' @keywords internal
-#'
+#' 
 #' @noRd
 plotting_svf <- function(data, fill,
                          fraction = .5,
@@ -1125,11 +1111,10 @@ plotting_svf <- function(data, fill,
   
 }
 
-#' Plot outlier
-#'
-#' @description Plot outliers
-#' @keywords internal
-#'
+#' Plot outliers
+#' 
+#' @description Plot outliers from ctmm
+#' 
 #' @noRd
 plotting_outliers <- function(data,
                               font_available = TRUE) {
@@ -1234,15 +1219,11 @@ plotting_outliers <- function(data,
   return(list(data = out_data, plot = out_plot))
 }
 
-
 #' To significant digits
-#'
-#' @description WIP
-#' @keywords internal
-#'
+#' 
 #' @importFrom stringr str_pad
+#' 
 #' @noRd
-#'
 sigdigits <- function(x, digits) {
   
   new_x <- format(x, digits = digits)
@@ -1256,27 +1237,21 @@ sigdigits <- function(x, digits) {
 
 
 #' Subset time frame
-#'
-#' @description Subset time frame
-#' @keywords internal
-#'
+#' 
 #' @importFrom dplyr %>%
+#' 
 #' @noRd
-#'
 subset_timeframe <- function(var, value) {
   as.data.frame(var) %>% dplyr::top_frac(value)
 }
 
 #' Show loading modal
-#'
-#' @description WIP
-#' @keywords internal
-#'
+#' 
 #' @importFrom dplyr %>%
 #' @importFrom ctmm %#%
+#' 
 #' @noRd
-#'
-loading_modal <- function(x, 
+loading_modal <- function(x,
                           exp_time = NULL,
                           parallel = FALSE,
                           n = NULL, type = "speed") {
@@ -1293,90 +1268,80 @@ loading_modal <- function(x,
   if (num_words > 2) x[2] <- paste(x[2:num_words], collapse = " ")
   
   n <- ifelse(is.null(n), 1, n)
+  if (!is.numeric(n)) stop("`n` argument must be numeric.")
   
-  if (is.null(exp_time)) {
-    out_txt <- p()
-  } else {
+  out_txt <- p()
+  
+  if (!is.null(exp_time)) {
     
-    if (!("mean" %in% names(exp_time)) || 
+    if (!("mean" %in% names(exp_time)) ||
         !("unit" %in% names(exp_time)) ||
         !("range" %in% names(exp_time)))
       stop(paste0("input must contain named columns 'mean'",
                   "'range', and 'unit'."))
     
-    header_css <- paste("background-color: #eaeaea;",
-                        "color: #797979;",
-                        "font-size: 16px;",
-                        "text-align: center;")
-    time_css <- paste("background-color: #eaeaea;",
-                      "color: #009da0;",
-                      "font-size: 15px;",
-                      "text-align: center;",
-                      "margin-top: -40px;")
-    
-    is_unknown <- identical(
-      as.character(exp_time$range), "unknown") ||
+    is_unknown <- identical(as.character(exp_time$range), "unknown") ||
       !is.finite(exp_time$max) ||
       exp_time$max <= 0
     
-    if (is_unknown) {
-      mean_time <- max_time <- min_time <- NULL
-      out_txt_range <- "unknown"
+    if (!is_unknown) {
       
-    } else {
+      header_css <- paste("background-color: #eaeaea;",
+                          "color: #797979;",
+                          "font-size: 16px;",
+                          "text-align: center;")
+      time_css <- paste("background-color: #eaeaea;",
+                        "color: #009da0;",
+                        "font-size: 15px;",
+                        "text-align: center;",
+                        "margin-top: -40px;")
+      
       mean_time <- fix_unit(exp_time$mean * n, exp_time$unit,
                             convert = TRUE)
-      max_time <- fix_unit(exp_time$max * n, exp_time$unit, 
+      max_time <- fix_unit(exp_time$max * n, exp_time$unit,
                            convert = TRUE)
       
       floor_min <- max_time$unit %#% (2 %#% "minutes")
       tmp <- max_time$unit %#% (
         ifelse(exp_time$min == 0, .001, exp_time$min) * n) %#%
         exp_time$unit
-      min_time <- fix_unit(
-        ifelse(tmp <= floor_min, floor_min, tmp),
-        max_time$unit)
+      min_time <- fix_unit(ifelse(tmp <= floor_min, floor_min, tmp),
+                           max_time$unit)
       
-      out_txt_range <- if (min_time$value >= max_time$value)
-        paste(max_time$value, max_time$unit) else
-          paste0(min_time$value, 
-                 "\u2013", max_time$value, 
-                 " ", max_time$unit)
-    }
-    
-    out_txt_parallel <- span("")
-    if (type == "fit" && !is_unknown) {
-      if (parallel) {
-        n_cores <- parallel::detectCores(logical = FALSE)/2
-        tmp_time <- fix_unit(mean_time$value / n_cores,
-                             mean_time$unit, convert = TRUE)
-        out_txt_range <- paste(tmp_time$value, tmp_time$unit)
-        out_txt_parallel <- p(
-          style = paste("font-size: 14px;",
-                        "line-height: 1;",
-                        "text-align: center;"),
-          span("[Running in parallel!].", class = "cl-sea"))
-        
+      out_txt_range <- if (min_time$value >= max_time$value) {
+        paste(max_time$value, max_time$unit)
       } else {
-        out_txt_range <- paste(mean_time$value, mean_time$unit)
+        paste0(min_time$value,
+               "\u2013", max_time$value,
+               " ", max_time$unit)
       }
-    }
-    
-    if (!is.null(n)) {
-      if (!is.numeric(n))
-        stop("`n` argument must be numeric.")
+      
+      out_txt_parallel <- span("")
+      if (type == "fit") {
+        if (parallel) {
+          n_cores <- parallel::detectCores(logical = FALSE)/2
+          tmp_time <- fix_unit(mean_time$value / n_cores,
+                               mean_time$unit, convert = TRUE)
+          out_txt_range <- paste(tmp_time$value, tmp_time$unit)
+          out_txt_parallel <- p(
+            style = paste("font-size: 14px;",
+                          "line-height: 1;",
+                          "text-align: center;"),
+            span("[Running in parallel!].", class = "cl-sea"))
+          
+        } else {
+          out_txt_range <- paste(mean_time$value, mean_time$unit)
+        }
+      }
       
       out_txt <- tagList(
         p(),
         p("Expected run time:",
-          style = paste("background-color: #eaeaea;",
-                        "color: #797979;",
-                        "font-size: 16px;",
-                        "text-align: center;")), br(),
+          style = header_css), br(),
         p(exp_time$range, style = time_css), p())
       
       out_txt_total <- tagList(
-        p("Total run time:", 
+        p("Total run time:",
           style = header_css), br(),
         p("\u2248", out_txt_range,
           style = time_css), p())
@@ -1386,14 +1351,15 @@ loading_modal <- function(x,
           p(),
           p("Expected run time:",
             style = header_css), br(),
-          p(exp_time$range, paste0("(per ", note_parallel, ")"), 
+          p(exp_time$range, paste0("(per ", note_parallel, ")"),
             style = time_css), p(),
           if (!parallel) out_txt_total,
           out_txt_parallel
         )
       }
-    }
-  }
+      
+    } # end of if (!is_unknown)
+  } # end of if (!is.null(exp_time))
   
   shinybusy::show_modal_spinner(
     spin = "fading-circle",
@@ -1407,14 +1373,11 @@ loading_modal <- function(x,
   
 }
 
-
 #' wrap_none
 #'
 #' @description Wrap text without spaces
-#' @keywords internal
-#'
+#' 
 #' @noRd
-#'
 wrap_none <- function(text, 
                       ...,
                       end = "",
@@ -1437,7 +1400,7 @@ wrap_none <- function(text,
 }
 
 #' format_num
-#'
+#' 
 #' @noRd
 format_num <- function(value) {
   list(color = case_when(
@@ -1447,9 +1410,10 @@ format_num <- function(value) {
 }
 
 #' format_perc
-#'
+#' 
 #' @noRd
-format_perc <- function(value, error_threshold = NULL, tol = 0.05) {
+format_perc <- function(value, index = NULL, name = NULL,
+                        error_threshold = NULL, tol = 0.05) {
   
   if (is.null(error_threshold)) {
     
@@ -1470,9 +1434,8 @@ format_perc <- function(value, error_threshold = NULL, tol = 0.05) {
   return(list(color = col))
 }
 
-
 #' format_subpop_perc
-#'
+#' 
 #' @noRd
 format_subpop_perc <- function(value, is_subpop) {
   
@@ -1491,8 +1454,8 @@ format_subpop_perc <- function(value, is_subpop) {
   return(list(color = col))
 }
 
-#' Calculate limits for plots.
-#'
+#' Calculate limits for plots
+#' 
 #' @noRd
 extract_limits <- function(data1, data2, data3 = NULL, scale = .1) {
   
@@ -1531,29 +1494,25 @@ extract_limits <- function(data1, data2, data3 = NULL, scale = .1) {
   return(out)
 }
 
-
-#' create_pal
+#' Create palette
 #'
 #' @noRd
 load_pal <- function() {
   
-  # Palette:
-  out <- list(mdn = "#222d32",
-              sea = "#009da0",
-              sea_m = "#007d80",
-              sea_d = "#00585A",
-              grn = "#77b131",
-              grn_d = "#385c13",
-              dgr = "#dd4b39",
-              dgr_d = "#A12C3B",
-              gld = "#ffb300",
-              gld_d = "#D47800")
-  
-  return(out)
+  list(mdn = "#222d32",
+       sea = "#009da0",
+       sea_m = "#007d80",
+       sea_d = "#00585A",
+       grn = "#77b131",
+       grn_d = "#385c13",
+       dgr = "#dd4b39",
+       dgr_d = "#A12C3B",
+       gld = "#ffb300",
+       gld_d = "#D47800")
 }
 
 #' create_modal
-#'
+#' 
 #' @noRd
 create_modal <- function(var, id) {
   
@@ -1807,12 +1766,13 @@ create_modal <- function(var, id) {
 
 
 #' One tab to put inside a tab items container
-#'
-#' @description shinydashboard function, but with data values to fix rintrojs issue.
-#' @keywords internal
-#'
+#' 
+#' @description A modified version of the `shinydashboard` function
+#'   that includes `data-*` attributes, to fix an `rintrojs` issue.
+#' 
 #' @noRd
 newTabItem <- function(tabName = NULL, ...) {
+  
   if (is.null(tabName))
     stop("Need tabName")
   
@@ -1820,23 +1780,19 @@ newTabItem <- function(tabName = NULL, ...) {
     stop("tabName must not have a '.' in it.")
   }
   
-  div(
+  return(div(
     role = "tabpanel",
     class = "tab-pane",
     id = paste0("shiny-tab-", tabName),
     `data-value` = tabName,
-    ...
-  )
+    ...))
 }
 
-
-#' Convert as.telemetry to data.frame.
-#'
-#' @description Convert as.telemetry to data.frame
-#' @keywords internal
-#'
+#' Convert as.telemetry to data.frame
+#' 
 #' @noRd
 telemetry_as_df <- function(object) {
+  
   if (class(object)[1] != "list" && class(object)[1] != "ctmm") 
     stop("Object must be a telemetry object.")
   
@@ -1847,27 +1803,22 @@ telemetry_as_df <- function(object) {
   
   out_df <- do.call(rbind.data.frame, out_df)
   head(out_df)
+  
   return(out_df)
 }
 
-
 #' round_any from plyr
-#'
-#' @description WIP
-#' @keywords internal
-#'
+#' 
+#' @description round_any from plyr
+#' 
 #' @noRd
-#'
 round_any <- function(x, accuracy, f = round) {
   f(x/accuracy) * accuracy
 }
 
 
 #' Give false origin, orientation, dispatch epoch from ctmm
-#'
-#' @description Give false origin, orientation, dispatch epoch
-#' @keywords internal
-#'
+#' 
 #' @noRd
 pseudonymize <- function(data, 
                          center = c(0, 0), 
@@ -1912,14 +1863,11 @@ pseudonymize <- function(data,
   return(data)
 }
 
-
 #' Extract location variance from ctmm
-#'
-#' @description Extract total variance or average variance
-#' @keywords internal
-#'
-#' @noRd
 #' 
+#' @description Extract total variance or average variance
+#' 
+#' @noRd
 var.covm <- function(sigma, average = FALSE) {
   
   if (ncol(sigma) == 1) return(sigma@par["major"])
@@ -1934,12 +1882,13 @@ var.covm <- function(sigma, average = FALSE) {
   return(sigma)
 }
 
-
-#' Check if error function from ctmmweb
-#'
+#' Check whether a result contains an error
+#' 
+#' @description check if error function from ctmmweb
+#' 
 #' @noRd
-#'
 has_error <- function(result) {
+  
   if (inherits(result, "try-error")) return(TRUE)
   else return(sapply(result, function(x) {
     inherits(x, "try-error")
@@ -1947,10 +1896,9 @@ has_error <- function(result) {
 }
 
 #' Coerce telemetry object to list
-#'
-#' @description Coerce telemetry object to list from ctmmweb
-#' @keywords internal
-#'
+#' 
+#' @description coerce telemetry object to list from ctmmweb
+#' 
 #' @noRd
 as_tele_list <- function(object) { 
   
@@ -1964,12 +1912,8 @@ as_tele_list <- function(object) {
 } 
 
 #' Convert as.telemetry to data.table
-#'
-#' @description Convert as.telemetry to data.table
-#' @keywords internal
-#'
+#' 
 #' @noRd
-#'
 tele_to_dt <- function(object) {
   
   if (!inherits(object, "list")) {
@@ -1998,12 +1942,9 @@ tele_to_dt <- function(object) {
   return(data_dt)
 }
 
-#' @title Build tables row-by-row
-#' @description Build tables row-by-row
-#' @keywords internal
+#' Build tables row-by-row
 #' 
 #' @noRd
-#' 
 .build_tbl <- function(data_type = "Initial",
                        target = NULL,
                        group = NULL,
@@ -2117,11 +2058,9 @@ tele_to_dt <- function(object) {
   
 } # end of function, .build_tbl()
 
-
-#' @title Chooser input
-#'
+#' Chooser input
+#' 
 #' @noRd
-#'
 chooserInput <- function(inputId, 
                          leftLabel, rightLabel,
                          leftChoices, rightChoices,
@@ -2194,19 +2133,16 @@ shiny::registerInputHandler("shinyjsexamples.chooser",
                                         B = as.character(data$right))
                             }, force = TRUE)
 
-
 #' Parallel lapply
-#'
-#' @description Parallel lapply adapted from ctmmweb.
-#'
-#' @param obj Input list of two lists (telemetry and CTMM objects).
-#' @param fun the function to be applied to each element of `obj`.
-#' @param cores integer. Number of cores.
-#' @param parallel logical. Uses a single core when FALSE.
-#' @keywords internal
-#'
+#' 
+#' @description Parallel lapply adapted from ctmmweb
+#' 
+#' @param obj Input list of two lists (telemetry and CTMM objects)
+#' @param fun the function to be applied to each element of `obj`
+#' @param cores integer. Number of cores
+#' @param parallel logical. Uses a single core when FALSE
+#' 
 #' @noRd
-#'
 par.lapply <- function(obj,
                        fun, 
                        cores = NULL,
@@ -2268,16 +2204,14 @@ par.lapply <- function(obj,
 }
 
 #' Parallel model selection
-#'
-#' @description Parallel model selection, adapted from ctmmweb.
-#'
-#' @param data telemetry object from as.telemetry().
-#' @param guess ctmm object from ctmm.guess().
-#' @param parallel True/false. Uses a single core when FALSE.
-#' @keywords internal
-#'
+#' 
+#' @description Parallel model selection, adapted from ctmmweb
+#' 
+#' @param data telemetry object from as.telemetry()
+#' @param guess ctmm object from ctmm.guess()
+#' @param parallel True/false. Uses a single core when FALSE
+#' 
 #' @noRd
-#'
 par.ctmm.select <- function(data,
                             guess,
                             trace = TRUE,
@@ -2350,16 +2284,14 @@ par.ctmm.select <- function(data,
 
 
 #' Parallel model fit
-#'
-#' @description Parallel model fit, adapted from ctmmweb.
-#'
-#' @param data telemetry object from as.telemetry().
-#' @param guess ctmm object from ctmm.guess().
-#' @param parallel True/false. Uses a single core when FALSE.
-#' @keywords internal
-#'
+#' 
+#' @description Parallel model fit, adapted from ctmmweb
+#' 
+#' @param data telemetry object from as.telemetry()
+#' @param guess ctmm object from ctmm.guess()
+#' @param parallel True/false. Uses a single core when FALSE
+#' 
 #' @noRd
-#'
 par.ctmm.fit <- function(data,
                          guess,
                          cores = NULL,
@@ -2418,14 +2350,12 @@ par.ctmm.fit <- function(data,
   return(out)
 }
 
-
 #' Parallel home range estimation
-#'
-#' @param input Telemetry (data) and model (fit) lists.
+#' 
+#' @param input Telemetry (data) and model (fit) lists
 #' @inheritParams par_lapply
-#'
+#' 
 #' @noRd
-#'
 par.akde <- function(data,
                      fit,
                      cores = NULL,
@@ -2476,12 +2406,11 @@ par.akde <- function(data,
 
 
 #' Parallel speed estimation
-#'
-#' @param input Telemetry and model list, adapted from ctmmweb.
+#' 
+#' @param input Telemetry and model list, adapted from ctmmweb
 #' @inheritParams par_lapply
-#'
+#' 
 #' @noRd
-#'
 par.speed <- function(data,
                       fit,
                       cores = NULL,
@@ -2540,12 +2469,11 @@ par.speed <- function(data,
   return(out_speed)
 }
 
-
 #' Align lists
-#'
+#' 
 #' @noRd
-#'
 align_lists <- function(...) {
+  
   list_of_lists <- list(...)
   if (dplyr::n_distinct(lengths(list_of_lists)) != 1) 
     stop("Input lists must be of the same length.")
@@ -2557,7 +2485,6 @@ align_lists <- function(...) {
   if (length(out_lists) == 0) out_lists <- NULL
   return(out_lists)
 }
-
 
 #' This function is a direct copy of the \code{ellipse} function from
 #' the \code{ellipse} package (version 0.5.0). See
@@ -2597,7 +2524,6 @@ ellipse <- function(x, scale = c(1, 1),
          npoints, 2, 
          dimnames = list(NULL, names))
 }
-
 
 #' This function is a direct copy of the \code{ellipke} function from
 #' the \code{pracma} package (version 2.4.4). See
@@ -2649,9 +2575,8 @@ ellipke <- function(m, tol = .Machine$double.eps) {
   return(list(k = k, e = e))
 }
 
-
 #' Summarize error metrics with confidence and prediction intervals
-#'
+#' 
 #' @noRd
 .summarize_error <- function(data,
                              error_col = "error",
@@ -2760,7 +2685,7 @@ ellipke <- function(m, tol = .Machine$double.eps) {
 
 
 #' Find initial stable value in sequence
-#'
+#' 
 #' @noRd
 .find_stable <- function(delta_vec, tol, n) {
   
@@ -2993,6 +2918,9 @@ ellipke <- function(m, tol = .Machine$double.eps) {
 #' 
 #' @noRd
 .get_cov <- function(fit, est, target = "hr", level = 0.95) {
+  # sampling covariance of the estimated mean:
+  # given the source dataset, where is the true population mean?
+  # (shrinks toward zero as more individuals are added)
   spec <- .target_w(target)
   .par_interval(fit, fit$COV, est, spec$w, level = level)
 }
@@ -3001,6 +2929,9 @@ ellipke <- function(m, tol = .Machine$double.eps) {
 #' 
 #' @noRd
 .get_pov <- function(fit, est, target = "hr", level = 0.95) {
+  # population variance across individuals:
+  # where would a newly tagged animal fall?
+  # (converges to the true population variance rather than to zero)
   spec <- .target_w(target)
   .par_interval(fit, fit$POV, est, spec$w, level = level)
 }

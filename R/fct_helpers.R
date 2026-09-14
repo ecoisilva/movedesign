@@ -409,6 +409,24 @@ simulate_seeded <- function(obj, seed) {
 } 
 
 
+#' Get the model that generated an individual's trajectory
+#' 
+#' @noRd
+get_true_fit <- function(rv, group = "All", seed = NULL) {
+  
+  if (isTRUE(rv$add_ind_var)) {
+    fit <- simulate_seeded(rv$meanfitList[[group]], as.integer(seed))
+    return(.recenter_mu(fit))
+  }
+  
+  return(prepare_mod(
+    tau_p = rv$tau_p[[group]][2, ],
+    tau_v = rv$tau_v[[group]][2, ],
+    sigma = rv$sigma[[group]][2, ],
+    mu = rv$mu[[group]]))
+}
+
+
 #' @title Get true home range area
 #' 
 #' @importFrom ctmm %#%
@@ -611,24 +629,24 @@ get_true_speed <- function(data,
     return(.weighted_average_speed(tv, fit_i, seed_i))
   }
   
-  speed_from_pars <- function(sigma_i, tau_p_i, tau_v_i,
+  speed_from_pars <- function(sigma_i, tau_p_i, tv,
                               fit_i = NULL) {
     
     s <- sigma_i$value[2] %#% sigma_i$unit[2]
     tp <- tau_p_i$value[2] %#% tau_p_i$unit[2]
-    tv <- tau_v_i$value[2] %#% tau_v_i$unit[2]
+    tv <- tv$value[2] %#% tv$unit[2]
     
     lambda <- .eigen_from_scalar(s / (tp * tv), .covm_ratio(fit_i))
     
     return(.gaussian_mean_speed(diag(lambda)))
   }
   
-  .get_speed <- function(fit_i, sigma_i, tau_p_i, tau_v_i,
+  .get_speed <- function(fit_i, sigma_i, tau_p_i, tv,
                          seed_i = NULL) {
     if (ind_var) {
       speed_from_fit(fit_i, seed_i)
     } else {
-      speed_from_pars(sigma_i, tau_p_i, tau_v_i, fit_i)
+      speed_from_pars(sigma_i, tau_p_i, tv, fit_i)
     }
   }
   
@@ -1314,52 +1332,75 @@ guess_time <- function(type = "fit",
   
   error <- ifelse(is.null(error), FALSE, error)
   
-  cal <- 1
-  set_id <- 1 
+  error_mult <- 6
+  n_bench <- c(150, 3000)
   
-  if (!type %in% c("fit", "speed")) 
-    stop("type =", type, " is not supported.", call. = FALSE) 
-  
+  set_id <- 1
   expt_unit <- "minute"
-  expt <- expt_max <- expt_min <- 0
+  expt <- expt_min <- expt_max <- 0
+  seconds <- NA_real_
   
   outputs <- data.frame("mean" = 0,
                         "min" = 0,
                         "max" = 0,
                         "unit" = expt_unit,
-                        "range" = "unknown")
+                        "range" = "unknown",
+                        "seconds" = NA)
   
   if (type == "fit") {
+    
     if (is.null(data) || !length(data)) stop("`data` not provided.")
-    
     data <- data[[set_id]]
+    n_loc <- nrow(data)
     
-    n <- 2500
-    if (nrow(data) < n) {
-      outputs$mean <- ifelse(nrow(data) < 1000, 1, 2)
-      if (error) outputs$mean <- outputs$mean * 6
-      outputs$mean <- outputs$mean * cal
-      outputs$min <- outputs$mean
-      outputs$max <- max(5, outputs$mean)
-      outputs$unit <- ifelse(outputs$mean <= 1, "minute", "minutes")
-      outputs$range <- paste("\u2264", round(outputs$mean, 0),
-                             outputs$unit)
+    if (n_loc < 2500) {
+      mins <- ifelse(n_loc < 1000, 1, 2)
+      if (error) mins <- mins * error_mult
+      
+      outputs$mean <- outputs$min <- mins
+      outputs$max <- max(5, mins)
+      outputs$unit <- ifelse(mins <= 1, "minute", "minutes")
+      outputs$range <- paste("\u2264", mins, outputs$unit)
+      outputs$seconds <- mins %#% "minutes"
       return(outputs)
     }
     
-    start <- Sys.time()
-    guess <- ctmm::ctmm.guess(data[1:200, ], interactive = FALSE)
-    tmp_fit <- par.ctmm.select(list(data[1:200, ]),
-                               list(guess),
-                               trace = trace,
-                               parallel = parallel)
-    total_time <- difftime(Sys.time(), start, units = "sec")[[1]]
+    .probe <- function(k) {
+      start <- Sys.time()
+      guess <- ctmm::ctmm.guess(data[1:k, ], interactive = FALSE)
+      par.ctmm.select(list(data[1:k, ]), list(guess),
+                      trace = trace, parallel = parallel)
+      return(difftime(Sys.time(), start, units = "sec")[[1]])
+    }
     
-    expt <- expt_unit %#% (total_time * nrow(data) / 200)
-    if (error) expt <- expt * 6
+    k <- c(200, 400, 800)
+    tt <- vapply(k, .probe, numeric(1))
     
+    p <- 1
+    d1 <- tt[2] - tt[1]
+    d2 <- tt[3] - tt[2]
+    
+    if (all(is.finite(tt)) && d1 > 0 && d2 > 0) {
+      p <- .clamp(log(d2/d1) / log(2), min = 0.5, max = 3)
+      b <- d2 / (800^p - 400^p)
+      a <- tt[3] - b * 800^p
+      a <- max(a, 0)
+      seconds <- a + b * n_loc^p
+      
+    } else {
+      seconds <- tt[3] * (n_loc/800)
+    }
+    
+    if (error) seconds <- seconds * error_mult
+    
+    if (trace)
+      message("guess_time(): probes = ",
+              paste(round(tt, 2), collapse = "s, "), "s, exponent = ",
+              round(p, 2))
+    
+    expt <- expt_unit %#% seconds
     expt <- round_any(expt, 1, f = floor)
-    expt_min <- max(round_any(expt, 1, f = floor) - 2, 0)
+    expt_min <- max(round_any(expt, 1, f = floor) - 2, 1)
     expt_max <- round_any(expt, 2, f = ceiling)
     if (expt >= 15) expt_max <- round_any(expt, 5, f = ceiling)
     
@@ -1378,60 +1419,30 @@ guess_time <- function(type = "fit",
     sum_fit <- summary(fit)
     
     if (!("speed" %in% names(sum_fit$DOF))) return(outputs)
-    if (!is.finite(sum_fit$DOF[["speed"]])) return(outputs)
     
-    tauv <- extract_pars(fit, name = "velocity")[[1]]
-    if (is.null(tauv)) return(outputs)
-    if (tauv$value[2] == 0) return(outputs)
-    tauv <- tauv$value[2] %#% tauv$unit[2]
-    
-    dti <- dti$value %#% dti$unit
-    dur <- "days" %#% dur$value %#% dur$unit
     N <- sum_fit$DOF[["speed"]]
+    if (!is.finite(N) || N <= 0) return(outputs)
     
-    x1 <- log(N)
-    x2 <- tauv/dti
-    x3 <- dur
+    if (N < 5) return(outputs)
     
-    if (tauv/dti < 1) {
-      y <- exp(3.4924 - 0.1978 * x1)
-      
-      if (N < 15) {
-        x3_capped <- min(x3, 30)
-        y_max <- exp(4.15038 - 0.3159 * x1 + 0.01912 * x3_capped)
-        if (N <= 5) y_max <- y_max * 2
-        y_max <- min(y_max, y * 20)
-      } else {
-        y_max <- y
-      }
-      
-      y <- y * cal
-      y_max <- y_max * cal
-      
-      expt <- expt_min <- ceiling(expt_unit %#% y)
-      expt_max <- ifelse(
-        N > 30,
-        round_any(expt_unit %#% y_max, 2, f = ceiling),
-        round_any(expt_unit %#% y_max, 3, f = ceiling))
-      
-    } else {
-      if (tauv/dti < 10)
-        y <- y_max <- exp(-3.28912 + 1.01494 *
-                            x1 + 0.01953 * x1 * x2)
-      if (tauv/dti >= 10)
-        y <- y_max <- exp(-2.0056285 + 0.9462089 *
-                            x1 + 0.0023285 * x1 * x2)
-      if (N < 15) y_max <- y_max + y_max * 2
-      
-      y <- y * cal
-      y_max <- y_max * cal
-      
-      y <- expt_unit %#% y
-      y_max <- expt_unit %#% y_max
-      expt_min <- ceiling(y * 2) / 2
-      expt <- round_any(y, 1, f = ceiling)
-      expt_max <- round_any(y_max, 1, f = ceiling)
-    }
+    dti_sec <- dti$value %#% dti$unit
+    dur_sec <- dur$value %#% dur$unit
+    if (!is.finite(dti_sec) || dti_sec <= 0) return(outputs)
+    if (!is.finite(dur_sec) || dur_sec <= 0) return(outputs)
+    
+    n_loc <- dur_sec / dti_sec
+    if (!is.finite(n_loc) || n_loc < 1) return(outputs)
+    
+    if (n_loc < n_bench[1] || n_loc > n_bench[2]) return(outputs)
+    
+    seconds <- 0.50 * n_loc^0.60
+    
+    sec_min <- seconds / 3
+    sec_max <- seconds * 3.5
+    
+    expt <- ceiling(expt_unit %#% seconds)
+    expt_min <- max(1, floor(expt_unit %#% sec_min))
+    expt_max <- ceiling(expt_unit %#% sec_max)
     
   } # end of if (type == "speed")
   
@@ -1439,6 +1450,7 @@ guess_time <- function(type = "fit",
     expt_min <- min(expt_min, 1)
     expt_max <- min(expt_max, 1)
     range <- paste("\u2264", "1", expt_unit)
+    
   } else {
     expt_unit <- "minutes"
     expt_min <- min(expt_min, expt)
@@ -1453,7 +1465,8 @@ guess_time <- function(type = "fit",
                         "min" = expt_min,
                         "max" = expt_max,
                         "unit" = expt_unit,
-                        "range" = range)
+                        "range" = range,
+                        "seconds" = seconds)
   return(outputs)
 }
 
@@ -1477,56 +1490,68 @@ measure_distance <- function(data) {
 
 #' @title Estimate distance from trajectory
 #' 
-#' @description estimate distance from ctmm::speed()
-#' 
+#' @importFrom ctmm %#%
 #' @noRd
-estimate_trajectory <- function(data, 
-                                fit, 
-                                groups = NULL, 
-                                dur, 
-                                tau_v, 
-                                seed) { 
+estimate_trajectory <- function(data,
+                                fit,
+                                groups = NULL,
+                                dur,
+                                tau_v,
+                                seed,
+                                n_max = 1e5) {
   
-  grouped <- ifelse(is.null(groups), FALSE, TRUE) 
+  grouped <- !is.null(groups)
   
-  if (class(data)[1] != "list" && 
-      class(data[[1]])[1] != "ctmm")  
-    stop("data argument needs to be a named list.") 
-  
-  if (class(fit)[1] != "list" && 
-      class(fit[[1]])[1] != "ctmm") 
-    stop("fit argument needs to be a named list.") 
-  
-  if (!is.list(seed) || length(seed) != length(data)) 
-    stop("seed argument needs to be a list matching `data`.", 
+  if (class(data)[1] != "list" &&
+      class(data[[1]])[1] != "ctmm")
+    stop("data argument needs to be a named list.",
          call. = FALSE)
+  
+  if (class(fit)[1] != "list" &&
+      class(fit[[1]])[1] != "ctmm")
+    stop("fit argument needs to be a named list.",
+         call. = FALSE)
+  
+  if (!is.list(fit) || length(fit) != length(data))
+    stop("`fit` needs to be a list matching `data`.",
+         call. = FALSE)
+  if (!is.list(seed) || length(seed) != length(data))
+    stop("seed argument needs to be a list matching `data`.",
+         call. = FALSE)
+  
+  dur_sec <- dur$value %#% dur$unit
   
   nms <- names(data) 
   out <- lapply(seq_along(data), function(x) { 
     
-    group <- 1 
-    if (grouped) { 
-      nm <- names(data)[[x]] 
-      group <- ifelse(nm %in% groups$A, "A", "B") 
-    } 
+    if (is.null(fit[[x]]) || is.null(data[[x]])) return(NULL)
     
-    tau_v <- tau_v[[group]]$value[2] %#% tau_v[[group]]$unit[2] 
-    dti <- ifelse(tau_v <= 1 %#% "min", 1 %#% "min", tau_v/10) 
-    dur <- dur$value %#% dur$unit 
+    group <- 1
+    if (grouped) {
+      group <- ifelse(nms[[x]] %in% groups$A, "A", "B")
+    }
     
-    t_new <- seq(0, round(dur, 0), by = dti)[-1] 
-    path <- ctmm::simulate(data[[x]],  
-                           fit[[x]],  
-                           seed = seed[[x]], 
-                           t = t_new) 
-    path$dist <- measure_distance(path) 
-    return(path) 
+    tv <- tau_v[[group]]$value[2] %#% tau_v[[group]]$unit[2]
+    if (!is.finite(tv) || tv <= 0) return(NULL)
+    dti <- ifelse(tv <= 1 %#% "min", 1 %#% "min", tv/10)
+    if (dur_sec/dti > n_max) dti <- dur_sec/n_max
+    
+    t_new <- seq(0, round(dur_sec, 0), by = dti)[-1]
+    path <- ctmm::simulate(data[[x]],
+                           fit[[x]],
+                           seed = seed[[x]],
+                           t = t_new)
+    
+    if (is.null(path)) return(NULL)
+    
+    path$dist <- measure_distance(path)
+    return(path)
     
   }) # end of lapply
   
-  names(out) <- nms 
-  return(out) 
-} 
+  names(out) <- nms
+  return(out)
+}
 
 
 #' @title Convert to a different unit

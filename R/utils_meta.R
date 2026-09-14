@@ -1,9 +1,8 @@
 
 #' @title Capture meta-analysis output
-#'
-#' @description Capture all outputs from the ctmm::meta() function.
-#' @keywords internal
-#'
+#' 
+#' @description capture all outputs from the ctmm::meta() function
+#' 
 #' @importFrom ctmm %#%
 #' @importFrom dplyr %>%
 #' 
@@ -176,9 +175,7 @@
 
 
 #' @title Check for Inf speed outputs
-#'
-#' @keywords internal
-#'
+#' 
 #' @noRd
 .check_for_inf_speed <- function(ctsd_list) {
   sapply(ctsd_list, function(x) {
@@ -188,9 +185,7 @@
 
 
 #' @title Compute expected values
-#'
-#' @keywords internal
-#'
+#' 
 #' @noRd
 .get_expected_values <- function(rv,
                                  set_target = c("hr", "ctsd"),
@@ -509,7 +504,10 @@
                        replicate = FALSE,
                        subpop = FALSE,
                        colors = NULL,
-                       filter_to = NULL) {
+                       filter_to = NULL,
+                       ...) {
+  
+  theme_extra <- NULL
   
   stopifnot(!is.null(rv$meta_tbl),
             !is.null(rv$which_m),
@@ -759,21 +757,16 @@
       
       ggplot2::scale_y_continuous(
         labels = scales::percent,
-        breaks = scales::breaks_pretty()) +
-      
-      ggplot2::theme_classic() +
-      ggplot2::theme(
-        text = ggplot2::element_text(
-          size = 13),
-        legend.position = "bottom",
-        strip.text = ggplot2::element_text(
-          size = 16),
-        strip.background.x = ggplot2::element_rect(
-          color = NA, fill = NA),
-        strip.background.y = ggplot2::element_rect(
-          color = NA, fill = NA),
-        plot.margin = ggplot2::unit(
-          c(1, 1, 1, 1), "cm"))
+        breaks = scales::breaks_pretty())
+    
+    theme_extra <- ggplot2::theme(
+      legend.position = "bottom",
+      strip.text = ggplot2::element_text(size = 16),
+      strip.background.x = ggplot2::element_rect(
+        color = NA, fill = NA),
+      strip.background.y = ggplot2::element_rect(
+        color = NA, fill = NA),
+      plot.margin = ggplot2::unit(c(1, 1, 1, 1), "cm"))
     
     if (!subpop) {
       p.optimal <- p.optimal + ggplot2::guides(shape = "none")
@@ -887,16 +880,15 @@
         values = pal_values,
         na.translate = FALSE, drop = FALSE) +
       ggplot2::scale_shape_manual(
-        "Groups:", values = c(16, 18)) +
-      
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        legend.position = "bottom",
-        plot.title = ggtext::element_markdown(
-          size = 15, face = 2, hjust = 1,
-          margin = ggplot2::margin(b = 2)),
-        plot.subtitle = ggtext::element_markdown(
-          size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
+        "Groups:", values = c(16, 18))
+    
+    theme_extra <- ggplot2::theme(
+      legend.position = "bottom",
+      plot.title = ggtext::element_markdown(
+        size = 15, face = 2, hjust = 1,
+        margin = ggplot2::margin(b = 2)),
+      plot.subtitle = ggtext::element_markdown(
+        size = 14, hjust = 1, margin = ggplot2::margin(b = 15)))
     
     if (rv$which_meta == "mean") {
       p.optimal <- p.optimal +
@@ -1026,15 +1018,20 @@
       ggplot2::scale_color_manual(
         txt_color, values = pal_values) +
       ggplot2::scale_shape_manual(
-        "Groups:", values = c(16, 18)) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(legend.position = "bottom")
+        "Groups:", values = c(16, 18))
+    
+    theme_extra <- ggplot2::theme(legend.position = "bottom")
     
     if (rv$which_meta == "mean") {
       p.optimal <- p.optimal +
         ggplot2::guides(shape = "none")
     }
   }
+  
+  p.optimal <- p.optimal +
+    theme_movedesign(font_available = FALSE, ...)
+  
+  if (!is.null(theme_extra)) p.optimal <- p.optimal + theme_extra
   
   return(p.optimal)
 }
@@ -1046,6 +1043,18 @@
 .process_replicates <- function(rv,
                                 out_replicate,
                                 start = Sys.time()) {
+  
+  .get_pars <- function(group, seed) {
+    if (!rv$add_ind_var)
+      return(list(tau_p = rv$tau_p[[group]],
+                  tau_v = rv$tau_v[[group]],
+                  sigma = rv$sigma[[group]]))
+    
+    fit_i <- simulate_seeded(rv$meanfitList[[group]], seed)
+    return(list(tau_p = extract_pars(fit_i, "position")[[1]],
+                tau_v = extract_pars(fit_i, "velocity")[[1]],
+                sigma = extract_pars(fit_i, "sigma")[[1]]))
+  }
   
   n <- m <- NULL
   groups <- NULL
@@ -1103,15 +1112,10 @@
     }
     
     if (rv$add_ind_var) {
-      tau_p <- extract_pars(
-        simulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
-        "position")[[1]]
-      tau_v <- extract_pars(
-        simulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
-        "velocity")[[1]]
-      sigma <- extract_pars(
-        simulate_seeded(rv$meanfitList[[group]], seedList[[i]]),
-        "sigma")[[1]]
+      pars <- .get_pars(group, seedList[[i]])
+      tau_p <- pars$tau_p
+      tau_v <- pars$tau_v
+      sigma <- pars$sigma
     } else {
       tau_p <- rv$tau_p[[group]]
       tau_v <- rv$tau_v[[group]]
@@ -1128,8 +1132,7 @@
         obj = simfitList[[i]],
         tau_p = tau_p,
         tau_v = tau_v,
-        sigma = sigma
-      )
+        sigma = sigma)
     )
   }
   
@@ -1166,18 +1169,10 @@
       }
       
       if (rv$add_ind_var) {
-        tau_p <- extract_pars(
-          simulate_seeded(rv$meanfitList[[group]],
-                          seedList[[i]]),
-          "position")[[1]]
-        tau_v <- extract_pars(
-          simulate_seeded(rv$meanfitList[[group]],
-                          seedList[[i]]),
-          "velocity")[[1]]
-        sigma <- extract_pars(
-          simulate_seeded(rv$meanfitList[[group]],
-                          seedList[[i]]),
-          "sigma")[[1]]
+        pars <- .get_pars(group, seedList[[i]])
+        tau_p <- pars$tau_p
+        tau_v <- pars$tau_v
+        sigma <- pars$sigma
       } else {
         tau_p <- rv$tau_p[[group]]
         tau_v <- rv$tau_v[[group]]
@@ -1194,8 +1189,9 @@
       
       if (is.null(akdeList[[i]]) ||
           is.null(tmpsum) || length(tmpsum) == 0 ||
+          inherits(tmpsum, "error") ||
           any(tmpsum[[1]] == 0) ||
-          inherits(tmpsum, "error") || N1 < 0.001) {
+          length(N1) != 1 || !is.finite(N1) || N1 < 0.001) {
         
         out_est_df <- out_est_df %>%
           dplyr::add_row(
@@ -1362,10 +1358,13 @@
     pathList <- list()
     for (i in seq_along(ctsdList)) {
       
+      fit <- list(get_true_fit(rv, group, seedList[[i]]))
+      names(truefit) <- names(simList)[i]
+      
       sdList <- ctsdList[[i]]
       pathList[[i]] <- estimate_trajectory(
         data = simList[i],
-        fit = simfitList[i],
+        fit = fit,
         groups = if (rv$grouped) groups[[2]] else NULL,
         dur = rv$dur,
         tau_v = rv$tau_v,
@@ -1383,15 +1382,15 @@
       }
       
       truth <- sum(pathList[[i]]$dist, na.rm = TRUE)
-      unit_old <- rv$speedEst$unit[i]
+      unit_old <- out_est_df$unit[i]
       
-      if (!is.na(rv$speedEst$est[i])) {
+      if (!is.na(out_est_df$est[i])) {
         
-        dist_lci <- (unit_new %#% rv$speedEst$lci[i]
+        dist_lci <- (unit_new %#% out_est_df$lci[i]
                      %#% unit_old) * dur_days
-        dist_est <- (unit_new %#% rv$speedEst$est[i]
+        dist_est <- (unit_new %#% out_est_df$est[i]
                      %#% unit_old) * dur_days
-        dist_uci <- (unit_new %#% rv$speedEst$uci[i]
+        dist_uci <- (unit_new %#% out_est_df$uci[i]
                      %#% unit_old) * dur_days
         
         dist_unit <- "kilometers"
@@ -1432,18 +1431,10 @@
       }
       
       if (rv$add_ind_var) {
-        tau_p <- extract_pars(
-          simulate_seeded(rv$meanfitList[[group]],
-                          seedList[[i]]),
-          "position")[[1]]
-        tau_v <- extract_pars(
-          simulate_seeded(rv$meanfitList[[group]],
-                          seedList[[i]]),
-          "velocity")[[1]]
-        sigma <- extract_pars(
-          simulate_seeded(rv$meanfitList[[group]],
-                          seedList[[i]]),
-          "sigma")[[1]]
+        pars <- .get_pars(group, seedList[[i]])
+        tau_p <- pars$tau_p
+        tau_v <- pars$tau_v
+        sigma <- pars$sigma
       } else {
         tau_p <- rv$tau_p[[group]]
         tau_v <- rv$tau_v[[group]]
@@ -1461,10 +1452,10 @@
           tau_p = tau_p,
           tau_v = tau_v,
           sigma = sigma,
-          speed = rv$speedEst[i, ],
-          speed_error = rv$speedErr[i, ],
-          distance = rv$distEst[i, ],
-          distance_error = rv$distErr[i, ]))
+          speed = out_est_df[i, ],
+          speed_error = out_err_df[i, ],
+          distance = out_dist_est_df[i, ],
+          distance_error = out_dist_err_df[i, ]))
     }
     
     rv$sd_completed <- TRUE
@@ -1477,7 +1468,4 @@
     rv$sd$tbl <- dplyr::distinct(rv$sd$tbl)
   
   return(out_replicate$summary)
-  
 }
-
-
