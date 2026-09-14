@@ -1943,19 +1943,19 @@ mod_tab_hrange_server <- function(id, rv) {
             minWidth = 80, name = nms[["area"]]),
           area_err = reactable::colDef(
             minWidth = 80, name = nms[["area_err"]],
-            style = format_perc,
+            style = function(value, index, name) format_perc(value),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = 1)),
           area_err_min = reactable::colDef(
             minWidth = 80, name = nms[["area_err_min"]],
-            style = format_perc,
+            style = function(value, index, name) format_perc(value),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = 1)),
           area_err_max = reactable::colDef(
             minWidth = 80, name = nms[["area_err_max"]],
-            style = format_perc,
+            style = function(value, index, name) format_perc(value),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = 1))

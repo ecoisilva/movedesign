@@ -1,13 +1,12 @@
 #' tab_report UI Function
-#'
-#' @description Final report tab.
-#'
-#' @param id,input,output,session Internal parameters for {shiny}.
-#'
+#' 
+#' @description Final report tab
+#' @param id,input,output,session Internal parameters for {shiny}
+#' 
 #' @noRd
-#'
+#' 
 #' @importFrom shiny NS tagList
-#'
+#' 
 mod_tab_report_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -306,6 +305,12 @@ mod_tab_report_server <- function(id, rv) {
     sims_speed <- get_speed_file()
     
     # DYNAMIC UI ELEMENTS -------------------------------------------------
+    
+    sd_is_valid <- reactive({
+      if (is.null(rv$speedErr)) return(FALSE)
+      if (!("est" %in% names(rv$speedErr))) return(FALSE)
+      return(sum(is.finite(rv$speedErr$est)) > 0)
+    })
     
     observe({
       req(rv$which_question)
@@ -622,7 +627,11 @@ mod_tab_report_server <- function(id, rv) {
         ci = ci)
       
       # Credible intervals:
-      rv$sd_cri <- .extract_cri(newdat$error, ci)
+      if (sum(is.finite(newdat$error)) < 2) {
+        rv$sd_cri <- data.frame(lci = NA, est = NA, uci = NA, ci = ci)
+      } else {
+        rv$sd_cri <- .extract_cri(newdat$error, ci)
+      }
       
     }) # end of observe
     
@@ -654,7 +663,12 @@ mod_tab_report_server <- function(id, rv) {
         ci = ci)
       
       # Credible intervals:
-      rv$sd_cri_new <- .extract_cri(newdat$error, ci)
+      if (sum(is.finite(newdat$error)) < 2) {
+        rv$sd_cri_new <- data.frame(
+          lci = NA, est = NA, uci = NA, ci = ci)
+      } else {
+        rv$sd_cri_new <- .extract_cri(newdat$error, ci)
+      }
       
     }) %>% # end of observe,
       bindEvent(rv$highlight_dti)
@@ -1228,7 +1242,9 @@ mod_tab_report_server <- function(id, rv) {
       # Speed and distance errors:
       
       sdErr_est <- sdErr_lci <- sdErr_uci <- NA
-      if (any(rv$dev$N2 > 0)) {
+      sd_unavailable <- !sd_is_valid()
+      
+      if (any(rv$dev$N2 > 0) && !sd_unavailable) {
         sdErr_lci <- .err_to_txt(rv[["speedErr"]]$lci)
         sdErr_est <- .err_to_txt(rv[["speedErr"]]$est)
         sdErr_uci <- .err_to_txt(rv[["speedErr"]]$uci)
@@ -1343,6 +1359,16 @@ mod_tab_report_server <- function(id, rv) {
                    "estimation."))
       }
       
+      if (sd_unavailable) {
+        out <- span(
+          out, br(), br(),
+          span("Speed and distance could not be estimated",
+               class = "cl-dgr"),
+          "for this sampling design: the sampling interval is too",
+          "long relative to the velocity autocorrelation timescale,",
+          "so no valid estimates were produced.")
+      }
+      
       if (rv$which_meta == "none") {
         if (is.na(hrErr_lci) || is.na(hrErr_uci)) {
           out_hr_err <- span(
@@ -1358,7 +1384,12 @@ mod_tab_report_server <- function(id, rv) {
             "for home range estimation,")
         }
         
-        if (is.na(sdErr_lci) || is.na(sdErr_uci)) {
+        if (sd_unavailable || is.na(sdErr_est)) {
+          out_sd_err <- span(
+            "and", span("could not be estimated", class = "cl-dgr"),
+            "for speed.")
+          
+        } else if (is.na(sdErr_lci) || is.na(sdErr_uci)) {
           out_sd_err <- span(
             "and", ifelse(sdErr_est == 0, "less than 0.01%",
                           paste0(sdErr_est, "%")),
@@ -1398,7 +1429,16 @@ mod_tab_report_server <- function(id, rv) {
             "for home range estimation,")
         }
         
-        if (is.na(sdmetaErr$lci) || is.na(sdmetaErr$uci)) {
+        .is_missing <- function(z) {
+          length(z) != 1L || !is.finite(z)
+        }
+        
+        if (.is_missing(sdmetaErr$est)) {
+          out_sd_err <- span(
+            "and could not be estimated for speed.")
+          
+        } else if (.is_missing(sdmetaErr$lci) ||
+                   .is_missing(sdmetaErr$uci)) {
           out_sd_err <- span(
             "and", ifelse(sdmetaErr$est == 0, "less than 0.01%",
                           paste0(sdmetaErr$est, "%")),
@@ -1590,6 +1630,13 @@ mod_tab_report_server <- function(id, rv) {
           span(txt_meta_tabs, class = "cl-sea"), "tab.")
       }
       
+      out_targets <- out_targets[
+        vapply(out_targets, function(tg) {
+          !is.null(rv$metaList[[tg]]) &&
+            !is.null(rv$metaList[[tg]]$meta) &&
+            nrow(as.data.frame(rv$metaList[[tg]]$meta)) > 0
+        }, logical(1))]
+      
       for (t in seq_along(out_targets)) {
         target <- out_targets[[t]]
         
@@ -1597,6 +1644,10 @@ mod_tab_report_server <- function(id, rv) {
           meta <- as.data.frame(rv$metaList[[target]]$meta)
           tmpunit <- extract_units(
             rownames(meta[grep("mean", rownames(meta)), ]))
+          
+          if (length(tmpunit) != 1 || is.na(tmpunit)) next
+          if (is.null(out_truth[[target]])) next
+          
           truth <- tmpunit %#% out_truth[[target]]
           
           meta_dt <- meta[1, ] %>%
@@ -1906,7 +1957,8 @@ mod_tab_report_server <- function(id, rv) {
         shinyjs::hide(id = "section-comparison")
         
         m <- length(rv$simList)
-        m <- ifelse(m == 1, "one simulation", "two simulations")
+        m <- paste(ifelse(m == 1, "one", m),
+                   ifelse(m == 1, "simulation", "simulations"))
         
         if (rv$which_meta != "none") {
           shinyalert::shinyalert(
@@ -2802,6 +2854,20 @@ mod_tab_report_server <- function(id, rv) {
           rv$dur, rv$dti,
           input$ci, rv$which_question)
       
+      if (!sd_is_valid()) {
+        output$repPlot_sd <- ggiraph::renderGirafe({
+          ggiraph::girafe(
+            ggobj = ggplot2::ggplot() +
+              ggplot2::annotate(
+                "text", x = 0, y = 0,
+                size = 4.5, color = "#797979",
+                label = paste("Speed could not be estimated\n",
+                              "for this sampling design.")) +
+              ggplot2::theme_void())
+        })
+        return(NULL)
+      }
+      
       is_both <- FALSE
       rv$ft_size <- 13
       if (!is.null(rv$which_question)) {
@@ -2883,6 +2949,16 @@ mod_tab_report_server <- function(id, rv) {
         
         tmp_unit <- fix_unit(out_dti, "seconds", convert = TRUE)$unit
         txt_dti <- paste("1 fix every", tmp_unit %#% out_dti, tmp_unit)
+      }
+      
+      if (sum(is.finite(rv$speedErr$est)) < 2) {
+        msg_log(
+          style = "danger",
+          message = paste(
+            msg_danger("Speed"), "distribution unavailable."),
+          detail = "At least two valid estimates are required.")
+        shinybusy::remove_modal_spinner()
+        return(NULL)
       }
       
       rv$report$txt_dti <- txt_dti
@@ -4157,7 +4233,7 @@ mod_tab_report_server <- function(id, rv) {
         style_fn <- if (bold) {
           list(fontWeight = "bold")
         } else if (!is.null(fmt) && startsWith(fmt, "pct")) {
-          format_perc
+          function(value, index, name) format_perc(value)
         } else if (!is.null(fmt) && startsWith(fmt, "num")) {
           format_num
         } else {

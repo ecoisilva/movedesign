@@ -918,9 +918,10 @@ mod_tab_ctsd_server <- function(id, rv) {
             "speed and distance. Please proceed to the",
             icon("box-archive", class = "cl-mdn"),
             span("Report", class = "cl-mdn"), "tab",
-            "for a review of both home range",
-            "and speed/distance estimation.", br(),
-            "You can also go back to the",
+            "for a review.", br(),
+            # "for a review of both home range",
+            # "and speed/distance estimation.", br(),
+            br(), "You can also go back to the",
             icon("stopwatch", class = "cl-mdn"),
             span("Sampling design", class = "cl-mdn"), "tab,",
             "and set a shorter",
@@ -1416,6 +1417,8 @@ mod_tab_ctsd_server <- function(id, rv) {
                                est = numeric(0),
                                uci = numeric(0))
       
+      n_failed <- 0
+      
       for (i in seq_along(sdList)) {
         sim_no <- seq_for[i]
         
@@ -1427,8 +1430,6 @@ mod_tab_ctsd_server <- function(id, rv) {
           out_err_df <- out_err_df %>%
             dplyr::add_row(seed = rv$seedList[[sim_no]],
                            lci = NA, est = NA, uci = NA)
-          
-          rv$pathList <<- c(rv$pathList, list(NULL))
           next
         }
         
@@ -1447,11 +1448,7 @@ mod_tab_ctsd_server <- function(id, rv) {
             dplyr::add_row(seed = rv$seedList[[sim_no]],
                            lci = NA, est = NA, uci = NA)
           
-          msg_log(
-            style = "danger",
-            message = paste(
-              "Data are too coarsely sampled for",
-              msg_danger("speed"), "estimation."))
+          n_failed <- n_failed + 1
           
           if (length(sdList) == 1) 
             shinyalert::shinyalert(
@@ -1468,7 +1465,6 @@ mod_tab_ctsd_server <- function(id, rv) {
                 "(less time between recorded locations).")),
               html = TRUE, size = "s")
           
-          rv$pathList <<- c(rv$pathList, list(NULL))
           next
         }
         
@@ -1499,6 +1495,14 @@ mod_tab_ctsd_server <- function(id, rv) {
             uci = ((sdList[[i]][[3]] %#% tmpunit) - sd_truth) / sd_truth)
       }
       
+      if (n_failed > 0) {
+        msg_log(
+          style = "danger",
+          message = paste(
+            "Data too coarsely sampled in",
+            # msg_danger("speed"), "estimation in",
+            n_failed, "of", length(sdList), "simulation(s)."))
+        
       rv$speedDatList <- dataList
       rv$speedEst <<- rbind(rv$speedEst, out_est_df)
       rv$speedErr <<- rbind(rv$speedErr, out_err_df)
@@ -1527,9 +1531,29 @@ mod_tab_ctsd_server <- function(id, rv) {
       for (i in seq_along(sdList)) {
         sim_no <- seq_for[i]
         
+        speed_failed <- is.null(sdList[[i]]) ||
+          is.na(rv$speedEst$est[sim_no])
+        
+        group_i <- if (rv$grouped) {
+          if (names(rv$simList)[sim_no] %in% rv$groups[[2]]$A)
+            "A" else "B"
+        } else "All"
+        
+        truefit <- if (rv$add_ind_var) {
+          list(simulate_seeded(rv$meanfitList[[group_i]],
+                               as.integer(rv$seedList[[sim_no]])))
+        } else {
+          list(prepare_mod(
+            tau_p = rv$tau_p[[group_i]][2, ],
+            tau_v = rv$tau_v[[group_i]][2, ],
+            sigma = rv$sigma[[group_i]][2, ],
+            mu = rv$mu[[group_i]]))
+        }
+        names(truefit) <- names(rv$simList)[sim_no]
+        
         pathList <- estimate_trajectory(
           data = rv$simList[sim_no],
-          fit = rv$simfitList[sim_no],
+          fit = truefit,
           groups = if (rv$grouped) rv$groups[[2]] else NULL,
           dur = rv$dur,
           tau_v = rv$tau_v,
@@ -1537,8 +1561,8 @@ mod_tab_ctsd_server <- function(id, rv) {
         
         rv$pathList <<- c(rv$pathList, pathList)
         
-        if (is.null(sdList[[i]]) ||
-            is.null(rv$pathList[[sim_no]])) {
+        if (speed_failed || is.null(rv$pathList[[sim_no]])) {
+          
           out_dist_est_df <- out_dist_est_df %>%
             dplyr::add_row(seed = rv$seedList[[sim_no]],
                            lci = NA, est = NA, uci = NA, unit = NA)
@@ -1549,6 +1573,7 @@ mod_tab_ctsd_server <- function(id, rv) {
         }
         
         truth <- sum(rv$pathList[[sim_no]]$dist, na.rm = TRUE)
+        
         unit_old <- rv$speedEst$unit[sim_no]
         
        if (!is.na(rv$speedEst$est[sim_no])) {
@@ -2564,19 +2589,19 @@ mod_tab_ctsd_server <- function(id, rv) {
             minWidth = 120, name = nms[["ctsd"]]),
           ctsd_err = reactable::colDef(
             minWidth = 80, name = nms[["ctsd_err"]],
-            style = format_perc,
+            style = function(value, index, name) format_perc(value),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = 1)),
           ctsd_err_min = reactable::colDef(
             minWidth = 80, name = nms[["ctsd_err_min"]],
-            style = format_perc,
+            style = function(value, index, name) format_perc(value),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = 1)),
           ctsd_err_max = reactable::colDef(
             minWidth = 80, name = nms[["ctsd_err_max"]],
-            style = format_perc,
+            style = function(value, index, name) format_perc(value),
             format = reactable::colFormat(
               separators = TRUE, locale = "en-US",
               percent = TRUE, digits = 1)),

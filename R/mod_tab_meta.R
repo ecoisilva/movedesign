@@ -1026,6 +1026,13 @@ mod_tab_meta_server <- function(id, rv) {
       if ("Speed & distance" %in% rv$which_question) {
         metaList[["ctsd"]] <- outList[["All"]][["ctsd"]] }
       
+      metaList <- metaList[!vapply(metaList, is.null, logical(1))]
+      
+      if (length(metaList) == 0) {
+        shinybusy::remove_modal_spinner()
+        return(NULL)
+      }
+      
       if (rv$grouped) {
         
         datList_groups <- list()
@@ -1253,6 +1260,7 @@ mod_tab_meta_server <- function(id, rv) {
       
       get_analysis <- c()
       if ("Home range" %in% rv$which_question) {
+        
         req(rv$akdeList)
         req(length(rv$akdeList) > 1)
         req(length(rv$simList) == length(rv$akdeList))
@@ -1262,21 +1270,46 @@ mod_tab_meta_server <- function(id, rv) {
           req(length(tmp) > 1)
         }
         get_analysis <- c(get_analysis, "hr")
+        
       }
       
       if ("Speed & distance" %in% rv$which_question) {
-        req(rv$ctsdList)
-        req(length(rv$ctsdList) > 1)
-        if (length(rv$simList) != length(rv$ctsdList)) {
+        
+        skip_msg <- NULL
+        
+        if (is.null(rv$ctsdList) || length(rv$ctsdList) == 0) {
+          skip_msg <- "no speed estimates available."
+          
+        } else if (length(rv$simList) != length(rv$ctsdList)) {
           warning("Movement is fractal")
+          skip_msg <- paste0(
+            "movement is fractal (",
+            length(rv$ctsdList), " of ",
+            length(rv$simList), ").")
         }
-        req(length(rv$simList) == length(rv$ctsdList))
-        if (any(is.null(rv$ctsdList))) {
-          tmp <- rv$ctsdList
-          tmp[sapply(tmp, is.null)] <- NULL
-          req(length(tmp) > 1)
+        
+        if (is.null(skip_msg)) {
+          tmp <- rv$ctsdList[!.check_for_inf_speed(rv$ctsdList)]
+          
+          if (length(tmp) > 0)
+            tmp[vapply(tmp, is.null, logical(1))] <- NULL
+          
+          if (length(tmp) > 1) {
+            get_analysis <- c(get_analysis, "ctsd")
+          } else {
+            skip_msg <- paste0(
+              "only ", length(tmp),
+              " individual(s) with valid estimates.")
+          }
         }
-        get_analysis <- c(get_analysis, "ctsd")
+        
+        if (!is.null(skip_msg))
+          msg_log(
+            style = "danger",
+            message = paste(
+              "Meta-analyses for", msg_danger("speed"),
+              "skipped."),
+            detail = skip_msg)
       }
       
       if (rv$which_m != "get_all") {
@@ -2224,6 +2257,7 @@ mod_tab_meta_server <- function(id, rv) {
         }
       }
       
+      req(length(outList) > 0)
       outList[sapply(outList, is.null)] <- NULL # drop NULLs
       out <- extract_outputs(
         outList,
@@ -2879,17 +2913,24 @@ mod_tab_meta_server <- function(id, rv) {
       req(rv$metaList, rv$sigma)
       req(length(rv$metaList) > 0)
       
-      if ("Home range" %in% rv$which_question) req(rv$akdeList)
-      if ("Speed & distance" %in% rv$which_question) req(rv$ctsdList)
-      
       if (length(rv$which_question) == 2) {
         req(rv$set_analysis)
         req(length(rv$metaList) == 2)
         set_analysis <- rv$set_analysis
+        
+        if (set_analysis == "hr") req(rv$akdeList)
+        if (set_analysis == "ctsd") {
+          tmp_ctsd <- rv$ctsdList[!.check_for_inf_speed(rv$ctsdList)]
+          req(length(tmp_ctsd) >= 2)
+        }
       } else {
         set_analysis <- switch(rv$which_question,
                                "Home range" = "hr",
                                "Speed & distance" = "ctsd")
+        
+        if ("Home range" == rv$which_question) req(rv$akdeList)
+        if ("Speed & distance" == rv$which_question) req(rv$ctsdList)
+        
       }
       
       dt_meta <- as.data.frame(rv$metaList[[set_analysis]]$meta)
